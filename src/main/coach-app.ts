@@ -1,0 +1,183 @@
+import { join } from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, Tray } from 'electron';
+import { Coach } from '../core/coach';
+import { JsonRepository } from '../core/repository';
+import { localDate } from '../core/dates';
+import { operations, type Candidate, type Snapshot } from '../shared/coach';
+import { ObserverClient } from './observer';
+import { NotificationWindow } from './notification';
+
+let window: BrowserWindow | null = null;
+let quitting = false;
+export function showCoach(): void { window?.show(); window?.focus(); }
+
+export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
+  let tray: Tray | null = null;
+  let errorStop = false;
+  let control: Promise<unknown> = Promise.resolve();
+  let date = localDate();
+  const previews: { notification: BrowserWindow | null } = { notification: null };
+  const observer = new ObserverClient((candidate) => { void coach.accept(candidate); }, () => {
+    notice.dismiss(); coach.fault('Windowsの観測が停止しました。再開してください。');
+  }, fixture);
+  const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
+  const publish = (snapshot: Snapshot) => {
+    if (window && !window.isDestroyed()) window.webContents.send('coach:changed', snapshot);
+    if (tray) {
+      tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
+      tray.setContextMenu(Menu.buildFromTemplate([
+        { label: '記録を見る', click: showCoach },
+        { label: snapshot.notificationsPaused ? '通知を再開' : '通知を停止', click: () => { void command(snapshot.notificationsPaused ? 'resume-notifications' : 'pause-notifications'); } },
+        { label: snapshot.observing ? '全停止' : '計測を再開', click: () => { void command(snapshot.observing ? 'stop' : 'start'); } },
+        { type: 'separator' }, { label: '終了', click: () => { void quit(); } }
+      ]));
+    }
+    if (snapshot.error && !errorStop) { errorStop = true; notice.dismiss(); void observer.stop().catch(() => {}); }
+  };
+  const coach = new Coach({ repository: new JsonRepository(app.getPath('userData')), date: localDate,
+    now: () => performance.now(), notify: (value) => notice.show(value), changed: publish });
+  const serialize = <T>(task: () => Promise<T>): Promise<T> => {
+    const result = control.then(task); control = result.catch(() => {}); return result;
+  };
+  const startObservation = async () => {
+    if (coach.snapshot().observing || coach.snapshot().pendingSave) return;
+    if (coach.snapshot().error) await coach.initialize();
+    if (coach.snapshot().error) return;
+    try { const generation = await observer.start(); errorStop = false; coach.begin(generation); publish(coach.snapshot()); }
+    catch (error) { coach.fault(error instanceof Error && error.message === 'arranged-api-unavailable'
+      ? '最大化判定に必要なWindows機能を取得できません。'
+      : 'Windowsの観測を開始できません。再開してください。'); }
+  };
+  const stopObservation = async () => {
+    coach.stop(); notice.dismiss();
+    try { await observer.stop(); }
+    catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
+  };
+  const command = (value: string) => serialize(async () => {
+    switch (value) {
+      case 'pause-notifications': coach.pauseNotifications(true); notice.dismiss(); break;
+      case 'resume-notifications': coach.pauseNotifications(false); break;
+      case 'stop': await stopObservation(); break;
+      case 'start': await startObservation(); break;
+      case 'retry-save': await coach.retrySave(); break;
+      case 'quit': await quit(); break;
+      default: throw new Error('Unknown command.');
+    }
+    return coach.snapshot();
+  });
+  const quit = async () => {
+    if (quitting) return;
+    coach.stop(); notice.dismiss(); await coach.idle();
+    if (coach.snapshot().pendingSave && window) {
+      const answer = await dialog.showMessageBox(window, { type: 'warning', message: '未保存の記録または設定があります。',
+        detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
+      if (answer.response !== 1) { showCoach(); return; }
+    }
+    quitting = true; await observer.shutdown(); tray?.destroy(); app.quit();
+  };
+  const sender = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== window?.webContents) throw new Error('Unknown sender.');
+  };
+  ipcMain.handle('coach:get-snapshot', async (event) => { sender(event); await coach.tick(); return coach.snapshot(); });
+  ipcMain.handle('coach:get-notice', (event) => {
+    if (!notice.sender(event.sender.id)) throw new Error('Unknown sender.'); return notice.current();
+  });
+  ipcMain.handle('coach:command', (event, value: unknown) => {
+    sender(event);
+    if (typeof value !== 'string' || !['pause-notifications', 'resume-notifications', 'stop', 'start', 'retry-save', 'quit'].includes(value)) throw new Error('Unknown command.');
+    return command(value);
+  });
+  ipcMain.handle('coach:set-muted', (event, operation: unknown, muted: unknown) => {
+    sender(event); const supported = operations.find((op) => op.id === operation);
+    if (!supported || typeof muted !== 'boolean') throw new Error('Invalid setting.');
+    return serialize(async () => { await coach.setMuted(supported.id, muted); if (muted) notice.dismiss(); return coach.snapshot(); });
+  });
+  ipcMain.handle('coach:delete', (event) => {
+    sender(event);
+    return serialize(async () => {
+      if (!window) return coach.snapshot();
+      const result = await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
+        detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
+      if (result.response !== 1) return coach.snapshot();
+      const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
+      if (!coach.snapshot().error && resume) await startObservation();
+      return coach.snapshot();
+    });
+  });
+  await coach.initialize();
+  window = new BrowserWindow({ width: 920, height: 760, minWidth: 620, minHeight: 500, show: false,
+    autoHideMenuBar: true, backgroundColor: '#f5f4ed',
+    webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event) => event.preventDefault());
+  window.on('close', (event) => { if (!quitting) { event.preventDefault(); window?.hide(); } });
+  app.on('before-quit', (event) => { if (!quitting) { event.preventDefault(); void quit(); } });
+  await load(window, 'coach');
+  if (!fixture) {
+    const pixels = Buffer.alloc(16 * 16 * 4);
+    for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) if ((x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36) {
+      const at = (y * 16 + x) * 4; pixels[at] = 72; pixels[at + 1] = 122; pixels[at + 2] = 33; pixels[at + 3] = 255;
+    }
+    tray = new Tray(nativeImage.createFromBitmap(pixels, { width: 16, height: 16 }));
+    tray.on('double-click', showCoach);
+    if (!coach.snapshot().settings.opened || coach.snapshot().error) { showCoach(); await coach.opened(); }
+  }
+  await startObservation(); publish(coach.snapshot());
+  const ticker = setInterval(() => {
+    if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
+  }, 1000);
+  app.once('will-quit', () => clearInterval(ticker));
+  screen.on('display-removed', () => notice.dismiss());
+  screen.on('display-metrics-changed', () => notice.dismiss());
+  if (fixture) {
+    const deadline = setTimeout(() => { void observer.shutdown(); app.exit(1); }, 25_000);
+    try {
+      if (!coach.snapshot().observing) throw new Error('observer');
+      const display = screen.getPrimaryDisplay();
+      const physical = screen.dipToScreenRect(null, display.bounds);
+      const value: Candidate = { type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1,
+        app: 'chrome', operation: 'maximize', date: localDate(), before: { state: 'normal', arranged: false },
+        after: { state: 'maximized' }, origin: 'mouse', route: 'max-button', injected: false, conflicted: false,
+        moving: false, elevated: false, targetMatched: true, inputAgeMs: 135, monitor: physical };
+      const beforeFocus = await observer.focusToken();
+      await observer.inject(value); await coach.idle();
+      const afterFocus = await observer.focusToken();
+      if (beforeFocus !== afterFocus || notice.focusable() || !notice.current()) throw new Error('notice-focus');
+      await observer.inject(value);
+      await observer.inject({ ...value, sequence: 2, origin: 'key', route: 'win-up' });
+      await observer.inject({ ...value, sequence: 3, origin: 'unknown', route: 'unknown' });
+      await coach.idle();
+      const counts = coach.snapshot().counts[localDate()]?.W03;
+      if (counts?.mouse !== 1 || counts.key !== 1) throw new Error('counts');
+      const rendered = await window.webContents.executeJavaScript(`new Promise((resolve) => {
+        const timer = setInterval(() => {
+          const row = document.querySelector('[data-operation="W03"]');
+          if (row?.querySelector('[data-kind="mouse"]')?.textContent === '1' && row?.querySelector('[data-kind="key"]')?.textContent === '1') {
+            clearInterval(timer); resolve(true);
+          }
+        }, 25);
+      })`);
+      if (!rendered) throw new Error('renderer');
+      const notification = previews.notification;
+      if (!notification || notification.isDestroyed()) throw new Error('notice-renderer');
+      const renderedNotice = await notification.webContents.executeJavaScript(`new Promise((resolve) => {
+        const timer = setInterval(() => { if (document.querySelector('.notice strong')?.textContent === 'Win + ↑') { clearInterval(timer); resolve(true); } }, 25);
+      })`);
+      if (!renderedNotice) throw new Error('notice-content');
+      const disk = JSON.parse(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'));
+      if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
+      const image = await window.webContents.capturePage();
+      await writeFile(join(app.getPath('userData'), 'coach-preview.png'), image.toPNG());
+      await writeFile(join(app.getPath('userData'), 'notice-preview.png'), (await notification.webContents.capturePage()).toPNG());
+      await new Promise((resolve) => setTimeout(resolve, 4200));
+      if (notice.current() !== null) throw new Error('notice-duration');
+      await stopObservation(); clearTimeout(deadline); clearInterval(ticker);
+      await observer.shutdown(); quitting = true;
+      console.log('COACH_SMOKE_OK ' + JSON.stringify({ mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
+        focusUnchanged: true, autoDismissed: true, hooksStopped: true, fixtureOnly: true,
+        realDisplayContext: process.argv.includes('--real-display-smoke') }));
+      app.exit(0);
+    } catch { clearTimeout(deadline); clearInterval(ticker); await observer.shutdown(); quitting = true; console.error('COACH_SMOKE_FAILED'); app.exit(1); }
+  }
+}

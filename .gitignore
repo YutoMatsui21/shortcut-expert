@@ -1,0 +1,8 @@
+node_modules/
+.tools/
+out/
+release/
+resources/native-helper/
+native-helper/bin/
+native-helper/obj/
+*.tsbuildinfo

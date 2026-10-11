@@ -1,0 +1,21 @@
+appId: local.window-shortcut-coach
+productName: Window Shortcut Coach
+directories:
+  output: release
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: resources/native-helper
+    to: native-helper
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: false
+  runAfterFinish: false
+  deleteAppDataOnUninstall: false

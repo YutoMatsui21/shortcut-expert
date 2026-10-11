@@ -1,0 +1,16 @@
+import { contextBridge, ipcRenderer } from 'electron';
+import type { CoachBridge, Snapshot } from '../shared/coach';
+
+const coach: CoachBridge = {
+  getSnapshot: () => ipcRenderer.invoke('coach:get-snapshot'),
+  getNotice: () => ipcRenderer.invoke('coach:get-notice'),
+  command: (command) => ipcRenderer.invoke('coach:command', command),
+  setMuted: (operation, muted) => ipcRenderer.invoke('coach:set-muted', operation, muted),
+  deleteCounts: () => ipcRenderer.invoke('coach:delete'),
+  subscribe: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, snapshot: Snapshot) => listener(snapshot);
+    ipcRenderer.on('coach:changed', handler);
+    return () => ipcRenderer.removeListener('coach:changed', handler);
+  }
+};
+contextBridge.exposeInMainWorld('coach', coach);

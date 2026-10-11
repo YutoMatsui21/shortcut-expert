@@ -1,0 +1,38 @@
+{
+  "name": "window-shortcut-coach",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Windows window-operation shortcut coach",
+  "license": "UNLICENSED",
+  "main": "out/main/index.cjs",
+  "engines": { "node": ">=24.11.1 <25", "npm": ">=10" },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run helper:build && node --test tests/*.test.ts",
+    "helper:build": "node scripts/build-helper.mjs",
+    "build": "npm run helper:build && npm run typecheck && electron-vite build",
+    "start": "electron-vite preview",
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:dev": "electron-vite dev -- --coach-smoke",
+    "package:dir": "electron-builder --dir --win --x64",
+    "smoke:packaged": "node scripts/smoke.mjs --packaged",
+    "package:installer": "electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "typescript": "7.0.2",
+    "vite": "7.3.7"
+  }
+}

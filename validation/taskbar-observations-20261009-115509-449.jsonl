@@ -1,0 +1,6 @@
+{"kind":"session","foregroundHook":true,"mouseHook":true,"keyHook":true}
+{"kind":"taskbar-snapshot","appButtons":6,"ownMatches":1,"slotCandidate":6,"error":"none","keyMappingValidated":false}
+{"kind":"taskbar-snapshot","appButtons":6,"ownMatches":1,"slotCandidate":6,"error":"none","keyMappingValidated":false}
+{"kind":"own-window-activated","expectedLabel":"mouse-switch","originCandidate":"taskbar-mouse","slotCandidate":6,"inputAgeMs":67,"actualTargetMatched":true,"causalityConfirmed":false}
+{"kind":"taskbar-snapshot","appButtons":6,"ownMatches":1,"slotCandidate":6,"error":"none","keyMappingValidated":false}
+{"kind":"own-window-activated","expectedLabel":"key-switch","originCandidate":"key","slotCandidate":6,"inputAgeMs":46,"actualTargetMatched":true,"causalityConfirmed":false}
