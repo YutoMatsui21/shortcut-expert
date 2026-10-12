@@ -283,11 +283,11 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### API到達性
 
-[native-health-result.json](validation/native-health-result.json)：自分の非表示窓でplacement・monitor取得、programリサイズの矩形変化とLOCATIONCHANGE1件、WinEvent／mouse／key hook登録。入力hookは即時解除、payload未読、自然入力試行0。TypeScriptからexe起動・JSON受信も成功。連続監視・React・配布の実行証拠ではない。
+[native-health-result.json](../validation/evidence/native-health-result.json)：自分の非表示窓でplacement・monitor取得、programリサイズの矩形変化とLOCATIONCHANGE1件、WinEvent／mouse／key hook登録。入力hookは即時解除、payload未読、自然入力試行0。TypeScriptからexe起動・JSON受信も成功。連続監視・React・配布の実行証拠ではない。
 
 #### ManualWindowProbe v1
 
-[round1原本](validation/manual-window-observations-round1.jsonl)：10/09 20:28:42保存、20:29:09読取。reset3件を含む11records。
+[round1原本](../validation/evidence/manual-window-observations-round1.jsonl)：10/09 20:28:42保存、20:29:09読取。reset3件を含む11records。
 
 | 本人ラベル | 観測／入力候補 | 評価 |
 | --- | --- | --- |
@@ -299,11 +299,11 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 原因：1秒の近接判定が長いdragを切る、途中のmonitor変化を操作扱い、入力競合／hit test／hook欠落。長時間・競合の修正前失敗を自動再現。v2はcaption実押下＋MOVESIZESTART/ENDで入力候補を保持し、終端と開始を比較。途中を数えず、元画面終了0、競合キーはunknown、終了解除。
 
-[OriginCandidateTests.cs](validation/OriginCandidateTests.cs)：12件合格。最大化・短いキー・長いdrag・終了解除・注入除外・競合・途中往復・終端比較・重複・元画面復帰を確認した純粋ロジック試験。OS配送・常用アプリ精度の保証ではない。保存はlatest＋UTC時刻付き原本に変更。
+[OriginCandidateTests.cs](../validation/probes/OriginCandidateTests.cs)：12件合格。最大化・短いキー・長いdrag・終了解除・注入除外・競合・途中往復・終端比較・重複・元画面復帰を確認した純粋ロジック試験。OS配送・常用アプリ精度の保証ではない。保存はlatest＋UTC時刻付き原本に変更。
 
 #### ManualWindowProbe v2
 
-[原本](validation/manual-window-observations-20261009-113827-828.jsonl)：10/09 20:40:58保存、20:41:15読取、metadata1＋操作3。2画面、4hooks=true。
+[原本](../validation/evidence/manual-window-observations-20261009-113827-828.jsonl)：10/09 20:40:58保存、20:41:15読取、metadata1＋操作3。2画面、4hooks=true。
 
 - drag8727ms：move-size-end、monitor0→1、drag-mouse、移動1。
 - 元画面への往復：移動recordなし。本人が実施・元画面で離したと回答し、未実施と区別して0を確認。
@@ -314,7 +314,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### TaskbarProbe
 
-[原本](validation/taskbar-observations-20261009-115509-449.jsonl)：10/09 20:55:28保存、20:55:43以降読取。
+[原本](../validation/evidence/taskbar-observations-20261009-115509-449.jsonl)：10/09 20:55:28保存、20:55:43以降読取。
 
 - foreground／mouse／key hooks=true。UIA appButtons6、ownMatches1、slotCandidate6、error=none。
 - mouse切替：taskbar-mouse、67ms、actualTargetMatched=true。
@@ -324,7 +324,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### ExternalWindowProbe：Chrome／Obsidian
 
-初回：[原本](validation/external-window-observations-20261011-050724-973.jsonl)、10/11 14:10:43保存。chromeだけ選択。Obsidianの選び直しなしという本人申告のため、Obsidian証拠に使わない。
+初回：[原本](../validation/evidence/external-window-observations-20261011-050724-973.jsonl)、10/11 14:10:43保存。chromeだけ選択。Obsidianの選び直しなしという本人申告のため、Obsidian証拠に使わない。
 
 | Chrome初回 | 結果 |
 | --- | --- |
@@ -333,7 +333,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 | mouse画面移動 | move-size-end、0→1、drag-mouse、2980ms |
 | key画面移動 | 1→0、nearby-key、Win+Shift+Left、36ms |
 
-再試行：[原本](validation/external-window-observations-20261011-051237-322.jsonl)、14:14:27保存。chrome／obsidianとも選択済み、2画面、4hooks=true。
+再試行：[原本](../validation/evidence/external-window-observations-20261011-051237-322.jsonl)、14:14:27保存。chrome／obsidianとも選択済み、2画面、4hooks=true。
 
 | 対象／操作 | 観測 | 判定 |
 | --- | --- | --- |
@@ -417,13 +417,16 @@ resetを選び本人が通常サイズに戻し2秒待つ。できない操作�
 
 ### ビルド
 
-作業フォルダのPowerShellで実行。cscはC:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe。以下は再現用で、今実行する必要はない。
+リポジトリのルートからPowerShellで実行。ソースは`validation/probes`、生成exeと今後のログはGit対象外の`.tools/validation`に置く。既存の実測原本は`validation/evidence`に保持する。cscはC:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe。以下は再現用で、今実行する必要はない。
 
 ```powershell
 $probeCompiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-& $probeCompiler /nologo /out:validation\NativeHealthProbe.exe validation\NativeHealthProbe.cs
-node .\validation\run-native-health.ts
-& $probeCompiler /nologo /target:winexe /out:validation\ExternalWindowProbe.exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll validation\ExternalWindowProbe.cs validation\InputOriginCandidate.cs validation\WindowStateSequence.cs
+New-Item -ItemType Directory -Force .tools\validation | Out-Null
+& $probeCompiler /nologo /out:.tools\validation\NativeHealthProbe.exe validation\probes\NativeHealthProbe.cs
+node .\validation\probes\run-native-health.ts
+& $probeCompiler /nologo /target:winexe /out:.tools\validation\ExternalWindowProbe.exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll validation\probes\ExternalWindowProbe.cs validation\probes\InputOriginCandidate.cs validation\probes\WindowStateSequence.cs
+& $probeCompiler /nologo /out:.tools\validation\OriginCandidateTests.exe validation\probes\OriginCandidateTests.cs validation\probes\InputOriginCandidate.cs validation\probes\WindowStateSequence.cs
+& .\.tools\validation\OriginCandidateTests.exe
 ```
 
 

@@ -21,7 +21,7 @@ internal static class Program
                 {
                     var r = screen.Bounds;
                     using var document = JsonDocument.Parse(JsonSerializer.Serialize(new { x = r.X, y = r.Y, width = r.Width, height = r.Height }));
-                    Console.WriteLine(JsonSerializer.Serialize(Observer.DisplayContext(document.RootElement, diagnostic: true)));
+                    Console.WriteLine(JsonSerializer.Serialize(DisplayContext.Query(document.RootElement, diagnostic: true)));
                 }
                 return 0;
             default: Console.Error.WriteLine("Unknown observer mode."); return 2;

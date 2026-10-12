@@ -1,8 +1,51 @@
 # 設計・実装状況
 
-契約は[mvp-requirements.md](mvp-requirements.md)、実行手順は[README.md](README.md)、根拠・原本は[research.md](research.md)。
+契約は[mvp-requirements.md](mvp-requirements.md)、実行手順は[README.md](../README.md)、根拠・原本は[research.md](research.md)。
 
-[承認済み最小設計](#design)・[実装と試験結果](#implementation)・[環境準備時の記録](#environment)。設計は残る候補も含み、実装済みはW03のみ。環境準備の節は当時の記録で、現行動作とは区別する。
+<a id="architecture"></a>
+
+## 現行アーキテクチャ
+
+機能追加・リファクタ・責務配置の判断に用いる。下記の責務分担を現行方針とし、後続の工程記録は当時の状態を示す。
+
+| Module／配置 | 責務 |
+| --- | --- |
+| Core／`src/core` | 操作判定、集計、利用状態、純粋な日付処理。保存・通知は受け取った依存を呼び、Node・Electron・Windows APIを直接使わない |
+| Main／`src/main` | Electron制御、保存実装、helper接続、通知、アプリ内スモーク試験 |
+| Preload／`src/preload` | 型付きIPCによる状態取得・制御・設定・削除の橋渡し |
+| Renderer／`src/renderer` | 数値・設定画面と通知画面、利用者の指示。OS観測・ファイルI/OはMainへ要求する |
+| Shared／`src/shared` | 共通型・操作定義。Node・Electron・Windowsへの依存を持たない |
+| Native helper／`native-helper` | Win32宣言、観測・候補生成、JSON Lines通信、画面照会。採用判断と案内キーの決定はTypeScript側で行う |
+
+### 依存方向と拡張
+
+- MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
+- RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
+- C#のWin32宣言はNativeMethods、通信はObserverHost、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フックと候補生成はObserverに置く。
+- 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
+- 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
+- 責務や依存方向を変更した場合は、この節を同じ変更内で更新する。
+
+### 確認と検証物
+
+- 判定・集計・保存は関連する自動試験で確認する。helper変更は再ビルドとnative試験、画面・IPC・起動の変更は関連するスモーク試験、同梱経路の変更は同梱版でも確認する。コマンドは[README](../README.md#開発確認)と[package.json](../package.json)を参照する。
+- 検証ソースは`validation/probes`、既存の実測原本は`validation/evidence`、再生成可能なexe・今後のログはGit対象外の`.tools/validation`に置く。製品コードにprobeを取り込む場合は成立条件を改めて確認する。
+- 人工候補の接続試験と実入力精度の証拠を区別し、未確認条件を対応済みとして扱わない。
+
+### 指示の配置
+
+全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。今回は独立した反復作業の手順を追加しないため、Skillや配下のAGENTS.mdは作らない。
+根拠：[AGENTS.md公式資料](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Skills公式資料](https://learn.chatgpt.com/docs/build-skills)、[指示を簡潔に保つ方針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)。
+
+## 責務分離の実施結果（2026-10-11）
+
+保存実装をMainへ移動し、スモーク試験・Reactの2画面・C#のAPI宣言／通信／画面照会を分離した。上記の責務分担をAGENTS.mdから参照する構成にした。保存形式、IPC、helperのプロトコル、画面文言、判定条件は維持している。
+
+- helper再ビルド・型検査・18テスト・本番ビルド、通常／開発／最終同梱版の人工候補スモークが成功。通常モードの隔離データでもトレイ、閉じた後の観測継続、停止／再開、通知設定、削除の取消／確定、終了を確認した。削除ダイアログの返答は試験側で置換して各経路を確認した。
+- 文書をdocs、検証コードをvalidation/probes、実測原本をvalidation/evidenceへ移動。原本6ファイルのSHA-256が一致し、health probeの再ビルド・実行と純粋ロジック12ケースが成功した。生成物は.tools/validationに置く。
+- 方針を新操作追加・保存処理変更・画面変更の3ケースで読み合わせ、担当箇所と必要な参照先を確認した。構成ルールと計画への適合を別々にレビューし、指摘事項はなかった。人工試験の成功は実入力精度の証拠にはしない。
+
+[承認済み最小設計](#design)・[実装と試験結果](#implementation)・[環境準備時の記録](#environment)。以下は過去の工程記録。設計は残る候補も含み、実装済みはW03のみ。
 
 2026-10-11整理後：環境準備専用の画面・IPC・health起動経路を削除し、人工候補を使うアプリ接続試験へ統一。日付生成と停止指示の重複を整理。現在のhelperはWinFormsのみを使い、未使用のWPF／UIAリンク確認依存を外した。UIAが必要な候補の実装時に参照を追加・検証する。以下の過去の試験名・コマンドは当時の記録で、現在の実行手順はREADMEに従う。
 
@@ -111,7 +154,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 2026-10-11 15:50:23→16:32:03 JST：W03最大化の初回接続区間完了。
 ステップ6全体は継続。11候補を維持し、残る10候補は未実装。公開対応数の確定・要件削減は行っていない。
 
-正本：[mvp-requirements.md](mvp-requirements.md)。設計：[最小設計](design.md#design)。起動：[README.md](README.md)。
+正本：[mvp-requirements.md](mvp-requirements.md)。設計：[最小設計](design.md#design)。起動：[README.md](../README.md)。
 
 ### 実装した動作
 
@@ -205,7 +248,7 @@ helperのhealth応答はprotocolVersion=1、runtime=.NET 10.0.12、architecture=
 
 healthは自分の非表示窓のplacement／rect取得とUIAアセンブリのリンクだけ。全体入力hook・外部窓の観測・ユーザー入力の収集を開始しない。画面2枚は今回の通常権限での実行セッションの結果であり、以前の別実行セッションの1枚と同一条件と扱わない。UIA識別精度・操作判定精度を証明しない。
 
-手順は[README.md](README.md)。smokeのElectronデータは`.tools`内。公開アプリの記録形式の実装ではない。ローカルSDK・NuGet／npmキャッシュ・生成物は.gitignoreで除外し、既存probeと観測原本は保持した。
+手順は[README.md](../README.md)。smokeのElectronデータは`.tools`内。公開アプリの記録形式の実装ではない。ローカルSDK・NuGet／npmキャッシュ・生成物は.gitignoreで除外し、既存probeと観測原本は保持した。
 
 ### 手戻り・権限
 

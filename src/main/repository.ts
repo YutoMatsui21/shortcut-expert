@@ -1,9 +1,9 @@
 import type { Counts, Settings } from '../shared/coach.ts';
-import type { Repository } from './coach.ts';
+import type { Repository } from '../core/coach.ts';
 import { mkdir, open, readFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { operations } from '../shared/coach.ts';
-import { validDate } from './dates.ts';
+import { validDate } from '../core/dates.ts';
 
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function keys(value: Record<string, unknown>, allowed: string[]): boolean { return Object.keys(value).every((key) => allowed.includes(key)); }

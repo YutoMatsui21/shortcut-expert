@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
 
 test('全画面判定は通常最大化とcloaked窓を除外し、全画面と不明窓は抑制する', () => {
@@ -31,4 +33,33 @@ test('テスト用helperは親のstdin終了でhookを残さず終了する', ()
   const messages = result.stdout.trim().split(/\r?\n/).map((line) => JSON.parse(line));
   assert.deepEqual(messages.map((message) => message.type), ['ready', 'started']);
   assert.equal(typeof messages[0].arrangedAvailable, 'boolean');
+});
+
+test('同一helperで開始・停止・再開・終了を順に確認できる', { timeout: 10_000 }, async (t) => {
+  const child = spawn(resolve('resources/native-helper/WindowObserver.exe'), ['--fixture'], {
+    windowsHide: true, stdio: 'pipe'
+  });
+  const lines = createInterface({ input: child.stdout });
+  t.after(() => { lines.close(); if (child.exitCode === null) child.kill(); });
+  let errors = '';
+  child.stderr.setEncoding('utf8').on('data', (text) => { errors += text; });
+  const exit = once(child, 'exit');
+  const messages = lines[Symbol.asyncIterator]();
+  const receive = async () => {
+    const next = await messages.next();
+    assert.equal(next.done, false, errors);
+    return JSON.parse(next.value!);
+  };
+  const ready = await receive();
+  assert.equal(ready.type, 'ready');
+  assert.equal(ready.protocolVersion, 1);
+  for (const [command, requestId, generation, type] of [
+    ['start', 1, 1, 'started'], ['stop', 2, 1, 'stopped'],
+    ['start', 3, 2, 'started'], ['shutdown', 4, 2, 'stopped']
+  ] as const) {
+    child.stdin.write(JSON.stringify({ command, requestId, generation }) + '\n');
+    assert.deepEqual(await receive(), { type, requestId });
+  }
+  assert.deepEqual(await exit, [0, null], errors);
+  assert.equal((await messages.next()).done, true);
 });

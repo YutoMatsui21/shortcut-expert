@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import { JsonRepository } from '../src/core/repository.ts';
+import { JsonRepository } from '../src/main/repository.ts';
 
 async function directory() {
   const root = resolve('.tools/tests'); await mkdir(root, { recursive: true });

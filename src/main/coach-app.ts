@@ -1,12 +1,12 @@
 import { join } from 'node:path';
-import { readFile, writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, Tray } from 'electron';
 import { Coach } from '../core/coach';
-import { JsonRepository } from '../core/repository';
+import { JsonRepository } from './repository';
 import { localDate } from '../core/dates';
-import { operations, type Candidate, type Snapshot } from '../shared/coach';
+import { operations, type Snapshot } from '../shared/coach';
 import { ObserverClient } from './observer';
 import { NotificationWindow } from './notification';
+import { runCoachSmoke } from './smoke';
 
 let window: BrowserWindow | null = null;
 let quitting = false;
@@ -131,53 +131,24 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   screen.on('display-removed', () => notice.dismiss());
   screen.on('display-metrics-changed', () => notice.dismiss());
   if (fixture) {
-    const deadline = setTimeout(() => { void observer.shutdown(); app.exit(1); }, 25_000);
+    let deadline: NodeJS.Timeout | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | undefined;
     try {
-      if (!coach.snapshot().observing) throw new Error('observer');
-      const display = screen.getPrimaryDisplay();
-      const physical = screen.dipToScreenRect(null, display.bounds);
-      const value: Candidate = { type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1,
-        app: 'chrome', operation: 'maximize', date: localDate(), before: { state: 'normal', arranged: false },
-        after: { state: 'maximized' }, origin: 'mouse', route: 'max-button', injected: false, conflicted: false,
-        moving: false, elevated: false, targetMatched: true, inputAgeMs: 135, monitor: physical };
-      const beforeFocus = await observer.focusToken();
-      await observer.inject(value); await coach.idle();
-      const afterFocus = await observer.focusToken();
-      if (beforeFocus !== afterFocus || notice.focusable() || !notice.current()) throw new Error('notice-focus');
-      await observer.inject(value);
-      await observer.inject({ ...value, sequence: 2, origin: 'key', route: 'win-up' });
-      await observer.inject({ ...value, sequence: 3, origin: 'unknown', route: 'unknown' });
-      await coach.idle();
-      const counts = coach.snapshot().counts[localDate()]?.W03;
-      if (counts?.mouse !== 1 || counts.key !== 1) throw new Error('counts');
-      const rendered = await window.webContents.executeJavaScript(`new Promise((resolve) => {
-        const timer = setInterval(() => {
-          const row = document.querySelector('[data-operation="W03"]');
-          if (row?.querySelector('[data-kind="mouse"]')?.textContent === '1' && row?.querySelector('[data-kind="key"]')?.textContent === '1') {
-            clearInterval(timer); resolve(true);
-          }
-        }, 25);
-      })`);
-      if (!rendered) throw new Error('renderer');
-      const notification = previews.notification;
-      if (!notification || notification.isDestroyed()) throw new Error('notice-renderer');
-      const renderedNotice = await notification.webContents.executeJavaScript(`new Promise((resolve) => {
-        const timer = setInterval(() => { if (document.querySelector('.notice strong')?.textContent === 'Win + ↑') { clearInterval(timer); resolve(true); } }, 25);
-      })`);
-      if (!renderedNotice) throw new Error('notice-content');
-      const disk = JSON.parse(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'));
-      if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
-      const image = await window.webContents.capturePage();
-      await writeFile(join(app.getPath('userData'), 'coach-preview.png'), image.toPNG());
-      await writeFile(join(app.getPath('userData'), 'notice-preview.png'), (await notification.webContents.capturePage()).toPNG());
-      await new Promise((resolve) => setTimeout(resolve, 4200));
-      if (notice.current() !== null) throw new Error('notice-duration');
-      await stopObservation(); clearTimeout(deadline); clearInterval(ticker);
-      await observer.shutdown(); quitting = true;
-      console.log('COACH_SMOKE_OK ' + JSON.stringify({ mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
-        focusUnchanged: true, autoDismissed: true, hooksStopped: true, fixtureOnly: true,
-        realDisplayContext: process.argv.includes('--real-display-smoke') }));
-      app.exit(0);
-    } catch { clearTimeout(deadline); clearInterval(ticker); await observer.shutdown(); quitting = true; console.error('COACH_SMOKE_FAILED'); app.exit(1); }
+      report = await Promise.race([
+        runCoachSmoke({ coach, observer, notice, window,
+          getNotificationWindow: () => previews.notification, directory: app.getPath('userData') }),
+        new Promise<never>((_, reject) => {
+          deadline = setTimeout(() => reject(new Error('smoke-timeout')), 25_000);
+        })
+      ]);
+      await stopObservation();
+    } catch { report = undefined; }
+    finally {
+      clearTimeout(deadline); clearInterval(ticker);
+      coach.stop(); notice.dismiss(); await observer.shutdown(); quitting = true;
+      if (report) console.log('COACH_SMOKE_OK ' + JSON.stringify({ ...report, hooksStopped: true }));
+      else console.error('COACH_SMOKE_FAILED');
+      app.exit(report ? 0 : 1);
+    }
   }
 }

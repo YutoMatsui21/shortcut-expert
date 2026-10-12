@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const executable = fileURLToPath(new URL('./NativeHealthProbe.exe', import.meta.url));
+const executable = fileURLToPath(new URL('../../.tools/validation/NativeHealthProbe.exe', import.meta.url));
 const output: string = execFileSync(executable, [], {
   encoding: 'utf8', timeout: 10000, windowsHide: true,
 });
