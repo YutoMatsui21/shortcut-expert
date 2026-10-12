@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, Tray } from 'electron';
 import { Coach } from '../core/coach';
+import { SerialQueue } from '../core/serial-queue';
 import { JsonRepository } from './repository';
 import { localDate } from '../core/dates';
 import { operations, type Snapshot } from '../shared/coach';
@@ -15,7 +16,7 @@ export function showCoach(): void { window?.show(); window?.focus(); }
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   let tray: Tray | null = null;
   let errorStop = false;
-  let control: Promise<unknown> = Promise.resolve();
+  const control = new SerialQueue();
   let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
   const observer = new ObserverClient((candidate) => { void coach.accept(candidate); }, () => {
@@ -37,12 +38,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   };
   const coach = new Coach({ repository: new JsonRepository(app.getPath('userData')), date: localDate,
     now: () => performance.now(), notify: (value) => notice.show(value), changed: publish });
-  const serialize = <T>(task: () => Promise<T>): Promise<T> => {
-    const result = control.then(task); control = result.catch(() => {}); return result;
-  };
   const startObservation = async () => {
-    if (coach.snapshot().observing || coach.snapshot().pendingSave) return;
-    if (coach.snapshot().error) await coach.initialize();
+    const snapshot = coach.snapshot();
+    if (snapshot.observing || snapshot.pendingSave) return;
+    if (snapshot.error) await coach.initialize();
     if (coach.snapshot().error) return;
     try { const generation = await observer.start(); errorStop = false; coach.begin(generation); publish(coach.snapshot()); }
     catch (error) { coach.fault(error instanceof Error && error.message === 'arranged-api-unavailable'
@@ -54,7 +53,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     try { await observer.stop(); }
     catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
   };
-  const command = (value: string) => serialize(async () => {
+  const command = (value: string) => control.run(async () => {
     switch (value) {
       case 'pause-notifications': coach.pauseNotifications(true); notice.dismiss(); break;
       case 'resume-notifications': coach.pauseNotifications(false); break;
@@ -91,11 +90,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   ipcMain.handle('coach:set-muted', (event, operation: unknown, muted: unknown) => {
     sender(event); const supported = operations.find((op) => op.id === operation);
     if (!supported || typeof muted !== 'boolean') throw new Error('Invalid setting.');
-    return serialize(async () => { await coach.setMuted(supported.id, muted); if (muted) notice.dismiss(); return coach.snapshot(); });
+    return control.run(async () => { await coach.setMuted(supported.id, muted); if (muted) notice.dismiss(); return coach.snapshot(); });
   });
   ipcMain.handle('coach:delete', (event) => {
     sender(event);
-    return serialize(async () => {
+    return control.run(async () => {
       if (!window) return coach.snapshot();
       const result = await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
         detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
@@ -121,7 +120,8 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     tray = new Tray(nativeImage.createFromBitmap(pixels, { width: 16, height: 16 }));
     tray.on('double-click', showCoach);
-    if (!coach.snapshot().settings.opened || coach.snapshot().error) { showCoach(); await coach.opened(); }
+    const snapshot = coach.snapshot();
+    if (!snapshot.settings.opened || snapshot.error) { showCoach(); await coach.opened(); }
   }
   await startObservation(); publish(coach.snapshot());
   const ticker = setInterval(() => {

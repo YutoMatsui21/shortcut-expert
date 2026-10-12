@@ -26,6 +26,17 @@
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
 - 責務や依存方向を変更した場合は、この節を同じ変更内で更新する。
 
+### 関数・コメントの方針
+
+- 長い条件式は業務上の意味が分かる関数名へ分け、早期returnで前提を示す。判定順序・短絡評価・副作用は維持する。
+- 重複する直列実行は`SerialQueue`を使い、Coach・Main制御・保存はそれぞれ独立したキューを持つ。失敗は呼出し元へ返し、後続処理は続ける。
+- 外部データは小さな型ガードで段階的に検証し、型の絞り込みを使う。キャストで検証を代用しない。
+- OS定数はNativeMethods、アプリ固有の時間・距離は利用箇所に名前を付けて置く。
+- コメントはコードから読み取れない理由・制約・寿命を書く。処理や型の言い換えは避ける。
+- 抽象化は実際の重複や差し替え需要に合わせる。性能改善は不要な計算の削減から始め、効果を主張する場合は計測する。
+
+根拠：[条件式の分解](https://refactoring.com/catalog/decomposeConditional.html)、[必要になってから抽象化する方針](https://martinfowler.com/bliki/Yagni.html)、[TypeScriptのコメント](https://google.github.io/styleguide/tsguide.html#comments-and-documentation)・[型アサーション](https://google.github.io/styleguide/tsguide.html#type-and-non-nullability-assertions)、[C#のコメント規約](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions#comment-style)。
+
 ### 確認と検証物
 
 - 判定・集計・保存は関連する自動試験で確認する。helper変更は再ビルドとnative試験、画面・IPC・起動の変更は関連するスモーク試験、同梱経路の変更は同梱版でも確認する。コマンドは[README](../README.md#開発確認)と[package.json](../package.json)を参照する。
@@ -36,6 +47,15 @@
 
 全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。今回は独立した反復作業の手順を追加しないため、Skillや配下のAGENTS.mdは作らない。
 根拠：[AGENTS.md公式資料](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Skills公式資料](https://learn.chatgpt.com/docs/build-skills)、[指示を簡潔に保つ方針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)。
+
+## 関数内の整理結果（2026-10-12）
+
+通知条件を名前付きの処理へ分離し、保存文書の検証を段階化した。直列キューを共通化し、Win32定数とアプリ固有の閾値を命名した。日付境界の重複計算と同じ同期区間のsnapshot複製を減らし、判断理由とdelegateの寿命にコメントを付けた。保存形式・IPC・helperプロトコル・表示・判定条件は維持している。
+
+- 型検査・helper再ビルド・60件のテスト（サブテスト含む）・Electronビルドと同梱版生成が成功。通知期限と間隔、表示見送り、保存中の停止、除外候補のsequence、保存原本保持、キューの失敗後の継続を確認した。
+- 通常・開発・同梱版の人工候補スモークで集計、重複／unknown除外、保存、2画面、フォーカス不変、通知消去、観測終了を確認。規約と計画への適合を別々にレビューし、指摘事項はなかった。
+
+同梱版は`release/local-refactor/win-unpacked/Window Shortcut Coach.exe`。実入力精度・実画面の全画面判定・速度の差は今回測定していない。
 
 ## 責務分離の実施結果（2026-10-11）
 

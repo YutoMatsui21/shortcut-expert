@@ -8,7 +8,7 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 ## 起動
 
-最新の整理版は`release/architecture-refactor/win-unpacked/Window Shortcut Coach.exe`。旧版をアプリ内またはトレイの「終了」で閉じてから起動する。画面の×はトレイへ閉じる動作で、記録を継続する。通常の保存先は共通なので記録・設定を引き継ぐ。利用側にNode.jsや.NET SDKの別導入は不要。
+最新の整理版は`release/local-refactor/win-unpacked/Window Shortcut Coach.exe`。旧版をアプリ内またはトレイの「終了」で閉じてから起動する。画面の×はトレイへ閉じる動作で、記録を継続する。通常の保存先は共通なので記録・設定を引き継ぐ。利用側にNode.jsや.NET SDKの別導入は不要。
 
 通常権限のChrome／Obsidian／VS Code／ChatGPTを候補とし、標準最大化ボタン、タイトルバーのダブルクリック、Win＋↑と最大化結果の一致を確認する。管理者アプリ、独自ボタン、キー変更、remote環境、全4アプリの認識精度は保証しない。スナップからの最大化も集計するが、同等キー未確認のためマウス操作には案内しない。
 
@@ -37,15 +37,15 @@ npm.cmd run smoke
 npm.cmd run smoke:dev
 npm.cmd run package:dir
 npm.cmd run smoke:packaged
-node .\scripts\smoke.mjs --packaged --real-display --package-dir release/architecture-refactor
+node .\scripts\smoke.mjs --packaged --real-display --package-dir release/local-refactor
 ```
 
-`test`はhelperをビルドして18件を確認。`smoke`は隔離データの人工mouse1／key1を使い、helper→判定→保存→React→通知→解除・終了を確認する。fixture中のhookは実入力payloadを読まない。数値1／1はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
+`test`はhelperをビルドし、判定・集計・保存形式・通知条件・直列実行・helperの開始終了を確認する。`smoke`は隔離データの人工mouse1／key1を使い、helper→判定→保存→React→通知→解除・終了を確認する。fixture中のhookは実入力payloadを読まない。数値1／1はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
 
 `package:dir`は`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は終了するか、別の出力先を指定する。
 
 ```powershell
-npm.cmd run package:dir -- --config.directories.output=release/architecture-refactor
+npm.cmd run package:dir -- --config.directories.output=release/local-refactor
 ```
 
 原本probeは`validation/probes`のソースから再ビルドする。[再現手順](docs/research.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。

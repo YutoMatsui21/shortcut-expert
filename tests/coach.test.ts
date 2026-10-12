@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Coach } from '../src/core/coach.ts';
-import type { Counts, Settings, Candidate } from '../src/shared/coach.ts';
+import { Coach, notificationCooldownElapsed } from '../src/core/coach.ts';
+import type { Counts, Settings, Candidate, Notice } from '../src/shared/coach.ts';
 
 const sample: Candidate = {
   type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1,
@@ -18,18 +18,88 @@ function harness() {
   let now = 0;
   let date = '2026-10-11';
   let failSave = false;
-  const notices: unknown[] = [];
+  let showNotice = true;
+  const notices: Notice[] = [];
   const repository = {
     load: async () => ({ counts: structuredClone(counts), settings: structuredClone(settings) }),
     saveCounts: async (next: Counts) => { if (failSave) throw new Error('disk'); counts = structuredClone(next); },
     saveSettings: async (next: Settings) => { settings = structuredClone(next); }
   };
   const coach = new Coach({ repository, date: () => date, now: () => now,
-    notify: async (notice) => { notices.push(notice); return true; }, changed: () => {} });
+    notify: async (notice) => { notices.push(notice); return showNotice; }, changed: () => {} });
   return { coach, notices, saved: () => counts, repository,
     clock: (value: number) => { now = value; }, date: (value: string) => { date = value; },
-    fail: (value: boolean) => { failSave = value; } };
+    fail: (value: boolean) => { failSave = value; }, showNotice: (value: boolean) => { showNotice = value; } };
 }
+
+for (const delay of [1999, 2000, 2001]) {
+  test(`通知候補は受信から${delay}msで期限を判定し、集計は保持する`, async () => {
+    const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+    const save = h.repository.saveCounts;
+    h.repository.saveCounts = async (value) => { h.clock(delay); await save(value); };
+    await h.coach.accept(sample);
+    assert.deepEqual(h.saved(), { '2026-10-11': { W03: { mouse: 1, key: 0 } } });
+    assert.equal(h.notices.length, delay < 2000 ? 1 : 0);
+    if (h.notices[0]) assert.equal(h.notices[0].expiresAt, 2000);
+  });
+}
+
+test('全体10秒と操作別60秒の通知間隔はそれぞれ境界を含む', () => {
+  for (const [now, lastNotice, lastOperation, expected] of [
+    [9999, 0, -Infinity, false], [10_000, 0, -Infinity, true], [10_001, 0, -Infinity, true],
+    [59_999, -Infinity, 0, false], [60_000, -Infinity, 0, true], [60_001, -Infinity, 0, true],
+    [60_000, 50_001, 0, false], [60_000, 50_000, 1, false], [60_000, 50_000, 0, true]
+  ] as const) assert.equal(notificationCooldownElapsed(now, lastNotice, lastOperation), expected);
+});
+
+test('同じ操作の通知は60秒直前に抑制し、60秒ちょうどに再表示する', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  await h.coach.accept(sample);
+  h.clock(59_999); await h.coach.accept({ ...sample, sequence: 2 });
+  assert.equal(h.notices.length, 1);
+  h.clock(60_000); await h.coach.accept({ ...sample, sequence: 3 });
+  assert.equal(h.notices.length, 2);
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 3);
+});
+
+test('表示が見送られた通知は間隔を進めず、次の候補で再表示できる', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  h.showNotice(false); await h.coach.accept(sample);
+  h.showNotice(true); h.clock(1); await h.coach.accept({ ...sample, sequence: 2 });
+  h.clock(2); await h.coach.accept({ ...sample, sequence: 3 });
+  assert.equal(h.notices.length, 2);
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 3);
+});
+
+test('除外した候補のsequenceも消費し、同じIDの別内容は受理しない', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  await h.coach.accept({ ...sample, origin: 'unknown' });
+  await h.coach.accept(sample);
+  assert.deepEqual(h.saved(), {});
+  await h.coach.accept({ ...sample, sequence: 2 });
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+});
+
+test('保存途中の停止は集計を完了し、通知せず、新しい世代の候補を受理する', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  const save = h.repository.saveCounts;
+  let release!: () => void;
+  let started!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  const saving = new Promise<void>((resolve) => { started = resolve; });
+  h.repository.saveCounts = async (value) => { started(); await blocked; await save(value); };
+  const accepted = h.coach.accept(sample);
+  await saving;
+  assert.equal(h.coach.snapshot().pendingSave, true);
+  h.coach.stop(); release(); await accepted;
+  assert.equal(h.notices.length, 0);
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+  h.coach.begin(2);
+  await h.coach.accept({ ...sample, sequence: 2 });
+  await h.coach.accept({ ...sample, generation: 2 });
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 2);
+  assert.equal(h.notices.length, 1);
+});
 
 test('同じ観測は1回だけ保存し、mouseは通知、keyは数値だけ更新する', async () => {
   const h = harness(); await h.coach.initialize(); h.coach.begin(1);
