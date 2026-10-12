@@ -36,6 +36,7 @@ export class Coach {
   private lastNotice = -Infinity;
   private lastOperation = new Map<OperationId, number>();
   private error: string | null = null;
+  private observerError: string | null = null;
   private pendingSave = false;
   private readonly queue = new SerialQueue();
   private pendingSettings: Settings | null = null;
@@ -51,6 +52,7 @@ export class Coach {
   }
   async initialize(): Promise<void> {
     this.error = null;
+    this.observerError = null;
     try {
       const loaded = await this.dependencies.repository.load();
       this.counts = loaded.counts;
@@ -69,14 +71,14 @@ export class Coach {
           await this.dependencies.repository.saveSettings(this.pendingSettings);
           this.settings = this.pendingSettings;
           this.pendingSettings = null;
-          this.error = null;
+          if (!this.pendingSave) this.error = null;
         } catch { this.error = '設定を保存できません。再試行してください。'; }
       }
       this.dependencies.changed(this.snapshot());
     });
   }
   begin(generation: number): void {
-    if (this.error || this.pendingSave || this.pendingSettings) return;
+    if (this.error || this.observerError || this.pendingSave || this.pendingSettings) return;
     this.generation = generation;
     this.sequence = 0;
     this.observing = true;
@@ -87,11 +89,12 @@ export class Coach {
     this.dependencies.changed(this.snapshot());
   }
   pauseNotifications(paused: boolean): void {
+    if (!this.observing) return;
     this.notificationsPaused = paused;
     this.dependencies.changed(this.snapshot());
   }
   fault(message: string): void {
-    this.error = message;
+    this.observerError = message;
     this.stop();
   }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
@@ -103,6 +106,8 @@ export class Coach {
       try {
         await this.dependencies.repository.saveSettings(next);
         this.settings = next;
+        this.pendingSettings = null;
+        if (!this.pendingSave && this.error === '設定を保存できません。再試行してください。') this.error = null;
       } catch {
         this.pendingSettings = next;
         this.error = '設定を保存できません。再試行してください。';
@@ -114,12 +119,13 @@ export class Coach {
   opened(): Promise<void> {
     return this.queue.run(async () => {
       if (this.settings.opened) return;
+      const next = { ...this.settings, opened: true };
       try {
-        const next = { ...this.settings, opened: true };
         await this.dependencies.repository.saveSettings(next);
         this.settings = next;
       } catch {
-        this.error = '設定を保存できません。';
+        this.pendingSettings = next;
+        this.error = '設定を保存できません。再試行してください。';
         this.stop();
       }
     });
@@ -192,6 +198,6 @@ export class Coach {
   }
   snapshot(): Snapshot {
     return { counts: structuredClone(this.counts), settings: structuredClone(this.settings), observing: this.observing,
-      notificationsPaused: this.notificationsPaused, error: this.error, pendingSave: this.pendingSave || this.pendingSettings !== null };
+      notificationsPaused: this.notificationsPaused, error: this.observerError ?? this.error, pendingSave: this.pendingSave || this.pendingSettings !== null };
   }
 }

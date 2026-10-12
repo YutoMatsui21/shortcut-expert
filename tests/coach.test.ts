@@ -32,6 +32,115 @@ function harness() {
     fail: (value: boolean) => { failSave = value; }, showNotice: (value: boolean) => { showNotice = value; } };
 }
 
+test('設定保存失敗後の最新の正常保存を再試行で古い値へ戻さない', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  const save = h.repository.saveSettings;
+  h.repository.saveSettings = async () => { throw new Error('settings-disk'); };
+  await h.coach.setMuted('W03', true);
+  assert.equal(h.coach.snapshot().pendingSave, true);
+  assert.equal(h.coach.snapshot().observing, false);
+  h.repository.saveSettings = save;
+  await h.coach.setMuted('W03', true);
+  await h.coach.setMuted('W03', false);
+  await h.coach.retrySave();
+  assert.deepEqual((await h.repository.load()).settings.muted, []);
+  assert.equal(h.coach.snapshot().pendingSave, false);
+  assert.equal(h.coach.snapshot().error, null);
+});
+
+test('設定だけ復旧しても未保存の記録エラーと停止状態を残す', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  h.fail(true); await h.coach.accept(sample);
+  const save = h.repository.saveSettings;
+  h.repository.saveSettings = async () => { throw new Error('settings-disk'); };
+  await h.coach.setMuted('W03', true);
+  h.repository.saveSettings = save;
+  await h.coach.retrySave();
+  const state = h.coach.snapshot();
+  assert.equal(state.pendingSave, true);
+  assert.equal(state.observing, false);
+  assert.match(state.error ?? '', /記録を保存/);
+  assert.deepEqual(state.settings.muted, ['W03']);
+  h.fail(false); await h.coach.retrySave(); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().error, null);
+  assert.equal(h.coach.snapshot().observing, true);
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+});
+
+test('初回表示の設定保存失敗を未保存として示し再試行で保存する', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  const save = h.repository.saveSettings;
+  h.repository.saveSettings = async () => { throw new Error('settings-disk'); };
+  await h.coach.opened();
+  assert.equal(h.coach.snapshot().settings.opened, false);
+  assert.equal(h.coach.snapshot().pendingSave, true);
+  assert.equal(h.coach.snapshot().observing, false);
+  h.repository.saveSettings = save;
+  await h.coach.retrySave();
+  assert.equal((await h.repository.load()).settings.opened, true);
+  assert.equal(h.coach.snapshot().pendingSave, false);
+});
+
+test('全停止中に通知停止設定を変えず再開後も元の状態を保つ', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  h.coach.pauseNotifications(true); h.coach.stop();
+  h.coach.pauseNotifications(false); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().notificationsPaused, true);
+  await h.coach.accept({ ...sample, generation: 2 });
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+  assert.equal(h.notices.length, 0);
+});
+
+test('保存中の全削除後に旧世代の候補と保留保存で記録を復活させない', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  await h.coach.setMuted('W03', true);
+  const save = h.repository.saveCounts;
+  let release!: () => void;
+  let started!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  const saving = new Promise<void>((resolve) => { started = resolve; });
+  h.repository.saveCounts = async (counts) => { started(); await blocked; await save(counts); };
+  const accepted = h.coach.accept(sample); await saving;
+  const deleted = h.coach.deleteCounts();
+  const old = h.coach.accept({ ...sample, sequence: 2 });
+  release(); await Promise.all([accepted, deleted, old]);
+  assert.deepEqual(h.saved(), {});
+  assert.deepEqual(h.coach.snapshot().settings.muted, ['W03']);
+  h.coach.begin(3); await h.coach.accept({ ...sample, generation: 3 });
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+});
+
+test('全削除の保存失敗では停止と未保存を維持し復旧後も設定を残す', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  await h.coach.accept(sample); await h.coach.setMuted('W03', true);
+  h.fail(true); await h.coach.deleteCounts(); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().observing, false);
+  assert.equal(h.coach.snapshot().pendingSave, true);
+  assert.equal(h.saved()['2026-10-11'].W03?.mouse, 1);
+  h.fail(false); await h.coach.retrySave();
+  assert.deepEqual(h.saved(), {}); assert.deepEqual(h.coach.snapshot().settings.muted, ['W03']);
+});
+
+test('深夜をまたいで届いた候補は操作完了日のみに計上する', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1); h.date('2026-10-12');
+  await h.coach.accept(sample);
+  await h.coach.accept({ ...sample, sequence: 2, date: '2026-10-12', origin: 'key', route: 'win-up' });
+  await h.coach.accept({ ...sample, sequence: 3, date: '2026-10-13' });
+  assert.deepEqual(h.saved(), {
+    '2026-10-11': { W03: { mouse: 1, key: 0 } }, '2026-10-12': { W03: { mouse: 0, key: 1 } }
+  });
+});
+
+test('保留設定の復旧がhelper故障状態を解除しない', async () => {
+  const h = harness(); await h.coach.initialize(); h.coach.begin(1);
+  const save = h.repository.saveSettings;
+  h.repository.saveSettings = async () => { throw new Error('fixture-settings'); };
+  await h.coach.setMuted('W03', true); h.coach.fault('Windowsの観測が停止しました。');
+  h.repository.saveSettings = save; await h.coach.retrySave(); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().observing, false);
+  assert.match(h.coach.snapshot().error ?? '', /Windows/);
+});
+
 for (const delay of [1999, 2000, 2001]) {
   test(`通知候補は受信から${delay}msで期限を判定し、集計は保持する`, async () => {
     const h = harness(); await h.coach.initialize(); h.coach.begin(1);

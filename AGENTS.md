@@ -5,6 +5,7 @@
 - 機能追加・リファクタ・責務配置のレビューでは、[現行アーキテクチャ](docs/design.md#architecture)を参照し、処理を担当Moduleへ置く。
 - Windowsの窓操作を効率化する目的・動作要件・公開前の受け入れ条件は[要件書](docs/mvp-requirements.md)、操作の成立条件は[技術判断](docs/research.md#operations)を参照する。習得数自体を目的にしない。
 - 実行手順・変更範囲に応じた検証は[README](README.md#開発確認)と[package.json](package.json)、.NET SDKの版は[global.json](global.json)を参照する。
+- テスト追加・バグ修正・CI変更では[テスト設計Skill](skills/test-shortcut-coach/SKILL.md)を読み、変更した本番経路に対応する検証を選ぶ。
 - 必要な資料だけ読み、過去の検証結果や設計上の仮説を現行実装の確認済み事実として扱わない。
 
 ## 変更と安全性

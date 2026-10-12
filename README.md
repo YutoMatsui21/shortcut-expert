@@ -2,7 +2,9 @@
 
 Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。現在は最大化のみ実装済み。通常窓のマウス最大化でWin＋↑を案内し、日別のmouse/key回数を記録する。実アプリの認識率と公開前条件は未合格。
 
-文書は4つ：本書は使い方、[mvp-requirements.md](docs/mvp-requirements.md)は要件・工程記録、[design.md](docs/design.md)は設計・実装・確認結果、[research.md](docs/research.md)は調査根拠・実測・probe再現。
+製品の正本は4つ：本書は使い方、[mvp-requirements.md](docs/mvp-requirements.md)は要件・工程記録、[design.md](docs/design.md)は設計・実装・確認結果、[research.md](docs/research.md)は調査根拠・実測・probe再現。
+
+品質保証の調査（2026-10-12）：[テスト設計・CI等のベストプラクティス](docs/quality-best-practices.md)、[現行リポジトリの不足・優先度・検証結果](docs/quality-gap-analysis.md)。改善案であり、製品の要件や公開基準は変更していない。
 
 開発方針は[AGENTS.md](AGENTS.md)と[現行アーキテクチャ](docs/design.md#architecture)を参照。
 
@@ -32,7 +34,9 @@ npm.cmd run dev
 .NET SDKはglobal.jsonの版を`.tools/dotnet`へ導入する。システムPATHへ追加しない。初回SDK／NuGet／npm取得にはネットワークが必要。helperはWinForms／Win32、self-containedでpublishする。ビルドは成功したpublishで同梱フォルダーを置換し、不要になった依存DLLを残さない。
 
 ```powershell
+npm.cmd run test:unit
 npm.cmd test
+npm.cmd run test:coverage
 npm.cmd run smoke
 npm.cmd run smoke:dev
 npm.cmd run package:dir
@@ -40,12 +44,18 @@ npm.cmd run smoke:packaged
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/local-refactor
 ```
 
-`test`はhelperをビルドし、判定・集計・保存形式・通知条件・直列実行・helperの開始終了を確認する。`smoke`は隔離データの人工mouse1／key1を使い、helper→判定→保存→React→通知→解除・終了を確認する。fixture中のhookは実入力payloadを読まない。数値1／1はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
+`test:unit`はhelperのpublishを待たず、判定・日付・集計・保存失敗・通知・通信を隔離fixtureで確認する。`test:native`はhelperを再buildし、本番C#候補生成/全画面policyの人工事象試験、C#→TS契約、hook開始終了を確認する。`test`は両方を順に実行する。Node 24のexperimental module mockはElectron/子プロセス/FS境界にのみ使う。`test:coverage`は速いsuiteのimport済みNode対象だけを計測し、未import・Renderer・C#を含む全体率ではない。
 
-`package:dir`は`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は終了するか、別の出力先を指定する。
+`smoke`は隔離データの人工mouse1／key1からhelper→判定→保存→React→通知へ接続し、実UIの通知停止/全停止/再開/mute/過去日選択、削除取消/確定、設定再読込、不正IPC拒否、解除・終了も確認する。削除確認のOS dialogだけ試験側の返答へ置換する。fixture中のhookは実入力payloadを読まない。数値はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
+
+テスト追加の選び方は[Skill](skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](docs/design.md#test-design)。CI定義は[quality.yml](.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。
+
+`package:dir`は直前にbuildした内容から`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は別の出力先を指定し、同じ出力先のexeを検証する。
 
 ```powershell
-npm.cmd run package:dir -- --config.directories.output=release/local-refactor
+npm.cmd run build
+npm.cmd run package:dir -- --config.directories.output=release/quality-tests
+node .\scripts\smoke.mjs --packaged --package-dir release/quality-tests
 ```
 
 原本probeは`validation/probes`のソースから再ビルドする。[再現手順](docs/research.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。

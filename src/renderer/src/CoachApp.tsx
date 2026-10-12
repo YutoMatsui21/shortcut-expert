@@ -31,7 +31,7 @@ export function CoachApp() {
       <span className={'badge ' + (observing ? 'running' : 'stopped')}>{observing ? paused ? '記録中 · 通知停止' : '記録中' : '全停止'}</span></header>
     <p className="intro">現在の記録対象は最大化の標準経路です。成立条件を確認できた観測だけを数えます。</p>
     <div className="controls">
-      <button disabled={busy || !snapshot} onClick={() => command(paused ? 'resume-notifications' : 'pause-notifications')}>{paused ? '通知を再開' : '通知を停止'}</button>
+      <button disabled={busy || !snapshot || !observing} onClick={() => command(paused ? 'resume-notifications' : 'pause-notifications')}>{paused ? '通知を再開' : '通知を停止'}</button>
       <button className="secondary" disabled={busy || !snapshot || (!observing && snapshot.pendingSave)} onClick={() => command(observing ? 'stop' : 'start')}>{observing ? '計測を全停止' : '計測を再開'}</button>
       <span>画面を閉じても記録を続けます。</span>
     </div>

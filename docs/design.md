@@ -21,7 +21,7 @@
 
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
-- C#のWin32宣言はNativeMethods、通信はObserverHost、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フックと候補生成はObserverに置く。
+- C#のWin32宣言はNativeMethods、通信はObserverHost、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
 - 責務や依存方向を変更した場合は、この節を同じ変更内で更新する。
@@ -45,8 +45,41 @@
 
 ### 指示の配置
 
-全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。今回は独立した反復作業の手順を追加しないため、Skillや配下のAGENTS.mdは作らない。
+全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
 根拠：[AGENTS.md公式資料](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Skills公式資料](https://learn.chatgpt.com/docs/build-skills)、[指示を簡潔に保つ方針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)。
+
+<a id="test-design"></a>
+
+## テスト設計
+
+目的は誤案内・二重集計・保存喪失・入力阻害を検知すること。試験数やcoverageを公開合格の代わりにしない。追加時は利用者に影響する入出力・副作用を確認し、不具合は修正前に失敗する操作列を残す。期待値は要件から与え、実装のコピーを正解にしない。
+
+| 層 | 本番の検証対象 | 隔離する境界・限界 |
+| --- | --- | --- |
+| 速いNode試験 | Coreの判定・時刻・状態列、Repository、ObserverClient、NotificationWindow | Electron/子プロセス/FS失敗を境界でfake。実入力・実画面の証拠ではない |
+| C# policy | 本番CandidateTrackerとDisplayPolicyをリンクした`tests/native-policy`、serialize出力→TS検証・判定 | 人工事象・状態。Win32配送・アプリ精度を保証しない。assertはC#で実行し、Nodeサブテストに水増ししない |
+| 実helper結合 | hook開始解除、start/stop/世代/EOF/shutdown | fixtureで入力payloadを読まない。callbackのOS取得は別確認 |
+| Electron smoke | 実Main/Preload/React、通知、画面操作、IPC拒否、設定再読込、削除取消/確定、解除・終了 | 人工候補・専用userData。削除確認だけOS dialogの返答を置換。通常tray・インストーラー・実認識精度は別 |
+| 同梱smoke | 同じbuildから生成したexe・preload・renderer・helper | 開発版と同じ隔離fixture。SDKなしでの導入とNSISは別 |
+| 実機受入 | Windows 11通常権限、対象app・1〜2画面、同等キー・入力精度・通常60分・導入と削除 | 本人の明示的な同意後に実施し、成果物版/hashと実施条件を残す。既存MVP基準を維持 |
+
+Node試験は`tests/*.test.ts`。`native`接頭辞はSDK/helperが必要なsuite、それ以外は速いsuiteへ自動収集する。コマンド・対象環境はREADMEとpackage.jsonを正本とする。zero discoveryを失敗にし、Nodeのmodule mockは外部境界だけに使う。実処理の失敗は握りつぶさず、native suiteを非Windowsでskipして合格としない。
+
+非同期競合はdeferredで完了順を指定し、時間境界はfake clockまたは注入時計を使う。保存は隔離directoryで原本bytesと再読込結果、失敗後の復旧を確認する。通知は表示前後・表示中の抑制、世代、focus/click、消去を確認する。C#取得処理を変えた場合、policy試験だけで済ませずhelper再build・結合と必要な同意後の実機確認を選ぶ。
+
+保存失敗後の設定は、後の正常保存を最新値とし古い保留を解消する。設定だけ復旧しても未保存記録とhelper故障を成功状態へ変えない。初回表示flagの保存失敗も保留設定として再試行できる。全停止中の通知flagは保持する。helper通信はrequestId・応答type・世代を照合し、旧プロセスの応答/exitを無視する。stdoutは改行前も上限を確認し、shutdownは応答後のexitを待ち、期限超過では強制終了する。
+
+CIは`.github/workflows/quality.yml`でPR・main・手動実行を対象に、型検査→速い試験→native→build→smoke→同梱生成→同梱smokeを実施する。Windows x64 runner、採用Node/SDK、SHA固定Action、read権限、timeout、古い実行取消を使い、fixture診断だけ短期間保存する。branch protection等の外部設定・実機受入はこのworkflowの成功と別に確認する。
+
+coverageはimportされたNode対象の未確認分岐を探す補助。未importのMain/Renderer・C#を含む製品全体の率とは呼ばない。mutation、長時間性能、OS/DPI matrix、実機アクセシビリティ、installerの自動化は必要性に応じて追加し、現在の受入条件を緩和しない。
+
+### 追加と検証（2026-10-12）
+
+- 保存/設定の失敗後の操作列、削除競合、深夜日付、通信の破損・期限・旧プロセス・EOF/終了、通知の抑制・期限・旧応答を回帰試験に追加。本番CandidateTrackerを人工事象で試験し、C# serialize→TS parser→採用判定も確認した。
+- 設定の旧保留復活、設定復旧による記録/observer故障の隠蔽、初回flag失敗の再試行不足、全停止中の通知flag変更、旧helper/通知の競合、shutdownでexitを待たない問題、改行前の受信上限、窓破棄/別processへのcaption履歴流用を修正。frame単位のIPC送信者検証も追加。
+- Nodeは速い102件＋native5件が成功（サブテスト含む）。C# policyの42ケースはnative suite内で別に実行し、Node件数へ水増ししない。型検査・helper/Electron build、通常と同梱の人工候補smokeが成功。UI制御、削除取消/確定、設定再読込、IPC拒否を確認。最終同梱の確認先は`release/quality-tests`。
+- coverageコマンドも成功。対象はimport済みNodeコードのみ。Skill frontmatterとworkflow YAML、文書のローカル参照を確認した。CIの参照Actionは公式のcommit/input定義を確認しSHA固定したが、GitHub上のworkflowと必須チェック設定は未実行/未確認。
+- Windows実入力の認識率、通常作業60分、混在DPI等の実画面、NSIS導入/再導入/削除、長時間性能、実機アクセシビリティは未確認。公開基準・候補数・通常保存内容を変更せず、実入力観測を行っていない。
 
 ## 関数内の整理結果（2026-10-12）
 

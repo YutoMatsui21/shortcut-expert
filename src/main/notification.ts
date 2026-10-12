@@ -9,9 +9,9 @@ export class NotificationWindow {
   private timer: NodeJS.Timeout | undefined;
   private poll: NodeJS.Timeout | undefined;
   private epoch = 0;
-  private observer: ObserverClient;
+  private observer: Pick<ObserverClient, 'context'>;
   private load: (window: BrowserWindow, mode: string) => Promise<void>;
-  constructor(observer: ObserverClient, load: (window: BrowserWindow, mode: string) => Promise<void>) {
+  constructor(observer: Pick<ObserverClient, 'context'>, load: (window: BrowserWindow, mode: string) => Promise<void>) {
     this.observer = observer; this.load = load;
   }
   current(): Notice | null { return this.notice; }
@@ -53,12 +53,15 @@ export class NotificationWindow {
       let checking = false;
       this.poll = setInterval(async () => {
         if (checking) return; checking = true;
-        try { const value = await this.observer.context(notice.monitor); if (!value.known || value.fullscreen) this.dismiss(); }
-        catch { this.dismiss(); }
+        try {
+          const value = await this.observer.context(notice.monitor);
+          if (epoch === this.epoch && this.window === window && (!value.known || value.fullscreen)) this.dismiss();
+        }
+        catch { if (epoch === this.epoch && this.window === window) this.dismiss(); }
         finally { checking = false; }
       }, 500);
       return true;
-    } catch { this.dismiss(); return false; }
+    } catch { if (epoch === this.epoch) this.dismiss(); return false; }
   }
   private preload(): string { return join(__dirname, '../preload/index.cjs'); }
 }

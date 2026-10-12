@@ -10,7 +10,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
+    "allowJs": true,
     "types": ["node", "vite/client"]
   },
-  "include": ["src", "tests", "electron.vite.config.ts"]
+  "include": ["src", "tests", "scripts", "electron.vite.config.ts"]
 }

@@ -10,7 +10,10 @@
   "scripts": {
     "dev": "electron-vite dev",
     "typecheck": "tsc --noEmit",
-    "test": "npm run helper:build && node --test tests/*.test.ts",
+    "test": "npm run test:unit && npm run test:native",
+    "test:unit": "node scripts/test.mjs unit",
+    "test:native": "npm run helper:build && node scripts/test.mjs native",
+    "test:coverage": "node scripts/test.mjs unit --coverage",
     "helper:build": "node scripts/build-helper.mjs",
     "build": "npm run helper:build && npm run typecheck && electron-vite build",
     "start": "electron-vite preview",

@@ -39,3 +39,17 @@ test('スナップ窓の最大化結果も記録し、未確認の同等キー�
   assert.equal(result?.origin, 'mouse');
   assert.equal(result?.shortcut, null);
 });
+
+for (const app of ['chrome', 'obsidian', 'code', 'chatgpt']) {
+  test(`${app}の最大化はmax button・caption double click・Win+Upの成立条件で判定する`, () => {
+    assert.equal(classify(maximize({ app, route: 'caption-double-click' }))?.shortcut, 'Win + ↑');
+    assert.equal(classify(maximize({ app, origin: 'key', route: 'win-up' }))?.origin, 'key');
+    assert.equal(classify(maximize({ app, inputAgeMs: 1000 }))?.operation, 'W03');
+  });
+}
+
+test('日付とsequenceの境界が不正な候補を数えない', () => {
+  for (const overrides of [{ date: '2026-02-30' }, { sequence: 0 }, { sequence: -1 }, { sequence: 0.5 }, { sequence: NaN }])
+    assert.equal(classify(maximize(overrides)), null);
+  assert.equal(classify(maximize({ monitor: null }))?.monitor, null, '画面不明でも成立した観測の集計は可能');
+});

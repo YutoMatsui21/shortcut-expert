@@ -1,0 +1,74 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-quality:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.11.1
+          cache: npm
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Toolchain
+        run: |
+          New-Item -ItemType Directory -Force .tools/test-results | Out-Null
+          node --version
+          npm.cmd --version
+          dotnet --version
+      - run: npm.cmd ci
+      - name: Types
+        run: npm.cmd run typecheck
+      - name: Fast tests
+        run: |
+          npm.cmd run test:unit 2>&1 | Tee-Object -FilePath .tools/test-results/unit.log
+          exit $LASTEXITCODE
+      - name: Native policy and fixture process tests
+        run: |
+          npm.cmd run test:native 2>&1 | Tee-Object -FilePath .tools/test-results/native.log
+          exit $LASTEXITCODE
+      - name: Build
+        run: npm.cmd run build
+      - name: App UI and IPC smoke (synthetic input only)
+        run: |
+          npm.cmd run smoke 2>&1 | Tee-Object -FilePath .tools/test-results/smoke.log
+          exit $LASTEXITCODE
+      - name: Package the tested build
+        run: npm.cmd run package:dir
+      - name: Packaged UI and IPC smoke
+        run: |
+          npm.cmd run smoke:packaged 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-smoke.log
+          exit $LASTEXITCODE
+      - name: Fixture diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fixture-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .tools/test-results/*.log
+            .tools/tests/coach-*/coach-preview.png
+            .tools/tests/coach-*/notice-preview.png
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 3

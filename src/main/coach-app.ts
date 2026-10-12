@@ -16,6 +16,7 @@ export function showCoach(): void { window?.show(); window?.focus(); }
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   let tray: Tray | null = null;
   let errorStop = false;
+  let fixtureDeleteResponse: number | null = null;
   const control = new SerialQueue();
   let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
@@ -29,7 +30,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
       tray.setContextMenu(Menu.buildFromTemplate([
         { label: '記録を見る', click: showCoach },
-        { label: snapshot.notificationsPaused ? '通知を再開' : '通知を停止', click: () => { void command(snapshot.notificationsPaused ? 'resume-notifications' : 'pause-notifications'); } },
+        { label: snapshot.notificationsPaused ? '通知を再開' : '通知を停止', enabled: snapshot.observing, click: () => { void command(snapshot.notificationsPaused ? 'resume-notifications' : 'pause-notifications'); } },
         { label: snapshot.observing ? '全停止' : '計測を再開', click: () => { void command(snapshot.observing ? 'stop' : 'start'); } },
         { type: 'separator' }, { label: '終了', click: () => { void quit(); } }
       ]));
@@ -76,11 +77,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     quitting = true; await observer.shutdown(); tray?.destroy(); app.quit();
   };
   const sender = (event: Electron.IpcMainInvokeEvent) => {
-    if (event.sender !== window?.webContents) throw new Error('Unknown sender.');
+    if (event.sender !== window?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.');
   };
   ipcMain.handle('coach:get-snapshot', async (event) => { sender(event); await coach.tick(); return coach.snapshot(); });
   ipcMain.handle('coach:get-notice', (event) => {
-    if (!notice.sender(event.sender.id)) throw new Error('Unknown sender.'); return notice.current();
+    if (!notice.sender(event.sender.id) || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.'); return notice.current();
   });
   ipcMain.handle('coach:command', (event, value: unknown) => {
     sender(event);
@@ -96,8 +97,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     sender(event);
     return control.run(async () => {
       if (!window) return coach.snapshot();
-      const result = await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
+      // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
+      const result = fixture && fixtureDeleteResponse !== null ? { response: fixtureDeleteResponse } : await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
         detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
+      fixtureDeleteResponse = null;
       if (result.response !== 1) return coach.snapshot();
       const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
       if (!coach.snapshot().error && resume) await startObservation();
@@ -136,13 +139,17 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     try {
       report = await Promise.race([
         runCoachSmoke({ coach, observer, notice, window,
-          getNotificationWindow: () => previews.notification, directory: app.getPath('userData') }),
+          getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
+          chooseDelete: (response) => { fixtureDeleteResponse = response; } }),
         new Promise<never>((_, reject) => {
           deadline = setTimeout(() => reject(new Error('smoke-timeout')), 25_000);
         })
       ]);
       await stopObservation();
-    } catch { report = undefined; }
+    } catch (error) {
+      report = undefined;
+      console.error('COACH_SMOKE_STAGE_FAILED ' + (error instanceof Error ? error.message : 'unknown'));
+    }
     finally {
       clearTimeout(deadline); clearInterval(ticker);
       coach.stop(); notice.dismiss(); await observer.shutdown(); quitting = true;
