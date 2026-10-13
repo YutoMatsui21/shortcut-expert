@@ -1,18 +1,56 @@
-import type { Candidate, Observation } from '../shared/coach.ts';
+import type { Bounds, Candidate, Observation, OperationId } from '../shared/coach.ts';
 import { validDate } from './dates.ts';
 
 export function classify(candidate: Candidate): Observation | null {
   if (!validDate(candidate.date) || !Number.isSafeInteger(candidate.sequence) || candidate.sequence < 1 ||
       !['chrome', 'obsidian', 'code', 'chatgpt'].includes(candidate.app) ||
-      candidate.operation !== 'maximize' || candidate.before.state !== 'normal' ||
-      candidate.before.arranged === null || candidate.after.state !== 'maximized' ||
       candidate.elevated !== false || candidate.injected || candidate.conflicted || candidate.moving || !candidate.targetMatched ||
       candidate.inputAgeMs < 0 || candidate.inputAgeMs > 1000 ||
-      !((candidate.origin === 'mouse' && ['max-button', 'caption-double-click'].includes(candidate.route)) ||
-        (candidate.origin === 'key' && candidate.route === 'win-up'))) return null;
+      !['mouse', 'key'].includes(candidate.origin)) return null;
+  let operation: OperationId;
+  let shortcut: string | null;
+  const route = (mouse: string[], key: string[]) => candidate.origin === 'mouse'
+    ? mouse.includes(candidate.route) : key.includes(candidate.route);
+  switch (candidate.operation) {
+    case 'maximize':
+      if (candidate.before.state !== 'normal' || candidate.before.arranged === null || candidate.after.state !== 'maximized' ||
+          !route(['max-button', 'caption-double-click'], ['win-up'])) return null;
+      operation = 'W03'; shortcut = candidate.before.arranged ? null : 'Win + ↑'; break;
+    case 'minimize':
+      if (!['normal', 'maximized'].includes(candidate.before.state) || candidate.after.state !== 'minimized' ||
+          !route(['min-button'], ['win-down'])) return null;
+      shortcut = candidate.before.state === 'normal' && candidate.before.arranged === false ? 'Win + ↓' : null;
+      if (candidate.origin === 'key' && shortcut === null) return null;
+      operation = 'W04'; break;
+    case 'restore':
+      if (candidate.before.state !== 'maximized' || candidate.after.state !== 'normal' || candidate.afterArranged !== false ||
+          !route(['max-button', 'caption-double-click'], ['win-down'])) return null;
+      operation = 'W05'; shortcut = 'Win + ↓'; break;
+    case 'close':
+      if (!['normal', 'maximized'].includes(candidate.before.state) || candidate.after.state !== 'closed' ||
+          !route(['close-button'], ['alt-f4'])) return null;
+      operation = 'W11'; shortcut = 'Alt + F4'; break;
+    case 'monitor-move': {
+      const from = candidate.fromMonitor, to = candidate.toMonitor;
+      if (!from || !to || sameMonitor(from, to) || candidate.before.state === 'minimized' ||
+          !['normal', 'maximized'].includes(candidate.before.state) || !['normal', 'maximized'].includes(candidate.after.state) ||
+          !route(['caption-drag'], ['win-shift-left', 'win-shift-right'])) return null;
+      const direction = candidate.moveDirection;
+      if (direction !== undefined && direction !== null && direction !== 'left' && direction !== 'right') return null;
+      if (direction && (direction === 'left' ? to.x >= from.x : to.x <= from.x)) return null;
+      if (candidate.origin === 'key' && direction && candidate.route !== `win-shift-${direction}`) return null;
+      operation = 'W02'; shortcut = direction ? `Win + Shift + ${direction === 'left' ? '←' : '→'}` : null;
+      break;
+    }
+    default: return null;
+  }
   return {
-    id: `${candidate.generation}:${candidate.sequence}`, operation: 'W03',
+    id: `${candidate.generation}:${candidate.sequence}`, operation,
     origin: candidate.origin === 'key' ? 'key' : 'mouse', date: candidate.date,
-    shortcut: candidate.before.arranged ? null : 'Win + ↑', monitor: candidate.monitor
+    shortcut, monitor: candidate.monitor
   };
+}
+
+function sameMonitor(a: Bounds, b: Bounds): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
 }

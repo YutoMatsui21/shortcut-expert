@@ -52,6 +52,19 @@
 
 ## テスト設計
 
+### 操作検出の追加（2026-10-12）
+
+W03に加えW02・W04・W05・W11の条件付き検出を実装し、全11候補へ一覧用キーと条件説明を追加した。UI一覧と、採用結果に応じた通知キーは別に決める。Coreの通知名はSharedの操作定義から取得する。
+
+- NativeMethods／Observerは最小化イベント、最小化／閉鎖のhit test、Win+↓／Win+Shift+左右／Alt+F4、画面情報を取得する。CandidateTrackerが入力と同一窓の前後状態・破棄・ドラッグ終端を照合し、Coreが採用条件と通知キーを決める。最小化・閉鎖後の前面変更を許すが、入力時の前面対象一致は必要。
+- ドラッグの入力→開始は1秒以内。開始時の証拠を終端まで保持し、追加入力・取得失敗・対象process変更・停止で破棄する。途中変化と復元を別計上せず、終端が元画面なら0回。画面構成変更も除外する。方向付き通知は左右・上端一致・非重複の2画面だけ。
+- JSON protocolVersionは1を維持。Candidateに任意の`afterArranged`・`fromMonitor`・`toMonitor`・`moveDirection`を追加しMainで型検証する。旧最大化候補はそのまま受信できる。復元は`afterArranged=false`、画面移動は異なる前後画面が必須。不足時は該当操作を見送る。helperとMainは同じbuildで同梱する。
+- HWND・process・入力時の画面構成はhelper内の一時情報。構成比較に画面矩形だけを使い、title・path・キー生ログは送らない。通常保存のschemaVersion、操作ID、Preload APIは変更せず、既存記録と設定を引き継ぐ。
+
+試験は本番C#→TS契約、Core→通知／集計／隔離保存、Electronの追加4操作mouse/key表示と全11行のキー、fixture通知画面を扱う。実入力精度・混在DPIの実画面・NSIS・通常60分は別の受入試験とする。
+
+検証結果：型検査、unit 109件、native 5件（本番C# policy 61ケースを内部で実行）、helper／Electron buildが成功。通常・開発版・同梱版の隔離fixture smokeが成功し、11行のキー、追加4操作のmouse/key集計・保存、通知画面・focus不変、設定再読込、停止・削除・不正IPC拒否・hook解除を確認した。同梱版は`release/operation-detection/win-unpacked/Window Shortcut Coach.exe`。開発版起動と同梱版生成／起動はsandbox制限による初回失敗後に権限制限の外で再実行した。実入力は観測しておらず、実アプリの認識率・実画面のDPI条件・NSIS導入は未確認。コミット・push・PR作成は行っていない。
+
 目的は誤案内・二重集計・保存喪失・入力阻害を検知すること。試験数やcoverageを公開合格の代わりにしない。追加時は利用者に影響する入出力・副作用を確認し、不具合は修正前に失敗する操作列を残す。期待値は要件から与え、実装のコピーを正解にしない。
 
 | 層 | 本番の検証対象 | 隔離する境界・限界 |

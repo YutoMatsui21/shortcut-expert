@@ -36,6 +36,8 @@ td { font-variant-numeric: tabular-nums; }
 thead th:not(:first-child), td { text-align: right; }
 .upcoming { color: #949a90; }
 .prepared { margin-left: 10px; font-size: 10px; color: #9a9f96; }
+.shortcut { font-size: 12px; }
+.shortcut-condition { display: block; font-size: 10px; color: #738077; margin-top: 4px; }
 .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; }
 input { accent-color: #337b52; }
 .footnote { font-size: 11px; color: #7d8879; margin-bottom: 0; }

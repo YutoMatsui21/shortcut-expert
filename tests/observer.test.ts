@@ -54,6 +54,16 @@ test('候補の検証は必須項目・有限値を確認し余分な内容を�
   assert.equal(candidate(candidateFixture({ monitor: { x: 0, y: 0, width: 0, height: 10 } }))?.monitor, null);
 });
 
+test('追加操作の状態・画面・方向を検証し、窓タイトルなどを転送しない', () => {
+  const move = { ...candidateFixture(), operation: 'monitor-move', afterArranged: false,
+    fromMonitor: { x: -1920, y: 0, width: 1920, height: 1080 },
+    toMonitor: { x: 0, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' };
+  assert.deepEqual(candidate({ ...move, title: 'private', path: 'private' }), move);
+  for (const invalid of [{ afterArranged: 'false' }, { fromMonitor: [] }, { toMonitor: { x: 0, y: 0, width: -1, height: 1080 } },
+    { moveDirection: 'up' }, { toMonitor: { ...move.toMonitor, y: Infinity } }]) assert.equal(candidate({ ...move, ...invalid }), null);
+  assert.equal(candidate({ ...move, moveDirection: null })?.moveDirection, null);
+});
+
 test('停止中・旧世代の候補を無視し新世代だけ転送する', async (t) => {
   const h = harness(t); await h.client.start();
   h.child().send(candidateFixture());

@@ -23,7 +23,7 @@ internal sealed class Observer : IDisposable
         this.emit = emit; this.fixture = fixture;
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
-    internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 4;
+    internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
     internal static bool ArrangedAvailable => isArranged is not null;
     internal static string ForegroundToken => GetForegroundWindow().ToString();
     private static Arranged? LoadArranged()
@@ -44,7 +44,8 @@ internal sealed class Observer : IDisposable
             (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
             (EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND),
             (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
-            (EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY) })
+            (EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY),
+            (EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND) })
         {
             nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
             if (hook != 0) eventHooks.Add(hook);
@@ -75,7 +76,8 @@ internal sealed class Observer : IDisposable
         }
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
-        return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0);
+        return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0,
+            DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout());
     }
     private static bool OrdinaryProcess(uint pid)
     {
@@ -131,14 +133,15 @@ internal sealed class Observer : IDisposable
                 return CallNextHookEx(0, code, message, data);
             }
             bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
-            bool modifiers = GetAsyncKeyState(VK_SHIFT) < 0 || GetAsyncKeyState(VK_CONTROL) < 0 || GetAsyncKeyState(VK_MENU) < 0;
+            bool shift = GetAsyncKeyState(VK_SHIFT) < 0, alt = GetAsyncKeyState(VK_MENU) < 0;
+            bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
             WindowState? before = null;
-            if (key.Key == VK_UP && win && !modifiers && states.TryGetValue(target, out WindowState? cached))
+            if (CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null && states.TryGetValue(target, out WindowState? cached))
             {
                 before = Read(target, cached);
                 if (before is not null) states[target] = before;
             }
-            tracker.Key(target, before, key.Key, win, modifiers, clock.ElapsedMilliseconds, key.Flags);
+            tracker.Key(target, before, key.Key, win, modifiers, clock.ElapsedMilliseconds, key.Flags, shift, alt);
         }
         catch { tracker.ClearInput(); }
         return CallNextHookEx(0, code, message, data);
@@ -148,15 +151,30 @@ internal sealed class Observer : IDisposable
         if (fixture || !Active || window == 0) return;
         try
         {
-            if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF) { states.Remove(window); tracker.Forget(window); return; }
-            if (kind == EVENT_SYSTEM_MOVESIZESTART) { tracker.MoveStart(window); return; }
-            if (kind == EVENT_SYSTEM_MOVESIZEEND) { tracker.MoveEnd(window); Remember(window); return; }
-            if (kind != EVENT_SYSTEM_FOREGROUND && (obj != OBJID_WINDOW || child != CHILDID_SELF)) return;
+            if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
+            {
+                states.TryGetValue(window, out WindowState? closed);
+                object? result = tracker.Close(window, closed, clock.ElapsedMilliseconds, DateTime.Now.ToString("yyyy-MM-dd"));
+                states.Remove(window);
+                if (result is not null) emit(result);
+                return;
+            }
+            if (kind == EVENT_SYSTEM_MOVESIZESTART) { tracker.MoveStart(window, clock.ElapsedMilliseconds); return; }
+            if (kind == EVENT_SYSTEM_MOVESIZEEND)
+            {
+                states.TryGetValue(window, out WindowState? cached);
+                WindowState? end = Read(window, cached);
+                object? result = tracker.FinishMove(window, end, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
+                if (end is not null) states[window] = end;
+                if (result is not null) emit(result);
+                return;
+            }
+            if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&
+                (obj != OBJID_WINDOW || child != CHILDID_SELF)) return;
             states.TryGetValue(window, out WindowState? previous);
             WindowState? after = Read(window, previous);
-            if (after is null) return;
+            if (after is null) { tracker.Forget(window); return; }
             states[window] = after;
-            if (previous is null || previous.Show != SW_SHOWNORMAL || after.Show != SW_SHOWMAXIMIZED) return;
             object? candidate = tracker.Complete(window, previous, after, clock.ElapsedMilliseconds,
                 GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"), DisplayContext.Bounds(window));
             if (candidate is not null) emit(candidate);

@@ -1,4 +1,5 @@
 import type { Candidate, Counts, Notice, Observation, OperationId, Settings, Snapshot } from '../shared/coach.ts';
+import { operations } from '../shared/coach.ts';
 import { classify } from './detector.ts';
 import { cutoffDate, validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
@@ -193,7 +194,9 @@ export class Coach {
     if (this.settings.muted.includes(observation.operation) || observation.origin !== 'mouse' ||
         !observation.monitor || !observation.shortcut) return null;
     if (!notificationCooldownElapsed(now, this.lastNotice, this.lastOperation.get(observation.operation) ?? -Infinity)) return null;
-    return { operation: observation.operation, label: '最大化', shortcut: observation.shortcut,
+    const definition = operations.find((operation) => operation.id === observation.operation);
+    if (!definition?.implemented) return null;
+    return { operation: observation.operation, label: definition.label, shortcut: observation.shortcut,
       monitor: observation.monitor, expiresAt: receivedAt + NOTICE_TTL_MS };
   }
   snapshot(): Snapshot {

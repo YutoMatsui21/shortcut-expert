@@ -23,5 +23,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.equal(observations[0]?.origin, 'mouse');
   assert.equal(observations[0]?.shortcut, 'Win + ↑');
   assert.equal(observations[1]?.origin, 'key');
-  assert.deepEqual(observations.slice(2), [null, null], 'Injected input is not a counted operation');
+  assert.deepEqual(observations.slice(2, 4), [null, null], 'Injected input is not a counted operation');
+  assert.deepEqual(observations.slice(4).map((value: ReturnType<typeof classify>) => [value?.operation, value?.origin]),
+    ['mouse', 'key'].flatMap((origin) => ['W04', 'W05', 'W11', 'W02'].map((id) => [id, origin])));
 });

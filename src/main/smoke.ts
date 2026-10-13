@@ -8,6 +8,8 @@ import type { ObserverClient } from './observer';
 import type { NotificationWindow } from './notification';
 import { JsonRepository } from './repository';
 import { Coach as FreshCoach } from '../core/coach';
+import { classify } from '../core/detector';
+import { operations } from '../shared/coach';
 
 type SmokeContext = {
   coach: Coach;
@@ -57,6 +59,12 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await coach.idle();
   const counts = coach.snapshot().counts[localDate()]?.W03;
   if (counts?.mouse !== 1 || counts.key !== 1) throw new Error('counts');
+  const shortcuts = await window.webContents.executeJavaScript(`Array.from(document.querySelectorAll('tbody tr')).map((row) => ({
+    id: row.getAttribute('data-operation'), text: row.querySelector('.shortcut')?.textContent,
+    disabled: row.querySelector('input')?.disabled, prepared: !!row.querySelector('.prepared') }))`);
+  if (shortcuts.length !== operations.length || operations.some((op, index) => shortcuts[index].id !== op.id ||
+      shortcuts[index].text !== `（${op.shortcut}）` || shortcuts[index].disabled === op.implemented ||
+      shortcuts[index].prepared === op.implemented)) throw new Error('operation-shortcuts');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '1' &&
     document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1'`, 'renderer');
   const notification = getNotificationWindow();
@@ -83,9 +91,40 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-notification-pause');
   await observer.inject({ ...value, sequence: 4, origin: 'key', route: 'win-up' }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.key !== 2 || notice.current()) throw new Error('paused-counting');
+  const additions: { candidate: Candidate; key: string }[] = [
+    { candidate: { ...value, operation: 'minimize', after: { state: 'minimized' }, route: 'min-button' }, key: 'win-down' },
+    { candidate: { ...value, operation: 'restore', before: { state: 'maximized', arranged: false },
+      after: { state: 'normal' }, afterArranged: false }, key: 'win-down' },
+    { candidate: { ...value, operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4' },
+    { candidate: { ...value, operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag', fromMonitor: physical,
+      toMonitor: { ...physical, x: physical.x + physical.width }, moveDirection: 'right' }, key: 'win-shift-right' }
+  ];
+  let addedSequence = 4;
+  for (const entry of additions) {
+    await observer.inject({ ...entry.candidate, sequence: ++addedSequence });
+    await observer.inject({ ...entry.candidate, sequence: ++addedSequence, origin: 'key', route: entry.key });
+    await coach.idle();
+    const result = classify(entry.candidate);
+    if (!result?.shortcut || notice.current()) throw new Error('added-classification');
+    await waitRenderer(window, `document.querySelector('[data-operation="${result.operation}"] [data-kind="mouse"]')?.textContent === '1' &&
+      document.querySelector('[data-operation="${result.operation}"] [data-kind="key"]')?.textContent === '1'`, 'added-renderer');
+    const saved = await new JsonRepository(directory).load();
+    if (saved.counts[localDate()][result.operation]?.key !== 1) throw new Error('added-save');
+    // Fixture notices separately exercise the real display path while the product's cooldown remains intact.
+    const label = operations.find((op) => op.id === result.operation)!.label;
+    const focus = await observer.focusToken();
+    if (!await notice.show({ operation: result.operation, label, shortcut: result.shortcut, monitor: physical,
+      expiresAt: performance.now() + 2000 })) throw new Error('added-notice');
+    const addedWindow = getNotificationWindow();
+    if (!addedWindow) throw new Error('added-notice-window');
+    await waitRenderer(addedWindow, `document.querySelector('.notice strong')?.textContent === ${JSON.stringify(result.shortcut)} &&
+      document.querySelector('.notice-label')?.textContent === ${JSON.stringify(label)}`, 'added-notice-content');
+    if (await observer.focusToken() !== focus || notice.focusable()) throw new Error('added-notice-focus');
+    notice.dismiss();
+  }
   await click(window, '計測を全停止');
   await waitRenderer(window, `document.querySelector('.badge')?.textContent === '全停止'`, 'ui-stop');
-  await observer.inject({ ...value, sequence: 5 }); await coach.idle();
+  await observer.inject({ ...value, sequence: ++addedSequence }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.mouse !== 1) throw new Error('stop-counting');
   await click(window, '計測を再開');
   await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-start');
@@ -122,6 +161,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (Object.keys(coach.snapshot().counts).length) throw new Error('delete-old-generation');
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
-    uiControls: true, deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
+    uiControls: true, operationShortcuts: 11, addedOperations: 4, addedNoticeWindows: true,
+    deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     realDisplayContext: process.argv.includes('--real-display-smoke') };
 }

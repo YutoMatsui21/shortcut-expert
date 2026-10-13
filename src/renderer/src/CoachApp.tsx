@@ -29,7 +29,7 @@ export function CoachApp() {
   return <main className="dashboard">
     <header><div><p className="eyebrow">WINDOW SHORTCUT COACH</p><h1>今日の操作、次はキーで。</h1></div>
       <span className={'badge ' + (observing ? 'running' : 'stopped')}>{observing ? paused ? '記録中 · 通知停止' : '記録中' : '全停止'}</span></header>
-    <p className="intro">現在の記録対象は最大化の標準経路です。成立条件を確認できた観測だけを数えます。</p>
+    <p className="intro">別画面への移動・最大化・最小化・最大化からの復元・閉じる操作を記録します。成立条件を確認できた観測だけを数えます。</p>
     <div className="controls">
       <button disabled={busy || !snapshot || !observing} onClick={() => command(paused ? 'resume-notifications' : 'pause-notifications')}>{paused ? '通知を再開' : '通知を停止'}</button>
       <button className="secondary" disabled={busy || !snapshot || (!observing && snapshot.pendingSave)} onClick={() => command(observing ? 'stop' : 'start')}>{observing ? '計測を全停止' : '計測を再開'}</button>
@@ -44,7 +44,8 @@ export function CoachApp() {
       <div className="totals"><div><span>マウス操作</span><strong>{total.mouse}<small>回</small></strong></div><div><span>キー操作</span><strong>{total.key}<small>回</small></strong></div></div>
       <table><thead><tr><th>操作</th><th>マウス</th><th>キー</th><th>通知</th></tr></thead><tbody>
         {operations.map((op) => <tr key={op.id} data-operation={op.id} className={op.implemented ? '' : 'upcoming'}>
-          <th scope="row">{op.label}{!op.implemented && <span className="prepared">準備中</span>}</th>
+          <th scope="row">{op.label} <span className="shortcut">（{op.shortcut}）</span>{!op.implemented && <span className="prepared">準備中</span>}
+            {op.condition && <small className="shortcut-condition">{op.condition}</small>}</th>
           <td data-kind="mouse">{counts[op.id]?.mouse ?? 0}</td><td data-kind="key">{counts[op.id]?.key ?? 0}</td>
           <td><label className="toggle"><input aria-label={op.label + 'の通知'} type="checkbox" disabled={busy || !snapshot || !op.implemented}
             checked={op.implemented && !snapshot?.settings.muted.includes(op.id)}

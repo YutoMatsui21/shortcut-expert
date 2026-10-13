@@ -9,6 +9,10 @@ export type Candidate = {
   injected: boolean; conflicted: boolean; moving: boolean; elevated: boolean;
   targetMatched: boolean; inputAgeMs: number;
   monitor: Bounds | null;
+  afterArranged?: boolean | null;
+  fromMonitor?: Bounds | null;
+  toMonitor?: Bounds | null;
+  moveDirection?: 'left' | 'right' | null;
 };
 export type Observation = {
   id: string; operation: OperationId; origin: 'mouse' | 'key'; date: string;
@@ -31,16 +35,16 @@ export type CoachBridge = {
   subscribe(listener: (snapshot: Snapshot) => void): () => void;
 };
 
-export const operations: { id: OperationId; label: string; implemented: boolean }[] = [
-  { id: 'W01', label: 'ウィンドウの切替', implemented: false },
-  { id: 'W02', label: '別画面へ移動', implemented: false },
-  { id: 'W03', label: '最大化', implemented: true },
-  { id: 'W04', label: '最小化', implemented: false },
-  { id: 'W05', label: '復元', implemented: false },
-  { id: 'W06', label: '左右半分に配置', implemented: false },
-  { id: 'W07', label: '四隅に配置', implemented: false },
-  { id: 'W08', label: 'スナップレイアウト', implemented: false },
-  { id: 'W09', label: 'デスクトップ表示', implemented: false },
-  { id: 'W10', label: 'タスクビュー', implemented: false },
-  { id: 'W11', label: 'ウィンドウを閉じる', implemented: false }
+export const operations: { id: OperationId; label: string; shortcut: string; condition?: string; implemented: boolean }[] = [
+  { id: 'W01', label: 'ウィンドウの切替', shortcut: 'Alt + Tab', condition: '切替候補を選択', implemented: false },
+  { id: 'W02', label: '別画面へ移動', shortcut: 'Win + Shift + ← / →', implemented: true },
+  { id: 'W03', label: '最大化', shortcut: 'Win + ↑', implemented: true },
+  { id: 'W04', label: '最小化', shortcut: 'Win + ↓', condition: '通常窓。最大化中は復元してから', implemented: true },
+  { id: 'W05', label: '復元', shortcut: 'Win + ↓', condition: '最大化から', implemented: true },
+  { id: 'W06', label: '左右半分に配置', shortcut: 'Win + ← / →', implemented: false },
+  { id: 'W07', label: '四隅に配置', shortcut: 'Win + ← / →、続けて ↑ / ↓', condition: 'Winを押したまま', implemented: false },
+  { id: 'W08', label: 'スナップレイアウト', shortcut: 'Win + Z', implemented: false },
+  { id: 'W09', label: 'デスクトップ表示', shortcut: 'Win + D', implemented: false },
+  { id: 'W10', label: 'タスクビュー', shortcut: 'Win + Tab', implemented: false },
+  { id: 'W11', label: 'ウィンドウを閉じる', shortcut: 'Alt + F4', implemented: true }
 ];

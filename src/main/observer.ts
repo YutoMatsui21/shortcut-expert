@@ -7,6 +7,11 @@ function record(value: unknown): value is Record<string, unknown> { return typeo
 function protocolId(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 0x7fffffff;
 }
+function bounds(value: unknown): Bounds | null {
+  if (!record(value) || !['x', 'y', 'width', 'height'].every((key) => typeof value[key] === 'number' && Number.isFinite(value[key])) ||
+      (value.width as number) <= 0 || (value.height as number) <= 0) return null;
+  return { x: value.x as number, y: value.y as number, width: value.width as number, height: value.height as number };
+}
 const responseTypes: Record<string, string> = {
   start: 'started', stop: 'stopped', shutdown: 'stopped', queryDisplayContext: 'displayContext',
   fixtureCandidate: 'injected', fixtureFocus: 'focus'
@@ -21,6 +26,9 @@ export function candidate(value: unknown): Candidate | null {
       typeof value.origin !== 'string' || !['mouse', 'key', 'unknown'].includes(value.origin) || typeof value.route !== 'string' ||
       !['injected', 'conflicted', 'moving', 'targetMatched', 'elevated'].every((key) => typeof value[key] === 'boolean') ||
       typeof value.inputAgeMs !== 'number' || !Number.isFinite(value.inputAgeMs)) return null;
+  if ('afterArranged' in value && value.afterArranged !== null && typeof value.afterArranged !== 'boolean') return null;
+  if (['fromMonitor', 'toMonitor'].some((key) => key in value && value[key] !== null && bounds(value[key]) === null)) return null;
+  if ('moveDirection' in value && value.moveDirection !== null && !['left', 'right'].includes(value.moveDirection as string)) return null;
   let monitor: Bounds | null = null;
   const rawMonitor = value.monitor;
   if (record(rawMonitor) && ['x', 'y', 'width', 'height'].every((key) => typeof rawMonitor[key] === 'number' && Number.isFinite(rawMonitor[key]))) {
@@ -32,7 +40,11 @@ export function candidate(value: unknown): Candidate | null {
     before: { state: value.before.state, arranged: value.before.arranged }, after: { state: value.after.state },
     origin: value.origin as Candidate['origin'], route: value.route, injected: value.injected as boolean,
     conflicted: value.conflicted as boolean, moving: value.moving as boolean, elevated: value.elevated as boolean, targetMatched: value.targetMatched as boolean,
-    inputAgeMs: value.inputAgeMs, monitor };
+    inputAgeMs: value.inputAgeMs, monitor,
+    ...('afterArranged' in value ? { afterArranged: value.afterArranged as boolean | null } : {}),
+    ...('fromMonitor' in value ? { fromMonitor: bounds(value.fromMonitor) } : {}),
+    ...('toMonitor' in value ? { toMonitor: bounds(value.toMonitor) } : {}),
+    ...('moveDirection' in value ? { moveDirection: value.moveDirection as 'left' | 'right' | null } : {}) };
 }
 
 export class ObserverClient {

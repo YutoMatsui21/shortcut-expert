@@ -1,6 +1,6 @@
 # Window Shortcut Coach（仮称）
 
-Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。現在は最大化のみ実装済み。通常窓のマウス最大化でWin＋↑を案内し、日別のmouse/key回数を記録する。実アプリの認識率と公開前条件は未合格。
+Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。別画面へ移動・最大化・最小化・最大化から復元・閉じるを条件付きで検出し、日別のmouse/key回数を記録する。全11候補の横に参考ショートカットを表示する。実アプリの認識率と公開前条件は未合格。
 
 製品の正本は4つ：本書は使い方、[mvp-requirements.md](docs/mvp-requirements.md)は要件・工程記録、[design.md](docs/design.md)は設計・実装・確認結果、[research.md](docs/research.md)は調査根拠・実測・probe再現。
 
@@ -10,9 +10,13 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 ## 起動
 
-最新の整理版は`release/local-refactor/win-unpacked/Window Shortcut Coach.exe`。旧版をアプリ内またはトレイの「終了」で閉じてから起動する。画面の×はトレイへ閉じる動作で、記録を継続する。通常の保存先は共通なので記録・設定を引き継ぐ。利用側にNode.jsや.NET SDKの別導入は不要。
+最新の操作追加版は`release/operation-detection/win-unpacked/Window Shortcut Coach.exe`。旧版をアプリ内またはトレイの「終了」で閉じてから起動する。画面の×はトレイへ閉じる動作で、記録を継続する。通常の保存先は共通なので記録・設定を引き継ぐ。利用側にNode.jsや.NET SDKの別導入は不要。
 
 通常権限のChrome／Obsidian／VS Code／ChatGPTを候補とし、標準最大化ボタン、タイトルバーのダブルクリック、Win＋↑と最大化結果の一致を確認する。管理者アプリ、独自ボタン、キー変更、remote環境、全4アプリの認識精度は保証しない。スナップからの最大化も集計するが、同等キー未確認のためマウス操作には案内しない。
+
+追加操作も入力と同一窓の結果が一致した場合に記録する。標準最小化ボタン／通常・非スナップ窓のWin＋↓、最大化からの標準復元ボタン・タイトルバーダブルクリック／Win＋↓、前面窓の標準×／Alt＋F4を対象にする。最大化・スナップからマウスで最小化した場合は記録だけ行う。閉じるは窓の破棄を確認し、トレイ格納やタブ閉鎖を数えない。
+
+画面移動はタイトルバーのドラッグ終端、またはWin＋Shift＋左右と移動結果を照合する。長いドラッグも扱い、途中変化・元画面への往復・派生復元は別計上しない。マウスへの方向付きキー案内は左右に並ぶ2画面で方向を確定できる場合だけ。移動中の画面構成変更は見送る。切替・左右／四隅スナップ・スナップレイアウト・デスクトップ表示・タスクビューはキー一覧のみで、検出は準備中。
 
 通知は操作した画面の右下に4秒、全体10秒／同一操作60秒以上の間隔、同時1件。全画面・判別不能では通知を抑制する。通知停止中も記録し、全停止では観測・記録・通知を止める。停止状態は再起動で解除し、操作別通知設定は保持する。自動起動登録なし。
 
@@ -41,7 +45,7 @@ npm.cmd run smoke
 npm.cmd run smoke:dev
 npm.cmd run package:dir
 npm.cmd run smoke:packaged
-node .\scripts\smoke.mjs --packaged --real-display --package-dir release/local-refactor
+node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
 ```
 
 `test:unit`はhelperのpublishを待たず、判定・日付・集計・保存失敗・通知・通信を隔離fixtureで確認する。`test:native`はhelperを再buildし、本番C#候補生成/全画面policyの人工事象試験、C#→TS契約、hook開始終了を確認する。`test`は両方を順に実行する。Node 24のexperimental module mockはElectron/子プロセス/FS境界にのみ使う。`test:coverage`は速いsuiteのimport済みNode対象だけを計測し、未import・Renderer・C#を含む全体率ではない。
@@ -49,6 +53,8 @@ node .\scripts\smoke.mjs --packaged --real-display --package-dir release/local-r
 `smoke`は隔離データの人工mouse1／key1からhelper→判定→保存→React→通知へ接続し、実UIの通知停止/全停止/再開/mute/過去日選択、削除取消/確定、設定再読込、不正IPC拒否、解除・終了も確認する。削除確認のOS dialogだけ試験側の返答へ置換する。fixture中のhookは実入力payloadを読まない。数値はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
 
 テスト追加の選び方は[Skill](skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](docs/design.md#test-design)。CI定義は[quality.yml](.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。
+
+操作追加版のsmokeは全11行のキーと準備中表示、追加4操作それぞれのmouse/key→helper通信→判定→保存→Reactも確認する。追加4操作の通知画面はfixture通知で別途表示確認し、Coreの通知判断はunit試験で確認する。製品の通知間隔は変更しない。
 
 `package:dir`は直前にbuildした内容から`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は別の出力先を指定し、同じ出力先のexeを検証する。
 
