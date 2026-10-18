@@ -7,6 +7,7 @@ internal static class Program
     private static readonly WindowState maximized = normal with { Show = SW_SHOWMAXIMIZED };
     private static readonly List<string> passed = new();
     private static readonly List<object> samples = new();
+    private static readonly List<object> v2Samples = new();
     private static void Check(string name, Action action) { action(); passed.Add(name); }
     private static void Equal<T>(T expected, T actual)
     {
@@ -16,7 +17,7 @@ internal static class Program
     private static JsonElement Complete(CandidateTracker tracker, long at = 135, nint foreground = 11,
         WindowState? before = null, WindowState? after = null) => JsonSerializer.SerializeToElement(
             tracker.Complete(11, before ?? normal, after ?? maximized, at, foreground, "2026-10-11",
-                new { x = -1920, y = 0, width = 1920, height = 1080 }));
+                new MonitorBounds(-1920, 0, 1920, 1080)));
     private static void Mouse(CandidateTracker tracker, int hit = HTMAXBUTTON, long at = 0,
         uint flags = 0, bool modifiers = false, bool foreground = true) =>
         tracker.Mouse(11, normal, hit, new Point { X = -100, Y = 20 }, at, 500, flags, modifiers, foreground);
@@ -87,10 +88,47 @@ internal static class Program
                 Equal("unknown", Complete(tracker, 101, before: replacement, after: replacement with { Show = SW_SHOWMAXIMIZED }).GetProperty("origin").GetString());
             });
             CheckAdditionalOperations();
-            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, globalInputCollected = false }));
+            CheckProtocol();
+            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, globalInputCollected = false }));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine($"Native policy failed after {passed.Count} cases: {error.Message}"); return 1; }
+    }
+    private static void CheckProtocol()
+    {
+        foreach (var sample in samples)
+        {
+            var legacy = JsonSerializer.Deserialize<WindowCandidate>(JsonSerializer.Serialize(sample))!;
+            v2Samples.Add(CandidateProtocol.V2(legacy, legacy.sequence, legacy.sequence));
+        }
+        Check("final emission order is independent from input transaction order", () => {
+            var tracker = Tracker(); Mouse(tracker);
+            var first = (WindowCandidate)tracker.Complete(11, normal, maximized, 100, 11, "2026-10-11", null)!;
+            Mouse(tracker, at: 200);
+            var second = (WindowCandidate)tracker.Complete(11, normal, maximized, 300, 11, "2026-10-11", null)!;
+            var delivered = new List<CandidateEnvelope>();
+            var emitter = new CandidateProtocol(value => delivered.Add((CandidateEnvelope)value));
+            emitter.Start(1, 2); emitter.Complete(second); emitter.Complete(first);
+            Equal(1, delivered[0].sequence); Equal(2, delivered[0].transaction);
+            Equal(2, delivered[1].sequence); Equal(1, delivered[1].transaction);
+            emitter.Stop(); emitter.Complete(first); Equal(2, delivered.Count);
+            emitter.Start(2, 2); emitter.Complete(first); Equal(2, delivered.Count);
+            emitter.Complete(first with { generation = 2 }); Equal(1, delivered[2].sequence);
+        });
+        Check("v2 drag emits only its terminal evidence", () => {
+            var left = normal with { Monitor = new(-1920, 0, 1920, 1080) };
+            var right = left with { Monitor = new(0, 0, 1920, 1080) };
+            var tracker = Tracker(); tracker.Mouse(11, left, HTCAPTION, default, 0, 500, 0, false, true);
+            tracker.MoveStart(11, 100);
+            Equal<object?>(null, tracker.Complete(11, left, maximized, 200, 11, "2026-10-11", null));
+            var end = (WindowCandidate)tracker.FinishMove(11, right, 5000, 11, "2026-10-11")!;
+            Equal(1, end.Transaction); Equal("monitor-move", end.operation);
+        });
+        foreach (Evidence evidence in new Evidence[] {
+            new ShellDisplayEvidence("task-view", null, null, null),
+            new ActivationEvidence(null, null, null, null, "unknown"),
+            new GlobalEvidence("desktop", null, null)
+        }) v2Samples.Add(new CandidateEnvelope("candidate", 2, 1, 1, 1, "2026-10-11", "unknown", "unknown", false, false, evidence));
     }
     private static void CheckAdditionalOperations()
     {

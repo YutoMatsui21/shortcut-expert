@@ -6,7 +6,7 @@ using Point = NativeMethods.Point;
 internal sealed class Observer : IDisposable
 {
     private const uint HitTestTimeoutMs = 10;
-    private readonly Action<object> emit;
+    private readonly CandidateProtocol protocol;
     private readonly bool fixture;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
@@ -20,7 +20,7 @@ internal sealed class Observer : IDisposable
 
     internal Observer(Action<object> emit, bool fixture = false)
     {
-        this.emit = emit; this.fixture = fixture;
+        protocol = new CandidateProtocol(emit); this.fixture = fixture;
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
@@ -32,9 +32,10 @@ internal sealed class Observer : IDisposable
         return user != 0 && NativeLibrary.TryGetExport(user, "IsWindowArranged", out nint address)
             ? Marshal.GetDelegateForFunctionPointer<Arranged>(address) : null;
     }
-    internal void Start(int newGeneration)
+    internal void Start(int newGeneration, int protocolVersion = 1)
     {
         Stop(); tracker.Reset(newGeneration);
+        protocol.Start(newGeneration, protocolVersion);
         if (!fixture && GetSystemMetrics(SM_REMOTESESSION) != 0) throw new InvalidOperationException("remote-session-unsupported");
         if (!fixture) EnumWindows((window, _) => { Remember(window); return true; }, 0);
         nint module = GetModuleHandleW(null);
@@ -54,6 +55,7 @@ internal sealed class Observer : IDisposable
     }
     internal void Stop()
     {
+        protocol.Stop();
         bool released = true;
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
@@ -156,7 +158,7 @@ internal sealed class Observer : IDisposable
                 states.TryGetValue(window, out WindowState? closed);
                 object? result = tracker.Close(window, closed, clock.ElapsedMilliseconds, DateTime.Now.ToString("yyyy-MM-dd"));
                 states.Remove(window);
-                if (result is not null) emit(result);
+                if (result is WindowCandidate evidence) protocol.Complete(evidence);
                 return;
             }
             if (kind == EVENT_SYSTEM_MOVESIZESTART) { tracker.MoveStart(window, clock.ElapsedMilliseconds); return; }
@@ -166,7 +168,7 @@ internal sealed class Observer : IDisposable
                 WindowState? end = Read(window, cached);
                 object? result = tracker.FinishMove(window, end, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
                 if (end is not null) states[window] = end;
-                if (result is not null) emit(result);
+                if (result is WindowCandidate evidence) protocol.Complete(evidence);
                 return;
             }
             if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&
@@ -177,7 +179,7 @@ internal sealed class Observer : IDisposable
             states[window] = after;
             object? candidate = tracker.Complete(window, previous, after, clock.ElapsedMilliseconds,
                 GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"), DisplayContext.Bounds(window));
-            if (candidate is not null) emit(candidate);
+            if (candidate is WindowCandidate evidenceResult) protocol.Complete(evidenceResult);
         }
         catch { tracker.ClearInput(); }
     }

@@ -1,4 +1,13 @@
-import type { Candidate } from '../../src/shared/coach.ts';
+import type { Candidate, CandidateV2 } from '../../src/shared/coach.ts';
+
+export function v2Fixture(legacy = candidateFixture(), transaction = legacy.sequence): CandidateV2 {
+  const { type, protocolVersion, generation, sequence, date, origin, route, injected, conflicted, ...result } = legacy;
+  return { type, protocolVersion: 2, generation, sequence, transaction, date, origin, route, injected, conflicted,
+    evidence: { kind: 'window', profile: 'legacy-window-v1', result: {
+      ...result, afterArranged: result.afterArranged ?? null, fromMonitor: result.fromMonitor ?? null,
+      toMonitor: result.toMonitor ?? null, moveDirection: result.moveDirection ?? null
+    } } };
+}
 
 export function candidateFixture(overrides: Partial<Candidate> = {}): Candidate {
   return {

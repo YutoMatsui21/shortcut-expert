@@ -23,12 +23,7 @@ internal static class DisplayContext
     internal static string Layout() => string.Join(";", Screen.AllScreens.Select(screen => screen.Bounds)
         .OrderBy(bounds => bounds.X).ThenBy(bounds => bounds.Y)
         .Select(bounds => $"{bounds.X},{bounds.Y},{bounds.Width},{bounds.Height}"));
-    internal static object? Bounds(nint window)
-    {
-        var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
-        if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONULL), ref info)) return null;
-        Rect r = info.Monitor; return new { x = r.Left, y = r.Top, width = r.Right - r.Left, height = r.Bottom - r.Top };
-    }
+    internal static MonitorBounds? Bounds(nint window) => Monitor(window);
     internal static object Query(JsonElement bounds, bool diagnostic = false)
     {
         try

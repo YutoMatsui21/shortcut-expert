@@ -18,6 +18,21 @@ export type Observation = {
   id: string; operation: OperationId; origin: 'mouse' | 'key'; date: string;
   shortcut: string | null; monitor: Bounds | null;
 };
+// Protocol v2 expands the transport without asserting new detector capabilities.
+export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
+export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
+  Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
+export type Evidence =
+  | { kind: 'window'; profile: CapabilityProfile; result: WindowEvidenceResult }
+  | { kind: 'shell-display'; profile: 'unverified'; feature: 'task-view' | 'snap-layout'; wasVisible: boolean | null; visible: boolean | null; targetMatched: boolean | null }
+  | { kind: 'activation'; profile: 'unverified'; slot: number | null; appMatched: boolean | null; targetMatched: boolean | null; individualEquivalent: boolean | null; result: 'launched' | 'activated' | 'unknown' }
+  | { kind: 'global'; profile: 'unverified'; feature: 'desktop' | 'minimize-all'; targetsKnown: boolean | null; resultConfirmed: boolean | null };
+export type CandidateV2 = {
+  type: 'candidate'; protocolVersion: 2; generation: number; sequence: number; transaction: number;
+  date: string; origin: 'mouse' | 'key' | 'unknown'; route: string; injected: boolean; conflicted: boolean;
+  evidence: Evidence;
+};
+export type ObserverCandidate = Candidate | CandidateV2;
 export type Counts = Record<string, Partial<Record<OperationId, { mouse: number; key: number }>>>;
 export type Settings = { muted: OperationId[]; opened: boolean };
 export type Snapshot = {

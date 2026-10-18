@@ -58,6 +58,8 @@ node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operati
 
 `test:unit`はhelperのpublishを待たず、判定・日付・集計・保存失敗・通知・通信を隔離fixtureで確認する。`test:native`はhelperを再buildし、本番C#候補生成/全画面policyの人工事象試験、C#→TS契約、hook開始終了を確認する。`test`は両方を順に実行する。Node 24のexperimental module mockはElectron/子プロセス/FS境界にのみ使う。`test:coverage`は速いsuiteのimport済みNode対象だけを計測し、未import・Renderer・C#を含む全体率ではない。
 
+protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配送/差替え/世代/版混在と、`test:native`のC#→v1/v2 JSON→Main parse→Coreを確認する。新helperとMainはv2を選択し、旧helper/Mainのv1経路も残す。同じ観測世代では混在させない。既存5操作の確証条件を維持し、未実証のShell・activation・globalは採用しない。型付き証拠の接続成功を自然入力精度や新操作対応の証明としない。契約の詳細は[設計](docs/design.md#test-design)を参照。
+
 `smoke`は隔離データの人工mouse1／key1からhelper→判定→保存→React→通知へ接続し、実UIの通知停止/全停止/再開/mute/過去日選択、削除取消/確定、設定再読込、不正IPC拒否、解除・終了も確認する。削除確認のOS dialogだけ試験側の返答へ置換する。fixture中のhookは実入力payloadを読まない。数値はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
 
 テスト追加の選び方は[Skill](skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](docs/design.md#test-design)。CI定義は[quality.yml](.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。

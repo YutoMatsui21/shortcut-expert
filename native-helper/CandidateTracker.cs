@@ -13,7 +13,7 @@ internal sealed class CandidateTracker
     private const int CaptionDoubleClickDistancePx = 4;
     private const long NoCaptionClickAt = -10000;
     private sealed record Input(nint Window, WindowState Before, string Origin, string Route,
-        long At, bool Injected, bool Conflicted, bool Matched);
+        long At, bool Injected, bool Conflicted, bool Matched, int Transaction);
     private readonly HashSet<nint> moving = new();
     private readonly Dictionary<nint, Input> drags = new();
     private Input? input;
@@ -21,11 +21,11 @@ internal sealed class CandidateTracker
     private uint lastCaptionProcess;
     private long lastCaptionAt = NoCaptionClickAt;
     private Point lastCaptionPoint;
-    private int generation, sequence;
+    private int generation, sequence, transaction;
 
     internal void Reset(int newGeneration)
     {
-        generation = newGeneration; sequence = 0; moving.Clear(); drags.Clear(); input = null;
+        generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
     internal void ClearInput() { input = null; drags.Clear(); }
@@ -59,7 +59,7 @@ internal sealed class CandidateTracker
         lastCaption = hit == HTCAPTION ? window : 0; lastCaptionProcess = before.Process;
         lastCaptionAt = now; lastCaptionPoint = point;
         input = new Input(window, before, route is "unknown" or "caption-press" ? "unknown" : "mouse", route, now,
-            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0, modifiers, foreground);
+            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0, modifiers, foreground, checked(++transaction));
     }
     internal void Key(nint window, WindowState? before, uint key, bool winDown, bool modifiers, long now, uint flags,
         bool shiftDown = false, bool altDown = false)
@@ -70,7 +70,7 @@ internal sealed class CandidateTracker
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
         if (route is null || before is null) { input = null; return; }
         input = new Input(window, before, "key", route, now,
-            (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, conflict, true);
+            (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, conflict, true, checked(++transaction));
     }
     internal static string? KeyRoute(uint key, bool win, bool shift, bool alt, bool other) => other ? null :
         (key, win, shift, alt) switch {
@@ -100,10 +100,12 @@ internal sealed class CandidateTracker
         return Build("close", candidate.Before, previous with { Show = 0 }, candidate, now - candidate.At, true, false, date, candidate.Before.Monitor);
     }
     internal object? Complete(nint window, WindowState? previous, WindowState after, long now,
-        nint foreground, string date, object? monitor)
+        nint foreground, string date, MonitorBounds? monitor)
     {
         if (previous is null) return null;
         if (previous.Process != after.Process) { Forget(window); return null; }
+        // A drag owns this transaction until its terminal result; derived transitions cannot consume it.
+        if (drags.ContainsKey(window)) return null;
         string? operation = (State(previous.Show), State(after.Show)) switch {
             ("normal", "maximized") => "maximize",
             ("normal" or "maximized", "minimized") => "minimize",
@@ -126,18 +128,17 @@ internal sealed class CandidateTracker
         return result;
     }
     private object Build(string operation, WindowState before, WindowState after, Input? candidate, long age,
-        bool target, bool isMoving, string date, object? monitor)
+        bool target, bool isMoving, string date, MonitorBounds? monitor)
     {
         bool recent = candidate is not null && age is >= 0 and <= InputMatchWindowMs;
         string? direction = before.HorizontalPair && after.HorizontalPair && before.Monitor is not null && after.Monitor is not null
             && before.Monitor.y == after.Monitor.y && before.Monitor != after.Monitor
             ? after.Monitor.x < before.Monitor.x ? "left" : "right" : null;
-        return new { type = "candidate", protocolVersion = 1, generation, sequence = ++sequence,
-            app = before.App, operation, date, before = new { state = State(before.Show), arranged = before.Arranged },
-            after = new { state = operation == "close" ? "closed" : State(after.Show) }, afterArranged = after.Arranged,
-            origin = recent ? candidate!.Origin : "unknown", route = recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",
-            injected = candidate?.Injected ?? false, conflicted = candidate?.Conflicted ?? false, moving = isMoving, elevated = false,
-            targetMatched = recent && candidate!.Matched && target, inputAgeMs = age, monitor,
-            fromMonitor = before.Monitor, toMonitor = after.Monitor, moveDirection = direction };
+        return new WindowCandidate("candidate", 1, generation, checked(++sequence), before.App, operation, date,
+            new(State(before.Show), before.Arranged), new(operation == "close" ? "closed" : State(after.Show)), after.Arranged,
+            recent ? candidate!.Origin : "unknown", recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",
+            candidate?.Injected ?? false, candidate?.Conflicted ?? false, isMoving, false,
+            recent && candidate!.Matched && target, age, monitor, before.Monitor, after.Monitor, direction)
+            { Transaction = candidate?.Transaction ?? checked(++transaction) };
     }
 }
