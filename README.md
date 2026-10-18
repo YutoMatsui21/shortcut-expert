@@ -2,7 +2,7 @@
 
 Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。別画面へ移動・最大化・最小化・最大化から復元・閉じるを条件付きで検出し、日別のmouse/key回数を記録する。全11候補の横に参考ショートカットを表示する。実アプリの認識率と公開前条件は未合格。
 
-製品の正本は4つ：本書は使い方、[mvp-requirements.md](docs/mvp-requirements.md)は要件・工程記録、[design.md](docs/design.md)は設計・実装・確認結果、[research.md](docs/research.md)は調査根拠・実測・probe再現。
+**今後の製品要件の正本**：[UI刷新の確定要件](docs/ui-redesign-requirements.md)。本書は現行ビルドの使い方とロードマップ、[mvp-requirements.md](docs/mvp-requirements.md)は旧MVPの要件・工程記録、[design.md](docs/design.md)は設計・実装状況、[research.md](docs/research.md)は調査・実測原本。
 
 ## 開発ロードマップ（2026-10-18決定）
 
