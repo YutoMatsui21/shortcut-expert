@@ -1,25 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { localDate as today } from '../../core/dates';
-import { operations, type CoachBridge, type Snapshot } from '../../shared/coach';
+import { operations } from '../../shared/coach';
+import { useCoach } from './useCoach';
 
 export function CoachApp() {
-  const [snapshot, setSnapshot] = useState<Snapshot>();
+  const { snapshot, busy, message, command, setMuted, deleteCounts } = useCoach();
   const [day, setDay] = useState(today());
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  useEffect(() => {
-    let active = true;
-    const receive = (next: Snapshot) => { if (active) setSnapshot(next); };
-    const unsubscribe = window.coach.subscribe(receive);
-    void window.coach.getSnapshot().then(receive).catch(() => setMessage('状態を取得できません。アプリを再起動してください。'));
-    return () => { active = false; unsubscribe(); };
-  }, []);
-  const act = async (action: () => Promise<Snapshot>) => {
-    setBusy(true); setMessage(null);
-    try { setSnapshot(await action()); } catch { setMessage('操作を完了できませんでした。もう一度お試しください。'); }
-    finally { setBusy(false); }
-  };
-  const command = (value: Parameters<CoachBridge['command']>[0]) => act(() => window.coach.command(value));
   const dates = [...new Set([today(), ...Object.keys(snapshot?.counts ?? {})])].sort().reverse();
   const selected = dates.includes(day) ? day : today();
   const counts = snapshot?.counts[selected] ?? {};
@@ -49,12 +35,12 @@ export function CoachApp() {
           <td data-kind="mouse">{counts[op.id]?.mouse ?? 0}</td><td data-kind="key">{counts[op.id]?.key ?? 0}</td>
           <td><label className="toggle"><input aria-label={op.label + 'の通知'} type="checkbox" disabled={busy || !snapshot || !op.implemented}
             checked={op.implemented && !snapshot?.settings.muted.includes(op.id)}
-            onChange={(event) => void act(() => window.coach.setMuted(op.id, !event.target.checked))} /><span>{op.implemented ? snapshot?.settings.muted.includes(op.id) ? 'OFF' : 'ON' : '—'}</span></label></td>
+            onChange={(event) => void setMuted(op.id, !event.target.checked)} /><span>{op.implemented ? snapshot?.settings.muted.includes(op.id) ? 'OFF' : 'ON' : '—'}</span></label></td>
         </tr>)}
       </tbody></table>
       <p className="footnote">通知を止めても記録は続きます。観測数は全操作の実行回数や習得率を表しません。</p>
     </section>
-    <footer><button className="text-button danger" disabled={busy || !snapshot} onClick={() => void act(() => window.coach.deleteCounts())}>全日分の記録を削除</button>
+    <footer><button className="text-button danger" disabled={busy || !snapshot} onClick={() => void deleteCounts()}>全日分の記録を削除</button>
       <button className="text-button" disabled={busy} onClick={() => command('quit')}>アプリを終了</button></footer>
   </main>;
 }
