@@ -16,11 +16,11 @@ export function CoachApp() {
   const [queried, setQueried] = useState<{ day: string; value: RecordRange } | null>(null);
   useEffect(() => {
     let current = true;
-    if (snapshot?.coverage && window.coach.getRecords) {
+    if (snapshot?.coverage && !snapshot.error && window.coach.getRecords) {
       void window.coach.getRecords(day, day).then(value => { if (current) setQueried({ day, value }); }, () => { if (current) setQueried(null); });
     }
     return () => { current = false; };
-  }, [day, snapshot?.revision]);
+  }, [day, snapshot?.revision, snapshot?.error]);
   const dates = [...new Set([today(), ...Object.keys(snapshot?.counts ?? {})])].sort().reverse();
   const selected = snapshot?.coverage ? day : dates.includes(day) ? day : today();
   const view = queried?.day === selected && queried.value.revision >= (snapshot?.revision ?? 0) ? queried.value : snapshot;

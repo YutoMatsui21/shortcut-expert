@@ -61,7 +61,7 @@ export class DurableCoach {
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   private prepare(count?: RecordMutation['count'], reset?: boolean): RecordMutation | null {
     const today = this.deps.date();
-    if (!validDate(today) || this.data.highWater > today || Object.keys(this.data.counts).some(day => day > today) || (count && count.day > today)) {
+    if (!validDate(today) || (!reset && (this.data.highWater > today || Object.keys(this.data.counts).some(day => day > today) || (count && count.day > today)))) {
       this.fail('端末の日付が記録より前です。日付を確認してください。'); return null;
     }
     const time = this.deps.now(), prior = this.baseline;
@@ -123,13 +123,16 @@ export class DurableCoach {
     this.publish();
   }
   setMuted(id: OperationId, muted: boolean): Promise<void> {
-    return this.queue.run(() => this.settings({ ...this.data.settings, muted: muted ? [...new Set([...this.data.settings.muted, id])]
-      : this.data.settings.muted.filter(value => value !== id) }));
+    return this.queue.run(() => {
+      const current = this.pendingSettings ?? this.data.settings;
+      return this.settings({ ...current, muted: muted ? [...new Set([...current.muted, id])] : current.muted.filter(value => value !== id) });
+    });
   }
-  opened(): Promise<void> { return this.queue.run(() => this.settings({ ...this.data.settings, opened: true })); }
+  opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }
   deleteCounts(): Promise<void> {
     this.stop();
     return this.queue.run(async () => {
+      if (!this.loaded) return;
       // Resolve a possible committed write before advancing epoch; never discard an unknown ACK.
       if (this.pending) await this.persist(this.pending);
       if (this.pending) return;

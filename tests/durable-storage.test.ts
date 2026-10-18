@@ -227,3 +227,22 @@ test('settings failure and recovery preserve a preexisting clock error', async t
   await h.coach.setMuted('W03', true); h.repository.saveSettings = save; await h.coach.retrySave(); h.coach.begin(2);
   assert.match(h.coach.snapshot().error!, /日付/); assert.equal(h.coach.snapshot().observing, false);
 });
+test('explicit full deletion recovers from a future high water without restoring old records', async t => {
+  const h = await fixture(t); await h.coach.accept(candidate);
+  h.date('2026-10-20'); await h.coach.tick(); h.date('2026-10-19'); await h.coach.tick();
+  assert.match(h.coach.snapshot().error!, /日付/);
+  await h.coach.deleteCounts();
+  assert.equal(h.coach.snapshot().error, null); assert.deepEqual(h.coach.snapshot().counts, {});
+  const state = await h.repository.load('2026-10-19'); assert.equal(state.epoch, 2); assert.equal(state.highWater, '2026-10-19');
+  h.coach.begin(2); await h.coach.accept({ ...candidate, generation: 2 });
+  assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
+});
+test('a second toggle and opened preserve earlier pending settings changes', async t => {
+  const h = await fixture(t); const save = h.repository.saveSettings.bind(h.repository);
+  h.repository.saveSettings = async () => { throw new Error('fixture settings'); };
+  await h.coach.setMuted('W03', true); h.repository.saveSettings = save;
+  await h.coach.setMuted('W04', true); await h.coach.opened();
+  const settings = (await h.repository.load('2026-10-19')).settings;
+  assert.deepEqual(settings.muted, ['W03', 'W04']); assert.equal(settings.opened, true);
+  assert.equal(h.coach.snapshot().pendingSave, false);
+});

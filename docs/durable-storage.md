@@ -38,6 +38,8 @@ UIは保存済みの数値を表示する。coverage根拠もcountもない操�
 
 最新mainのprotocol v2と結合し、DurableCoachもObserverCandidateを受け取る。世代内のprotocol固定、4096 transaction範囲の重複拒否、採用前の候補複製をJSON経路と揃えた。起動時load失敗では設定を書かず、設定保存成功は設定由来のエラーだけを解除する。読込時にも設定の形式を検査する。
 
+追加レビューでは、SQLite authorityを確認した後は旧JSONへアクセスしないようにし、全削除だけは時計高水位を現在日へ戻して復旧できるようにした。設定変更は保留中の最新値を引き継ぐ。過去日のqueryはエラー解除後に同じrevisionでも再実行し、全停止中のsuspendは故障扱いしない。過去queryの失敗→同一revisionでの再開と、停止後suspendは本番Main/Worker/Reactを通す隔離smokeへ追加した。
+
 停止中のtickは時計確認を継続するが、日付高水位・count・coverageに差分がなければtransactionと配信を省く。保存方式のprobe失敗は原本を保持して再試行/終了のOS dialogを示す。CIには開発版・配布版両方のSQLite smokeを追加した。今後の実装完了条件（push、最新headのCI/Codex確認、必要な修正と再検証）はAGENTS.mdに集約する。
 
 以下の125件等は初回実装時の記録。レビュー修正後の最終確認はPR #57の最新headに対応するCIとCodexレビューで確認する。

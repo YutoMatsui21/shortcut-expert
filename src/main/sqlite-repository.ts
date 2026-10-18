@@ -15,8 +15,9 @@ async function exists(file: string): Promise<boolean> {
 export async function selectRepository(root: string, workerPath: string): Promise<JsonRepository | SqliteRepository> {
   // Existing authority wins even if DB is missing or broken; never import/fall back to old JSON.
   const sqlite = await exists(join(root, 'records-v1'));
+  if (sqlite) return new SqliteRepository(root, workerPath);
   const legacy = await exists(join(root, 'counts.json')) || await exists(join(root, 'settings.json'));
-  return sqlite || !legacy ? new SqliteRepository(root, workerPath) : new JsonRepository(root);
+  return !legacy ? new SqliteRepository(root, workerPath) : new JsonRepository(root);
 }
 export async function selectRepositoryWithRetry(root: string, workerPath: string, recover: () => Promise<boolean>): Promise<JsonRepository | SqliteRepository> {
   for (;;) {

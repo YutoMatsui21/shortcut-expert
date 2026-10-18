@@ -110,9 +110,11 @@ export class StorageStore {
       check(meta.epoch === value.epoch, 'STALE_EPOCH');
       check(meta.session === '' || meta.session === value.writeSession, 'STALE_SESSION');
       check(value.sequence === Number(meta.sequence) + 1, 'WRITE_SEQUENCE');
-      check(String(meta.highWater) <= value.today, 'CLOCK_BACKWARD');
-      const future = this.db.prepare('SELECT day FROM counts WHERE day>? LIMIT 1').get(value.today);
-      check(!future, 'FUTURE_RECORDS');
+      if (!value.reset) {
+        check(String(meta.highWater) <= value.today, 'CLOCK_BACKWARD');
+        const future = this.db.prepare('SELECT day FROM counts WHERE day>? LIMIT 1').get(value.today);
+        check(!future, 'FUTURE_RECORDS');
+      }
       if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage;');
       else {
         if (value.count) {

@@ -143,7 +143,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     else if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
-  powerMonitor.on('suspend', () => { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); });
+  powerMonitor.on('suspend', () => { if (coach.snapshot().observing) { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); } });
   screen.on('display-removed', () => notice.dismiss());
   screen.on('display-metrics-changed', () => notice.dismiss());
   if (fixture) {
