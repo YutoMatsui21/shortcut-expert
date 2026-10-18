@@ -32,6 +32,8 @@
 
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
+- Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証を担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除確認・終了判断は`coach-app.ts`に残す。
+- Rendererの`useCoach.ts`は初回状態取得・購読と解除・操作中/エラー状態・ボタン要求を担当する。`CoachApp.tsx`は日付選択と表示を担当し、窓の生成やIPC登録を行わない。
 - C#のWin32宣言はNativeMethods、通信はObserverHost、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
@@ -62,6 +64,14 @@
 <a id="test-design"></a>
 
 ## テスト設計
+
+### #1：新UIの準備整理（2026-10-18）
+
+[Issue #1](https://github.com/YutoMatsui21/shortcut-expert/issues/1)の範囲で窓管理・IPC受付・Rendererの状態処理を上記担当へ分離した。画面・保存形式・IPC/Preload契約・既存5操作の判定条件は維持する。再表示は同じ窓を使い、最小化中は明示的にrestoreしてからshow/focusする。復元呼出しを外すと回帰試験が失敗することも確認した。
+
+Node試験は窓の読込中の重複生成防止、close→hideと終了時のclose許可、窓の隔離/遷移拒否、正規IPCと別窓・子frame・不正引数の拒否、Preloadの再購読/解除を確認する。Electron smokeには実窓のclose→hide、登録済みsecond-instanceイベントからの再表示/最小化復元、Renderer再読込後の状態取得・通知停止/再開を追加した。second-instanceは人工イベントであり、実際の別プロセス起動やトレイのダブルクリック配送の証拠とはしない。
+
+検証結果：型検査、unit 113件、native 5件（内部で本番C# policy 61ケース）、helper/Electron build、隔離fixture smokeが成功。smokeは既存の記録・設定・通知・停止/再開・削除・不正IPC拒否に加え、上記の窓復元とRenderer再読込を確認した。実入力観測は実施していない。実際の別プロセスからの二重起動・トレイのOS操作・配布版/NSISは今回未確認。コミット・push・PR作成は行っていない。
 
 ### 操作検出の追加（2026-10-12）
 

@@ -1,17 +1,18 @@
-import { join } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, Tray } from 'electron';
+import { app, type BrowserWindow, dialog, Menu, nativeImage, screen, Tray } from 'electron';
 import { Coach } from '../core/coach';
 import { SerialQueue } from '../core/serial-queue';
 import { JsonRepository } from './repository';
 import { localDate } from '../core/dates';
-import { operations, type Snapshot } from '../shared/coach';
+import type { Snapshot } from '../shared/coach';
 import { ObserverClient } from './observer';
 import { NotificationWindow } from './notification';
 import { runCoachSmoke } from './smoke';
+import { CoachWindow } from './coach-window';
+import { registerCoachIpc } from './coach-ipc';
 
-let window: BrowserWindow | null = null;
+const coachWindow = new CoachWindow();
 let quitting = false;
-export function showCoach(): void { window?.show(); window?.focus(); }
+export function showCoach(): void { coachWindow.show(); }
 
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   let tray: Tray | null = null;
@@ -25,7 +26,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   }, fixture);
   const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
   const publish = (snapshot: Snapshot) => {
-    if (window && !window.isDestroyed()) window.webContents.send('coach:changed', snapshot);
+    coachWindow.publish(snapshot);
     if (tray) {
       tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
       tray.setContextMenu(Menu.buildFromTemplate([
@@ -69,6 +70,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   const quit = async () => {
     if (quitting) return;
     coach.stop(); notice.dismiss(); await coach.idle();
+    const window = coachWindow.current;
     if (coach.snapshot().pendingSave && window) {
       const answer = await dialog.showMessageBox(window, { type: 'warning', message: '未保存の記録または設定があります。',
         detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
@@ -76,46 +78,30 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     quitting = true; await observer.shutdown(); tray?.destroy(); app.quit();
   };
-  const sender = (event: Electron.IpcMainInvokeEvent) => {
-    if (event.sender !== window?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.');
-  };
-  ipcMain.handle('coach:get-snapshot', async (event) => { sender(event); await coach.tick(); return coach.snapshot(); });
-  ipcMain.handle('coach:get-notice', (event) => {
-    if (!notice.sender(event.sender.id) || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.'); return notice.current();
+  const deleteCounts = () => control.run(async () => {
+    const window = coachWindow.current;
+    if (!window) return coach.snapshot();
+    // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
+    const result = fixture && fixtureDeleteResponse !== null ? { response: fixtureDeleteResponse } : await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
+      detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
+    fixtureDeleteResponse = null;
+    if (result.response !== 1) return coach.snapshot();
+    const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
+    if (!coach.snapshot().error && resume) await startObservation();
+    return coach.snapshot();
   });
-  ipcMain.handle('coach:command', (event, value: unknown) => {
-    sender(event);
-    if (typeof value !== 'string' || !['pause-notifications', 'resume-notifications', 'stop', 'start', 'retry-save', 'quit'].includes(value)) throw new Error('Unknown command.');
-    return command(value);
-  });
-  ipcMain.handle('coach:set-muted', (event, operation: unknown, muted: unknown) => {
-    sender(event); const supported = operations.find((op) => op.id === operation);
-    if (!supported || typeof muted !== 'boolean') throw new Error('Invalid setting.');
-    return control.run(async () => { await coach.setMuted(supported.id, muted); if (muted) notice.dismiss(); return coach.snapshot(); });
-  });
-  ipcMain.handle('coach:delete', (event) => {
-    sender(event);
-    return control.run(async () => {
-      if (!window) return coach.snapshot();
-      // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
-      const result = fixture && fixtureDeleteResponse !== null ? { response: fixtureDeleteResponse } : await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
-        detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
-      fixtureDeleteResponse = null;
-      if (result.response !== 1) return coach.snapshot();
-      const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
-      if (!coach.snapshot().error && resume) await startObservation();
-      return coach.snapshot();
-    });
+  registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
+    getSnapshot: async () => { await coach.tick(); return coach.snapshot(); },
+    getNotice: async () => notice.current(),
+    command,
+    setMuted: (operation, muted) => control.run(async () => {
+      await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coach.snapshot();
+    }),
+    deleteCounts
   });
   await coach.initialize();
-  window = new BrowserWindow({ width: 920, height: 760, minWidth: 620, minHeight: 500, show: false,
-    autoHideMenuBar: true, backgroundColor: '#f5f4ed',
-    webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  window.webContents.on('will-navigate', (event) => event.preventDefault());
-  window.on('close', (event) => { if (!quitting) { event.preventDefault(); window?.hide(); } });
   app.on('before-quit', (event) => { if (!quitting) { event.preventDefault(); void quit(); } });
-  await load(window, 'coach');
+  const window = await coachWindow.create(load, () => quitting);
   if (!fixture) {
     const pixels = Buffer.alloc(16 * 16 * 4);
     for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) if ((x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36) {

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
-import { screen, type BrowserWindow } from 'electron';
+import { app, screen, type BrowserWindow } from 'electron';
 import type { Coach } from '../core/coach';
 import { localDate } from '../core/dates';
 import type { Candidate } from '../shared/coach';
@@ -159,9 +159,29 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (Object.keys(cleared.counts).length || cleared.settings.muted.join() !== 'W03') throw new Error('delete-settings-retained');
   await observer.inject({ ...value, generation: 2, sequence: 2 }); await coach.idle();
   if (Object.keys(coach.snapshot().counts).length) throw new Error('delete-old-generation');
+
+  window.show(); window.close();
+  if (window.isDestroyed() || window.isVisible() || !coach.snapshot().observing) throw new Error('window-close-hide');
+  // Use the registered second-instance listener, which shares the tray's show entry point.
+  app.emit('second-instance', {}, [], '');
+  if (!window.isVisible() || window.isDestroyed()) throw new Error('window-redisplay');
+  await new Promise<void>((resolve) => { window.once('minimize', () => resolve()); window.minimize(); });
+  const restored = new Promise<void>((resolve) => window.once('restore', () => resolve()));
+  app.emit('second-instance', {}, [], '');
+  await restored;
+  if (window.isMinimized() || !window.isVisible()) throw new Error('window-restore');
+  const loaded = new Promise<void>((resolve) => window.webContents.once('did-finish-load', () => resolve()));
+  window.webContents.reload(); await loaded;
+  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中' &&
+    document.querySelector('input[aria-label="最大化の通知"]')?.checked === false`, 'ui-reload-snapshot');
+  await click(window, '通知を停止');
+  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-reload-command');
+  await click(window, '通知を再開');
+  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中'`, 'ui-reload-subscription');
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
     uiControls: true, operationShortcuts: 11, addedOperations: 4, addedNoticeWindows: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
+    windowHiddenAndRestored: true, rendererResubscribed: true,
     realDisplayContext: process.argv.includes('--real-display-smoke') };
 }
