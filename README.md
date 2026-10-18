@@ -4,6 +4,14 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 製品の正本は4つ：本書は使い方、[mvp-requirements.md](docs/mvp-requirements.md)は要件・工程記録、[design.md](docs/design.md)は設計・実装・確認結果、[research.md](docs/research.md)は調査根拠・実測・probe再現。
 
+## 開発ロードマップ（2026-10-18決定）
+
+- 初回リリース対象は**12操作**。W09（Win+D）とW14（Win+M）は将来保留。
+- **先にUI・データ保存・通知・設定を実装**し、全12操作を「準備中」として表示する。人工イベントを隔離データに流して結合・回帰試験を行い、通常の利用実績と混ぜない。
+- 検出器は最後に実装する。先行7操作は **W03最大化、W05最大化解除、W04最小化、W06左右半分、W07四隅、W02別画面移動、W11閉じる**。残る5操作はW12／W01／W10／W08／W13。
+- 条件付き実装済みの5操作は、まだ自然入力95%以上を確認していない。UI完成・人工テスト合格と検出器の受入は別。**12操作の両自然入力が受入基準を満たすまでリリースしない。**
+
+現行の実行・検出説明は既存ビルドの仕様。今後の要件は[UI刷新の確定要件](docs/ui-redesign-requirements.md)、工程は[親Issue：基盤](https://github.com/YutoMatsui21/shortcut-expert/issues/50)・[UI](https://github.com/YutoMatsui21/shortcut-expert/issues/51)・[検出器](https://github.com/YutoMatsui21/shortcut-expert/issues/52)を参照。
 品質保証の調査（2026-10-12）：[テスト設計・CI等のベストプラクティス](docs/quality-best-practices.md)、[現行リポジトリの不足・優先度・検証結果](docs/quality-gap-analysis.md)。改善案であり、製品の要件や公開基準は変更していない。
 
 開発方針は[AGENTS.md](AGENTS.md)と[現行アーキテクチャ](docs/design.md#architecture)を参照。
