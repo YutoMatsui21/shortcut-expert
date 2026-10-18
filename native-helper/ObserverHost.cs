@@ -17,7 +17,8 @@ internal static class ObserverHost
         using var dispatcher = new Control(); _ = dispatcher.Handle;
         using var context = new ApplicationContext();
         using var observer = new Observer(Emit, fixture);
-        Emit(new { type = "ready", protocolVersion = 1, arrangedAvailable = Observer.ArrangedAvailable });
+        int selectedProtocol = 1;
+        Emit(new { type = "ready", protocolVersion = 1, supportedProtocols = new[] { 1, 2 }, arrangedAvailable = Observer.ArrangedAvailable });
         _ = Task.Run(() =>
         {
             try
@@ -37,12 +38,20 @@ internal static class ObserverHost
                             switch (command.GetProperty("command").GetString())
                             {
                                 case "start":
-                                    observer.Start(command.GetProperty("generation").GetInt32());
+                                    selectedProtocol = command.TryGetProperty("protocolVersion", out var version) ? version.GetInt32() : 1;
+                                    observer.Start(command.GetProperty("generation").GetInt32(), selectedProtocol);
                                     Emit(new { type = "started", requestId }); break;
                                 case "stop": observer.Stop(); Emit(new { type = "stopped", requestId }); break;
                                 case "queryDisplayContext": Emit(new { type = "displayContext", requestId, result = fixture && !realDisplay ? new { known = true, fullscreen = false } : DisplayContext.Query(command.GetProperty("monitor")) }); break;
                                 case "fixtureCandidate" when fixture:
-                                    Emit(command.GetProperty("candidate")); Emit(new { type = "injected", requestId }); break;
+                                    var fixtureValue = command.GetProperty("candidate");
+                                    if (selectedProtocol == 2 && fixtureValue.GetProperty("protocolVersion").GetInt32() == 1)
+                                    {
+                                        var legacy = fixtureValue.Deserialize<WindowCandidate>() ?? throw new ArgumentException("fixture");
+                                        Emit(CandidateProtocol.V2(legacy, legacy.sequence, legacy.sequence));
+                                    }
+                                    else Emit(fixtureValue);
+                                    Emit(new { type = "injected", requestId }); break;
                                 case "fixtureFocus" when fixture:
                                     Emit(new { type = "focus", requestId, result = Observer.ForegroundToken }); break;
                                 case "shutdown": observer.Stop(); Emit(new { type = "stopped", requestId }); context.ExitThread(); break;

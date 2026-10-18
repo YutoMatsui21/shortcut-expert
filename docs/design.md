@@ -34,7 +34,7 @@
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
 - Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証を担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除確認・終了判断は`coach-app.ts`に残す。
 - Rendererの`useCoach.ts`は初回状態取得・購読と解除・操作中/エラー状態・ボタン要求を担当する。`CoachApp.tsx`は日付選択と表示を担当し、窓の生成やIPC登録を行わない。
-- C#のWin32宣言はNativeMethods、通信はObserverHost、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
+- C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
 - 責務や依存方向を変更した場合は、この節を同じ変更内で更新する。
@@ -70,6 +70,22 @@
 <a id="test-design"></a>
 
 ## テスト設計
+
+### #13：型付き証拠とprotocol v2の併設
+
+Sharedの`ObserverCandidate`は旧`Candidate`と`CandidateV2`のunion。v2はgeneration/最終送信sequence/入力transaction/完了日/由来/route/注入・競合と、`window`・`shell-display`・`activation`・`global`の証拠を分ける。Nativeの`CandidateProtocol`は限定された証拠recordを直列送信し、Mainがvariantの必須項目・型・ID範囲を検査して許可項目だけをCoreへ渡す。未知の能力はnullのまま保持し、成功へ変換しない。生キー列・窓token・process ID・タイトル・path・UIA treeは通信型に含めない。hookへUIA処理は追加していない。
+
+readyは旧版互換のprotocolVersion=1とsupportedProtocols=[1,2]を返す。新Mainはstartでv2を選び、広告のない旧helperにはv1を選ぶ。旧Mainから版指定なしのstartを受けた新helperはv1を送る。同じ世代では1経路だけを使い、Mainは選択版と違う候補を通信故障として停止する。Coreでも世代内の版混在を拒否する。fixture命令だけは既存のv1人工候補を選択中のv2へ変換する。この変換は実入力経路には存在しない。
+
+Nativeの入力transactionは世代内で単調増加し、入力・drag終端・破棄・停止の既存寿命を引き継ぐ。単純入力の1000ms、dragの入力→開始1000msと終端までの保持を維持する。CandidateTrackerの結果組立時sequenceとは独立に、CandidateProtocolが最終emit時にsequenceを採番する。遅い完了が先のtransactionでも送信順に受けられ、停止・旧世代の遅延完了は送らない。drag中の派生状態は送らず、終端だけがtransactionを消費する。
+
+Coreは除外候補もsequenceとtransactionを消費し、再配送・同一IDの内容差替えを拒否する。記録・通知待ちへ入る前に候補を複製し、呼出し元からの差替えも防ぐ。transactionの記憶は最新IDから4096個の範囲に制限し、範囲外の古いIDは記憶を削除しても採用しない。この上限は再配送拒否の資源制限であり、新しい検出器の実測期限ではない。Shellの非同期読取や確認dialog等の確定点・期限は本変更では実装しない。
+
+`window/legacy-window-v1`だけが既存5操作のCore条件へ接続する。これは従来条件の移送profileであり、自然入力精度の合格profileではない。残るvariantは`unverified`として型・parse契約だけを併設し、値がtrueでも採用0件。未実証route/profile・操作は採用しない。判定後の`Observation`（ID/操作ID/由来/完了日/同等キーまたはnull/画面）がUI・保存・通知との境界となる。保存形式・表示registry・通知条件は本変更で変更しない。B08解消・新操作実装・自然入力受入を意味しない。
+
+検証はNodeのv2厳格parse→本番CoreとCoach、C#の本番CandidateTracker/CandidateProtocol→JSON→TS parse/Core、実helperのv1/v2選択・開始解除を隔離fixtureで扱う。余分なenvelope項目で否定的なwindow証拠を上書きできる不具合は、採用されてしまうassert失敗を確認後、必須envelope項目だけを明示的に移送する修正で防いだ。実入力の検出精度・UIA provider・配布受入は別の検証とする。
+
+2026-10-19検証結果：Windows 11 build 26300、Node 24.11.1/npm 10.9.2、ローカル.NET SDK 10.0.401。型検査、unit 121件、native 6件（本番C# policy 63ケース）、helper/Electron buildが成功。最後の必須fieldの型整理後も関連26 unitとC#→TS契約を再確認した。通常版と`release/protocol-v2/win-unpacked/Window Shortcut Coach.exe`の隔離fixture smokeが成功し、既存5操作のmouse/key集計・保存・通知、重複除外、設定再読込、停止/再開/削除、窓復元、不正IPC拒否、hook解除を確認した。npm取得のEPERM、同梱生成のElectronキャッシュrenameのEPERM、同梱exeのsandbox内起動失敗は権限付き再実行で成功。実入力観測・UIA探索・キー送出・自然入力精度・NSIS導入・通常60分は未実施。B08や新操作の技術ゲートは未解消。コミット・push・PR作成・Issue更新は行っていない。
 
 ### #1：新UIの準備整理（2026-10-18）
 

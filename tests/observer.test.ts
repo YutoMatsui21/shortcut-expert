@@ -1,20 +1,21 @@
 import { test, mock, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { HelperProcess } from './support/helper-process.ts';
-import { candidateFixture } from './support/fixtures.ts';
+import { candidateFixture, v2Fixture } from './support/fixtures.ts';
 
 let launched: HelperProcess[] = [];
 let sendReady = true;
 let readyVersion = 1;
+let supportedProtocols: number[] | undefined;
 mock.module('electron', { namedExports: { app: { isPackaged: false, getAppPath: () => '.' } } });
 mock.module('node:child_process', { namedExports: { spawn: () => {
   const process = new HelperProcess(); launched.push(process);
-  if (sendReady) queueMicrotask(() => process.ready(readyVersion)); return process;
+  if (sendReady) queueMicrotask(() => process.send({ type: 'ready', protocolVersion: readyVersion, arrangedAvailable: true, supportedProtocols })); return process;
 } } });
 const { ObserverClient, candidate } = await import('../src/main/observer.ts');
 
 function harness(t: TestContext) {
-  launched = []; sendReady = true; readyVersion = 1;
+  launched = []; sendReady = true; readyVersion = 1; supportedProtocols = undefined;
   const accepted: unknown[] = [];
   let faults = 0;
   const client = new ObserverClient((value) => accepted.push(value), () => { faults++; }, true);
@@ -32,6 +33,21 @@ test('ready待ちのhelper異常終了はタイムアウトを待たず失敗す
   t.mock.timers.tick(5000);
   await failed;
   assert.equal(h.faults(), 1);
+});
+
+test('v2能力を広告したhelperだけv2で開始し、同じ世代の旧候補は停止理由にする', async (t) => {
+  const h = harness(t); supportedProtocols = [1, 2]; await h.client.start();
+  assert.equal(h.child().requests[0].protocolVersion, 2);
+  h.child().send(v2Fixture());
+  assert.deepEqual(h.accepted, [v2Fixture()]);
+  h.child().send(candidateFixture({ sequence: 2 }));
+  assert.equal(h.faults(), 1); assert.equal(h.child().killed, true);
+});
+
+test('v2通信の不足証拠はhelper停止へ伝わる', async (t) => {
+  const h = harness(t); supportedProtocols = [1, 2]; await h.client.start();
+  h.child().send({ ...v2Fixture(), evidence: { kind: 'window' } });
+  assert.deepEqual(h.accepted, []); assert.equal(h.faults(), 1);
 });
 
 test('画面照会に別typeの応答を返すhelperは停止し照会を失敗させる', async (t) => {

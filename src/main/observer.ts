@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { app } from 'electron';
-import type { Bounds, Candidate } from '../shared/coach';
+import type { Bounds, Candidate, CandidateV2, Evidence, ObserverCandidate } from '../shared/coach';
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function protocolId(value: unknown): value is number {
@@ -47,19 +47,65 @@ export function candidate(value: unknown): Candidate | null {
     ...('moveDirection' in value ? { moveDirection: value.moveDirection as 'left' | 'right' | null } : {}) };
 }
 
+function nullableBoolean(value: unknown): value is boolean | null { return value === null || typeof value === 'boolean'; }
+export function candidateV2(value: unknown): CandidateV2 | null {
+  if (!record(value) || value.type !== 'candidate' || value.protocolVersion !== 2 ||
+      !protocolId(value.generation) || !protocolId(value.sequence) || !protocolId(value.transaction) ||
+      typeof value.date !== 'string' || typeof value.route !== 'string' || value.route.length > 64 ||
+      !(value.origin === 'mouse' || value.origin === 'key' || value.origin === 'unknown') ||
+      typeof value.injected !== 'boolean' || typeof value.conflicted !== 'boolean' || !record(value.evidence)) return null;
+  const raw = value.evidence;
+  let evidence: Evidence;
+  switch (raw.kind) {
+    case 'window': {
+      if (!(raw.profile === 'legacy-window-v1' || raw.profile === 'unverified') || !record(raw.result)) return null;
+      const result = candidate({ ...raw.result, type: 'candidate', protocolVersion: 1,
+        generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
+        route: value.route, injected: value.injected, conflicted: value.conflicted });
+      if (!result || result.afterArranged === undefined || result.fromMonitor === undefined || result.toMonitor === undefined || result.moveDirection === undefined ||
+          !(raw.result.monitor === null || bounds(raw.result.monitor))) return null;
+      const { type, protocolVersion, generation, sequence, date, origin, route, injected, conflicted, ...window } = result;
+      evidence = { kind: 'window', profile: raw.profile, result: { ...window, afterArranged: result.afterArranged,
+        fromMonitor: result.fromMonitor, toMonitor: result.toMonitor, moveDirection: result.moveDirection } }; break;
+    }
+    case 'shell-display':
+      if (raw.profile !== 'unverified' || !(raw.feature === 'task-view' || raw.feature === 'snap-layout') ||
+          !nullableBoolean(raw.wasVisible) || !nullableBoolean(raw.visible) || !nullableBoolean(raw.targetMatched)) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, feature: raw.feature, wasVisible: raw.wasVisible,
+        visible: raw.visible, targetMatched: raw.targetMatched }; break;
+    case 'activation':
+      if (raw.profile !== 'unverified' || !(raw.slot === null || (protocolId(raw.slot) && raw.slot <= 9)) ||
+          !nullableBoolean(raw.appMatched) || !nullableBoolean(raw.targetMatched) || !nullableBoolean(raw.individualEquivalent) ||
+          !(raw.result === 'launched' || raw.result === 'activated' || raw.result === 'unknown')) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, slot: raw.slot, appMatched: raw.appMatched,
+        targetMatched: raw.targetMatched, individualEquivalent: raw.individualEquivalent, result: raw.result }; break;
+    case 'global':
+      if (raw.profile !== 'unverified' || !(raw.feature === 'desktop' || raw.feature === 'minimize-all') ||
+          !nullableBoolean(raw.targetsKnown) || !nullableBoolean(raw.resultConfirmed)) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, feature: raw.feature,
+        targetsKnown: raw.targetsKnown, resultConfirmed: raw.resultConfirmed }; break;
+    default: return null;
+  }
+  return { type: 'candidate', protocolVersion: 2, generation: value.generation, sequence: value.sequence,
+    transaction: value.transaction, date: value.date, origin: value.origin, route: value.route,
+    injected: value.injected, conflicted: value.conflicted, evidence };
+}
+
 export class ObserverClient {
   private child: ChildProcessWithoutNullStreams | null = null;
   private generation = 0;
   private requestId = 0;
   private fixture: boolean;
-  private onCandidate: (candidate: Candidate) => void;
+  private onCandidate: (candidate: ObserverCandidate) => void;
   private onFault: () => void;
   private ready: { resolve(): void; reject(error: Error): void; timer: NodeJS.Timeout } | null = null;
   private active = false;
   private closing = false;
   private arrangedAvailable = false;
+  private protocol: 1 | 2 = 1;
+  private v2Available = false;
   private pending = new Map<number, { type: string; resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: NodeJS.Timeout }>();
-  constructor(onCandidate: (candidate: Candidate) => void, onFault: () => void, fixture = false) {
+  constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false) {
     this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture;
   }
   async start(): Promise<number> {
@@ -100,7 +146,8 @@ export class ObserverClient {
       }
     }
     const generation = ++this.generation;
-    const result = await this.request('start', { generation });
+    this.protocol = this.v2Available ? 2 : 1;
+    const result = await this.request('start', { generation, protocolVersion: this.protocol });
     if (result.type !== 'started') throw new Error('helper-not-started');
     this.active = true; return generation;
   }
@@ -134,7 +181,7 @@ export class ObserverClient {
     return record(value) && value.known === true && typeof value.fullscreen === 'boolean'
       ? { known: true, fullscreen: value.fullscreen } : { known: false, fullscreen: true };
   }
-  async inject(value: Candidate): Promise<void> {
+  async inject(value: ObserverCandidate): Promise<void> {
     if (!this.fixture) throw new Error('fixture-only');
     await this.request('fixtureCandidate', { candidate: value });
   }
@@ -157,12 +204,14 @@ export class ObserverClient {
       if (!record(message)) throw new Error('protocol');
       if (message.type === 'ready' && message.protocolVersion === 1) {
         this.arrangedAvailable = message.arrangedAvailable === true;
+        this.v2Available = Array.isArray(message.supportedProtocols) && message.supportedProtocols.includes(2);
         if (this.ready) { clearTimeout(this.ready.timer); this.ready.resolve(); this.ready = null; }
         return;
       }
       if (message.type === 'candidate') {
-        const value = candidate(message);
+        const value = message.protocolVersion === 2 ? candidateV2(message) : candidate(message);
         if (!value) throw new Error('candidate');
+        if (value.protocolVersion !== this.protocol) throw new Error('candidate-protocol');
         if (this.active && value.generation === this.generation) this.onCandidate(value);
         return;
       }

@@ -1,7 +1,16 @@
-import type { Bounds, Candidate, Observation, OperationId } from '../shared/coach.ts';
+import type { Bounds, Candidate, ObserverCandidate, Observation, OperationId } from '../shared/coach.ts';
 import { validDate } from './dates.ts';
 
-export function classify(candidate: Candidate): Observation | null {
+export function classify(value: ObserverCandidate): Observation | null {
+  if (value.protocolVersion === 1) return classifyWindow(value);
+  if (value.evidence.kind !== 'window' || value.evidence.profile !== 'legacy-window-v1') return null;
+  const observation = classifyWindow({ ...value.evidence.result, type: 'candidate', protocolVersion: 1,
+    generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
+    route: value.route, injected: value.injected, conflicted: value.conflicted });
+  return observation ? { ...observation, id: `${value.generation}:t${value.transaction}` } : null;
+}
+
+function classifyWindow(candidate: Candidate): Observation | null {
   if (!validDate(candidate.date) || !Number.isSafeInteger(candidate.sequence) || candidate.sequence < 1 ||
       !['chrome', 'obsidian', 'code', 'chatgpt'].includes(candidate.app) ||
       candidate.elevated !== false || candidate.injected || candidate.conflicted || candidate.moving || !candidate.targetMatched ||
