@@ -18,6 +18,12 @@ export async function selectRepository(root: string, workerPath: string): Promis
   const legacy = await exists(join(root, 'counts.json')) || await exists(join(root, 'settings.json'));
   return sqlite || !legacy ? new SqliteRepository(root, workerPath) : new JsonRepository(root);
 }
+export async function selectRepositoryWithRetry(root: string, workerPath: string, recover: () => Promise<boolean>): Promise<JsonRepository | SqliteRepository> {
+  for (;;) {
+    try { return await selectRepository(root, workerPath); }
+    catch { if (!await recover()) throw new Error('STORAGE_SELECTION_CANCELLED'); }
+  }
+}
 export class SqliteRepository implements DurableRepository {
   readonly session = randomUUID();
   private worker: Worker | null = null;

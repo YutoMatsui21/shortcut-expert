@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { PassThrough, Writable } from 'node:stream';
 
-export type HelperRequest = { command: string; requestId: number; generation?: number; monitor?: unknown; candidate?: unknown };
+export type HelperRequest = { command: string; requestId: number; generation?: number; protocolVersion?: number; monitor?: unknown; candidate?: unknown };
 
 // OS/process boundary only; protocol parsing and request lifetimes use production code.
 export class HelperProcess extends EventEmitter {

@@ -10,6 +10,11 @@ import { validDate } from '../core/dates.ts';
 const ids = [...operations.map(op => op.id), 'W12', 'W13'];
 const check = (ok: unknown, message: string): void => { if (!ok) throw new Error(message); };
 const integer = (n: number) => Number.isSafeInteger(n) && n >= 0;
+function validateSettings(settings: Settings): void {
+  check(settings && typeof settings === 'object' && !Array.isArray(settings) && typeof settings.opened === 'boolean' &&
+    Array.isArray(settings.muted) && settings.muted.every(id => ids.includes(id)) &&
+    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened'].includes(k)), 'INVALID_SETTINGS');
+}
 export class StorageStore {
   private db: DatabaseSync;
   constructor(root: string) {
@@ -65,7 +70,9 @@ export class StorageStore {
   load(today: string): StorageState {
     check(validDate(today), 'INVALID_DAY');
     const meta = this.meta();
-    return { ...this.query(daysBefore(today, 59), today), settings: JSON.parse(String(this.db.prepare('SELECT value FROM settings WHERE id=1').get()!.value)),
+    const settings: Settings = JSON.parse(String(this.db.prepare('SELECT value FROM settings WHERE id=1').get()!.value));
+    validateSettings(settings);
+    return { ...this.query(daysBefore(today, 59), today), settings,
       epoch: Number(meta.epoch), highWater: String(meta.highWater) };
   }
   query(from: string, to: string): RecordRange {
@@ -134,8 +141,7 @@ export class StorageStore {
     this.transaction(() => this.db.prepare("UPDATE meta SET session=?,sequence=0,hash='' WHERE id=1").run(session));
   }
   saveSettings(settings: Settings): void {
-    check(typeof settings.opened === 'boolean' && Array.isArray(settings.muted) && settings.muted.every(id => ids.includes(id)) &&
-      new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened'].includes(k)), 'INVALID_SETTINGS');
+    validateSettings(settings);
     this.transaction(() => {
       this.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(settings));
       this.db.exec('UPDATE meta SET revision=revision+1 WHERE id=1');

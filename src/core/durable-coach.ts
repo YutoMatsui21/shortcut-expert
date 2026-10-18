@@ -1,4 +1,4 @@
-import type { Candidate, Notice, OperationId, Settings, Snapshot } from '../shared/coach.ts';
+import type { ObserverCandidate, Notice, OperationId, Settings, Snapshot } from '../shared/coach.ts';
 import { operations } from '../shared/coach.ts';
 import type { DurableRepository, RecordMutation, StorageState } from '../shared/storage.ts';
 import { daysBefore, recordOperations } from '../shared/storage.ts';
@@ -18,8 +18,12 @@ export class DurableCoach {
   private paused = false;
   private error: string | null = null;
   private observerError: string | null = null;
+  private loaded = false;
   private generation = 0;
   private candidateSequence = 0;
+  private protocol: 1 | 2 | null = null;
+  private transactions = new Set<number>();
+  private latestTransaction = 0;
   private writeSequence = 0;
   private session: string;
   private pending: RecordMutation | null = null;
@@ -32,8 +36,10 @@ export class DurableCoach {
   constructor(deps: Dependencies) { this.deps = deps; this.session = deps.session; }
   async initialize(): Promise<void> {
     if (this.pending || this.pendingSettings) return;
+    this.loaded = false;
     try {
       this.data = await this.deps.repository.load(this.deps.date());
+      this.loaded = true;
       this.error = null; this.observerError = null; this.baseline = null;
       await this.tick();
     } catch { this.fail('保存データを読み込めません。元のデータは保持しています。'); }
@@ -43,8 +49,9 @@ export class DurableCoach {
     this.error = message; this.stop();
   }
   begin(generation: number): void {
-    if (this.error || this.observerError || this.pending || this.pendingSettings) return;
+    if (!this.loaded || this.error || this.observerError || this.pending || this.pendingSettings) return;
     this.generation = generation; this.candidateSequence = 0; this.observing = true;
+    this.protocol = null; this.transactions.clear(); this.latestTransaction = 0;
     this.baseline = { day: this.deps.date(), time: this.deps.now(), observing: true, capabilities: this.deps.capabilities() };
   }
   stop(): void { this.observing = false; this.generation++; this.baseline = null; this.publish(); }
@@ -71,6 +78,12 @@ export class DurableCoach {
       value: { knowledge: 'not-observed', activeMs: 0, gap: true,
         capabilityRevision: current.find(c => c.operation === count.operation)?.revision ?? 'unverified' } });
     this.baseline = { day: today, time, observing: this.observing, capabilities: current };
+    const coverageChanged = coverage.some(row => {
+      const prior = this.data.coverage[row.day]?.[row.operation];
+      return !prior || row.value.activeMs > 0 || (row.value.gap && !prior.gap) ||
+        row.value.capabilityRevision !== prior.capabilityRevision || (row.value.knowledge === 'observed' && prior.knowledge !== 'observed');
+    });
+    if (!count && !reset && today === this.data.highWater && !coverageChanged) return null;
     return { epoch: this.data.epoch, writeSession: this.session, sequence: ++this.writeSequence, today, count, coverage, reset };
   }
   private async persist(value: RecordMutation): Promise<void> {
@@ -100,9 +113,11 @@ export class DurableCoach {
     });
   }
   private async settings(value: Settings): Promise<void> {
+    // No write may replace unread settings or erase a load/clock/record error.
+    if (!this.loaded) { this.publish(); return; }
     try {
       await this.deps.repository.saveSettings(value); this.data.settings = value; this.pendingSettings = null;
-      if (!this.pending) this.error = null;
+      if (!this.pending && this.error === '設定を保存できません。再試行してください。') this.error = null;
     } catch { this.pendingSettings = value; this.fail('設定を保存できません。再試行してください。'); }
     this.publish();
   }
@@ -120,11 +135,21 @@ export class DurableCoach {
       const value = this.prepare(undefined, true); if (value) await this.persist(value);
     });
   }
-  accept(candidate: Candidate): Promise<void> {
+  accept(value: ObserverCandidate): Promise<void> {
     const received = this.deps.now();
+    const candidate = structuredClone(value);
     return this.queue.run(async () => {
+      if (!Number.isInteger(candidate.sequence) || candidate.sequence < 1 || candidate.sequence > 0x7fffffff) return;
       if (!this.observing || this.error || candidate.generation !== this.generation || candidate.sequence <= this.candidateSequence) return;
+      if (this.protocol !== null && candidate.protocolVersion !== this.protocol) return;
+      this.protocol = candidate.protocolVersion;
       this.candidateSequence = candidate.sequence;
+      if (candidate.protocolVersion === 2) {
+        const id = candidate.transaction;
+        if (!Number.isInteger(id) || id < 1 || id > 0x7fffffff || this.transactions.has(id) || id <= this.latestTransaction - 4096) return;
+        this.latestTransaction = Math.max(this.latestTransaction, id); this.transactions.add(id);
+        for (const seen of this.transactions) if (seen <= this.latestTransaction - 4096) this.transactions.delete(seen);
+      }
       const observation = classify(candidate); if (!observation) return;
       const value = this.prepare({ day: observation.date, operation: observation.operation, origin: observation.origin });
       if (!value) return;

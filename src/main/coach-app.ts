@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { Coach } from '../core/coach';
 import { DurableCoach } from '../core/durable-coach';
-import { selectRepository, SqliteRepository } from './sqlite-repository';
+import { selectRepositoryWithRetry, SqliteRepository } from './sqlite-repository';
 import { SerialQueue } from '../core/serial-queue';
 import { localDate } from '../core/dates';
 import type { Snapshot } from '../shared/coach';
@@ -47,7 +47,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   const storageFixture = process.argv.includes('--storage-smoke');
   if (fixture && !storageFixture) await writeFile(join(app.getPath('userData'), 'counts.json'), JSON.stringify({ schemaVersion: 1, days: {} }), { flag: 'wx' });
   const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
-  const repository = await selectRepository(app.getPath('userData'), workerPath);
+  const repository = await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
+    const answer = await dialog.showMessageBox({ type: 'error', message: '保存先を確認できません。',
+      detail: '元のデータは変更していません。保存先へのアクセスを確認して再試行してください。',
+      buttons: ['再試行', '終了'], defaultId: 0, cancelId: 1 });
+    return answer.response === 0;
+  });
   const common = { date: localDate, now: () => performance.now(), notify: (value: import('../shared/coach').Notice) => notice.show(value), changed: publish };
   const coach = repository instanceof SqliteRepository
     ? new DurableCoach({ ...common, repository, session: repository.session,
@@ -130,11 +135,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     tray = new Tray(nativeImage.createFromBitmap(pixels, { width: 16, height: 16 }));
     tray.on('double-click', showCoach);
     const snapshot = coach.snapshot();
-    if (!snapshot.settings.opened || snapshot.error) { showCoach(); await coach.opened(); }
+    if (!snapshot.settings.opened || snapshot.error) { showCoach(); if (!snapshot.error) await coach.opened(); }
   }
   await startObservation(); publish(coach.snapshot());
   ticker = setInterval(() => {
-    if (repository instanceof SqliteRepository || localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
+    if (repository instanceof SqliteRepository) void coach.tick();
+    else if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
   powerMonitor.on('suspend', () => { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); });

@@ -1,4 +1,4 @@
-import type { Candidate, Counts, Notice, Observation, OperationId, Settings, Snapshot } from '../shared/coach.ts';
+import type { ObserverCandidate, Counts, Notice, Observation, OperationId, Settings, Snapshot } from '../shared/coach.ts';
 import { operations } from '../shared/coach.ts';
 import { classify } from './detector.ts';
 import { cutoffDate, validDate } from './dates.ts';
@@ -7,6 +7,7 @@ import { SerialQueue } from './serial-queue.ts';
 const NOTICE_TTL_MS = 2000;
 const GLOBAL_NOTICE_INTERVAL_MS = 10_000;
 const OPERATION_NOTICE_INTERVAL_MS = 60_000;
+const TRANSACTION_WINDOW = 4096;
 
 export function notificationCooldownElapsed(now: number, lastNotice: number, lastOperationNotice: number): boolean {
   return now - lastNotice >= GLOBAL_NOTICE_INTERVAL_MS &&
@@ -33,6 +34,9 @@ export class Coach {
   private observing = false;
   private generation = 0;
   private sequence = 0;
+  private protocol: 1 | 2 | null = null;
+  private transactions = new Set<number>();
+  private latestTransaction = 0;
   private notificationsPaused = false;
   private lastNotice = -Infinity;
   private lastOperation = new Map<OperationId, number>();
@@ -82,6 +86,8 @@ export class Coach {
     if (this.error || this.observerError || this.pendingSave || this.pendingSettings) return;
     this.generation = generation;
     this.sequence = 0;
+    this.protocol = null;
+    this.transactions.clear(); this.latestTransaction = 0;
     this.observing = true;
   }
   stop(): void {
@@ -158,14 +164,26 @@ export class Coach {
     }
     this.dependencies.changed(this.snapshot());
   }
-  accept(candidate: Candidate): Promise<void> {
+  accept(candidate: ObserverCandidate): Promise<void> {
     const receivedAt = this.dependencies.now();
-    return this.queue.run(() => this.apply(candidate, receivedAt));
+    const snapshot = structuredClone(candidate);
+    return this.queue.run(() => this.apply(snapshot, receivedAt));
   }
-  private async apply(candidate: Candidate, receivedAt: number): Promise<void> {
+  private async apply(candidate: ObserverCandidate, receivedAt: number): Promise<void> {
+    if (!Number.isInteger(candidate.sequence) || candidate.sequence < 1 || candidate.sequence > 0x7fffffff) return;
     if (!this.observing || candidate.generation !== this.generation || candidate.sequence <= this.sequence) return;
+    if (this.protocol !== null && candidate.protocolVersion !== this.protocol) return;
+    this.protocol = candidate.protocolVersion;
     // 除外した候補も消費し、同じ世代・sequenceを別の内容で再受理しない。
     this.sequence = candidate.sequence;
+    if (candidate.protocolVersion === 2) {
+      const id = candidate.transaction;
+      if (!Number.isInteger(id) || id < 1 || id > 0x7fffffff || this.transactions.has(id) || id <= this.latestTransaction - TRANSACTION_WINDOW) return;
+      this.latestTransaction = Math.max(this.latestTransaction, id);
+      this.transactions.add(id);
+      // Retired IDs remain inadmissible even after their tombstones are pruned.
+      for (const seen of this.transactions) if (seen <= this.latestTransaction - TRANSACTION_WINDOW) this.transactions.delete(seen);
+    }
     const observation = classify(candidate);
     if (!observation) return;
     await this.refreshDate();

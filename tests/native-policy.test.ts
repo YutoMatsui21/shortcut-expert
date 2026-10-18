@@ -5,7 +5,7 @@ import { dotnet, dotnetEnvironment } from '../scripts/dotnet.mjs';
 import { classify } from '../src/core/detector.ts';
 
 mock.module('electron', { namedExports: { app: {} } });
-const { candidate } = await import('../src/main/observer.ts');
+const { candidate, candidateV2 } = await import('../src/main/observer.ts');
 
 test('本番のC#候補生成と全画面分類を人工イベント列で検証する', { timeout: 60_000 }, async (t) => {
   const result = spawnSync(dotnet, ['run', '--project', 'tests/native-policy/WindowObserver.PolicyTests.csproj',
@@ -26,4 +26,10 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.deepEqual(observations.slice(2, 4), [null, null], 'Injected input is not a counted operation');
   assert.deepEqual(observations.slice(4).map((value: ReturnType<typeof classify>) => [value?.operation, value?.origin]),
     ['mouse', 'key'].flatMap((origin) => ['W04', 'W05', 'W11', 'W02'].map((id) => [id, origin])));
+  const v2 = report.v2Samples.map((sample: unknown) => {
+    const parsed = candidateV2(sample); assert.ok(parsed, 'C# v2 output must satisfy strict TS protocol'); return classify(parsed);
+  });
+  assert.deepEqual(v2.slice(0, observations.length).map((value: ReturnType<typeof classify>) => value && { ...value, id: 'comparison' }),
+    observations.map((value: ReturnType<typeof classify>) => value && { ...value, id: 'comparison' }));
+  assert.deepEqual(v2.slice(observations.length), [null, null, null]);
 });

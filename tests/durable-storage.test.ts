@@ -11,6 +11,7 @@ import { JsonRepository } from '../src/main/repository.ts';
 import { StorageStore } from '../src/main/storage-store.ts';
 import type { RecordMutation } from '../src/shared/storage.ts';
 import type { Candidate } from '../src/shared/coach.ts';
+import { v2Fixture } from './support/fixtures.ts';
 
 const worker = resolve('src/main/storage-worker.ts');
 const candidate: Candidate = { type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1, app: 'chrome', operation: 'maximize',
@@ -187,4 +188,35 @@ test('settings retry cannot clear a helper fault; deletion retains settings and 
   assert.deepEqual(h.coach.snapshot().counts, {});
   await h.coach.accept({ ...candidate, generation: 3 });
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
+});
+test('load failure cannot be erased by opened/settings writes or restart observation', async t => {
+  const h = await fixture(t); const load = h.repository.load.bind(h.repository);
+  h.repository.load = async () => { throw new Error('fixture load failure'); };
+  let writes = 0; const save = h.repository.saveSettings.bind(h.repository);
+  h.repository.saveSettings = async value => { writes++; await save(value); };
+  await h.coach.initialize(); await h.coach.opened(); await h.coach.setMuted('W03', true); h.coach.begin(2);
+  assert.equal(writes, 0); assert.match(h.coach.snapshot().error!, /読み込めません/);
+  assert.equal(h.coach.snapshot().observing, false);
+  h.repository.load = load; await h.coach.initialize(); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().observing, true);
+});
+test('stopped ticks preserve revision and checkpoint until date changes; rollback is still detected', async t => {
+  const h = await fixture(t); h.coach.stop(); const before = (await h.repository.load('2026-10-19')).revision;
+  for (let i = 1; i <= 4; i++) { h.time(i * 1000); await h.coach.tick(); }
+  assert.equal((await h.repository.load('2026-10-19')).revision, before);
+  h.date('2026-10-20'); await h.coach.tick();
+  assert.equal((await h.repository.load('2026-10-20')).revision, before + 1);
+  h.date('2026-10-19'); await h.coach.tick(); assert.match(h.coach.snapshot().error!, /日付/);
+});
+test('durable v2 consumes transactions once, rejects version mixing and protects queued payload', async t => {
+  const h = await fixture(t); const v2 = v2Fixture(candidate, 10);
+  const accepted = h.coach.accept(v2); v2.date = '2099-01-01'; await accepted;
+  await h.coach.accept({ ...v2Fixture(candidate, 10), sequence: 2 });
+  await h.coach.accept({ ...candidate, sequence: 3 });
+  await h.coach.accept({ ...v2Fixture(candidate, 11), sequence: 3 });
+  assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 2);
+  const unverified = v2Fixture(candidate, 12); unverified.evidence.profile = 'unverified'; unverified.sequence = 4;
+  await h.coach.accept(unverified);
+  await h.coach.accept({ ...v2Fixture(candidate, 12), sequence: 5 });
+  assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 2);
 });
