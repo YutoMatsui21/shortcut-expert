@@ -1,12 +1,16 @@
-import { app, type BrowserWindow, dialog, Menu, nativeImage, screen, Tray } from 'electron';
+import { app, type BrowserWindow, dialog, Menu, nativeImage, screen, Tray, powerMonitor } from 'electron';
+import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import { Coach } from '../core/coach';
+import { DurableCoach } from '../core/durable-coach';
+import { selectRepository, SqliteRepository } from './sqlite-repository';
 import { SerialQueue } from '../core/serial-queue';
-import { JsonRepository } from './repository';
 import { localDate } from '../core/dates';
 import type { Snapshot } from '../shared/coach';
 import { ObserverClient } from './observer';
 import { NotificationWindow } from './notification';
 import { runCoachSmoke } from './smoke';
+import { runStorageSmoke } from './storage-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 
@@ -16,6 +20,7 @@ export function showCoach(): void { coachWindow.show(); }
 
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   let tray: Tray | null = null;
+  let ticker: NodeJS.Timeout | undefined;
   let errorStop = false;
   let fixtureDeleteResponse: number | null = null;
   const control = new SerialQueue();
@@ -38,8 +43,16 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     if (snapshot.error && !errorStop) { errorStop = true; notice.dismiss(); void observer.stop().catch(() => {}); }
   };
-  const coach = new Coach({ repository: new JsonRepository(app.getPath('userData')), date: localDate,
-    now: () => performance.now(), notify: (value) => notice.show(value), changed: publish });
+  // Keep the established JSON smoke as legacy regression. New storage has its own empty-userData smoke.
+  const storageFixture = process.argv.includes('--storage-smoke');
+  if (fixture && !storageFixture) await writeFile(join(app.getPath('userData'), 'counts.json'), JSON.stringify({ schemaVersion: 1, days: {} }), { flag: 'wx' });
+  const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
+  const repository = await selectRepository(app.getPath('userData'), workerPath);
+  const common = { date: localDate, now: () => performance.now(), notify: (value: import('../shared/coach').Notice) => notice.show(value), changed: publish };
+  const coach = repository instanceof SqliteRepository
+    ? new DurableCoach({ ...common, repository, session: repository.session,
+      capabilities: () => fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : [] })
+    : new Coach({ ...common, repository });
   const startObservation = async () => {
     const snapshot = coach.snapshot();
     if (snapshot.observing || snapshot.pendingSave) return;
@@ -76,7 +89,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
       if (answer.response !== 1) { showCoach(); return; }
     }
-    quitting = true; await observer.shutdown(); tray?.destroy(); app.quit();
+    quitting = true; clearInterval(ticker); await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close(); tray?.destroy(); app.quit();
   };
   const deleteCounts = () => control.run(async () => {
     const window = coachWindow.current;
@@ -91,6 +104,13 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return coach.snapshot();
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
+    getRecords: async (from, to) => {
+      try {
+        if (repository instanceof SqliteRepository) return await repository.query(from, to);
+        const loaded = await repository.load();
+        return { counts: Object.fromEntries(Object.entries(loaded.counts).filter(([day]) => day >= from && day <= to)), coverage: {}, revision: 0 };
+      } catch { coach.fault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
+    },
     getSnapshot: async () => { await coach.tick(); return coach.snapshot(); },
     getNotice: async () => notice.current(),
     command,
@@ -113,18 +133,20 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (!snapshot.settings.opened || snapshot.error) { showCoach(); await coach.opened(); }
   }
   await startObservation(); publish(coach.snapshot());
-  const ticker = setInterval(() => {
-    if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
+  ticker = setInterval(() => {
+    if (repository instanceof SqliteRepository || localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
+  powerMonitor.on('suspend', () => { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); });
   screen.on('display-removed', () => notice.dismiss());
   screen.on('display-metrics-changed', () => notice.dismiss());
   if (fixture) {
+    if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
-    let report: Awaited<ReturnType<typeof runCoachSmoke>> | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | undefined;
     try {
       report = await Promise.race([
-        runCoachSmoke({ coach, observer, notice, window,
+        storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           chooseDelete: (response) => { fixtureDeleteResponse = response; } }),
         new Promise<never>((_, reject) => {
@@ -138,7 +160,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     finally {
       clearTimeout(deadline); clearInterval(ticker);
-      coach.stop(); notice.dismiss(); await observer.shutdown(); quitting = true;
+      coach.stop(); notice.dismiss(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close(); quitting = true;
       if (report) console.log('COACH_SMOKE_OK ' + JSON.stringify({ ...report, hooksStopped: true }));
       else console.error('COACH_SMOKE_FAILED');
       app.exit(report ? 0 : 1);

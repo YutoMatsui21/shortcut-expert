@@ -8,7 +8,7 @@ const packageOption = process.argv.indexOf('--package-dir');
 const packageDir = packageOption >= 0 ? process.argv[packageOption + 1] : 'release';
 if (!packageDir) throw new Error('--package-dir needs a folder');
 const executable = packaged ? resolve(packageDir, 'win-unpacked/Window Shortcut Coach.exe') : electron;
-const options = ['--coach-smoke'];
+const options = [process.argv.includes('--storage') ? '--storage-smoke' : '--coach-smoke'];
 if (process.argv.includes('--real-display')) options.push('--real-display-smoke');
 const args = packaged ? options : [resolve('.'), ...options];
 const environment = { ...process.env };
