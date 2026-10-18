@@ -18,6 +18,7 @@ export class DurableCoach {
   private paused = false;
   private error: string | null = null;
   private observerError: string | null = null;
+  private settingsError: string | null = null;
   private loaded = false;
   private generation = 0;
   private candidateSequence = 0;
@@ -94,13 +95,13 @@ export class DurableCoach {
       this.data = { ...this.data, ...await this.deps.repository.query(daysBefore(this.deps.date(), 59), this.deps.date()),
         epoch: value.reset ? value.epoch + 1 : value.epoch, highWater: value.today };
       this.pending = null;
-      this.error = this.pendingSettings ? '設定を保存できません。再試行してください。' : null;
+      this.error = null;
     } catch { this.fail(); }
     this.publish();
   }
   tick(): Promise<void> {
     return this.queue.run(async () => {
-      if (this.pending || this.error) return;
+      if (this.pending || this.error || this.pendingSettings) return;
       const value = this.prepare(); if (value) await this.persist(value);
     });
   }
@@ -117,8 +118,8 @@ export class DurableCoach {
     if (!this.loaded) { this.publish(); return; }
     try {
       await this.deps.repository.saveSettings(value); this.data.settings = value; this.pendingSettings = null;
-      if (!this.pending && this.error === '設定を保存できません。再試行してください。') this.error = null;
-    } catch { this.pendingSettings = value; this.fail('設定を保存できません。再試行してください。'); }
+      this.settingsError = null;
+    } catch { this.pendingSettings = value; this.settingsError = '設定を保存できません。再試行してください。'; this.stop(); }
     this.publish();
   }
   setMuted(id: OperationId, muted: boolean): Promise<void> {
@@ -167,6 +168,6 @@ export class DurableCoach {
   snapshot(): Snapshot {
     return { counts: structuredClone(this.data.counts), coverage: structuredClone(this.data.coverage), revision: this.data.revision,
       settings: structuredClone(this.data.settings), observing: this.observing, notificationsPaused: this.paused,
-      error: this.observerError ?? this.error, pendingSave: !!this.pending || !!this.pendingSettings };
+      error: this.observerError ?? this.error ?? this.settingsError, pendingSave: !!this.pending || !!this.pendingSettings };
   }
 }

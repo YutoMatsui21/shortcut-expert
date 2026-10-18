@@ -220,3 +220,10 @@ test('durable v2 consumes transactions once, rejects version mixing and protects
   await h.coach.accept({ ...v2Fixture(candidate, 12), sequence: 5 });
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 2);
 });
+test('settings failure and recovery preserve a preexisting clock error', async t => {
+  const h = await fixture(t); h.date('2026-10-20'); await h.coach.tick(); h.date('2026-10-19'); await h.coach.tick();
+  const save = h.repository.saveSettings.bind(h.repository);
+  h.repository.saveSettings = async () => { throw new Error('fixture settings'); };
+  await h.coach.setMuted('W03', true); h.repository.saveSettings = save; await h.coach.retrySave(); h.coach.begin(2);
+  assert.match(h.coach.snapshot().error!, /日付/); assert.equal(h.coach.snapshot().observing, false);
+});
