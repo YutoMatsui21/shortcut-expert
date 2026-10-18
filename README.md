@@ -76,6 +76,14 @@ node .\scripts\smoke.mjs --packaged --package-dir release/quality-tests
 
 原本probeは`validation/probes`のソースから再ビルドする。[再現手順](docs/research.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。
 
+SQLite方式の検証（[#10の結果・採用方式・限界](docs/sqlite-storage-validation.md)）は以下で再実行する。製品ビルドや.NET SDKを使わず、同じ固定版Electron/ASAR/Windows x64の独立した無署名probe配布物を作る。hook・実入力・通常の保存先は使わず、毎回`.tools/validation/sqlite-*`へfixtureと結果JSONを出力する。故障試験では自分で起動したprobeを強制終了し、fixture DBだけにread-only属性・NTFS書込拒否ACLを設定してfinallyで解除する。配布物内ソースが現在のprobeと異なれば実行前に再packageを要求する。
+
+```powershell
+npm.cmd run probe:sqlite
+npm.cmd run probe:sqlite:package
+npm.cmd run probe:sqlite:packaged
+```
+
 ## 公開準備
 
 `npm.cmd run package:installer`はbuild後にNSISインストーラーを作る入口。導入・再導入・削除、通常利用60分、採用操作ごとの精度確認は未完。正式名称・appId・OSSライセンス・公開先・署名を決める必要があり、UNLICENSEDは未選定を表す。

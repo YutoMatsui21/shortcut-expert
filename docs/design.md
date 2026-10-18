@@ -56,6 +56,10 @@
 - 検証ソースは`validation/probes`、既存の実測原本は`validation/evidence`、再生成可能なexe・今後のログはGit対象外の`.tools/validation`に置く。製品コードにprobeを取り込む場合は成立条件を改めて確認する。
 - 人工候補の接続試験と実入力精度の証拠を区別し、未確認条件を対応済みとして扱わない。
 
+### #10：SQLite方式の成立確認（2026-10-18）
+
+配布版の隔離probeで`node:sqlite`・専用Worker・WAL/FULLのディスク保存、応答消失時の重複防止、故障時の原本保持、JSON全件/bytes照合後の移行、長期期間読込を確認した。方式と証拠・限界・#15/#16への引継ぎは[SQLite保存方式の技術検証](sqlite-storage-validation.md)を参照する。製品は引き続き`JsonRepository`を使い、このprobeを本番保存として呼ばない。
+
 ### 指示の配置
 
 全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
