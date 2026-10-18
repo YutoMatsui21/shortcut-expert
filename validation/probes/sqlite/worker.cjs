@@ -2,8 +2,7 @@ const { parentPort, workerData, isMainThread } = require('node:worker_threads');
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
 const assert = require('node:assert/strict');
-const { DatabaseSync } = require('node:sqlite');
-const { connect, range, write, reset, migrate, transaction } = require('./store.cjs');
+const { connect, range, write, reset, migrate } = require('./store.cjs');
 
 assert.equal(isMainThread, false);
 const { root, action } = workerData;
@@ -49,9 +48,7 @@ function execute() {
       db.exec(`PRAGMA max_page_count=${pages}`);
       let failure;
       try {
-        transaction(db, () => {
-          db.prepare('INSERT INTO writes VALUES (?,?,?)').run(1, 'failed-full', 'fixture');
-          db.exec("UPDATE counts SET mouse=mouse+100");
+        write(db, request.batch, () => {
           db.prepare('INSERT INTO capacity_fixture VALUES (?)').run(Buffer.alloc(1024 * 1024));
         });
       } catch (error) { failure = { message: error.message, errcode: error.errcode }; }
@@ -59,7 +56,7 @@ function execute() {
       assert.deepEqual(info(db).rows, before.rows);
       assert.equal(info(db).writes, before.writes);
       db.exec('PRAGMA max_page_count=1073741823');
-      return { failure, ...info(db) };
+      return { failure, failedBatch: request.batch, ...info(db) };
     }
     if (action === 'readonly') {
       // File's Windows read-only attribute was set by the supervisor, not an injected exception.

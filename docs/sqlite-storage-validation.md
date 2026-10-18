@@ -8,8 +8,10 @@
 
 - MainがWorkerと要求IDを所有し、Worker内でSQLiteを同期・直列実行する。Workerは明示的にASARからunpackし、DBをASAR外の書込領域に置く。RendererへDBパス・SQL・汎用ファイルAPIを公開しない。
 - `generation + writeId + payload`の照合、集計加算、ledger挿入を同じtransactionに置き、COMMIT後だけ成功応答する。再送は**同じID・同じ差分**を使う。同じIDで異なる内容、旧世代の遅延要求は拒否する。削除・世代更新もtransactionで行う。新IDでの再送は二重加算を防げないため、#15で保留要求の寿命と再起動時の扱いを定義する。未確定のメモリ上の入力の救済は保証しない。
-- ledgerは集計の書込メタデータだけで、入力ログ・窓ID・タイトルを記録しない。ledger削除は再送防止の根拠を失わせるため、保存期間を短くしない。製品でのサイズ管理・観測期間・設定を含むschemaは#15/#16で定義する。
+- ledgerは集計の書込メタデータだけで、入力ログ・窓ID・タイトルを記録しない。同一世代ではledgerを保持して再送を判定する。全記録削除では集計・日付・ledgerを消して世代を進める処理を同じtransactionで確定する。旧世代はledger照合より先に拒否するため、履歴payloadを残す必要はない。製品でのサイズ管理・観測期間・設定を含むschemaは#15/#16で定義する。
 - 既存JSONを上書きせず、別DBへコピーする。日付集合（空の操作日も含む）・全操作のmouse/key・全設定・原本SHA-256を照合し、DBを閉じて再読込してから切替pointerを一時ファイル同期→renameで確定する。旧W09の履歴とmuteも保全する。新12操作の状態はmuted→対象外、その他→学習中。習得済みや過去の観測期間を推定しない。
+- JSONが未作成なら旧`JsonRepository`と同じ既定値（空counts、muted空/opened=false）を使い、移行metadataにはhashの代わりに`absent`を記録する。欠落しているファイルは作らず、切替前にも欠落を照合する。JSON解析エラーやENOENT以外の読込失敗を既定値に置換しない。
+- 初期schemaの作成前に移行先名と原本hashを含む所有markerを一時ファイルへ書込・同期し、renameで確定する。書込前・確定前に中断した一時markerはDB作成前なので次回書き直せる。未切替・所有情報一致・空schema/version 0のDBに限り初期化中断から再開し、schemaのcommit後にmarkerを取り除く。所有情報のない既存version 0・非空schema・未知版・原本不一致は初期化しない。切替済みDBが欠落していれば新規DBを作らず停止する。
 - 製品移行では旧保存queueを止め、単一起動lockを保持したまま2ファイルを読む。probeの直前bytes再照合は、旧プロセスが照合後に書く競合を排除できない。既存移行先の破損・未知schema・原本不一致は上書きせず停止する。変更された原本との自動マージはしない。
 - 起動時・移行前にschemaと整合性を確認する。失敗を空DBへ置換しない。WAL運用中のDB本体だけのコピーをバックアップとしない。破損の自動修復、利用者の保存再試行UI、実userDataへの切替は後続Issueで実装する。
 
@@ -17,7 +19,7 @@
 
 Windows `10.0.26300` / x64、Electron **44.7.0**、同梱Node **24.21.0**、実測SQLite **3.53.4**、electron-builder **26.15.3**。ASAR内のmainからunpackされたWorkerを起動し、全件`app.isPackaged=true`を照合。独立した無署名probe exeであり、既存アプリの同梱helperやUIは起動しない。通常製品と同じ固定Electron・packager・ASAR・Windows x64を使う。NSIS導入や署名は対象外。
 
-最終配布版実行：**2026-10-18 23:57:12〜23:57:48 JST、15シナリオ成功**。原本は`.tools/validation/sqlite-qazV1A/report.json`。最終開発版も同じ15シナリオが成功し、原本は`.tools/validation/sqlite-dITpYM/report.json`。既存unitテスト113件・型検査・probeの構文確認・diffの空白検査も成功。製品経路は変更しないため、helper/native試験・通常UI smokeは今回実行していない。各ソースSHA-256・ASAR SHA-256・runtime・結果を記録し、実行前に配布物内のソース一致を検証する。生成exe・DB・ログはGit対象外で再生成できる。
+初回検証の配布版実行：**2026-10-18 23:57:12〜23:57:48 JST、15シナリオ成功**。原本は`.tools/validation/sqlite-qazV1A/report.json`。同時点の開発版も同じ15シナリオが成功し、原本は`.tools/validation/sqlite-dITpYM/report.json`。既存unitテスト113件・型検査・probeの構文確認・diffの空白検査も成功。製品経路は変更しないため、helper/native試験・通常UI smokeは今回実行していない。各ソースSHA-256・ASAR SHA-256・runtime・結果を記録し、実行前に配布物内のソース一致を検証する。生成exe・DB・ログはGit対象外で再生成できる。レビュー後の修正と最終結果は次節に記録する。
 
 | 確認した条件 | 結果 |
 | --- | --- |
@@ -41,9 +43,26 @@ Windows `10.0.26300` / x64、Electron **44.7.0**、同梱Node **24.21.0**、実�
 
 ## 未確認事項と検証時の修正
 
+### PR #55のレビュー対応（2026-10-19）
+
+6件を確認し、いずれも方式の成立根拠やデータ保護に影響するため対応した。規約の確認では検証結果と説明の食い違い、要件の確認では移行・再試行の不足が見つかった。製品への組み込みは引き続き#15/#16の範囲。
+
+| レビュー | 修正と追加検証 |
+| --- | --- |
+| [旧JSON未作成](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610516) | 両方なし/片方だけの3条件で旧repositoryの既定値を使い、存在する原本bytesと欠落を保持して再移行できる |
+| [Electron固定版の照合](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610520) | 実行ごとのruntime.electronを現在のpackage.json固定版と照合し、不一致を拒否。古い版のmetadataを拒否するunit試験を追加 |
+| [初期schema中断](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610522) | 所有markerによる限定的な再開を追加。marker書込前・確定前とschema transaction途中の3停止点を追加し、未知DB・非空schema・原本変更の拒否もunitで確認 |
+| [FULL後の同じ書込の再送](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610527) | 共通write経路の集計・ledger更新後にSQLite FULLを起こし、再起動でrollbackを照合。その後は同じID/同じpayloadで成功し、もう一度送ってもduplicateになる |
+| [全削除後のledger残存](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610528) | days/counts/writesを空にし世代を進める。設定保持、旧世代拒否、新世代の同一IDは一度だけ加算を確認 |
+| [実在しない日付](https://github.com/YutoMatsui21/shortcut-expert/pull/55#discussion_r4307610533) | 新規書込と移行で同じ暦日検証を使う。存在しない日付3例の拒否とDB/ledgerの不変、正しい閏日の受理を確認 |
+
+修正前の保存コードでは追加回帰試験の未作成JSON・ledger削除・不正日付・初期schema停止点が期待どおり失敗した。所有markerの直接作成にも中断の余地があり、markerの書込前停止試験を失敗させてから、一時ファイル経由の確定へ修正した。通常のunit入口に7件を追加し、全120件・型検査・構文確認・diffの空白検査が成功した。
+
+最終検証は**開発版・配布版とも20シナリオ成功**。開発版原本は`.tools/validation/sqlite-rz1RAo/report.json`、配布版原本は`.tools/validation/sqlite-CH7Poy/report.json`。配布版は**2026-10-19 01:34:21〜01:35:28 JST**に実行し、Electron 44.7.0（現在の固定版と一致）/ Node 24.21.0 / SQLite 3.53.4だった。両実行の全probeソースhashも一致した。独立した規約・要件レビューでも今回の修正範囲に未対応の指摘はなかった。初回15シナリオの記録は当時の結果であり、これら6点まで確認できていた証拠とは扱わない。実ボリューム枯渇・停電等の限界は今回も変わらない。
+
 実ボリュームの容量枯渇、WAL同期時のI/O障害、停電・OS crash・記憶装置故障は未確認。FULLはSQLiteページ上限による故障、強制終了はElectron親プロセスの終了であり、これらを停電試験と同一視しない。故障ディスクからの救済を保証しない。製品userData・並行する旧版との移行・NSIS・通常UIとの結合は#15以降で確認する。
 
-初期probeはElectronのready前にWorkerを動かし、早期終了時に断続的なaccess violationを起こした。`whenReady`後に開始し、Workerのexitを待って終了する構成へ変更し、描画不要のprobeではhardware accelerationを無効化した。以後の最終開発版・最終配布版は各15シナリオ成功。製品の既存起動コードは変更していない。NTFS拒否中は試験側のreadFileも失敗するため、ACLを戻した後に原本を照合するよう試験を修正。内部ページ破損は例外codeではなくquick_checkの結果として返る場合もあるため、その実結果を照合する。
+初期probeはElectronのready前にWorkerを動かし、早期終了時に断続的なaccess violationを起こした。`whenReady`後に開始し、Workerのexitを待って終了する構成へ変更し、描画不要のprobeではhardware accelerationを無効化した。以後の初回検証では開発版・配布版が各15シナリオ成功し、レビュー対応後は各20シナリオが成功した。製品の既存起動コードは変更していない。NTFS拒否中は試験側のreadFileも失敗するため、ACLを戻した後に原本を照合するよう試験を修正。内部ページ破損は例外codeではなくquick_checkの結果として返る場合もあるため、その実結果を照合する。
 
 ## 一次資料
 
@@ -75,7 +94,7 @@ FULL／IOERRなどでは、失敗した文だけ戻る場合とtransaction全体
 
 SQLiteは一意制約を提供するが、通常のPRIMARY KEY／UNIQUEではNULLが重複防止をすり抜ける場合がある。設計への適用：write IDとgenerationにNOT NULL制約を付け、一意な組をledgerへ記録する。ledger挿入・日別操作別加算・世代照合を同じtransactionに置き、commit後のACK消失再送はledger照合で処理する。同じIDで内容が違う再送は成功としない。[SQLite制約](https://www.sqlite.org/lang_createtable.html#the_primary_key)
 
-これはアプリ側の設計案でありSQLite単体のexactly-once機能ではない。リセットによる世代更新も同じDBで直列化し、旧世代の遅延writeを拒否する必要がある。未commit／未送信のメモリ上の差分は回復保証の対象にできない。ledgerを削除すると、そのIDの再送を識別する根拠も失う。
+これはアプリ側の設計案でありSQLite単体のexactly-once機能ではない。リセットによる世代更新も同じDBで直列化し、旧世代の遅延writeを拒否する必要がある。未commit／未送信のメモリ上の差分は回復保証の対象にできない。同一世代のledger削除は再送判定の根拠を失うが、全記録削除時は世代更新とledger削除を原子的に確定し、旧世代拒否で再送を防ぐ。
 
 ## JSON移行と原本bytes
 

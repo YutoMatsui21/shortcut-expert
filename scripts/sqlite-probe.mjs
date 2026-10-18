@@ -1,5 +1,5 @@
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, writeFile, access, chmod, copyFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, access, chmod, copyFile, unlink } from 'node:fs/promises';
 import { resolve, join, relative, normalize } from 'node:path';
 import { release } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -8,8 +8,10 @@ import { performance } from 'node:perf_hooks';
 import assert from 'node:assert/strict';
 import electron from 'electron';
 import { extractFile } from '@electron/asar';
+import { assertRuntime } from '../validation/probes/sqlite/runtime.cjs';
 
 const packaged = process.argv.includes('--packaged');
+const pinnedElectron = JSON.parse(await readFile('package.json', 'utf8')).devDependencies.electron;
 const executable = packaged ? resolve('release/sqlite-probe/win-unpacked/SQLite Storage Probe.exe') : electron;
 await access(executable); // Fail once, before creating fixtures, if packaging has not completed.
 const base = resolve('.tools/validation');
@@ -21,7 +23,7 @@ delete environment.ELECTRON_RUN_AS_NODE;
 delete environment.ELECTRON_RENDERER_URL;
 const sourceHashes = {};
 for (const file of ['scripts/sqlite-probe.mjs', 'validation/probes/sqlite/main.cjs', 'validation/probes/sqlite/worker.cjs',
-  'validation/probes/sqlite/store.cjs', 'validation/probes/sqlite/electron-builder.cjs']) {
+  'validation/probes/sqlite/store.cjs', 'validation/probes/sqlite/runtime.cjs', 'validation/probes/sqlite/electron-builder.cjs']) {
   const bytes = await readFile(file);
   sourceHashes[file] = sha(bytes);
   if (packaged && file.startsWith('validation/')) {
@@ -29,7 +31,7 @@ for (const file of ['scripts/sqlite-probe.mjs', 'validation/probes/sqlite/main.c
   }
 }
 const evidence = { started: new Date().toISOString(), packaged, executable: relative(resolve('.'), executable),
-  fixture: relative(resolve('.'), output), windows: release(), sourceHashes,
+  fixture: relative(resolve('.'), output), windows: release(), pinnedElectron, sourceHashes,
   ...(packaged ? { asarHash: sha(await readFile('release/sqlite-probe/win-unpacked/resources/app.asar')) } : {}), tests: [] };
 async function fixture(name) {
   const root = join(output, name);
@@ -75,7 +77,7 @@ async function run(root, action, request = {}, options = {}) {
     const exit = await completion;
     assert.equal(exit.code, 0, stderr);
     const result = JSON.parse(await readFile(join(root, 'result.json'), 'utf8'));
-    assert.equal(result.runtime.packaged, packaged);
+    assertRuntime(result.runtime, pinnedElectron, packaged);
     if (packaged) assert.equal(result.workerOutsideAsar, true);
     evidence.runtime ??= result.runtime;
     if (!options.failure) assert.equal(result.ok, true, JSON.stringify(result));
@@ -115,11 +117,25 @@ await test('duplicate-conflict-and-generation-fence', async () => {
   await run(isolated, 'write', { batches: [batch('before-reset')] });
   const reset = await run(isolated, 'reset');
   assert.equal(reset.result.generation, 2);
+  assert.equal(reset.result.writes, 0);
+  assert.deepEqual(reset.result.rows, []);
   const stale = await run(isolated, 'write', { batches: [batch('before-reset'), batch('late')] }, { failure: true });
   assert.match(stale.error, /STALE_GENERATION/);
   const current = await run(isolated, 'write', { batches: [batch('new', { generation: 2 })] });
   assert.equal(current.result.rows[0].mouse, 1);
   return { duplicate: true, conflictRejected: true, oldGenerationRejected: true };
+});
+await test('invalid-write-dates-preserve-committed-data', async () => {
+  const isolated = await fixture('invalid-write-date');
+  const baseline = await run(isolated, 'write', { batches: [batch('baseline')] });
+  for (const day of ['2026-02-30', '2025-02-29', '2026-13-01']) {
+    const rejected = await run(isolated, 'write', { batches: [batch('invalid-' + day, { day })] }, { failure: true });
+    assert.match(rejected.error, /INVALID_DAY/);
+  }
+  const restart = await run(isolated, 'inspect');
+  assert.deepEqual(restart.result.rows, baseline.result.rows);
+  assert.equal(restart.result.writes, 1);
+  return { invalidDatesRejected: 3, committedRowsPreserved: true, ledgerRows: 1 };
 });
 for (const phase of ['before-commit', 'after-commit']) {
   await test('process-kill-' + phase, async () => {
@@ -143,10 +159,19 @@ for (const phase of ['before-commit', 'after-commit']) {
   });
 }
 await test('sqlite-full-rollback-and-retry', async () => {
-  const failure = await run(root, 'full');
-  const retry = await run(root, 'write', { batches: [batch('after-full')] });
+  const failedBatch = batch('failed-full');
+  const failure = await run(root, 'full', { batch: failedBatch });
+  assert.deepEqual(failure.result.failedBatch, failedBatch);
+  const persisted = await run(root, 'inspect');
+  assert.deepEqual(persisted.result.rows, failure.result.rows);
+  assert.equal(persisted.result.writes, failure.result.writes);
+  const retry = await run(root, 'write', { batches: [failedBatch] });
   assert.equal(retry.result.rows[0].mouse, 2017);
-  return failure.result.failure;
+  assert.deepEqual(retry.result.replies, ['written']);
+  const duplicate = await run(root, 'write', { batches: [failedBatch] });
+  assert.deepEqual(duplicate.result.replies, ['duplicate']);
+  assert.equal(duplicate.result.rows[0].mouse, 2017);
+  return { ...failure.result.failure, failedBatch, retryReplies: retry.result.replies, duplicateReplies: duplicate.result.replies };
 });
 await test('windows-readonly-file-rollback-and-retry', async () => {
   const file = join(root, 'records.sqlite');
@@ -250,7 +275,26 @@ await test('json-full-migration-byte-identity-and-repeat', async () => {
   await unchanged(directory, bytes);
   return first.result;
 });
-for (const phase of ['migration-before-commit', 'migration-before-switch', 'migration-after-switch']) {
+await test('missing-legacy-json-defaults-and-original-preservation', async () => {
+  const results = [];
+  for (const present of [[], ['counts.json'], ['settings.json']]) {
+    const { directory, bytes } = await legacyFixture('missing-json-' + results.length);
+    for (const file of ['counts.json', 'settings.json']) if (!present.includes(file)) await unlink(join(directory, file));
+    const first = await run(directory, 'migrate');
+    assert.equal(first.result.rows, present.includes('counts.json') ? 807 : 0);
+    assert.equal(first.result.countsHash === 'absent', !present.includes('counts.json'));
+    assert.equal(first.result.settingsHash === 'absent', !present.includes('settings.json'));
+    const repeat = await run(directory, 'migrate');
+    assert.deepEqual(repeat.result, first.result);
+    for (const [index, file] of ['counts.json', 'settings.json'].entries()) {
+      assert.equal(await exists(join(directory, file)), present.includes(file));
+      if (present.includes(file)) assert.deepEqual(await readFile(join(directory, file)), bytes[index]);
+    }
+    results.push({ present, ...first.result });
+  }
+  return results;
+});
+for (const phase of ['marker-before-write', 'marker-before-publish', 'schema-before-commit', 'migration-before-commit', 'migration-before-switch', 'migration-after-switch']) {
   await test('migration-kill-restart-' + phase, async () => {
     const { directory, bytes } = await legacyFixture(phase);
     await run(directory, 'migrate', { pause: phase }, { pause: true, kill: true });

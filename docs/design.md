@@ -60,6 +60,8 @@
 
 配布版の隔離probeで`node:sqlite`・専用Worker・WAL/FULLのディスク保存、応答消失時の重複防止、故障時の原本保持、JSON全件/bytes照合後の移行、長期期間読込を確認した。方式と証拠・限界・#15/#16への引継ぎは[SQLite保存方式の技術検証](sqlite-storage-validation.md)を参照する。製品は引き続き`JsonRepository`を使い、このprobeを本番保存として呼ばない。
 
+2026-10-19のPR #55レビュー対応では、未作成JSONの既定値と欠落保持、所有情報で限定したschema初期化再開、全削除時のledger削除と世代更新、不正暦日の拒否、FULL後の同じ書込の再送、現在のElectron固定版との照合を追加した。初期schemaのtransaction内も強制終了試験の対象とし、所有情報のないDBや未知版は上書きしない。
+
 ### 指示の配置
 
 全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
