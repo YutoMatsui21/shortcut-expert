@@ -35,7 +35,7 @@
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
 - Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証を担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除確認・終了判断は`coach-app.ts`に残す。
-- Rendererの`useCoach.ts`は初回状態取得・購読と解除・操作中/エラー状態・ボタン要求を担当する。`CoachApp.tsx`は日付選択と表示を担当し、窓の生成やIPC登録を行わない。
+- #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。既存日別表示は`RecordsPage.tsx`へ移し、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](learning-ui.md)。
 - C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。

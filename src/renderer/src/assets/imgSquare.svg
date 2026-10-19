@@ -1,0 +1,5 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="square">
+<path id="icon" d="M8.625 2.25H3.375C2.75368 2.25 2.25 2.75368 2.25 3.375V8.625C2.25 9.24632 2.75368 9.75 3.375 9.75H8.625C9.24632 9.75 9.75 9.24632 9.75 8.625V3.375C9.75 2.75368 9.24632 2.25 8.625 2.25ZM3.375 1.125C2.13236 1.125 1.125 2.13236 1.125 3.375V8.625C1.125 9.86764 2.13236 10.875 3.375 10.875H8.625C9.86764 10.875 10.875 9.86764 10.875 8.625V3.375C10.875 2.13236 9.86764 1.125 8.625 1.125H3.375Z" fill-rule="evenodd" clip-rule="evenodd" fill="#CAD5F1"/>
+</g>
+</svg>

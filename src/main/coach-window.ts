@@ -11,8 +11,8 @@ export class CoachWindow {
 
   async create(load: (window: BrowserWindow, mode: string) => Promise<void>, isQuitting: () => boolean): Promise<BrowserWindow> {
     if (this.current) return this.current;
-    const window = new BrowserWindow({ width: 920, height: 760, minWidth: 620, minHeight: 500, show: false,
-      autoHideMenuBar: true, backgroundColor: '#f5f4ed',
+    const window = new BrowserWindow({ width: 1120, height: 700, minWidth: 800, minHeight: 600, show: false, frame: false,
+      autoHideMenuBar: true, backgroundColor: '#ffffff',
       webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     this.window = window;
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -32,6 +32,15 @@ export class CoachWindow {
   }
 
   hide(): void { this.current?.hide(); }
+
+  command(command: 'minimize' | 'maximize' | 'hide'): void {
+    const window = this.current;
+    if (!window) return;
+    if (command === 'hide') this.hide();
+    else if (command === 'minimize') window.minimize();
+    else if (window.isMaximized()) window.unmaximize();
+    else window.maximize();
+  }
 
   publish(snapshot: Snapshot): void { this.current?.webContents.send('coach:changed', snapshot); }
 }

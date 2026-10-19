@@ -13,6 +13,8 @@ import { runCoachSmoke } from './smoke';
 import { runStorageSmoke } from './storage-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
+import { learningReadModel } from '../core/learning';
+import { daysBefore } from '../shared/storage';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -109,6 +111,16 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return coach.snapshot();
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
+    getLearning: () => control.run(async () => {
+      const today = localDate();
+      try {
+        const snapshot = coach.snapshot();
+        const records = repository instanceof SqliteRepository ? await repository.query(daysBefore(today, 6), today)
+          : { counts: snapshot.counts, coverage: {}, revision: 0 };
+        return learningReadModel(records, snapshot.settings, today);
+      } catch { if (!coach.snapshot().error) coach.fault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
+    }),
+    windowCommand: async (value) => coachWindow.command(value),
     getRecords: async (from, to) => {
       try {
         if (repository instanceof SqliteRepository) return await repository.query(from, to);

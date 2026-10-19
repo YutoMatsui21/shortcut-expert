@@ -77,6 +77,8 @@ jobs:
             .tools/test-results/*.log
             .tools/tests/coach-*/coach-preview.png
             .tools/tests/coach-*/notice-preview.png
+            .tools/tests/coach-*/learning-*.png
+            .tools/tests/coach-*/learning-layout.json
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3
