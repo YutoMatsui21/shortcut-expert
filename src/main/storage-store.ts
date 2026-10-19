@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { existsSync, openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync, unlinkSync } from 'node:fs';
+import { openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync, unlinkSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { operations, type OperationId, type Settings } from '../shared/coach.ts';
@@ -7,6 +7,7 @@ import type { Coverage, RecordMutation, RecordRange, StorageState } from '../sha
 import { daysBefore } from '../shared/storage.ts';
 import { validDate } from '../core/dates.ts';
 import type { LegacyImport } from './storage-migration.ts';
+import { fileExists } from './storage-files.ts';
 
 const ids = [...operations.map(op => op.id), 'W12', 'W13', 'W14'];
 const check = (ok: unknown, message: string): void => { if (!ok) throw new Error(message); };
@@ -21,13 +22,17 @@ function validateSettings(settings: Settings): void {
 export class StorageStore {
   private db: DatabaseSync;
   private root: string;
-  constructor(root: string) {
+  private mode: 'active' | 'staging';
+  constructor(root: string, mode: 'active' | 'staging' = 'active') {
     this.root = root;
+    this.mode = mode;
     const file = join(root, 'records.sqlite');
     const marker = join(root, 'authority.json');
-    const existed = existsSync(file);
+    const existed = fileExists(file);
+    const migrated = fileExists(join(root, 'source.json'));
+    if (mode === 'active' && migrated) check(existed && fileExists(join(root, 'initialized')), 'MIGRATED_DATABASE_MISSING');
     const authority = { schemaVersion: 1, file: 'records.sqlite' };
-    if (!existsSync(marker)) {
+    if (!fileExists(marker)) {
       check(!existed, 'UNKNOWN_DATABASE');
       const fd = openSync(marker + '.tmp', 'w');
       try { writeFileSync(fd, JSON.stringify(authority)); fsyncSync(fd); } finally { closeSync(fd); }
@@ -35,14 +40,14 @@ export class StorageStore {
     } else check(JSON.stringify(JSON.parse(readFileSync(marker, 'utf8'))) === JSON.stringify(authority), 'UNKNOWN_AUTHORITY');
     // A committed authority must never fall back to JSON or recreate a missing database.
     const initializing = join(root, 'initializing');
-    if (!existed && existsSync(join(root, 'initialized'))) throw new Error('DATABASE_MISSING');
+    if (!existed && fileExists(join(root, 'initialized'))) throw new Error('DATABASE_MISSING');
     if (!existed) writeFileSync(initializing, '1', { flag: 'a' });
     this.db = new DatabaseSync(file, { timeout: 1000 });
     try {
       check(this.db.prepare('PRAGMA quick_check').get()?.quick_check === 'ok', 'DATABASE_CORRUPT');
       const version = this.db.prepare('PRAGMA user_version').get()?.user_version;
       if (version === 0) {
-        check(existsSync(initializing) && !existsSync(join(root, 'initialized')), 'UNKNOWN_SCHEMA');
+        check(fileExists(initializing) && !fileExists(join(root, 'initialized')), 'UNKNOWN_SCHEMA');
         check(this.db.prepare('SELECT COUNT(*) AS n FROM sqlite_schema').get()?.n === 0, 'UNKNOWN_SCHEMA');
         this.transaction(() => this.db.exec(`
           CREATE TABLE meta (id INTEGER PRIMARY KEY CHECK(id=1), epoch INTEGER NOT NULL, highWater TEXT NOT NULL,
@@ -62,7 +67,15 @@ export class StorageStore {
       this.db.exec('PRAGMA synchronous=FULL');
       check(this.db.prepare('PRAGMA synchronous').get()?.synchronous === 2, 'SYNC_UNAVAILABLE');
       this.db.exec('CREATE TABLE IF NOT EXISTS migration (id INTEGER PRIMARY KEY CHECK(id=1), identity TEXT NOT NULL, purge INTEGER NOT NULL) STRICT');
-      this.purgeLegacy();
+      this.db.exec('CREATE TABLE IF NOT EXISTS legacy_days (day TEXT PRIMARY KEY) STRICT');
+      if (mode === 'active' && migrated) {
+        const source = JSON.parse(readFileSync(join(root, 'source.json'), 'utf8'));
+        const migration = this.db.prepare('SELECT identity,purge FROM migration WHERE id=1').get();
+        check(source.schemaVersion === 1 && Object.keys(source).sort().join(',') === 'identity,schemaVersion' &&
+          typeof source.identity === 'string' && /^[a-f0-9]{64}$/.test(source.identity) && migration?.identity === source.identity &&
+          [0,1,2].includes(Number(migration?.purge)), 'INVALID_MIGRATION_AUTHORITY');
+      }
+      if (mode === 'active') this.purgeLegacy();
       // Schema itself is the durable authority; this marker also detects a subsequently missing DB.
       const fd = openSync(join(root, 'initialized'), 'w');
       try { writeFileSync(fd, '1'); fsyncSync(fd); } finally { closeSync(fd); }
@@ -78,6 +91,7 @@ export class StorageStore {
     if (this.db.prepare('SELECT * FROM migration WHERE id=1').get()) { this.verifyLegacy(source); return; }
     check(this.meta().revision === 0 && this.db.prepare('SELECT COUNT(*) AS n FROM counts').get()?.n === 0, 'MIGRATION_NOT_EMPTY');
     this.transaction(() => {
+      for (const day of Object.keys(source.counts)) this.db.prepare('INSERT INTO legacy_days VALUES (?)').run(day);
       for (const [day, values] of Object.entries(source.counts)) for (const [id, count] of Object.entries(values)) {
         this.db.prepare('INSERT INTO counts VALUES (?,?,?,?)').run(day, id, count!.mouse, count!.key);
         this.db.prepare('INSERT INTO coverage VALUES (?,?,?,?,?,?)').run(day, id, 'legacy-unknown', 0, 1, 'legacy-v1');
@@ -93,7 +107,10 @@ export class StorageStore {
     return { ...settings, states: Object.fromEntries(ids.map(id => [id, settings.muted.includes(id as OperationId) ? 'excluded' : 'learning'])) };
   }
   verifyLegacy(source: LegacyImport): void {
-    check(this.db.prepare('SELECT identity FROM migration WHERE id=1').get()?.identity === source.identity, 'MIGRATION_IDENTITY');
+    const migration = this.db.prepare('SELECT identity,purge FROM migration WHERE id=1').get();
+    check(migration?.identity === source.identity && migration.purge === 0, 'MIGRATION_IDENTITY');
+    check(JSON.stringify(this.db.prepare('SELECT day FROM legacy_days ORDER BY day').all().map(row => row.day)) ===
+      JSON.stringify(Object.keys(source.counts).sort()), 'MIGRATION_DAYS');
     const expected = Object.entries(source.counts).flatMap(([day, values]) => Object.entries(values).map(([operation, count]) => ({ day, operation, mouse: count!.mouse, key: count!.key })))
       .sort((a,b) => a.day.localeCompare(b.day) || a.operation.localeCompare(b.operation));
     const actual = this.db.prepare('SELECT day,operation,mouse,key FROM counts ORDER BY day,operation').all();
@@ -105,6 +122,7 @@ export class StorageStore {
     check(this.meta().revision === 1 && this.meta().epoch === 1 && this.meta().highWater === (Object.keys(source.counts).sort().at(-1) ?? ''), 'MIGRATION_META');
   }
   private purgeLegacy(): void {
+    if (this.mode !== 'active') return;
     if (this.db.prepare('SELECT purge FROM migration WHERE id=1').get()?.purge !== 1) return;
     for (const name of ['counts.json', 'settings.json']) {
       try { unlinkSync(join(dirname(this.root), name)); }
@@ -123,6 +141,7 @@ export class StorageStore {
   query(from: string, to: string): RecordRange {
     check(validDate(from) && validDate(to) && from <= to && to <= daysBefore(from, -59), 'INVALID_RANGE');
     const result: RecordRange = { counts: {}, coverage: {}, revision: Number(this.meta().revision) };
+    for (const row of this.db.prepare('SELECT day FROM legacy_days WHERE day>=? AND day<=? ORDER BY day').all(from, to)) result.counts[String(row.day)] = {};
     for (const row of this.db.prepare('SELECT * FROM counts WHERE day>=? AND day<=? ORDER BY day,operation').all(from, to)) {
       (result.counts[String(row.day)] ??= {})[row.operation as OperationId] = { mouse: Number(row.mouse), key: Number(row.key) };
     }
@@ -160,7 +179,7 @@ export class StorageStore {
         const future = this.db.prepare('SELECT day FROM counts WHERE day>? LIMIT 1').get(value.today);
         check(!future, 'FUTURE_RECORDS');
       }
-      if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage; UPDATE migration SET purge=1 WHERE id=1;');
+      if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage; DELETE FROM legacy_days; UPDATE migration SET purge=1 WHERE id=1;');
       else {
         if (value.count) {
           const c = value.count;

@@ -4,11 +4,13 @@
 
 ## 保存と有効化
 
-`migration-v1/`へsource identity（両文書の有無・長さ・bytesのSHA-256、pathや入力列なし）を同期保存する。所有markerがないstage・source変更・読取不能は停止する。counts・各旧rowのlegacy-unknown coverage（activeMs=0/gap=true）・opened・muted→excluded・他全IDのlearning・時計高水位・移行identityをtransactionで取り込む。新操作の過去countや既知0件、masteredは作らない。空の旧日付は高水位には残し、架空の操作rowは作らない。
+source identity（両文書の有無・長さ・bytesのSHA-256、pathや入力列なし）を`migration-init-*`へ同期保存し、markerを含むdirectoryを`migration-v1/`へ原子的に公開する。公開前中断で残るinit directoryにはDBも記録copyもなく、次の起動では新しいinitで再試行できる。所有markerがない既存stage・source変更・読取不能は停止する。存在確認もENOENTだけを未作成とし、ACL/I/Oエラーを握り潰さない。
 
-DBを閉じて再openし、全日×ID×mouse/key、全coverage、全状態、opened、identity/metaを照合する。総和だけで合格にしない。sourceも再照合し、閉じた保存一式を同一ボリュームのdirectory renameで`records-v1/`へ原子的に有効化する。新規保存のauthority markerと初期化保護もそのまま移る。
+counts・各旧rowのlegacy-unknown coverage（activeMs=0/gap=true）・opened・muted→excluded・他全IDのlearning・時計高水位・移行identityをtransactionで取り込む。旧全日付を`legacy_days`にも同時保存し、空日も再open照合・有界queryで保持する。新操作の過去countや既知0件、masteredは作らない。空日に架空の操作rowやcoverageは作らない。
 
-中断stageは所有identityが一致したときだけ再開する。transaction前なら再取込、commit済みなら全行照合だけを行い加算しない。未知・不一致のstageは空にして再作成しない。activation後は`records-v1/`自体がauthorityであり、JSONへアクセスしない。DB破損・欠落・未来版も再importしない。
+DBを閉じて再openし、全旧日付集合・全日×ID×mouse/key、全coverage、全状態、opened、identity/metaとpurge=0を照合する。総和だけで合格にしない。stagingモードではpurgeを実行しない。sourceも再照合し、閉じた保存一式を同一ボリュームのdirectory renameで`records-v1/`へ原子的に有効化する。新規保存のauthority markerと初期化保護もそのまま移る。
+
+中断stageは所有identityが一致したときだけ再開する。transaction前なら再取込、commit済みなら全行照合だけを行い加算しない。未知・不一致のstageは空にして再作成しない。activation後は`records-v1/`自体がauthorityであり、JSONへアクセスしない。移行済みsource markerがあればDBとinitializedの両方を必須にし、同時欠落でも空DBを再作成しない。DB破損・欠落・未来版も再importしない。
 
 W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。W14のIDは詰め替えず状態をlearningで確保する（旧v1 registryはW01〜W11のみ）。初回12操作の一覧刷新は後続UI Issueの範囲で、今回W12/W13の新しい表示行は追加しない。
 

@@ -50,7 +50,7 @@ test('missing documents keep defaults and stay missing; malformed, extra fields,
 test('owned interrupted stage resumes idempotently; all-row mismatch and source changes never activate', t => {
   const h = fixture(t), source = readLegacy(h.root), stage = join(h.root, 'migration-v1');
   mkdirSync(stage); writeFileSync(join(stage, 'source.json'), JSON.stringify({ schemaVersion: 1, identity: source.identity }));
-  const store = new StorageStore(stage); store.importLegacy(source); store.close();
+  const store = new StorageStore(stage, 'staging'); store.importLegacy(source); store.close();
   const db = new DatabaseSync(join(stage, 'records.sqlite'));
   db.exec("UPDATE counts SET mouse=mouse+1 WHERE operation='W01'; UPDATE counts SET mouse=mouse-1 WHERE operation='W09'"); db.close();
   assert.throws(() => prepareStorage(h.target), /MIGRATION_COUNTS/); assert.equal(existsSync(h.target), false);
@@ -65,7 +65,7 @@ test('owned interrupted stage resumes idempotently; all-row mismatch and source 
 test('schema-only interrupted migration and transaction failure resume without partial imports', t => {
   const h = fixture(t), source = readLegacy(h.root), stage = join(h.root, 'migration-v1');
   mkdirSync(stage); writeFileSync(join(stage, 'source.json'), JSON.stringify({ schemaVersion: 1, identity: source.identity }));
-  const empty = new StorageStore(stage); empty.close();
+  const empty = new StorageStore(stage, 'staging'); empty.close();
   const db = new DatabaseSync(join(stage, 'records.sqlite'));
   db.exec("CREATE TRIGGER fail_import BEFORE INSERT ON counts WHEN NEW.operation='W09' BEGIN SELECT RAISE(ABORT,'fixture'); END;"); db.close();
   assert.throws(() => prepareStorage(h.target)); assert.equal(existsSync(h.target), false);
@@ -101,4 +101,33 @@ test('unowned stage stops; activated authority never reimports missing/corrupt D
   prepareStorage(h.target); const reopened = new StorageStore(h.target);
   try { assert.deepEqual(reopened.query('2020-01-02', '2020-01-02').counts, {}); assert.equal(reopened.load('2026-10-19').settings.opened, true); }
   finally { reopened.close(); }
+});
+test('empty legacy dates survive import, bounded read, verification and deletion', t => {
+  const h = fixture(t), sourceCounts = { schemaVersion: 1, days: { '2019-01-01': {}, ...h.counts.days, '2026-10-19': {} } };
+  writeFileSync(join(h.root, 'counts.json'), JSON.stringify(sourceCounts));
+  const source = readLegacy(h.root); prepareStorage(h.target);
+  const store = new StorageStore(h.target);
+  try {
+    store.verifyLegacy(source);
+    assert.deepEqual(store.query('2019-01-01', '2019-01-01').counts, { '2019-01-01': {} });
+    assert.deepEqual(store.query('2019-01-01', '2019-01-01').coverage, {});
+    store.claim('delete-empty'); store.commit({ epoch: 1, writeSession: 'delete-empty', sequence: 1, today: '2026-10-19', coverage: [], reset: true });
+    assert.deepEqual(store.query('2019-01-01', '2019-01-01').counts, {});
+  } finally { store.close(); }
+});
+test('migrated target with both DB and initialization marker missing never recreates empty authority', t => {
+  const h = fixture(t); prepareStorage(h.target);
+  rmSync(join(h.target, 'records.sqlite')); rmSync(join(h.target, 'initialized'));
+  assert.throws(() => new StorageStore(h.target), /DATABASE_MISSING/);
+  assert.equal(existsSync(join(h.target, 'records.sqlite')), false);
+  assert.equal(existsSync(join(h.root, 'counts.json')), true);
+});
+test('corrupt staging purge meta is rejected before touching either original', t => {
+  const h = fixture(t), stage = join(h.root, 'migration-v1'), source = readLegacy(h.root);
+  mkdirSync(stage); writeFileSync(join(stage, 'source.json'), JSON.stringify({ schemaVersion: 1, identity: source.identity }));
+  const store = new StorageStore(stage, 'staging'); store.importLegacy(source); store.close();
+  const db = new DatabaseSync(join(stage, 'records.sqlite')); db.exec('UPDATE migration SET purge=1'); db.close();
+  assert.throws(() => prepareStorage(h.target));
+  assert.equal(existsSync(h.target), false);
+  assert.equal(readLegacy(h.root).identity, source.identity);
 });
