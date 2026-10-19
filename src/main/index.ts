@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { app, type BrowserWindow } from 'electron';
 import { runCoach, showCoach } from './coach-app';
 
-const fixture = process.argv.includes('--coach-smoke');
+const fixture = process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke');
 function fixtureData(): string {
   if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;
   const directory = app.isPackaged ? join(app.getPath('temp'), 'window-shortcut-coach-tests') : join(app.getAppPath(), '.tools', 'tests');

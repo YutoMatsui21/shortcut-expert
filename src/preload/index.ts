@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { CoachBridge, Snapshot } from '../shared/coach';
 
 const coach: CoachBridge = {
+  getRecords: (from, to) => ipcRenderer.invoke('coach:get-records', from, to),
   getSnapshot: () => ipcRenderer.invoke('coach:get-snapshot'),
   getNotice: () => ipcRenderer.invoke('coach:get-notice'),
   command: (command) => ipcRenderer.invoke('coach:command', command),

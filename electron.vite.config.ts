@@ -6,8 +6,8 @@ export default defineConfig({
   main: {
     build: {
       rollupOptions: {
-        input: resolve('src/main/index.ts'),
-        output: { entryFileNames: 'index.cjs', format: 'cjs' }
+        input: { index: resolve('src/main/index.ts'), 'storage-worker': resolve('src/main/storage-worker.ts') },
+        output: { entryFileNames: '[name].cjs', format: 'cjs' }
       }
     }
   },

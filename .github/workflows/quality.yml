@@ -56,9 +56,17 @@ jobs:
           exit $LASTEXITCODE
       - name: Package the tested build
         run: npm.cmd run package:dir
+      - name: Durable storage UI and IPC smoke (synthetic input only)
+        run: |
+          node scripts/smoke.mjs --storage 2>&1 | Tee-Object -FilePath .tools/test-results/storage-smoke.log
+          exit $LASTEXITCODE
       - name: Packaged UI and IPC smoke
         run: |
           npm.cmd run smoke:packaged 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-smoke.log
+          exit $LASTEXITCODE
+      - name: Packaged durable storage UI and IPC smoke
+        run: |
+          node scripts/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
           exit $LASTEXITCODE
       - name: Fixture diagnostics
         if: always()
