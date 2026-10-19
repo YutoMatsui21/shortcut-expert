@@ -36,6 +36,18 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 ## 開発・確認
 
+<a id="development-workflow"></a>
+
+### 開発の進め方
+
+1. 実装前に`git status --short --branch`、`git worktree list`、`git log -1 --oneline`を確認する。対象Issueの依存・受入条件と基準コミットを照合し、作業先を1つに決める。detached HEADの場合は実装前に`codex/`ブランチへ所属させる。別コピーへの移し替え、他のworktreeの依存フォルダーや生成物の流用は通常の準備手順にしない。commit・pushの範囲はユーザーの依頼に従う。
+2. 長いIssue本文は成功した取得1回を`.tools/issue-<番号>.txt`などへ保存し、見出しを`rg -n '^#'`で探して該当節だけ読む。再取得は仕様更新の確認が必要な時に行う。取得失敗なら内容を仕様として使わず、終了コード・保存ファイルの内容を確認する。PowerShellではnativeコマンド失敗後も後続処理が続くため、依存するコマンドの間で`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を使う。
+3. 必要なツールと版は`package.json`・`global.json`で照合し、不足分だけ下記手順で準備する。権限・ネットワークによる失敗は承認された再実行か環境修正で解決する。修正前に同じコマンドを繰り返さず、承認拒否時は理由と未完了箇所を報告する。試験のTEMPに書込権限の問題がある場合は、この作業先の`.tools/test-temp`を作成し、そのコマンドの`TEMP`/`TMP`だけそこへ向ける。
+4. 修正中は下記のファイル・名前指定で関連試験を実行し、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証は変更内容・基準コミット・実行コマンドと対応づけ、ソース・依存・生成物・環境が変わった範囲を再検証する。調査の任意追加確認とIssueの必須条件を分け、次Issueの案内前にも依存条件を確認する。
+5. pushとCI・レビュー確認まで依頼された場合は、push後のhead SHAを固定して状態と未解決指摘を確認する。同じheadの実行中状態は30秒以上空け、変化がなければ60秒へ延ばす。正常待機中は状態の要約、失敗時に該当jobのログ、レビュー時に対象指摘を読む。新しいpush後はSHAを取り直し、古いheadの成功を完了根拠にしない。
+
+### 実行環境
+
 Windows x64、Node.js 24系・npm。作業フォルダーのPowerShellで実行する。
 
 ```powershell
@@ -91,6 +103,19 @@ npm.cmd run probe:sqlite
 npm.cmd run probe:sqlite:package
 npm.cmd run probe:sqlite:packaged
 ```
+
+### 修正中のテスト絞り込み
+
+`test:unit`の追加引数で`tests/`直下のファイル名を指定する。`--file=`は複数指定できる。module mockの有効化とsuiteごとのtimeoutは通常実行と同じ。未指定なら従来どおりsuite全体を実行する。
+
+```powershell
+npm.cmd run test:unit -- --file=coach-ipc.test.ts
+npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
+```
+
+`--test-reporter=spec|tap|dot`も指定できる。名前指定は一致しないケースを実行しないため、実行された件数と対象名を確認する。dotは詳細を省くので、失敗調査にはspecかtapを使う。絞り込み成功をsuite全体の合格として扱わない。
+
+nativeだけを絞る場合はhelperをbuildした後、`node scripts/test.mjs native --file=native-policy.test.ts`を使う。`test:native`経由では従来どおり毎回helperをbuildする。全体ログが必要な時は`.tools/test-results`へ保存し、結果の要約と失敗箇所を読む。
 
 ## 公開準備
 

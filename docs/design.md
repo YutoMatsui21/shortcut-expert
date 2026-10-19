@@ -73,6 +73,8 @@
 
 ## テスト設計
 
+テスト実行入口`scripts/test.mjs`はunit/nativeの分類、module mock有効化、timeout、coverage条件を共通化する。ファイル・名前・reporter指定の使い方は[README](../README.md#修正中のテスト絞り込み)に集約する。`tests/test-runner.test.ts`は隔離fixtureを別プロセスで実行し、選択したテストだけの実行、失敗終了コードの伝播、既定の全件実行、native分類、誤った引数の拒否を確認する。製品の検出・保存・通知経路の試験とは分ける。
+
 ### #13：型付き証拠とprotocol v2の併設
 
 Sharedの`ObserverCandidate`は旧`Candidate`と`CandidateV2`のunion。v2はgeneration/最終送信sequence/入力transaction/完了日/由来/route/注入・競合と、`window`・`shell-display`・`activation`・`global`の証拠を分ける。Nativeの`CandidateProtocol`は限定された証拠recordを直列送信し、Mainがvariantの必須項目・型・ID範囲を検査して許可項目だけをCoreへ渡す。未知の能力はnullのまま保持し、成功へ変換しない。生キー列・窓token・process ID・タイトル・path・UIA treeは通信型に含めない。hookへUIA処理は追加していない。
