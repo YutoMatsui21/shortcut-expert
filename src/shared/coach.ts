@@ -1,4 +1,4 @@
-export type OperationId = 'W01' | 'W02' | 'W03' | 'W04' | 'W05' | 'W06' | 'W07' | 'W08' | 'W09' | 'W10' | 'W11';
+export type OperationId = 'W01' | 'W02' | 'W03' | 'W04' | 'W05' | 'W06' | 'W07' | 'W08' | 'W09' | 'W10' | 'W11' | 'W12' | 'W13';
 export type Bounds = { x: number; y: number; width: number; height: number };
 export type Candidate = {
   type: 'candidate'; protocolVersion: 1; generation: number; sequence: number;
@@ -37,11 +37,13 @@ export type Counts = Record<string, Partial<Record<OperationId, { mouse: number;
 export type Settings = { muted: OperationId[]; opened: boolean };
 export type Snapshot = {
   counts: Counts; settings: Settings;
+  coverage?: import('./storage.ts').CoverageDays; revision?: number;
   observing: boolean; notificationsPaused: boolean;
   error: string | null; pendingSave: boolean;
 };
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
 export type CoachBridge = {
+  getRecords?(from: string, to: string): Promise<import('./storage.ts').RecordRange>;
   getNotice(): Promise<Notice | null>;
   getSnapshot(): Promise<Snapshot>;
   command(command: 'pause-notifications' | 'resume-notifications' | 'stop' | 'start' | 'retry-save' | 'quit'): Promise<Snapshot>;

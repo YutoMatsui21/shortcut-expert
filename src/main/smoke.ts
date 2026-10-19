@@ -12,7 +12,7 @@ import { classify } from '../core/detector';
 import { operations } from '../shared/coach';
 
 type SmokeContext = {
-  coach: Coach;
+  coach: Pick<Coach, keyof Coach>;
   observer: ObserverClient;
   notice: NotificationWindow;
   window: BrowserWindow;
@@ -77,7 +77,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   ].map((request) => request.then(() => false, () => true)))`);
   if (!rejected.every((value: boolean) => value)) throw new Error('ipc-invalid-payload');
   const isolated = await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
-    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getNotice,getSnapshot,setMuted,subscribe'`);
+    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getNotice,getRecords,getSnapshot,setMuted,subscribe'`);
   if (!isolated) throw new Error('renderer-capabilities');
   const disk = JSON.parse(await readFile(join(directory, 'counts.json'), 'utf8'));
   if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');

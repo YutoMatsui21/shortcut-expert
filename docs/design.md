@@ -17,6 +17,8 @@
 既存の工程記録・旧MVP要件・除外前Specの実施順より、この現行方針を優先する。Issue [#14](https://github.com/YutoMatsui21/shortcut-expert/issues/14)は検出器側の技術審査であり、UI/保存の着手ゲートではない。
 ## 現行アーキテクチャ
 
+新規利用の日別保存は[保存契約と検証](durable-storage.md)に従う。Mainの`sqlite-repository.ts`が単一writerと専用`storage-worker.ts`を所有し、`storage-store.ts`だけがSQLiteへアクセスする。Coreの`durable-coach.ts`は限定Repository契約を介して、件数・coverage・時計高水位・非重複checkpointを同時保存する。Core/Rendererは最大60日のread modelだけを持つ。旧JSON用`Coach`/`JsonRepository`は未移行利用者に限定して維持し、新規経路では30日剪定を通さない。限定bridgeの`getRecords`はMainでsender/mainFrame・実在日付・最大60日を再検証する。
+
 機能追加・リファクタ・責務配置の判断に用いる。下記の責務分担を現行方針とし、後続の工程記録は当時の状態を示す。
 
 | Module／配置 | 責務 |

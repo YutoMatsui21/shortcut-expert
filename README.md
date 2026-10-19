@@ -32,6 +32,8 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 保存は日別集計と設定だけ。文字・キー生ログ・URL・窓タイトル・clipboard・画像を通常実行で保存せず、外部送信・アカウントなし。開発時は`.tools/coach-data`、同梱版は`%APPDATA%\Window Shortcut Coach`へ保存。設定を含む完全削除はアプリ終了後に同梱版の保存フォルダーを削除する。
 
+新規利用では`records-v1/`のSQLiteへ日別記録を無期限に保存する。画面・IPCの読込は最大60日へ制限し、古い日は日付入力から表示する。観測の根拠がない項目は「—」。既存JSONは自動移行せず従来経路へ残す。DB欠落・破損・未来版は空記録へ戻さず停止する。[新規保存経路・検証範囲](docs/durable-storage.md)。
+
 ## 開発・確認
 
 <a id="development-workflow"></a>
@@ -65,6 +67,8 @@ npm.cmd run smoke
 npm.cmd run smoke:dev
 npm.cmd run package:dir
 npm.cmd run smoke:packaged
+node scripts/smoke.mjs --storage
+node scripts/smoke.mjs --packaged --storage
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
 ```
 

@@ -5,6 +5,9 @@ directories:
 files:
   - out/**/*
   - package.json
+asarUnpack:
+  - out/main/storage-worker.cjs
+  - out/main/chunks/**/*
 extraResources:
   - from: resources/native-helper
     to: native-helper
