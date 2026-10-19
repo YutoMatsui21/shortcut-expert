@@ -11,7 +11,7 @@ type Dependencies = {
   repository: DurableRepository; session: string; date(): string; now(): number;
   capabilities(): Capability[]; notify(value: Notice): Promise<boolean>; changed(value: Snapshot): void;
 };
-// New-user storage path. The legacy Coach remains exclusively for unmigrated JSON users.
+// Durable path for new and migrated users; legacy Coach is retained for isolated regression fixtures.
 export class DurableCoach {
   private data: StorageState = { counts: {}, coverage: {}, settings: { muted: [], opened: false }, epoch: 1, highWater: '', revision: 0 };
   private observing = false;
@@ -126,7 +126,8 @@ export class DurableCoach {
   setMuted(id: OperationId, muted: boolean): Promise<void> {
     return this.queue.run(() => {
       const current = this.pendingSettings ?? this.data.settings;
-      return this.settings({ ...current, muted: muted ? [...new Set([...current.muted, id])] : current.muted.filter(value => value !== id) });
+      return this.settings({ ...current, ...(current.states ? { states: { ...current.states, [id]: muted ? 'excluded' : 'learning' } } : {}),
+        muted: muted ? [...new Set([...current.muted, id])] : current.muted.filter(value => value !== id) });
     });
   }
   opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }

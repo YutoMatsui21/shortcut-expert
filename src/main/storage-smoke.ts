@@ -9,14 +9,14 @@ import type { ObserverClient } from './observer';
 import { localDate } from '../core/dates';
 import { daysBefore } from '../shared/storage';
 
-async function chooseDay(window: BrowserWindow, day: string): Promise<void> {
+export async function chooseDay(window: BrowserWindow, day: string): Promise<void> {
   await window.webContents.executeJavaScript(`(() => {
     const input = document.querySelector('input[type="date"]');
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(day)});
     input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true}));
   })()`);
 }
-async function waitFor(window: BrowserWindow, condition: string, stage: string): Promise<void> {
+export async function waitFor(window: BrowserWindow, condition: string, stage: string): Promise<void> {
   await window.webContents.executeJavaScript(`new Promise((resolve,reject)=> {
     const end=Date.now()+3000; const timer=setInterval(()=> {
       if(${condition}) { clearInterval(timer);resolve(true); }

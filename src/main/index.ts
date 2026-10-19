@@ -1,9 +1,10 @@
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { mkdirSync, mkdtempSync } from 'node:fs';
 import { app, type BrowserWindow } from 'electron';
 import { runCoach, showCoach } from './coach-app';
 
-const fixture = process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke');
+const fixture = process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
+if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
 function fixtureData(): string {
   if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;
   const directory = app.isPackaged ? join(app.getPath('temp'), 'window-shortcut-coach-tests') : join(app.getAppPath(), '.tools', 'tests');

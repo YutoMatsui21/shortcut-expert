@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { Coach } from '../core/coach';
 import { DurableCoach } from '../core/durable-coach';
 import { selectRepositoryWithRetry, SqliteRepository } from './sqlite-repository';
+import { JsonRepository } from './repository';
 import { SerialQueue } from '../core/serial-queue';
 import { localDate } from '../core/dates';
 import type { Snapshot } from '../shared/coach';
@@ -11,6 +12,7 @@ import { ObserverClient } from './observer';
 import { NotificationWindow } from './notification';
 import { runCoachSmoke } from './smoke';
 import { runStorageSmoke } from './storage-smoke';
+import { runMigrationSmoke } from './migration-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 import { learningReadModel } from '../core/learning';
@@ -46,10 +48,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (snapshot.error && !errorStop) { errorStop = true; notice.dismiss(); void observer.stop().catch(() => {}); }
   };
   // Keep the established JSON smoke as legacy regression. New storage has its own empty-userData smoke.
-  const storageFixture = process.argv.includes('--storage-smoke');
+  const migrationFixture = process.argv.includes('--migration-smoke');
+  const storageFixture = process.argv.includes('--storage-smoke') || migrationFixture;
   if (fixture && !storageFixture) await writeFile(join(app.getPath('userData'), 'counts.json'), JSON.stringify({ schemaVersion: 1, days: {} }), { flag: 'wx' });
   const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
-  const repository = await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
+  const repository = fixture && !storageFixture ? new JsonRepository(app.getPath('userData')) : await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
     const answer = await dialog.showMessageBox({ type: 'error', message: '保存先を確認できません。',
       detail: '元のデータは変更していません。保存先へのアクセスを確認して再試行してください。',
       buttons: ['再試行', '終了'], defaultId: 0, cancelId: 1 });
@@ -161,10 +164,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   if (fixture) {
     if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
-    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | undefined;
     try {
       report = await Promise.race([
-        storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           chooseDelete: (response) => { fixtureDeleteResponse = response; } }),
         new Promise<never>((_, reject) => {
