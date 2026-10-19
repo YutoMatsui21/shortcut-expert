@@ -24,6 +24,27 @@ export async function runLearningSmoke(window: BrowserWindow) {
   assert.equal(read.rows.length, 12);
   assert.deepEqual(read.rows.map((row: { id: string }) => row.id), learningOperations.map(op => op.id));
   assert.equal(read.rows.find((row: { id: string }) => row.id === 'W03').total, 2);
+  const initialCounts = await window.webContents.executeJavaScript('window.coach.getSnapshot().then(value => value.counts)');
+  for (const state of ['mastered', 'excluded', 'learning']) {
+    await window.webContents.executeJavaScript(`(() => {
+      const select = document.querySelector('[data-learning-operation="W03"] select');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, '${state}');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+    await waitForLearning(window, `document.querySelector('[data-learning-operation="W03"] select').value === '${state}' && !document.querySelector('[data-learning-operation="W03"] select').disabled`);
+    const value = await window.webContents.executeJavaScript('window.coach.getLearning()');
+    assert.equal(value.rows.find((row: { id: string }) => row.id === 'W03').state, state);
+    await waitForLearning(window, `document.querySelector('.learning-summary .${state} > span').textContent === '${state === 'learning' ? 12 : 1}'`);
+    await selectPage(window, '記録'); await selectPage(window, 'ショートカット一覧');
+    assert.equal(await window.webContents.executeJavaScript(`document.querySelector('[data-learning-operation="W03"] select').value`), state);
+  }
+  assert.deepEqual(await window.webContents.executeJavaScript('window.coach.getSnapshot().then(value => value.counts)'), initialCounts);
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'mastered')`);
+  await window.webContents.executeJavaScript('location.reload()');
+  await waitForLearning(window, `document.querySelector('[data-learning-operation="W03"] select')?.value === 'mastered'`);
+  await writeFile(join(app.getPath('userData'), 'learning-mastered.png'), (await window.webContents.capturePage()).toPNG());
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'learning')`);
+  await waitForLearning(window, `document.querySelector('[data-learning-operation="W03"] select')?.value === 'learning'`);
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 700);

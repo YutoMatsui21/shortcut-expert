@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { app, screen, powerMonitor, type BrowserWindow } from 'electron';
-import { runLearningSmoke } from './learning-smoke';
+import { runLearningSmoke, selectPage, waitForLearning } from './learning-smoke';
 import { SqliteRepository } from './sqlite-repository';
 import { DurableCoach } from '../core/durable-coach';
 import type { Coach } from '../core/coach';
@@ -43,6 +43,23 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
   assert.equal(coach.snapshot().counts[today].W03?.key, 1);
   assert.equal(coach.snapshot().counts[today].W03?.mouse, 1);
   await runLearningSmoke(window);
+  const saveSettings = repository.saveSettings.bind(repository);
+  repository.saveSettings = async () => { throw new Error('fixture settings failure'); };
+  await selectPage(window, 'ショートカット一覧');
+  await window.webContents.executeJavaScript(`(() => {
+    const select = document.querySelector('[data-learning-operation="W03"] select');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'mastered');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await waitForLearning(window, `document.querySelector('.page-frame .error')?.textContent.includes('設定を保存できません') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'learning'`);
+  assert.equal(coach.snapshot().pendingSave, true); assert.equal(coach.snapshot().observing, false);
+  repository.saveSettings = saveSettings;
+  await window.webContents.executeJavaScript(`document.querySelector('.page-frame .error button').click()`);
+  await waitForLearning(window, `!document.querySelector('.page-frame .error') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'mastered'`);
+  assert.equal(coach.snapshot().pendingSave, false);
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'learning')`);
+  await window.webContents.executeJavaScript(`window.coach.command('start')`);
+  await selectPage(window, '記録');
   await window.webContents.executeJavaScript(`new Promise((resolve, reject) => {
     const end = Date.now() + 3000; const timer = setInterval(() => {
       if(document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1') { clearInterval(timer); resolve(true); }
@@ -94,6 +111,6 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
     assert.equal((await reopened.query(oldDay, oldDay)).counts[oldDay].W03?.key, 1);
   } finally { await reopened.close(); }
   return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: 1, key: 1, oldDayRenderer: true, retained120Days: true,
-    reopened: true, boundedIpc: true, historicalQueryRecovered: true, stoppedSuspendPreserved: true,
+    reopened: true, boundedIpc: true, historicalQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };
 }

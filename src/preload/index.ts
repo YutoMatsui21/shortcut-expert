@@ -9,6 +9,7 @@ const coach: CoachBridge = {
   getNotice: () => ipcRenderer.invoke('coach:get-notice'),
   command: (command) => ipcRenderer.invoke('coach:command', command),
   setMuted: (operation, muted) => ipcRenderer.invoke('coach:set-muted', operation, muted),
+  setLearningState: (operation, state) => ipcRenderer.invoke('coach:set-learning-state', operation, state),
   deleteCounts: () => ipcRenderer.invoke('coach:delete'),
   subscribe: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, snapshot: Snapshot) => listener(snapshot);

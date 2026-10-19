@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { operations } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
 import { SerialQueue } from '../core/serial-queue.ts';
+import { isLearningState } from '../shared/learning.ts';
+import { recordOperations } from '../shared/storage.ts';
 
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -33,12 +35,14 @@ export function countsDocument(value: unknown): Counts | null {
 export function settingsDocument(value: unknown): Settings | null {
   if (!object(value) || !keys(value, ['schemaVersion', 'muted', 'opened']) || value.schemaVersion !== 1) return null;
   const settings = { muted: value.muted, opened: value.opened };
-  return validSettings(settings) ? settings : null;
+  return validSettings(settings) && settings.muted.every(id => operations.some(op => op.id === id)) ? settings : null;
 }
 function validSettings(value: unknown): value is Settings {
-  return object(value) && keys(value, ['muted', 'opened']) && typeof value.opened === 'boolean' &&
-    Array.isArray(value.muted) && value.muted.every((id) => operations.some((op) => op.id === id)) &&
-    new Set(value.muted).size === value.muted.length;
+  const ids = [...operations.map(op => op.id), ...recordOperations];
+  return object(value) && keys(value, ['muted', 'opened', 'states']) && typeof value.opened === 'boolean' &&
+    Array.isArray(value.muted) && value.muted.every((id) => ids.includes(id)) &&
+    new Set(value.muted).size === value.muted.length && (value.states === undefined ||
+      (object(value.states) && Object.entries(value.states).every(([id, state]) => ids.some(value => value === id) && isLearningState(state))));
 }
 
 export class JsonRepository implements Repository {
@@ -49,7 +53,9 @@ export class JsonRepository implements Repository {
     const countsFile = await this.read('counts.json', { schemaVersion: 1, days: {} });
     const settingsFile = await this.read('settings.json', { schemaVersion: 1, muted: [], opened: false });
     const counts = countsDocument(countsFile);
-    const settings = settingsDocument(settingsFile);
+    // v2 is used only by the retained JSON regression fixture. Legacy migration stays strict v1.
+    const settings = object(settingsFile) && settingsFile.schemaVersion === 2 && object(settingsFile.states)
+      ? (({ schemaVersion, ...value }) => validSettings(value) ? value : null)(settingsFile) : settingsDocument(settingsFile);
     if (!counts || !settings) throw new Error('保存データの形式が不正です。元のファイルは保持しています。');
     return { counts, settings };
   }
@@ -59,7 +65,7 @@ export class JsonRepository implements Repository {
   }
   async saveSettings(settings: Settings): Promise<void> {
     if (!validSettings(settings)) throw new Error('保存データの形式が不正です。');
-    await this.write('settings.json', { schemaVersion: 1, ...settings });
+    await this.write('settings.json', { schemaVersion: settings.states ? 2 : 1, ...settings });
   }
   private async read(name: string, fallback: unknown): Promise<unknown> {
     try { return JSON.parse(await readFile(join(this.directory, name), 'utf8')); }
