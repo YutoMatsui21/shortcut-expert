@@ -22,11 +22,13 @@ async function fixture(t: TestContext) {
   const repository = new SqliteRepository(root, worker);
   t.after(async () => { await repository.close(); await rm(root, { recursive: true, force: true }); });
   let today = '2026-10-19', now = 0;
+  let dateReader = () => today;
   let capabilities: Capability[] = [{ operation: 'W03', revision: 'fixture-v1' }];
-  const coach = new DurableCoach({ repository, session: repository.session, date: () => today, now: () => now,
+  const coach = new DurableCoach({ repository, session: repository.session, date: () => dateReader(), now: () => now,
     capabilities: () => capabilities, notify: async () => false, changed: () => {} });
   await coach.initialize(); assert.equal(coach.snapshot().error, null); coach.begin(1);
   return { root, repository, coach, date: (value: string) => { today = value; }, time: (value: number) => { now = value; },
+    dateReader: (read: () => string) => { dateReader = read; },
     capabilities: (value: Capability[]) => { capabilities = value; } };
 }
 test('empty userData -> real worker commit/counts/coverage -> reopen; bounded views retain >30 days', async t => {
@@ -245,4 +247,14 @@ test('a second toggle and opened preserve earlier pending settings changes', asy
   const settings = (await h.repository.load('2026-10-19')).settings;
   assert.deepEqual(settings.muted, ['W03', 'W04']); assert.equal(settings.opened, true);
   assert.equal(h.coach.snapshot().pendingSave, false);
+});
+test('midnight during post-commit refresh never expands the bounded query to 61 days', async t => {
+  const h = await fixture(t); const commit = h.repository.commit.bind(h.repository);
+  h.repository.commit = async value => {
+    await commit(value); let first = true;
+    h.dateReader(() => { if (first) { first = false; return '2026-10-19'; } return '2026-10-20'; });
+  };
+  await h.coach.accept(candidate);
+  assert.equal(h.coach.snapshot().error, null); assert.equal(h.coach.snapshot().pendingSave, false);
+  assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
 });

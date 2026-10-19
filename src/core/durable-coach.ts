@@ -92,7 +92,8 @@ export class DurableCoach {
     try {
       await this.deps.repository.commit(value);
       // Reload only the bounded view; counts are never copied back as full-history replacements.
-      this.data = { ...this.data, ...await this.deps.repository.query(daysBefore(this.deps.date(), 59), this.deps.date()),
+      const today = this.deps.date();
+      this.data = { ...this.data, ...await this.deps.repository.query(daysBefore(today, 59), today),
         epoch: value.reset ? value.epoch + 1 : value.epoch, highWater: value.today };
       this.pending = null;
       this.error = null;
