@@ -3,7 +3,7 @@ import { operations, type CoachBridge } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
 import { daysBefore } from '../shared/storage.ts';
 
-type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'deleteCounts' | 'getRecords'>;
+type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'windowCommand'>;
 type Command = Parameters<CoachBridge['command']>[0];
 
 function isCommand(value: unknown): value is Command {
@@ -17,6 +17,12 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
     if (!allowed || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.');
   };
   ipcMain.handle('coach:get-snapshot', (event) => { assertSender(event); return requests.getSnapshot(); });
+  ipcMain.handle('coach:get-learning', (event) => { assertSender(event); return requests.getLearning(); });
+  ipcMain.handle('coach:window', (event, value: unknown) => {
+    assertSender(event);
+    if (value !== 'minimize' && value !== 'maximize' && value !== 'hide') throw new Error('Unknown window command.');
+    return requests.windowCommand(value);
+  });
   ipcMain.handle('coach:get-records', (event, from: unknown, to: unknown) => {
     assertSender(event);
     if (typeof from !== 'string' || typeof to !== 'string' || !validDate(from) || !validDate(to) || from > to || to > daysBefore(from, -59) || !requests.getRecords) throw new Error('Invalid range.');

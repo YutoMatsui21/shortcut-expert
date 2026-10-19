@@ -10,6 +10,7 @@ import { JsonRepository } from './repository';
 import { Coach as FreshCoach } from '../core/coach';
 import { classify } from '../core/detector';
 import { operations } from '../shared/coach';
+import { runLearningSmoke, selectPage, waitForLearning } from './learning-smoke';
 
 type SmokeContext = {
   coach: Pick<Coach, keyof Coach>;
@@ -59,6 +60,8 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await coach.idle();
   const counts = coach.snapshot().counts[localDate()]?.W03;
   if (counts?.mouse !== 1 || counts.key !== 1) throw new Error('counts');
+  await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]').getAttribute('aria-current') === 'page'`);
+  await selectPage(window, '記録');
   const shortcuts = await window.webContents.executeJavaScript(`Array.from(document.querySelectorAll('tbody tr')).map((row) => ({
     id: row.getAttribute('data-operation'), text: row.querySelector('.shortcut')?.textContent,
     disabled: row.querySelector('input')?.disabled, prepared: !!row.querySelector('.prepared') }))`);
@@ -77,7 +80,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   ].map((request) => request.then(() => false, () => true)))`);
   if (!rejected.every((value: boolean) => value)) throw new Error('ipc-invalid-payload');
   const isolated = await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
-    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getNotice,getRecords,getSnapshot,setMuted,subscribe'`);
+    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecords,getSnapshot,setMuted,subscribe,windowCommand'`);
   if (!isolated) throw new Error('renderer-capabilities');
   const disk = JSON.parse(await readFile(join(directory, 'counts.json'), 'utf8'));
   if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
@@ -86,6 +89,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await writeFile(join(directory, 'notice-preview.png'), (await notification.webContents.capturePage()).toPNG());
   await new Promise((resolve) => setTimeout(resolve, 4200));
   if (notice.current() !== null) throw new Error('notice-duration');
+  await runLearningSmoke(window);
 
   await click(window, '通知を停止');
   await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-notification-pause');
@@ -172,6 +176,8 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (window.isMinimized() || !window.isVisible()) throw new Error('window-restore');
   const loaded = new Promise<void>((resolve) => window.webContents.once('did-finish-load', () => resolve()));
   window.webContents.reload(); await loaded;
+  await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]').getAttribute('aria-current') === 'page' && [...document.querySelectorAll('.group-header')].every(button => button.getAttribute('aria-expanded') === 'true')`);
+  await selectPage(window, '記録');
   await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中' &&
     document.querySelector('input[aria-label="最大化の通知"]')?.checked === false`, 'ui-reload-snapshot');
   await click(window, '通知を停止');

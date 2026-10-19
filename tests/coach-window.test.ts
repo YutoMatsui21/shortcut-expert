@@ -7,6 +7,7 @@ class FixtureWindow extends EventEmitter {
   static all: FixtureWindow[] = [];
   destroyed = false;
   minimized = false;
+  maximized = false;
   visible = false;
   calls: string[] = [];
   openHandler?: () => { action: string };
@@ -23,6 +24,10 @@ class FixtureWindow extends EventEmitter {
   show() { this.calls.push('show'); this.visible = true; }
   focus() { this.calls.push('focus'); }
   hide() { this.visible = false; }
+  minimize() { this.minimized = true; }
+  isMaximized() { return this.maximized; }
+  maximize() { this.maximized = true; }
+  unmaximize() { this.maximized = false; }
 }
 
 Object.defineProperty(globalThis, '__dirname', { value: 'fixture-main' });
@@ -66,6 +71,13 @@ test('窓の隔離設定と外部遷移拒否を維持する', async () => {
     preload: window.options.webPreferences?.preload, contextIsolation: true, nodeIntegration: false, sandbox: true
   });
   assert.equal(window.options.show, false);
+  assert.equal(window.options.frame, false);
+  assert.equal(window.options.width, 1120); assert.equal(window.options.height, 700);
+  assert.equal(window.options.minWidth, 800); assert.equal(window.options.minHeight, 600);
+  manager.command('minimize'); assert.equal(window.minimized, true);
+  manager.command('maximize'); assert.equal(window.maximized, true);
+  manager.command('maximize'); assert.equal(window.maximized, false);
+  manager.show(); manager.command('hide'); assert.equal(window.visible, false);
   assert.deepEqual(window.openHandler?.(), { action: 'deny' });
   const event = { preventDefault: mock.fn() };
   window.webContents.emit('will-navigate', event);
