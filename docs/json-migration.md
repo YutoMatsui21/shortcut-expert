@@ -12,7 +12,7 @@ DBを閉じて再openし、全旧日付集合・全日×ID×mouse/key、全cover
 
 中断stageは所有identityが一致したときだけ再開する。transaction前なら再取込、commit済みなら全行照合だけを行い加算しない。未知・不一致のstageは空にして再作成しない。activation後は`records-v1/`自体がauthorityであり、JSONへアクセスしない。移行済みsource markerがあればDBとinitializedの両方を必須にし、同時欠落でも空DBを再作成しない。DB破損・欠落・未来版も再importしない。
 
-W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。W14のIDは詰め替えず状態をlearningで確保する（旧v1 registryはW01〜W11のみ）。初回12操作の一覧刷新は後続UI Issueの範囲で、今回W12/W13の新しい表示行は追加しない。
+W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。W14のIDは詰め替えず状態をlearningで確保する（旧v1 registryはW01〜W11のみ）。一覧は#17の正式12操作を使用し、移行したmutedも対象外として表示する。記録ページは#19で刷新するまで既存表を維持し、その合計からもW09を外す。
 
 ## 全削除
 

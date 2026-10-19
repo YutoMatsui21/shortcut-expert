@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { Coach } from '../core/coach';
 import { SqliteRepository } from './sqlite-repository';
 import { chooseDay, waitFor } from './storage-smoke';
+import { selectPage } from './learning-smoke';
 
 export async function runMigrationSmoke({ coach, window, repository }: {
   coach: Pick<Coach, keyof Coach>; window: BrowserWindow; repository: unknown;
@@ -13,6 +14,11 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   const state = coach.snapshot(); assert.equal(state.error, null);
   assert.equal(state.settings.opened, true); assert.equal(state.settings.states?.W03, 'excluded');
   assert.equal(state.settings.states?.W12, 'learning');
+  const learning = await window.webContents.executeJavaScript('window.coach.getLearning()');
+  assert.equal(learning.rows.length, 12);
+  assert.equal(learning.rows.find((row: { id: string }) => row.id === 'W03').state, 'excluded');
+  assert.equal(learning.rows.some((row: { id: string }) => row.id === 'W09' || row.id === 'W14'), false);
+  await selectPage(window, '記録');
   const old = '2020-01-02';
   const rows = await repository.query(old, old);
   assert.equal(rows.counts[old].W03?.mouse, 7); assert.equal(rows.counts[old].W03?.key, 5);

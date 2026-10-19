@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { app, screen, powerMonitor, type BrowserWindow } from 'electron';
+import { runLearningSmoke } from './learning-smoke';
 import { SqliteRepository } from './sqlite-repository';
 import { DurableCoach } from '../core/durable-coach';
 import type { Coach } from '../core/coach';
@@ -41,6 +42,7 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
   await coach.idle();
   assert.equal(coach.snapshot().counts[today].W03?.key, 1);
   assert.equal(coach.snapshot().counts[today].W03?.mouse, 1);
+  await runLearningSmoke(window);
   await window.webContents.executeJavaScript(`new Promise((resolve, reject) => {
     const end = Date.now() + 3000; const timer = setInterval(() => {
       if(document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1') { clearInterval(timer); resolve(true); }
