@@ -1,23 +1,28 @@
 import { DatabaseSync } from 'node:sqlite';
-import { existsSync, openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync, unlinkSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { operations, type OperationId, type Settings } from '../shared/coach.ts';
 import type { Coverage, RecordMutation, RecordRange, StorageState } from '../shared/storage.ts';
 import { daysBefore } from '../shared/storage.ts';
 import { validDate } from '../core/dates.ts';
+import type { LegacyImport } from './storage-migration.ts';
 
-const ids = [...operations.map(op => op.id), 'W12', 'W13'];
+const ids = [...operations.map(op => op.id), 'W12', 'W13', 'W14'];
 const check = (ok: unknown, message: string): void => { if (!ok) throw new Error(message); };
 const integer = (n: number) => Number.isSafeInteger(n) && n >= 0;
 function validateSettings(settings: Settings): void {
   check(settings && typeof settings === 'object' && !Array.isArray(settings) && typeof settings.opened === 'boolean' &&
     Array.isArray(settings.muted) && settings.muted.every(id => ids.includes(id)) &&
-    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened'].includes(k)), 'INVALID_SETTINGS');
+    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened', 'states'].includes(k)), 'INVALID_SETTINGS');
+  if (settings.states !== undefined) check(settings.states && typeof settings.states === 'object' && !Array.isArray(settings.states) &&
+    Object.entries(settings.states).every(([id, state]) => ids.includes(id) && ['learning', 'mastered', 'excluded'].includes(state)), 'INVALID_STATES');
 }
 export class StorageStore {
   private db: DatabaseSync;
+  private root: string;
   constructor(root: string) {
+    this.root = root;
     const file = join(root, 'records.sqlite');
     const marker = join(root, 'authority.json');
     const existed = existsSync(file);
@@ -56,6 +61,8 @@ export class StorageStore {
       check(this.db.prepare('PRAGMA journal_mode=WAL').get()?.journal_mode === 'wal', 'WAL_UNAVAILABLE');
       this.db.exec('PRAGMA synchronous=FULL');
       check(this.db.prepare('PRAGMA synchronous').get()?.synchronous === 2, 'SYNC_UNAVAILABLE');
+      this.db.exec('CREATE TABLE IF NOT EXISTS migration (id INTEGER PRIMARY KEY CHECK(id=1), identity TEXT NOT NULL, purge INTEGER NOT NULL) STRICT');
+      this.purgeLegacy();
       // Schema itself is the durable authority; this marker also detects a subsequently missing DB.
       const fd = openSync(join(root, 'initialized'), 'w');
       try { writeFileSync(fd, '1'); fsyncSync(fd); } finally { closeSync(fd); }
@@ -67,6 +74,44 @@ export class StorageStore {
     catch (error) { try { this.db.exec('ROLLBACK'); } catch {} throw error; }
   }
   private meta() { return this.db.prepare('SELECT * FROM meta WHERE id=1').get()!; }
+  importLegacy(source: LegacyImport): void {
+    if (this.db.prepare('SELECT * FROM migration WHERE id=1').get()) { this.verifyLegacy(source); return; }
+    check(this.meta().revision === 0 && this.db.prepare('SELECT COUNT(*) AS n FROM counts').get()?.n === 0, 'MIGRATION_NOT_EMPTY');
+    this.transaction(() => {
+      for (const [day, values] of Object.entries(source.counts)) for (const [id, count] of Object.entries(values)) {
+        this.db.prepare('INSERT INTO counts VALUES (?,?,?,?)').run(day, id, count!.mouse, count!.key);
+        this.db.prepare('INSERT INTO coverage VALUES (?,?,?,?,?,?)').run(day, id, 'legacy-unknown', 0, 1, 'legacy-v1');
+      }
+      this.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(this.legacySettings(source.settings)));
+      this.db.prepare('INSERT INTO migration VALUES (1,?,0)').run(source.identity);
+      const lastDay = Object.keys(source.counts).sort().at(-1) ?? '';
+      this.db.prepare('UPDATE meta SET highWater=?,revision=1 WHERE id=1').run(lastDay);
+      this.db.exec('PRAGMA user_version=1');
+    });
+  }
+  private legacySettings(settings: Settings): Settings {
+    return { ...settings, states: Object.fromEntries(ids.map(id => [id, settings.muted.includes(id as OperationId) ? 'excluded' : 'learning'])) };
+  }
+  verifyLegacy(source: LegacyImport): void {
+    check(this.db.prepare('SELECT identity FROM migration WHERE id=1').get()?.identity === source.identity, 'MIGRATION_IDENTITY');
+    const expected = Object.entries(source.counts).flatMap(([day, values]) => Object.entries(values).map(([operation, count]) => ({ day, operation, mouse: count!.mouse, key: count!.key })))
+      .sort((a,b) => a.day.localeCompare(b.day) || a.operation.localeCompare(b.operation));
+    const actual = this.db.prepare('SELECT day,operation,mouse,key FROM counts ORDER BY day,operation').all();
+    check(JSON.stringify(actual) === JSON.stringify(expected), 'MIGRATION_COUNTS');
+    const coverage = this.db.prepare('SELECT * FROM coverage ORDER BY day,operation').all();
+    check(coverage.length === expected.length && coverage.every((row, i) => row.day === expected[i].day && row.operation === expected[i].operation &&
+      row.knowledge === 'legacy-unknown' && row.activeMs === 0 && row.gap === 1 && row.capabilityRevision === 'legacy-v1'), 'MIGRATION_COVERAGE');
+    check(this.db.prepare('SELECT value FROM settings WHERE id=1').get()?.value === JSON.stringify(this.legacySettings(source.settings)), 'MIGRATION_SETTINGS');
+    check(this.meta().revision === 1 && this.meta().epoch === 1 && this.meta().highWater === (Object.keys(source.counts).sort().at(-1) ?? ''), 'MIGRATION_META');
+  }
+  private purgeLegacy(): void {
+    if (this.db.prepare('SELECT purge FROM migration WHERE id=1').get()?.purge !== 1) return;
+    for (const name of ['counts.json', 'settings.json']) {
+      try { unlinkSync(join(dirname(this.root), name)); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
+    this.db.prepare('UPDATE migration SET purge=2 WHERE id=1').run();
+  }
   load(today: string): StorageState {
     check(validDate(today), 'INVALID_DAY');
     const meta = this.meta();
@@ -115,7 +160,7 @@ export class StorageStore {
         const future = this.db.prepare('SELECT day FROM counts WHERE day>? LIMIT 1').get(value.today);
         check(!future, 'FUTURE_RECORDS');
       }
-      if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage;');
+      if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage; UPDATE migration SET purge=1 WHERE id=1;');
       else {
         if (value.count) {
           const c = value.count;
@@ -137,6 +182,7 @@ export class StorageStore {
       this.db.prepare('UPDATE meta SET epoch=?,highWater=?,revision=revision+1,session=?,sequence=?,hash=? WHERE id=1')
         .run(value.reset ? value.epoch + 1 : value.epoch, value.today, value.writeSession, value.sequence, hash);
     });
+    this.purgeLegacy();
   }
   claim(session: string): void {
     check(/^[a-zA-Z0-9-]{1,80}$/.test(session), 'INVALID_SESSION');

@@ -7,7 +7,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { spawn } from 'node:child_process';
 import { DurableCoach, type Capability } from '../src/core/durable-coach.ts';
 import { SqliteRepository, selectRepository } from '../src/main/sqlite-repository.ts';
-import { JsonRepository } from '../src/main/repository.ts';
 import { StorageStore } from '../src/main/storage-store.ts';
 import type { RecordMutation } from '../src/shared/storage.ts';
 import type { Candidate } from '../src/shared/coach.ts';
@@ -112,7 +111,8 @@ test('lost ACK through real worker commit retains exact pending mutation; retry 
 test('existing JSON remains byte-identical; authority/missing DB/unknown schema never fall back or overwrite', async t => {
   const root = await mkdtemp(join(tmpdir(), 'coach-legacy-')); t.after(() => rm(root, { recursive: true, force: true }));
   const original = '{"schemaVersion":99,"days":{}}'; await writeFile(join(root, 'counts.json'), original);
-  assert.ok(await selectRepository(root, worker) instanceof JsonRepository);
+  const invalid = await selectRepository(root, worker); assert.ok(invalid instanceof SqliteRepository);
+  try { await assert.rejects(invalid.load('2026-10-19')); } finally { await invalid.close(); }
   assert.equal(await readFile(join(root, 'counts.json'), 'utf8'), original);
   await mkdir(join(root, 'records-v1'));
   await writeFile(join(root, 'records-v1', 'authority.json'), '{"schemaVersion":99}');

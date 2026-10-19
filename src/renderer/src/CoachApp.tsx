@@ -26,8 +26,9 @@ export function CoachApp() {
   const view = queried?.day === selected && queried.value.revision >= (snapshot?.revision ?? 0) ? queried.value : snapshot;
   const counts = view?.counts[selected] ?? {};
   const known = (id: import('../../shared/coach').OperationId) => !snapshot?.coverage || !!counts[id] || view?.coverage?.[selected]?.[id]?.knowledge === 'observed';
-  const anyKnown = !snapshot?.coverage || Object.keys(counts).length > 0 || Object.values(view?.coverage?.[selected] ?? {}).some(value => value?.knowledge === 'observed');
-  const total = Object.values(counts).reduce((sum, value) => ({ mouse: sum.mouse + (value?.mouse ?? 0), key: sum.key + (value?.key ?? 0) }), { mouse: 0, key: 0 });
+  const visible = operations.filter(op => !snapshot?.coverage || op.id !== 'W09');
+  const anyKnown = visible.some(op => known(op.id));
+  const total = visible.reduce((sum, op) => ({ mouse: sum.mouse + (counts[op.id]?.mouse ?? 0), key: sum.key + (counts[op.id]?.key ?? 0) }), { mouse: 0, key: 0 });
   const paused = snapshot?.notificationsPaused ?? false;
   const observing = snapshot?.observing ?? false;
   return <main className="dashboard">
@@ -48,7 +49,7 @@ export function CoachApp() {
         <label>日付{snapshot?.coverage ? <input type="date" value={selected} max={today()} onChange={event => { if (event.target.value) setDay(event.target.value); }} /> : <select value={selected} onChange={(event) => setDay(event.target.value)}>{dates.map((date) => <option key={date} value={date}>{date}</option>)}</select>}</label></div>
       <div className="totals"><div><span>マウス操作</span><strong>{anyKnown ? total.mouse : '—'}<small>回</small></strong></div><div><span>キー操作</span><strong>{anyKnown ? total.key : '—'}<small>回</small></strong></div></div>
       <table><thead><tr><th>操作</th><th>マウス</th><th>キー</th><th>通知</th></tr></thead><tbody>
-        {operations.map((op) => <tr key={op.id} data-operation={op.id} className={op.implemented ? '' : 'upcoming'}>
+        {visible.map((op) => <tr key={op.id} data-operation={op.id} className={op.implemented ? '' : 'upcoming'}>
           <th scope="row">{op.label} <span className="shortcut">（{op.shortcut}）</span>{!op.implemented && <span className="prepared">準備中</span>}
             {op.condition && <small className="shortcut-condition">{op.condition}</small>}</th>
           <td data-kind="mouse">{known(op.id) ? counts[op.id]?.mouse ?? 0 : '—'}</td><td data-kind="key">{known(op.id) ? counts[op.id]?.key ?? 0 : '—'}</td>

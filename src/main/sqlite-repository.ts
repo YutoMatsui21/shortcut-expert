@@ -16,8 +16,7 @@ export async function selectRepository(root: string, workerPath: string): Promis
   // Existing authority wins even if DB is missing or broken; never import/fall back to old JSON.
   const sqlite = await exists(join(root, 'records-v1'));
   if (sqlite) return new SqliteRepository(root, workerPath);
-  const legacy = await exists(join(root, 'counts.json')) || await exists(join(root, 'settings.json'));
-  return !legacy ? new SqliteRepository(root, workerPath) : new JsonRepository(root);
+  return new SqliteRepository(root, workerPath);
 }
 export async function selectRepositoryWithRetry(root: string, workerPath: string, recover: () => Promise<boolean>): Promise<JsonRepository | SqliteRepository> {
   for (;;) {
@@ -40,7 +39,7 @@ export class SqliteRepository implements DurableRepository {
   constructor(directory: string, workerPath: string) { this.root = join(directory, 'records-v1'); this.workerPath = workerPath; }
   private async acquire(): Promise<void> {
     if (this.lock) return;
-    await mkdir(this.root, { recursive: true });
+    await mkdir(join(this.root, '..'), { recursive: true });
     const identity = createHash('sha256').update(this.root.toLowerCase()).digest('hex').slice(0, 32);
     const path = process.platform === 'win32' ? `\\\\.\\pipe\\shortcut-coach-${identity}` : join(tmpdir(), `shortcut-coach-${identity}.sock`);
     const owner = createServer(socket => socket.destroy());
@@ -60,7 +59,7 @@ export class SqliteRepository implements DurableRepository {
     // Both the startup and each request have bounded waits; errors never reach UI with paths.
     worker.on('error', () => {});
     try { await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => { void worker.terminate(); reject(new Error('STORAGE_TIMEOUT')); }, 5000);
+      const timeout = setTimeout(() => { void worker.terminate(); reject(new Error('STORAGE_TIMEOUT')); }, 60_000);
       const finish = (error?: Error) => { clearTimeout(timeout); worker.off('message', message); worker.off('error', failed); worker.off('exit', exited); error ? reject(error) : resolve(); };
       const message = (v: { ready: boolean }) => finish(v.ready ? undefined : new Error('STORAGE_OPEN_FAILED'));
       const failed = () => finish(new Error('STORAGE_OPEN_FAILED'));

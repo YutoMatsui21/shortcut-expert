@@ -30,9 +30,9 @@ Windows 11の日常の窓操作に、既存ショートカットを案内するM
 
 数値画面で日付選択、操作別mouse/key、通知ON/OFF、記録全削除を操作する。全削除は設定を残す。時計が既存記録より前の日付になると、記録を保持して計測を止める。日時を戻すか、記録全削除後に再開する。
 
-保存は日別集計と設定だけ。文字・キー生ログ・URL・窓タイトル・clipboard・画像を通常実行で保存せず、外部送信・アカウントなし。開発時は`.tools/coach-data`、同梱版は`%APPDATA%\Window Shortcut Coach`へ保存。設定を含む完全削除はアプリ終了後に同梱版の保存フォルダーを削除する。
+保存は日別集計と設定だけ。文字・キー生ログ・URL・窓タイトル・clipboard・画像を通常実行で保存せず、外部送信・アカウントなし。開発時は`.tools/coach-data`、同梱版は`%APPDATA%\window-shortcut-coach`へ保存（実行時identityと既存配布物で確認）。設定を含む完全削除はアプリ終了後に同梱版の保存フォルダーを削除する。
 
-新規利用では`records-v1/`のSQLiteへ日別記録を無期限に保存する。画面・IPCの読込は最大60日へ制限し、古い日は日付入力から表示する。観測の根拠がない項目は「—」。既存JSONは自動移行せず従来経路へ残す。DB欠落・破損・未来版は空記録へ戻さず停止する。[新規保存経路・検証範囲](docs/durable-storage.md)。
+`records-v1/`のSQLiteへ日別記録を無期限に保存する。画面・IPCの読込は最大60日へ制限し、古い日は日付入力から表示する。観測の根拠がない項目は「—」。既存JSONは原本を保持し、全日分・設定を別stagingへ移して再読込・全行照合後に有効化する。移行前に削除済みの記録は復元できない。DB欠落・破損・未来版は空記録へ戻さず停止する。[保存経路](docs/durable-storage.md)・[移行と検証範囲](docs/json-migration.md)。
 
 ## 開発・確認
 
@@ -69,6 +69,8 @@ npm.cmd run package:dir
 npm.cmd run smoke:packaged
 node scripts/smoke.mjs --storage
 node scripts/smoke.mjs --packaged --storage
+node scripts/smoke.mjs --migration
+node scripts/smoke.mjs --packaged --migration
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
 ```
 

@@ -1,7 +1,8 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { StorageStore } from './storage-store.ts';
+import { prepareStorage } from './storage-migration.ts';
 let store: StorageStore;
-try { store = new StorageStore(workerData.root); parentPort!.postMessage({ ready: true }); }
+try { prepareStorage(workerData.root); store = new StorageStore(workerData.root); parentPort!.postMessage({ ready: true }); }
 catch { parentPort!.postMessage({ ready: false }); parentPort!.close(); }
 parentPort!.on('message', ({ id, action, args }) => {
   try {

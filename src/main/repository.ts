@@ -26,11 +26,11 @@ function validDay(value: unknown): value is Counts[string] {
 function validCounts(value: unknown): value is Counts {
   return object(value) && Object.entries(value).every(([date, day]) => validDate(date) && validDay(day));
 }
-function countsDocument(value: unknown): Counts | null {
+export function countsDocument(value: unknown): Counts | null {
   if (!object(value) || !keys(value, ['schemaVersion', 'days']) || value.schemaVersion !== 1) return null;
   return validCounts(value.days) ? value.days : null;
 }
-function settingsDocument(value: unknown): Settings | null {
+export function settingsDocument(value: unknown): Settings | null {
   if (!object(value) || !keys(value, ['schemaVersion', 'muted', 'opened']) || value.schemaVersion !== 1) return null;
   const settings = { muted: value.muted, opened: value.opened };
   return validSettings(settings) ? settings : null;
