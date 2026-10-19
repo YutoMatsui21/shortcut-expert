@@ -14,6 +14,8 @@ DBを閉じて再openし、全旧日付集合・全日×ID×mouse/key、全cover
 
 W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。W14のIDは詰め替えず状態をlearningで確保する（旧v1 registryはW01〜W11のみ）。一覧は#17の正式12操作を使用し、移行したmutedも対象外として表示する。記録ページは#19で刷新するまで既存表を維持し、その合計からもW09を外す。
 
+移行済みactive DBでは`migration`/`legacy_days`の存在も必須とし、欠落を空表として再作成しない。補助表の追加は非移行DBのschema拡張と未公開stagingに限る。
+
 ## 全削除
 
 件数・coverage削除とepoch更新のtransactionで移行metaをpending purgeにする。続けて旧counts.json/settings.jsonを削除し、完了metaを保存してから応答する。原本削除前にもDBは消費済みauthorityを維持する。cleanup失敗は未保存エラーとして停止し、同じ要求のretryまたは次のWorker起動時に残りを削除する。設定・状態・opened・source消費identityはDBへ残す。stagingはactivation時に移動済みで記録の別backupは作らない。SSDの物理消去は保証しない。

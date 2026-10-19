@@ -131,3 +131,19 @@ test('corrupt staging purge meta is rejected before touching either original', t
   assert.equal(existsSync(h.target), false);
   assert.equal(readLegacy(h.root).identity, source.identity);
 });
+test('migrated authority rejects missing legacy day table instead of silently recreating empty dates', t => {
+  const h = fixture(t);
+  writeFileSync(join(h.root, 'counts.json'), JSON.stringify({ schemaVersion: 1, days: { '2019-01-01': {}, ...h.counts.days } }));
+  prepareStorage(h.target);
+  const db = new DatabaseSync(join(h.target, 'records.sqlite')); db.exec('DROP TABLE legacy_days'); db.close();
+  assert.throws(() => { const opened = new StorageStore(h.target); opened.close(); }, /MIGRATION_SCHEMA/);
+  const inspect = new DatabaseSync(join(h.target, 'records.sqlite'), { readOnly: true });
+  try { assert.equal(inspect.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE name='legacy_days'").get()?.n, 0); }
+  finally { inspect.close(); }
+  assert.equal(existsSync(join(h.root, 'counts.json')), true);
+});
+test('persisted migration identity refuses a missing source marker instead of treating the DB as unmigrated', t => {
+  const h = fixture(t); prepareStorage(h.target); rmSync(join(h.target, 'source.json'));
+  assert.throws(() => { const opened = new StorageStore(h.target); opened.close(); }, /MIGRATION_SOURCE_MISSING/);
+  assert.equal(existsSync(join(h.root, 'counts.json')), true);
+});

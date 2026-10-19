@@ -66,8 +66,17 @@ export class StorageStore {
       check(this.db.prepare('PRAGMA journal_mode=WAL').get()?.journal_mode === 'wal', 'WAL_UNAVAILABLE');
       this.db.exec('PRAGMA synchronous=FULL');
       check(this.db.prepare('PRAGMA synchronous').get()?.synchronous === 2, 'SYNC_UNAVAILABLE');
-      this.db.exec('CREATE TABLE IF NOT EXISTS migration (id INTEGER PRIMARY KEY CHECK(id=1), identity TEXT NOT NULL, purge INTEGER NOT NULL) STRICT');
-      this.db.exec('CREATE TABLE IF NOT EXISTS legacy_days (day TEXT PRIMARY KEY) STRICT');
+      if (mode === 'active' && !migrated && this.db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name='migration'").get()) {
+        check(!this.db.prepare('SELECT id FROM migration WHERE id=1').get(), 'MIGRATION_SOURCE_MISSING');
+      }
+      if (mode === 'active' && migrated) {
+        check(this.db.prepare("SELECT COUNT(*) AS n FROM sqlite_schema WHERE type='table' AND name IN ('migration','legacy_days')").get()?.n === 2,
+          'MIGRATION_SCHEMA_MISSING');
+      } else {
+        // Only an unmigrated schema or an unpublished stage may acquire these optional tables.
+        this.db.exec('CREATE TABLE IF NOT EXISTS migration (id INTEGER PRIMARY KEY CHECK(id=1), identity TEXT NOT NULL, purge INTEGER NOT NULL) STRICT');
+        this.db.exec('CREATE TABLE IF NOT EXISTS legacy_days (day TEXT PRIMARY KEY) STRICT');
+      }
       if (mode === 'active' && migrated) {
         const source = JSON.parse(readFileSync(join(root, 'source.json'), 'utf8'));
         const migration = this.db.prepare('SELECT identity,purge FROM migration WHERE id=1').get();
