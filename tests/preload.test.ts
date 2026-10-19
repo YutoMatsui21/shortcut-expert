@@ -4,12 +4,17 @@ import { EventEmitter } from 'node:events';
 import type { CoachBridge, Snapshot } from '../src/shared/coach.ts';
 
 const renderer = new EventEmitter();
+const invoke = mock.fn(async (..._args: unknown[]) => {});
 let bridge: CoachBridge;
 mock.module('electron', { namedExports: {
-  ipcRenderer: Object.assign(renderer, { invoke: async () => {} }),
+  ipcRenderer: Object.assign(renderer, { invoke }),
   contextBridge: { exposeInMainWorld: (name: string, value: CoachBridge) => { assert.equal(name, 'coach'); bridge = value; } }
 } });
 await import('../src/preload/index.ts');
+test('three-state changes use only the limited IPC channel and arguments', async () => {
+  await bridge.setLearningState('W12', 'mastered');
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:set-learning-state', 'W12', 'mastered']);
+});
 
 test('状態の再購読と解除で他の購読を消さず、解除後の通知も残さない', () => {
   const receive = mock.fn();

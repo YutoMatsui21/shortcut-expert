@@ -16,7 +16,6 @@ import { runMigrationSmoke } from './migration-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 import { learningReadModel } from '../core/learning';
-import { daysBefore } from '../shared/storage';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -118,8 +117,8 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       const today = localDate();
       try {
         const snapshot = coach.snapshot();
-        const records = repository instanceof SqliteRepository ? await repository.query(daysBefore(today, 6), today)
-          : { counts: snapshot.counts, coverage: {}, revision: 0 };
+        if (coach instanceof DurableCoach) return await coach.getLearning(today);
+        const records = { counts: snapshot.counts, coverage: {}, revision: 0 };
         return learningReadModel(records, snapshot.settings, today);
       } catch { if (!coach.snapshot().error) coach.fault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
     }),
@@ -136,6 +135,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     command,
     setMuted: (operation, muted) => control.run(async () => {
       await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coach.snapshot();
+    }),
+    setLearningState: (operation, state) => control.run(async () => {
+      await coach.setLearningState(operation, state);
+      if (state !== 'learning') notice.dismiss();
+      return coach.snapshot();
     }),
     deleteCounts
   });

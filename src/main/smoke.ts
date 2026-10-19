@@ -76,11 +76,12 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   const forbiddenSender = await notification.webContents.executeJavaScript(`window.coach.getSnapshot().then(() => false, () => true)`);
   if (!forbiddenSender) throw new Error('ipc-notice-sender');
   const rejected = await window.webContents.executeJavaScript(`Promise.all([
-    window.coach.command('unknown'), window.coach.setMuted('W99', true), window.coach.setMuted('W03', 'true'), window.coach.getNotice()
+    window.coach.command('unknown'), window.coach.setMuted('W99', true), window.coach.setMuted('W03', 'true'), window.coach.getNotice(),
+    window.coach.setLearningState('W09', 'learning'), window.coach.setLearningState('W03', 'automatic')
   ].map((request) => request.then(() => false, () => true)))`);
   if (!rejected.every((value: boolean) => value)) throw new Error('ipc-invalid-payload');
   const isolated = await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
-    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecords,getSnapshot,setMuted,subscribe,windowCommand'`);
+    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecords,getSnapshot,setLearningState,setMuted,subscribe,windowCommand'`);
   if (!isolated) throw new Error('renderer-capabilities');
   const disk = JSON.parse(await readFile(join(directory, 'counts.json'), 'utf8'));
   if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
@@ -147,9 +148,9 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   const previousDate = localDate(previous);
   await observer.inject({ ...value, generation: 2, sequence: 1, date: previousDate, origin: 'key', route: 'win-up' });
   await coach.idle();
-  await waitRenderer(window, `!![...document.querySelectorAll('select option')].find((option) => option.value === ${JSON.stringify(previousDate)})`, 'ui-day-option');
+  await waitRenderer(window, `!![...document.querySelectorAll('.records-frame select option')].find((option) => option.value === ${JSON.stringify(previousDate)})`, 'ui-day-option');
   await window.webContents.executeJavaScript(`(() => {
-    const select = document.querySelector('select'); select.value = ${JSON.stringify(previousDate)}; select.dispatchEvent(new Event('change', { bubbles: true }));
+    const select = document.querySelector('.records-frame select'); select.value = ${JSON.stringify(previousDate)}; select.dispatchEvent(new Event('change', { bubbles: true }));
   })()`);
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '0' &&
     document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1'`, 'ui-past-day');
@@ -158,7 +159,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (!coach.snapshot().counts[previousDate]) throw new Error('delete-cancel');
   chooseDelete(1); await click(window, '全日分の記録を削除');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '0' &&
-    document.querySelector('select')?.options.length === 1 && document.querySelector('.badge')?.textContent === '記録中'`, 'ui-delete-confirm');
+    document.querySelector('.records-frame select')?.options.length === 1 && document.querySelector('.badge')?.textContent === '記録中'`, 'ui-delete-confirm');
   const cleared = await new JsonRepository(directory).load();
   if (Object.keys(cleared.counts).length || cleared.settings.muted.join() !== 'W03') throw new Error('delete-settings-retained');
   await observer.inject({ ...value, generation: 2, sequence: 2 }); await coach.idle();

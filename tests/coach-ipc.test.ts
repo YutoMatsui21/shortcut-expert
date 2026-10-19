@@ -25,14 +25,15 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
     getSnapshot: mock.fn(async () => snapshot), getNotice: mock.fn(async () => null),
     command: mock.fn<CoachBridge['command']>(async () => snapshot),
     setMuted: mock.fn<CoachBridge['setMuted']>(async () => snapshot),
+    setLearningState: mock.fn<CoachBridge['setLearningState']>(async () => snapshot),
     deleteCounts: mock.fn(async () => snapshot)
   };
   registerCoachIpc(() => ({ webContents: contents }) as Electron.BrowserWindow, (id) => id === 2, requests);
-  assert.equal(handlers.size, 8);
+  assert.equal(handlers.size, 9);
   const invoke = (channel: string, from: Electron.IpcMainInvokeEvent, ...args: unknown[]) => handlers.get(channel)!(from, ...args);
   for (const channel of handlers.keys()) {
     const sender = channel === 'coach:get-notice' ? noticeEvent : event;
-    const args = channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
+    const args = channel === 'coach:set-learning-state' ? ['W13', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
     assert.throws(() => invoke(channel, { ...sender, senderFrame: {} } as Electron.IpcMainInvokeEvent, ...args), /Unknown sender/);
     assert.throws(() => invoke(channel, channel === 'coach:get-notice' ? event : noticeEvent, ...args), /Unknown sender/);
     await invoke(channel, sender, ...args);
@@ -48,6 +49,11 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
     assert.throws(() => invoke('coach:set-muted', event, ...args), /Invalid setting/);
   }
   assert.equal(requests.command.mock.callCount(), 1);
+  for (const args of [['W09', 'learning'], ['W14', 'excluded'], ['W99', 'learning'], ['W03', 'automatic'], ['W03', {}], [null, 'learning']]) {
+    assert.throws(() => invoke('coach:set-learning-state', event, ...args), /Invalid learning state/);
+  }
+  assert.deepEqual(requests.setLearningState.mock.calls[0].arguments, ['W13', 'mastered']);
+  assert.equal(requests.setLearningState.mock.callCount(), 1);
   assert.equal(requests.setMuted.mock.callCount(), 1);
   assert.deepEqual(requests.command.mock.calls[0].arguments, ['stop']);
   assert.deepEqual(requests.setMuted.mock.calls[0].arguments, ['W03', true]);

@@ -1,4 +1,6 @@
-import type { OperationId } from './coach.ts';
+import type { OperationId, Settings } from './coach.ts';
+export type { LearningState } from './coach.ts';
+import type { LearningState } from './coach.ts';
 
 export const learningGroups = [
   { label: '起動・切り替え', icon: 'imgCategoryIcon' },
@@ -6,7 +8,16 @@ export const learningGroups = [
   { label: '配置・移動', icon: 'imgCategoryIcon2' },
   { label: '画面の整理', icon: 'imgCategoryIcon3' }
 ] as const;
-export type LearningState = 'learning' | 'mastered' | 'excluded';
+export function isLearningState(value: unknown): value is LearningState {
+  return value === 'learning' || value === 'mastered' || value === 'excluded';
+}
+export function learningState(settings: Settings, id: OperationId): LearningState {
+  return settings.states?.[id] ?? (settings.muted.includes(id) ? 'excluded' : 'learning');
+}
+export function withLearningState(settings: Settings, id: OperationId, state: LearningState): Settings {
+  return { ...settings, states: { ...settings.states, [id]: state },
+    muted: state === 'learning' ? settings.muted.filter(value => value !== id) : [...new Set([...settings.muted, id])] };
+}
 // Static keycaps describe the intended shortcut, never detector evidence.
 export const learningOperations: { id: OperationId; group: number; label: string; keys: string[]; hint?: string; availability: 'preparing' }[] = [
   { id: 'W12', group: 0, label: 'タスクバーのアプリを開く', keys: ['Win', '1–9'], availability: 'preparing' },

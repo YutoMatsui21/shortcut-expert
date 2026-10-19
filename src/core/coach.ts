@@ -3,6 +3,7 @@ import { operations } from '../shared/coach.ts';
 import { classify } from './detector.ts';
 import { cutoffDate, validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
+import { learningState, withLearningState, type LearningState } from '../shared/learning.ts';
 
 const NOTICE_TTL_MS = 2000;
 const GLOBAL_NOTICE_INTERVAL_MS = 10_000;
@@ -107,9 +108,11 @@ export class Coach {
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   tick(): Promise<void> { return this.queue.run(() => this.refreshDate()); }
   setMuted(operation: OperationId, muted: boolean): Promise<void> {
+    return this.setLearningState(operation, muted ? 'excluded' : 'learning');
+  }
+  setLearningState(operation: OperationId, state: LearningState): Promise<void> {
     return this.queue.run(async () => {
-      const next = { ...this.settings, muted: muted ? [...new Set([...this.settings.muted, operation])]
-        : this.settings.muted.filter((id) => id !== operation) };
+      const next = withLearningState(this.pendingSettings ?? this.settings, operation, state);
       try {
         await this.dependencies.repository.saveSettings(next);
         this.settings = next;
@@ -126,7 +129,7 @@ export class Coach {
   opened(): Promise<void> {
     return this.queue.run(async () => {
       if (this.settings.opened) return;
-      const next = { ...this.settings, opened: true };
+      const next = { ...(this.pendingSettings ?? this.settings), opened: true };
       try {
         await this.dependencies.repository.saveSettings(next);
         this.settings = next;
@@ -209,7 +212,7 @@ export class Coach {
   private createNotice(observation: Observation, generation: number, receivedAt: number, now: number): Notice | null {
     if (!this.observing || generation !== this.generation || this.notificationsPaused) return null;
     if (!(now - receivedAt < NOTICE_TTL_MS)) return null;
-    if (this.settings.muted.includes(observation.operation) || observation.origin !== 'mouse' ||
+    if (learningState(this.settings, observation.operation) !== 'learning' || observation.origin !== 'mouse' ||
         !observation.monitor || !observation.shortcut) return null;
     if (!notificationCooldownElapsed(now, this.lastNotice, this.lastOperation.get(observation.operation) ?? -Infinity)) return null;
     const definition = operations.find((operation) => operation.id === observation.operation);

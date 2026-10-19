@@ -2,8 +2,9 @@ import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
 import { operations, type CoachBridge } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
 import { daysBefore } from '../shared/storage.ts';
+import { isLearningState, learningOperations } from '../shared/learning.ts';
 
-type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'windowCommand'>;
+type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'windowCommand'>;
 type Command = Parameters<CoachBridge['command']>[0];
 
 function isCommand(value: unknown): value is Command {
@@ -39,6 +40,12 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
     const supported = operations.find((op) => op.id === operation);
     if (!supported || typeof muted !== 'boolean') throw new Error('Invalid setting.');
     return requests.setMuted(supported.id, muted);
+  });
+  ipcMain.handle('coach:set-learning-state', (event, operation: unknown, state: unknown) => {
+    assertSender(event);
+    const supported = learningOperations.find(op => op.id === operation);
+    if (!supported || !isLearningState(state)) throw new Error('Invalid learning state.');
+    return requests.setLearningState(supported.id, state);
   });
   ipcMain.handle('coach:delete', (event) => { assertSender(event); return requests.deleteCounts(); });
 }

@@ -5,6 +5,8 @@ import { daysBefore, recordOperations } from '../shared/storage.ts';
 import { classify } from './detector.ts';
 import { validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
+import { learningState, withLearningState, type LearningState } from '../shared/learning.ts';
+import { learningReadModel } from './learning.ts';
 
 export type Capability = { operation: OperationId; revision: string };
 type Dependencies = {
@@ -31,8 +33,6 @@ export class DurableCoach {
   private pendingSettings: Settings | null = null;
   private queue = new SerialQueue();
   private baseline: { day: string; time: number; observing: boolean; capabilities: Capability[] } | null = null;
-  private lastNotice = -Infinity;
-  private lastOperation = new Map<OperationId, number>();
   private deps: Dependencies;
   constructor(deps: Dependencies) { this.deps = deps; this.session = deps.session; }
   async initialize(): Promise<void> {
@@ -118,16 +118,24 @@ export class DurableCoach {
     // No write may replace unread settings or erase a load/clock/record error.
     if (!this.loaded) { this.publish(); return; }
     try {
-      await this.deps.repository.saveSettings(value); this.data.settings = value; this.pendingSettings = null;
+      await this.deps.repository.saveSettings(value);
+      const today = this.deps.date();
+      const records = await this.deps.repository.query(daysBefore(today, 59), today);
+      this.data = { ...this.data, ...records, settings: value }; this.pendingSettings = null;
       this.settingsError = null;
     } catch { this.pendingSettings = value; this.settingsError = '設定を保存できません。再試行してください。'; this.stop(); }
     this.publish();
   }
   setMuted(id: OperationId, muted: boolean): Promise<void> {
-    return this.queue.run(() => {
-      const current = this.pendingSettings ?? this.data.settings;
-      return this.settings({ ...current, ...(current.states ? { states: { ...current.states, [id]: muted ? 'excluded' : 'learning' } } : {}),
-        muted: muted ? [...new Set([...current.muted, id])] : current.muted.filter(value => value !== id) });
+    return this.setLearningState(id, muted ? 'excluded' : 'learning');
+  }
+  setLearningState(id: OperationId, state: LearningState): Promise<void> {
+    return this.queue.run(() => this.settings(withLearningState(this.pendingSettings ?? this.data.settings, id, state)));
+  }
+  getLearning(today: string) {
+    return this.queue.run(async () => {
+      // Counts, settings and revision must come from the same serialized writer state.
+      return learningReadModel(this.data, this.data.settings, today);
     });
   }
   opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }
@@ -142,7 +150,6 @@ export class DurableCoach {
     });
   }
   accept(value: ObserverCandidate): Promise<void> {
-    const received = this.deps.now();
     const candidate = structuredClone(value);
     return this.queue.run(async () => {
       if (!Number.isInteger(candidate.sequence) || candidate.sequence < 1 || candidate.sequence > 0x7fffffff) return;
@@ -161,13 +168,11 @@ export class DurableCoach {
       if (!value) return;
       await this.persist(value);
       if (this.error || this.pending || !this.observing || candidate.generation !== this.generation || this.paused ||
-        observation.origin !== 'mouse' || !observation.shortcut || !observation.monitor || this.data.settings.muted.includes(observation.operation)) return;
-      const now = this.deps.now();
-      if (now - received >= 2000 || now - this.lastNotice < 10_000 || now - (this.lastOperation.get(observation.operation) ?? -Infinity) < 60_000) return;
+        observation.origin !== 'mouse' || !observation.shortcut || !observation.monitor || learningState(this.data.settings, observation.operation) !== 'learning') return;
       const label = operations.find(op => op.id === observation.operation)!.label;
-      if (await this.deps.notify({ operation: observation.operation, label, shortcut: observation.shortcut, monitor: observation.monitor, expiresAt: received + 2000 })) {
-        this.lastNotice = this.deps.now(); this.lastOperation.set(observation.operation, this.lastNotice);
-      }
+      // The legacy window adapter still owns its display policy until #26. Core requests every eligible notice.
+      try { await this.deps.notify({ operation: observation.operation, label, shortcut: observation.shortcut, monitor: observation.monitor, expiresAt: Infinity }); }
+      catch { /* An unknown delivery result must never trigger an automatic resend. */ }
     });
   }
   snapshot(): Snapshot {
