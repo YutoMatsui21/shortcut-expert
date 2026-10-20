@@ -42,6 +42,7 @@ export type Snapshot = {
   observing: boolean; notificationsPaused: boolean;
   error: string | null; pendingSave: boolean;
   windowMaximized?: boolean;
+  stateVersion?: number;
 };
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
 export type CoachBridge = {

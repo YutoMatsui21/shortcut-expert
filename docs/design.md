@@ -36,6 +36,7 @@
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
 - Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証を担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除確認・終了判断は`coach-app.ts`に残す。
 - #22の通常boundsはCoachWindowがDIPで取得し、Mainのwindow-boundsがwork areaへ補正する。Coreの設定キューから既存SQLite Workerへ保存する。最大化状態は非永続のsnapshot項目。coach-appの終了は重複要求をまとめ、制御待機→停止→bounds/保存flush→未保存確認→helper/Worker終了を待つ。[契約・V03未確認条件](window-lifecycle.md)。
+- #23のSettingsPopoverは共通gearの下に2スイッチを表示し、トレイと同じMain commandでsessionの通知pause・計測stop/startを制御する。停止中は通知の希望値を保持して変更を無効にする。CoachWindowの非永続stateVersionで、Rendererが新しい配信後に届く古いIPC応答を無視する。[設定パネル・検証範囲](settings-panel.md)。
 - #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。7日記録表示は`RecordsPage.tsx`に置き、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](learning-ui.md)。
 - #18の3学習状態はSharedで解決し、Mainが検証した`setLearningState`をCoreの直列キューから既存settings保存へ渡す。DurableCoachの確定済みcounts/settings/revisionから一覧を生成する。Coreの通知適格性はlearningの確証済みmouseのみで毎回評価し、標準Toastのadapterは#26へ分離する。全状態で記録を継続し、失敗時の保留は成功状態として表示しない。[保存・互換・検証範囲](learning-ui.md#3状態18)。
 - #19の記録ページはCoreの`records.ts`で操作別7日集計とKPIを生成する。限定`getRecordSummary`がCore直列キュー→Repositoryの7日query→同一revision確認→12行/KPIを返す。Rendererは全履歴を取得せず、共通Shellに縦積み/4列表を表示する。[記録の契約・検証](records-ui.md)。

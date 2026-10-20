@@ -87,7 +87,7 @@ test('settings failure keeps confirmed state; retry keeps latest choices and cou
   assert.equal(coach.snapshot().pendingSave, false);
 });
 
-for (const action of ['delay', 'pause', 'stop', 'failure', 'delivery-unknown'] as const) {
+for (const action of ['delay', 'pause', 'stop', 'stop-restart', 'failure', 'delivery-unknown'] as const) {
   test(`notification after persistence: ${action}`, async t => {
     const root = await mkdtemp(join(tmpdir(), 'coach-learning-delivery-'));
     const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
@@ -103,10 +103,25 @@ for (const action of ['delay', 'pause', 'stop', 'failure', 'delivery-unknown'] a
     now = 5000;
     if (action === 'pause') coach.pauseNotifications(true);
     if (action === 'stop') coach.stop();
+    if (action === 'stop-restart') {
+      coach.pauseNotifications(true); coach.stop();
+      coach.pauseNotifications(false);
+      assert.equal(coach.snapshot().notificationsPaused, true, 'stopped commands cannot change the desired pause');
+      coach.begin(2);
+      assert.equal(coach.snapshot().observing, false, 'an in-flight save blocks restart');
+    }
     release.resolve(); await pending;
     assert.equal(requests, action === 'delay' || action === 'delivery-unknown' ? 1 : 0);
     repository.commit = commit; await coach.retrySave();
     assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 1);
     assert.equal(requests, action === 'delay' || action === 'delivery-unknown' ? 1 : 0, 'retry never replays a notice');
+    if (action === 'stop-restart') {
+      coach.begin(2); coach.pauseNotifications(false);
+      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 1, sequence: 2 }));
+      assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 1, 'old generation stays rejected after restart');
+      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 }));
+      assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 2);
+      assert.equal(requests, 1, 'only the new generation can request a notice');
+    }
   });
 }
