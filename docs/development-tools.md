@@ -2,7 +2,7 @@
 
 ## 実行環境
 
-`npm.cmd run dev:check`は作業先のTEMPとElectron/builderキャッシュでwrite→renameを確認し、Electron・固定SDK・helperの有無を要約する。必要な部品は`-- --require=electron,sdk,helper`で指定する。部品の存在確認はソースの新しさや検証成功を保証しない。
+`npm.cmd run dev:check`は作業先のTEMPとElectron/builderキャッシュでwrite→renameを確認し、Electron・SDK・helperの有無を要約する。SDKは.NET hostがglobal.jsonのrollForwardも含めて解決した版を採用し、基準版と実際の版を返す。必要な部品は`-- --require=electron,sdk,helper`で指定する。部品の存在確認はソースの新しさや検証成功を保証しない。
 
 依存は`npm.cmd run dev:install`、Electron本体だけ不足する場合は`npm.cmd run dev:electron`を使う。installはネットワークを使う明示的な操作。`dev-run.mjs`を通るnpm入口、unit/native runner、helper build、smokeは各子プロセスへ作業先のTEMP/cacheを渡す。builderのElectron取得は環境変数だけを参照しないため、wrapperが`electronDownload.cache`も明示する。前のshellで設定した環境変数を引き継ぐ必要はない。SDKの版はglobal.json、各入口はpackage.jsonを正本とする。
 

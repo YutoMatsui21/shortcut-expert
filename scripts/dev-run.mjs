@@ -18,11 +18,14 @@ if (tool === 'check') {
   const required = args[0]?.slice('--require='.length).split(',') ?? [];
   const sdk = existsSync('.tools/dotnet/dotnet.exe') ? resolve('.tools/dotnet/dotnet.exe') : 'dotnet';
   const result = spawnSync(sdk, ['--version'], { encoding: 'utf8', windowsHide: true, timeout: 15_000, env: { ...env, DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1', DOTNET_CLI_TELEMETRY_OPTOUT: '1' } });
-  const expectedSdk = JSON.parse(readFileSync('global.json', 'utf8')).sdk.version;
+  const sdkPolicy = JSON.parse(readFileSync('global.json', 'utf8')).sdk;
+  const expectedSdk = sdkPolicy.version;
+  // The host resolves global.json, including rollForward; exact equality rejects valid patches.
+  const resolvedSdk = result.status === 0 && /^\d+\.\d+\.\d+(?:[-+].+)?$/.test(result.stdout.trim()) ? result.stdout.trim() : null;
   const expectedElectron = JSON.parse(readFileSync('package.json', 'utf8')).devDependencies.electron;
   const electron = existsSync('node_modules/electron/dist/electron.exe') && existsSync('node_modules/electron/package.json') && JSON.parse(readFileSync('node_modules/electron/package.json', 'utf8')).version === expectedElectron;
-  const components = { electron, sdk: result.status === 0 && result.stdout.trim() === expectedSdk, helper: existsSync('resources/native-helper/WindowObserver.exe') };
-  console.log(JSON.stringify({ node: process.version, writableDirectories: true, components, expectedSdk, expectedElectron,
+  const components = { electron, sdk: resolvedSdk !== null, helper: existsSync('resources/native-helper/WindowObserver.exe') };
+  console.log(JSON.stringify({ node: process.version, writableDirectories: true, components, expectedSdk, resolvedSdk, sdkRollForward:sdkPolicy.rollForward ?? 'default', expectedElectron,
     note: 'Availability only; rebuild changed sources before testing or packaging.' }));
   process.exit(required.every(name => components[name]) ? 0 : 1);
 }

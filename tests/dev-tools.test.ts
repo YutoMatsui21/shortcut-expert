@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { developmentEnvironment, checkWritableDirectories } from '../scripts/dev-environment.mjs';
 import { smokeSucceeded, smokeFailureSummary } from '../scripts/smoke-result.mjs';
 
@@ -37,4 +38,22 @@ test('smoke diagnostics distinguish empty failure, timeout and missing success m
   assert.equal(empty.status,1); assert.equal(empty.stdoutBytes,0); assert.equal(empty.mode,'--storage-smoke');
   const timeout = JSON.parse(smokeFailureSummary({status:null,signal:'SIGTERM',error:new Error('spawn ETIMEDOUT')},'--migration-smoke',2));
   assert.equal(timeout.error,'spawn ETIMEDOUT'); assert.equal(timeout.boot,2); assert.equal(timeout.signal,'SIGTERM');
+});
+
+test('preflight accepts the SDK resolved by global.json rollForward and rejects host resolution failure', t => {
+  mkdirSync('.tools/tests', {recursive:true});
+  const root=mkdtempSync(resolve('.tools/tests/sdk-check-'));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  writeFileSync(join(root,'global.json'),JSON.stringify({sdk:{version:'10.0.401',rollForward:'latestPatch'}}));
+  writeFileSync(join(root,'package.json'),JSON.stringify({devDependencies:{electron:'44.7.0'}}));
+  const child=join(root,'check.mjs');
+  writeFileSync(child, `import { mock } from 'node:test';
+    mock.module('node:child_process',{namedExports:{spawnSync:()=>({status:Number(process.env.FIXTURE_SDK_STATUS),stdout:'10.0.402\\n'})}});
+    process.argv=['node','dev-run.mjs','check','--require=sdk'];
+    await import(${JSON.stringify(pathToFileURL(resolve('scripts/dev-run.mjs')).href)});`);
+  const env={...process.env}; delete env.NODE_TEST_CONTEXT;
+  for (const status of [0,1]) {
+    const result=spawnSync(process.execPath,['--experimental-test-module-mocks',child],{cwd:root,encoding:'utf8',windowsHide:true,env:{...env,FIXTURE_SDK_STATUS:String(status)}});
+    assert.equal(result.status,status,result.stdout+result.stderr);
+  }
 });
