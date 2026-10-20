@@ -99,6 +99,23 @@ test('display removal corrects the normal rectangle and retains maximized/minimi
   await manager.flush(true);
 });
 
+test('a rejected bounds save can retry the same value and accept later moves', async () => {
+  const manager = new CoachWindow();
+  let fail = true;
+  const saved: unknown[] = [];
+  await manager.create(async () => {}, () => false, { workAreas: () => [{ x: 0, y: 0, width: 1920, height: 1080 }],
+    save: async bounds => { if (fail) throw new Error('fixture-write'); saved.push(bounds); } });
+  const window = FixtureWindow.all.at(-1)!;
+  window.bounds = { x: 100, y: 100, width: 1000, height: 650 }; window.emit('resize');
+  await assert.rejects(manager.flush(true), /fixture-write/);
+  fail = false; manager.resumeBounds();
+  await manager.flush();
+  assert.deepEqual(saved, [{ x: 100, y: 100, width: 1000, height: 650 }]);
+  window.bounds = { ...window.bounds, x: 120 }; window.emit('move');
+  await manager.flush(true);
+  assert.equal(saved.length, 2);
+});
+
 test('窓の隔離設定と外部遷移拒否を維持する', async () => {
   const manager = new CoachWindow();
   await manager.create(async (_window, mode) => { assert.equal(mode, 'coach'); }, () => false);

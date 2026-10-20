@@ -143,6 +143,19 @@ test('停止解除の応答が期限内に来ない場合は停止を返しhelpe
   assert.equal(h.child().killed, true); assert.equal(h.faults(), 1);
 });
 
+test('shutdown waits for the retired helper exit after stop failure', async t => {
+  const h = harness(t); await h.client.start(); h.child().respond = null;
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const stopped = assert.rejects(h.client.stop(), /helper-stop-failed/);
+  t.mock.timers.tick(2500); await stopped;
+  let finished = false;
+  const shutting = h.client.shutdown().then(() => { finished = true; });
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+  assert.equal(finished, false, 'kill request is not process exit');
+  h.child().exit(1); await shutting;
+  assert.equal(finished, true);
+});
+
 test('子プロセスの終了とstdin失敗は画面照会を失敗させる', async (t) => {
   const h = harness(t); await h.client.start(); h.child().respond = null;
   const failed = assert.rejects(h.client.context(candidateFixture().monitor!), /helper-failed/);
@@ -174,8 +187,19 @@ test('shutdown応答後も終了しないhelperを期限で強制終了する', 
   const shutting = h.client.shutdown();
   for (let i = 0; i < 5; i++) await Promise.resolve();
   t.mock.timers.tick(2499); assert.equal(h.child().killed, false);
-  t.mock.timers.tick(1); await shutting;
+  t.mock.timers.tick(1);
+  h.child().exit(); await shutting;
   assert.equal(h.child().killed, true); assert.equal(h.faults(), 0);
+});
+
+test('shutdown rejects if kill does not produce a confirmed exit; a later retry can finish', async t => {
+  const h = harness(t); await h.client.start();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  h.child().respond = request => h.child().send({ type: 'stopped', requestId: request.requestId });
+  const shutting = assert.rejects(h.client.shutdown(), /helper-exit-unconfirmed/);
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+  t.mock.timers.tick(5000); await shutting;
+  h.child().exit(); await h.client.shutdown();
 });
 
 test('改行が来ない巨大chunkでも受信中に停止する', async (t) => {

@@ -93,6 +93,7 @@ export function candidateV2(value: unknown): CandidateV2 | null {
 
 export class ObserverClient {
   private child: ChildProcessWithoutNullStreams | null = null;
+  private processes = new Map<ChildProcessWithoutNullStreams, Promise<void>>();
   private generation = 0;
   private requestId = 0;
   private fixture: boolean;
@@ -116,6 +117,12 @@ export class ObserverClient {
       const mode = this.fixture ? process.argv.includes('--real-display-smoke') ? '--fixture-display' : '--fixture' : '--observe';
       this.child = spawn(path, [mode], { cwd: dirname(path), windowsHide: true, stdio: 'pipe' });
       const child = this.child;
+      // A failed transport retires a child, but kill() alone does not confirm its exit.
+      this.processes.set(child, new Promise<void>(resolve => {
+        const done = () => { this.processes.delete(child); resolve(); };
+        child.once('exit', done);
+        child.once('error', () => { if (!child.pid) done(); });
+      }));
       let buffered = '';
       child.stdout.setEncoding('utf8');
       child.stdout.on('data', (text: string) => {
@@ -160,20 +167,23 @@ export class ObserverClient {
   async shutdown(): Promise<void> {
     this.closing = true; this.active = false;
     const child = this.child;
-    if (!child) return;
-    const exited = new Promise<void>((resolve) => {
-      if (child.exitCode !== null) { resolve(); return; }
-      const done = () => { clearTimeout(timer); child.removeListener('exit', done); resolve(); };
-      const timer = setTimeout(() => { child.kill(); done(); }, 2500);
-      child.once('exit', done);
+    const waits = [...this.processes].map(async ([process, exited]) => {
+      const kill = setTimeout(() => process.kill(), 2500);
+      let deadline: NodeJS.Timeout | undefined;
+      try {
+        await Promise.race([exited, new Promise<never>((_, reject) => {
+          deadline = setTimeout(() => reject(new Error('helper-exit-unconfirmed')), 5000);
+        })]);
+      } finally { clearTimeout(kill); clearTimeout(deadline); }
     });
-    try { await this.request('shutdown'); }
-    catch { child.kill(); }
-    finally {
-      child.stdin.end();
-      await exited;
-      if (this.child === child) this.child = null;
-    }
+    const shutdown = async () => {
+      if (!child) return;
+      try { await this.request('shutdown'); }
+      catch { child.kill(); }
+      finally { child.stdin.end(); }
+    };
+    await Promise.all([shutdown(), ...waits]);
+    if (this.child === child) this.child = null;
   }
   async context(monitor: Bounds): Promise<{ known: boolean; fullscreen: boolean }> {
     const response = await this.request('queryDisplayContext', { monitor });

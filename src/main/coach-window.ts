@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron';
 import type { Bounds, Snapshot } from '../shared/coach';
 import { visibleNormalBounds } from './window-bounds.ts';
 import { isNormalBounds } from '../shared/window.ts';
+import { SerialQueue } from '../core/serial-queue.ts';
 
 type WindowPreferences = { saved?: Bounds; workAreas(): Bounds[]; save(bounds: Bounds): Promise<void> };
 
@@ -12,6 +13,7 @@ export class CoachWindow {
   private normal?: Bounds;
   private timer?: NodeJS.Timeout;
   private saving: Promise<void> = Promise.resolve();
+  private saves = new SerialQueue();
   private disposed = false;
   private snapshot?: Snapshot;
   private dirty = false;
@@ -36,7 +38,7 @@ export class CoachWindow {
       this.normal = bounds;
       this.dirty = true;
       // Coalesce the latest value with a bounded write interval even during long drags.
-      this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush(); }, 250);
+      this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush().catch(() => {}); }, 250);
     };
     window.on('move', remember); window.on('resize', remember);
     const stateChanged = () => { if (this.snapshot) this.publish(this.snapshot); };
@@ -73,7 +75,7 @@ export class CoachWindow {
     window.setBounds(next);
     this.normal = next;
     this.dirty = true;
-    this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush(); }, 250);
+    this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush().catch(() => {}); }, 250);
     if (maximized) window.maximize();
     if (minimized) window.minimize();
   }
@@ -85,7 +87,10 @@ export class CoachWindow {
     if (bounds && this.preferences && this.dirty) {
       this.dirty = false;
       const save = this.preferences.save;
-      this.saving = this.saving.then(() => save(bounds));
+      this.saving = this.saves.run(async () => {
+        try { await save(bounds); }
+        catch (error) { if (this.normal === bounds) this.dirty = true; throw error; }
+      });
     }
     await this.saving;
   }

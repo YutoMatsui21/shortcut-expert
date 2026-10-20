@@ -16,6 +16,8 @@ boundsだけの保存は記録ReadModelを変えないためmeta.revisionを進�
 
 終了要求は同じPromiseにまとめる。新たなstart・設定変更・削除を止め、先行UI制御を待ち、計測停止とhelperのstop、通常bounds flush、Core保存待機を終えてから未保存確認を出す。「戻る」は停止を維持して既存窓を表示し、再試行できる。終了確定後はhelper shutdown/EOF/exitとSQLite Worker closeを待ち、トレイを破棄してapp.quitする。終了中の表示変更では新しいbounds保存を追加しない。終了失敗は成功扱いせず、停止・画面エラーへ戻す。
 
+通信失敗で切り離したhelperもexit待機対象に保持する。shutdownは2.5秒でkillを要求し、5秒までにexitを確認できなければ失敗してアプリを残す。kill要求だけで完全終了と扱わない。bounds保存Promiseがrejectした場合は呼出し元へ失敗を返し、同じ値の再試行を保持して保存キューの末尾を回復する。この2件は修正前の回帰失敗と修正後の成功を確認した。
+
 ## 証拠の範囲とV03
 
 unitは負座標/画面外/小画面補正、状態変化中の上書き防止、保存待機と遅延イベント拒否、実SQLite Worker経由の保存・削除保持・再open・不正値拒否を確認する。Electron smokeは限定IPCからの最大化/復元、CSS drag/no-drag、hide中の計測状態、共通second-instance復元、保存失敗時の終了取消・保存再試行、重複終了要求から実helper shutdownまでを通す。外形/content/viewport/devicePixelRatio/scaleFactorをfixture結果に含める。
