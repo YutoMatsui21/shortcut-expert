@@ -45,4 +45,4 @@ GitHub APIが使える限り、待機中にrun/job/全コメントを別々に�
 - 非同期処理は返されたIDを保存し、終了結果を受け取ったIDを待機対象から外す。`functions.wait`のcell IDと`write_stdin`のsession IDを区別する。
 - 成功した検証はソース・依存・生成物・環境と対応づける。変更した範囲を再検証し、UI/fixtureの期待を固めてから最終packageする。現行の全体確認や最新headのレビューを省略しない。
 
-smokeの終了時に成功markerがない場合は、exit 0でも不成功とする。通常のstage/stackに加え、空出力やtimeoutでもmode・起動回数・終了status/signal・出力byte数を表示する。不正IPC拒否のような意図した負例ログと、最初の失敗stageを区別する。診断は隔離fixtureの試験経路だけで出す。
+smokeはElectronモジュールの読込より先にTEMP/cacheを設定し、初回の自動downloadも同じ作業先へ向ける。同梱版では開発用Electronを読み込まない。終了時に成功markerがない場合は、exit 0でも不成功とする。通常のstage/stackに加え、空出力やtimeoutでもmode・起動回数・終了status/signal・出力byte数を表示する。不正IPC拒否のような意図した負例ログと、最初の失敗stageを区別する。診断は隔離fixtureの試験経路だけで出す。

@@ -43,13 +43,13 @@ export function issueSection(body, title) {
   const lines = body.split('\n');
   let fence = null;
   const headings = lines.flatMap((line, index) => {
-    const delimiter = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
-    if (delimiter) {
-      if (!fence) fence = delimiter;
-      else if (delimiter[0] === fence[0] && delimiter.length >= fence.length) fence = null;
+    const matchFence = /^ {0,3}(`{3,}|~{3,})([^\n]*)$/.exec(line);
+    const delimiter = matchFence?.[1], suffix = matchFence?.[2];
+    if (fence) {
+      if (delimiter && delimiter[0] === fence[0] && delimiter.length >= fence.length && /^[ \t\r]*$/.test(suffix)) fence = null;
       return [];
     }
-    if (fence) return [];
+    if (delimiter && (delimiter[0] === '~' || !suffix.includes('`'))) { fence = delimiter; return []; }
     const match = /^(#{1,6})\s+(.+?)\s*\r?$/.exec(line);
     return match ? [{ index, level: match[1].length, title: match[2] }] : [];
   });

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -56,4 +56,24 @@ test('preflight accepts the SDK resolved by global.json rollForward and rejects 
     const result=spawnSync(process.execPath,['--experimental-test-module-mocks',child],{cwd:root,encoding:'utf8',windowsHide:true,env:{...env,FIXTURE_SDK_STATUS:String(status)}});
     assert.equal(result.status,status,result.stdout+result.stderr);
   }
+});
+
+test('smoke sets local cache before Electron module can trigger its first download', t=>{
+  mkdirSync('.tools/tests',{recursive:true});
+  const root=mkdtempSync(resolve('.tools/tests/smoke-loader-'));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  mkdirSync(join(root,'scripts')); mkdirSync(join(root,'node_modules/electron'),{recursive:true});
+  for(const name of ['smoke.mjs','dev-environment.mjs','smoke-result.mjs']) copyFileSync(resolve('scripts',name),join(root,'scripts',name));
+  writeFileSync(join(root,'package.json'),JSON.stringify({main:'fixture-app.cjs'}));
+  writeFileSync(join(root,'node_modules/electron/index.js'),`
+    const assert=require('node:assert/strict'),path=require('node:path');
+    assert.equal(process.env.electron_config_cache,path.resolve('.tools/electron-cache'));
+    assert.equal(process.env.TEMP,path.resolve('.tools/test-temp'));
+    module.exports=process.execPath;
+  `);
+  writeFileSync(join(root,'fixture-app.cjs'),`console.log('COACH_SMOKE_OK {}');`);
+  const env:NodeJS.ProcessEnv={...process.env,TEMP:'old-temp',electron_config_cache:'old-cache'}; delete env.NODE_TEST_CONTEXT;
+  const result=spawnSync(process.execPath,[join(root,'scripts/smoke.mjs')],{cwd:root,env,encoding:'utf8',windowsHide:true});
+  assert.equal(result.status,0,result.stdout+result.stderr);
+  assert.match(result.stdout,/COACH_SMOKE_OK/);
 });

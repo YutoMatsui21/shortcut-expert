@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import electron from 'electron';
 import { developmentEnvironment } from './dev-environment.mjs';
 import { smokeSucceeded, smokeFailureSummary } from './smoke-result.mjs';
 
@@ -9,12 +8,14 @@ const packaged = process.argv.includes('--packaged');
 const packageOption = process.argv.indexOf('--package-dir');
 const packageDir = packageOption >= 0 ? process.argv[packageOption + 1] : 'release';
 if (!packageDir) throw new Error('--package-dir needs a folder');
-const executable = packaged ? resolve(packageDir, 'win-unpacked/Window Shortcut Coach.exe') : electron;
+// Electron can install its binary during module loading, before the app is spawned.
+const environment = developmentEnvironment();
+Object.assign(process.env, environment);
+const executable = packaged ? resolve(packageDir, 'win-unpacked/Window Shortcut Coach.exe') : (await import('electron')).default;
 const migration = process.argv.includes('--migration');
 const options = [migration ? '--migration-smoke' : process.argv.includes('--storage') ? '--storage-smoke' : '--coach-smoke'];
 if (process.argv.includes('--real-display')) options.push('--real-display-smoke');
 const args = packaged ? options : [resolve('.'), ...options];
-const environment = developmentEnvironment();
 mkdirSync(resolve('.tools/tests'), { recursive: true });
 environment.COACH_TEST_DATA_DIR = mkdtempSync(join(resolve('.tools/tests'), 'coach-'));
 delete environment.ELECTRON_RUN_AS_NODE;

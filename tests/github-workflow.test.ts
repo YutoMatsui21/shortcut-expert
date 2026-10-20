@@ -90,3 +90,11 @@ test('PR details retain original findings with replies, detect edits and reject 
   const truncated=pullRequestStatus({...options,details:true});
   assert.equal(truncated.truncated,true); assert.equal(truncated.checksPassed,false);
 });
+
+test('spec headings stay inside fences until a matching delimiter with whitespace-only suffix',()=>{
+  for (const marker of ['```','~~~']) {
+    const body=`# Spec\n${marker}text\n${marker}not-a-closing-fence\n## Fake heading\n${marker.slice(0,2)}\n${marker} \t\r\n## Real heading\ncontract\n`;
+    assert.doesNotMatch(issueSection(body),/Fake heading/);
+    assert.equal(issueSection(body,'Real heading'),'## Real heading\ncontract\n');
+  }
+});
