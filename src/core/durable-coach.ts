@@ -116,7 +116,8 @@ export class DurableCoach {
       this.publish();
     });
   }
-  private async settings(value: Settings): Promise<void> {
+  private async settings(value: Settings, publish = true): Promise<void> {
+    const notify = publish || this.pendingSettings !== null;
     // No write may replace unread settings or erase a load/clock/record error.
     if (!this.loaded) { this.publish(); return; }
     try {
@@ -126,7 +127,7 @@ export class DurableCoach {
       this.data = { ...this.data, ...records, settings: value }; this.pendingSettings = null;
       this.settingsError = null;
     } catch { this.pendingSettings = value; this.settingsError = '設定を保存できません。再試行してください。'; this.stop(); }
-    this.publish();
+    if (notify || this.pendingSettings) this.publish();
   }
   setMuted(id: OperationId, muted: boolean): Promise<void> {
     return this.setLearningState(id, muted ? 'excluded' : 'learning');
@@ -148,6 +149,9 @@ export class DurableCoach {
     });
   }
   opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }
+  setNormalBounds(normalBounds: import('../shared/coach.ts').Bounds): Promise<void> {
+    return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), normalBounds: { ...normalBounds } }, false));
+  }
   deleteCounts(): Promise<void> {
     this.stop();
     return this.queue.run(async () => {

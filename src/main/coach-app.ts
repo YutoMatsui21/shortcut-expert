@@ -21,13 +21,20 @@ import { recordsReadModel } from '../core/records';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
-export function showCoach(): void { coachWindow.show(); }
+let showRequested = false;
+export function showCoach(): void {
+  showRequested = true;
+  coachWindow.show();
+}
 
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   let tray: Tray | null = null;
   let ticker: NodeJS.Timeout | undefined;
   let errorStop = false;
   let fixtureDeleteResponse: number | null = null;
+  let fixtureQuitResponse: number | null = null;
+  let exiting: Promise<void> | null = null;
+  let exitRequested = false;
   const control = new SerialQueue();
   let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
@@ -70,6 +77,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       capabilities: () => fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : [] })
     : new Coach({ ...common, repository });
   const startObservation = async () => {
+    if (exitRequested) return;
     const snapshot = coach.snapshot();
     if (snapshot.observing || snapshot.pendingSave) return;
     if (snapshot.error) await coach.initialize();
@@ -85,29 +93,43 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
   };
   const command = (value: string) => control.run(async () => {
+    if (exitRequested) return coach.snapshot();
     switch (value) {
       case 'pause-notifications': coach.pauseNotifications(true); notice.dismiss(); break;
       case 'resume-notifications': coach.pauseNotifications(false); break;
       case 'stop': await stopObservation(); break;
       case 'start': await startObservation(); break;
       case 'retry-save': await coach.retrySave(); break;
-      case 'quit': await quit(); break;
+      case 'quit': break;
       default: throw new Error('Unknown command.');
     }
     return coach.snapshot();
   });
-  const quit = async () => {
-    if (quitting) return;
-    coach.stop(); notice.dismiss(); await coach.idle();
+  const performQuit = async () => {
+    exitRequested = true;
+    // Drain earlier UI commands before stopping; prevent a queued start from reattaching hooks.
+    await control.run(async () => {});
+    await stopObservation();
+    await coachWindow.flush(true); await coach.idle();
     const window = coachWindow.current;
     if (coach.snapshot().pendingSave && window) {
-      const answer = await dialog.showMessageBox(window, { type: 'warning', message: '未保存の記録または設定があります。',
+      const answer = fixture && fixtureQuitResponse !== null ? { response: fixtureQuitResponse } : await dialog.showMessageBox(window, { type: 'warning', message: '未保存の記録または設定があります。',
         detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
-      if (answer.response !== 1) { showCoach(); return; }
+      if (answer.response !== 1) { exitRequested = false; coachWindow.resumeBounds(); showCoach(); return; }
     }
-    quitting = true; clearInterval(ticker); await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close(); tray?.destroy(); app.quit();
+    clearInterval(ticker); await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close();
+    quitting = true; tray?.destroy(); app.quit();
+  };
+  const quit = (): Promise<void> => {
+    if (quitting) return Promise.resolve();
+    if (!exiting) exiting = performQuit().catch(() => {
+      exitRequested = false; coachWindow.resumeBounds();
+      coach.fault('終了処理を確認できませんでした。保存状態を確認して終了を再試行してください。'); showCoach();
+    }).finally(() => { exiting = null; });
+    return exiting;
   };
   const deleteCounts = () => control.run(async () => {
+    if (exitRequested) return coach.snapshot();
     const window = coachWindow.current;
     if (!window) return coach.snapshot();
     // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
@@ -121,6 +143,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
     getRecordSummary: (query) => control.run(async () => {
+      if (exitRequested) throw new Error('終了処理中です。');
       try {
         const today = localDate();
         if (coach instanceof DurableCoach) return await coach.getRecordSummary(today, query);
@@ -132,6 +155,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       }
     }),
     getLearning: () => control.run(async () => {
+      if (exitRequested) throw new Error('終了処理中です。');
       const today = localDate();
       try {
         const snapshot = coach.snapshot();
@@ -140,21 +164,24 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         return learningReadModel(records, snapshot.settings, today);
       } catch { if (!coach.snapshot().error) coach.fault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
     }),
-    windowCommand: async (value) => coachWindow.command(value),
+    windowCommand: async (value) => { if (!exitRequested) coachWindow.command(value); },
     getRecords: async (from, to) => {
+      if (exitRequested) throw new Error('終了処理中です。');
       try {
         if (repository instanceof SqliteRepository) return await repository.query(from, to);
         const loaded = await repository.load();
         return { counts: Object.fromEntries(Object.entries(loaded.counts).filter(([day]) => day >= from && day <= to)), coverage: {}, revision: 0 };
       } catch { coach.fault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
     },
-    getSnapshot: async () => { await coach.tick(); return coach.snapshot(); },
+    getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
     getNotice: async () => notice.current(),
-    command,
+    command: value => value === 'quit' ? quit().then(() => coach.snapshot()) : command(value),
     setMuted: (operation, muted) => control.run(async () => {
+      if (exitRequested) return coach.snapshot();
       await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coach.snapshot();
     }),
     setLearningState: (operation, state) => control.run(async () => {
+      if (exitRequested) return coach.snapshot();
       await coach.setLearningState(operation, state);
       if (state !== 'learning') notice.dismiss();
       return coach.snapshot();
@@ -163,7 +190,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   });
   await coach.initialize();
   app.on('before-quit', (event) => { if (!quitting) { event.preventDefault(); void quit(); } });
-  const window = await coachWindow.create(load, () => quitting);
+  const window = await coachWindow.create(load, () => quitting, {
+    saved: coach.snapshot().settings.normalBounds,
+    workAreas: () => [screen.getPrimaryDisplay(), ...screen.getAllDisplays().filter(display => display.id !== screen.getPrimaryDisplay().id)].map(display => display.workArea),
+    save: bounds => coach.setNormalBounds(bounds)
+  });
+  if (showRequested) showCoach();
   if (!fixture) {
     const pixels = Buffer.alloc(16 * 16 * 4);
     for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) if ((x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36) {
@@ -176,13 +208,16 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   }
   await startObservation(); publish(coach.snapshot());
   ticker = setInterval(() => {
+    if (exitRequested) return;
     if (repository instanceof SqliteRepository) void coach.tick();
     else if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
   powerMonitor.on('suspend', () => { if (coach.snapshot().observing) { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); } });
-  screen.on('display-removed', () => notice.dismiss());
-  screen.on('display-metrics-changed', () => notice.dismiss());
+  const displaysChanged = () => { notice.dismiss(); coachWindow.correctBounds(); };
+  screen.on('display-added', displaysChanged);
+  screen.on('display-removed', displaysChanged);
+  screen.on('display-metrics-changed', displaysChanged);
   if (fixture) {
     if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
@@ -191,7 +226,21 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       report = await Promise.race([
         comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
-          chooseDelete: (response) => { fixtureDeleteResponse = response; } }),
+          chooseDelete: (response) => { fixtureDeleteResponse = response; },
+          verifyWindowExit: async () => {
+            const save = repository.saveSettings.bind(repository);
+            repository.saveSettings = async () => { throw new Error('fixture settings failure'); };
+            const before = window.getNormalBounds();
+            window.setBounds({ ...before, width: before.width === 1000 ? 1001 : 1000 });
+            // Make the OS response deterministic, retaining production flush/stop/confirmation.
+            fixtureQuitResponse = 0;
+            await Promise.all([quit(), quit()]);
+            if (quitting || !coach.snapshot().pendingSave || coach.snapshot().observing || !window.isVisible()) throw new Error('quit-cancel-pending');
+            repository.saveSettings = save;
+            fixtureQuitResponse = null;
+            await coach.retrySave();
+            if (coach.snapshot().pendingSave) throw new Error('quit-retry-save');
+          } }),
         new Promise<never>((_, reject) => {
           deadline = setTimeout(() => reject(new Error('smoke-timeout')), 25_000);
         })
@@ -203,6 +252,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     finally {
       clearTimeout(deadline); clearInterval(ticker);
+      if (report && !storageFixture) {
+        app.once('will-quit', () => console.log('COACH_SMOKE_OK ' + JSON.stringify({ ...report, hooksStopped: true, safeExit: true })));
+        await Promise.all([quit(), quit()]);
+        if (!quitting) { console.error('COACH_SMOKE_FAILED safe-exit'); app.exit(1); }
+        return;
+      }
       coach.stop(); notice.dismiss(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close(); quitting = true;
       if (report) console.log('COACH_SMOKE_OK ' + JSON.stringify({ ...report, hooksStopped: true }));
       else console.error('COACH_SMOKE_FAILED');

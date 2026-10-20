@@ -16,6 +16,8 @@ export function CoachApp() {
   const [readError, setReadError] = useState(false);
   const [day, setDay] = useState(localDate());
   const [settings, setSettings] = useState(false);
+  const [maximized, setMaximized] = useState(false);
+  useEffect(() => { if (coach.snapshot?.windowMaximized !== undefined) setMaximized(coach.snapshot.windowMaximized); }, [coach.snapshot?.windowMaximized]);
   const gear = useRef<HTMLButtonElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   useEffect(() => { const timer = setInterval(() => setDay(localDate()), 1000); return () => clearInterval(timer); }, []);
@@ -36,7 +38,7 @@ export function CoachApp() {
     <div className="titlebar"><div className="caption"><Icon name="imgAppIconKeyboardOutlineTransparent" /><span>Shortcut Expert</span></div>
       <div className="window-controls"><button ref={gear} className="gear-button" aria-label="設定" aria-expanded={settings} onClick={() => setSettings(!settings)}><Icon name="imgGroup" /></button>
         <button aria-label="最小化" onClick={() => windowAction('minimize')}><Icon name="imgMinus" /></button>
-        <button aria-label="最大化または復元" onClick={() => windowAction('maximize')}><Icon name="imgSquare" /></button>
+        <button aria-label={maximized ? '復元' : '最大化'} onClick={() => windowAction('maximize')}>{maximized ? <svg className="icon" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 3.5v-2h7v7h-2m-7-5h7v7h-7z" fill="none" stroke="currentColor" /></svg> : <Icon name="imgSquare" />}</button>
         <button aria-label="閉じる" onClick={() => windowAction('hide')}><Icon name="imgXmark" /></button></div>
     </div>
     <nav className="navigation-rail" aria-label="ページ"><button aria-label="ショートカット一覧" title="ショートカット一覧" aria-current={page === 'learning' ? 'page' : undefined} onClick={() => setPage('learning')}><Icon name="imgIconBookOpen" /></button>

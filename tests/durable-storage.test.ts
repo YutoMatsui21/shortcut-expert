@@ -13,6 +13,24 @@ import type { Candidate } from '../src/shared/coach.ts';
 import { v2Fixture } from './support/fixtures.ts';
 
 const worker = resolve('src/main/storage-worker.ts');
+test('normal bounds persist via the real worker, preserve learning settings and survive delete/reopen', async t => {
+  const h = await fixture(t);
+  const bounds = { x: -1200, y: 80, width: 1000, height: 650 };
+  await h.coach.setNormalBounds(bounds);
+  await h.coach.setLearningState('W03', 'mastered');
+  await h.coach.opened();
+  await h.coach.deleteCounts();
+  await h.repository.close();
+  const reopened = new SqliteRepository(h.root, worker);
+  try {
+    const state = await reopened.load('2026-10-19');
+    assert.deepEqual(state.settings.normalBounds, bounds);
+    assert.equal(state.settings.states?.W03, 'mastered');
+    assert.equal(state.settings.opened, true);
+    await assert.rejects(reopened.saveSettings({ ...state.settings, normalBounds: { ...bounds, x: Infinity } }));
+    assert.deepEqual((await reopened.load('2026-10-19')).settings.normalBounds, bounds);
+  } finally { await reopened.close(); }
+});
 const candidate: Candidate = { type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1, app: 'chrome', operation: 'maximize',
   date: '2026-10-19', before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, origin: 'key', route: 'win-up',
   injected: false, conflicted: false, moving: false, elevated: false, targetMatched: true, inputAgeMs: 100, monitor: null };

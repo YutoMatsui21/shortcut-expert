@@ -21,6 +21,7 @@ type SmokeContext = {
   getNotificationWindow(): BrowserWindow | null;
   directory: string;
   chooseDelete(response: number): void;
+  verifyWindowExit(): Promise<void>;
 };
 
 async function waitRenderer(window: BrowserWindow, condition: string, stage: string): Promise<void> {
@@ -43,7 +44,7 @@ async function click(window: BrowserWindow, label: string): Promise<void> {
   if (!clicked) throw new Error('ui-button-' + label);
 }
 
-export async function runCoachSmoke({ coach, observer, notice, window, getNotificationWindow, directory, chooseDelete }: SmokeContext) {
+export async function runCoachSmoke({ coach, observer, notice, window, getNotificationWindow, directory, chooseDelete, verifyWindowExit }: SmokeContext) {
   if (!coach.snapshot().observing) throw new Error('observer');
   const display = screen.getPrimaryDisplay();
   const physical = screen.dipToScreenRect(null, display.bounds);
@@ -178,10 +179,25 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-reload-command');
   await click(window, '通知を再開');
   await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-reload-subscription');
+  const caption = await window.webContents.executeJavaScript(`({
+    drag: getComputedStyle(document.querySelector('.titlebar')).getPropertyValue('-webkit-app-region'),
+    controls: getComputedStyle(document.querySelector('.window-controls')).getPropertyValue('-webkit-app-region')
+  })`);
+  if (caption.drag !== 'drag' || caption.controls !== 'no-drag') throw new Error('caption-regions');
+  await window.webContents.executeJavaScript(`document.querySelector('button[aria-label="最大化"]').click()`);
+  await waitRenderer(window, `!!document.querySelector('button[aria-label="復元"]')`, 'caption-maximized');
+  await window.webContents.executeJavaScript(`document.querySelector('button[aria-label="復元"]').click()`);
+  await waitRenderer(window, `!!document.querySelector('button[aria-label="最大化"]')`, 'caption-restored');
+  const restoredBounds = window.getNormalBounds();
+  const windowEvidence = { bounds: window.getBounds(), content: window.getContentBounds(),
+    viewport: await window.webContents.executeJavaScript('({width:innerWidth,height:innerHeight,devicePixelRatio})'),
+    scaleFactor: screen.getDisplayMatching(restoredBounds).scaleFactor };
+  await verifyWindowExit();
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
     uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
-    windowHiddenAndRestored: true, rendererResubscribed: true,
+    windowHiddenAndRestored: true, rendererResubscribed: true, captionCommands: true,
+    pendingExitCancelledAndRecovered: true, windowEvidence,
     realDisplayContext: process.argv.includes('--real-display-smoke') };
 }

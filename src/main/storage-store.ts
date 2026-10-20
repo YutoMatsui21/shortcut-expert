@@ -8,6 +8,7 @@ import { daysBefore } from '../shared/storage.ts';
 import { validDate } from '../core/dates.ts';
 import type { LegacyImport } from './storage-migration.ts';
 import { fileExists } from './storage-files.ts';
+import { isNormalBounds } from '../shared/window.ts';
 
 const ids = [...operations.map(op => op.id), 'W12', 'W13', 'W14'];
 const check = (ok: unknown, message: string): void => { if (!ok) throw new Error(message); };
@@ -15,7 +16,8 @@ const integer = (n: number) => Number.isSafeInteger(n) && n >= 0;
 function validateSettings(settings: Settings): void {
   check(settings && typeof settings === 'object' && !Array.isArray(settings) && typeof settings.opened === 'boolean' &&
     Array.isArray(settings.muted) && settings.muted.every(id => ids.includes(id)) &&
-    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened', 'states'].includes(k)), 'INVALID_SETTINGS');
+    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened', 'states', 'normalBounds'].includes(k)) &&
+    (settings.normalBounds === undefined || isNormalBounds(settings.normalBounds)), 'INVALID_SETTINGS');
   if (settings.states !== undefined) check(settings.states && typeof settings.states === 'object' && !Array.isArray(settings.states) &&
     Object.entries(settings.states).every(([id, state]) => ids.includes(id) && ['learning', 'mastered', 'excluded'].includes(state)), 'INVALID_STATES');
 }

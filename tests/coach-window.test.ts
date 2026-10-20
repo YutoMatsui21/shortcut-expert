@@ -9,6 +9,9 @@ class FixtureWindow extends EventEmitter {
   minimized = false;
   maximized = false;
   visible = false;
+  bounds = { x: 100, y: 100, width: 1120, height: 700 };
+  getNormalBounds() { return { ...this.bounds }; }
+  setBounds(bounds: typeof this.bounds) { this.bounds = bounds; this.emit('resize'); }
   calls: string[] = [];
   openHandler?: () => { action: string };
   sent: unknown[][] = [];
@@ -26,8 +29,8 @@ class FixtureWindow extends EventEmitter {
   hide() { this.visible = false; }
   minimize() { this.minimized = true; }
   isMaximized() { return this.maximized; }
-  maximize() { this.maximized = true; }
-  unmaximize() { this.maximized = false; }
+  maximize() { this.maximized = true; this.emit('maximize'); }
+  unmaximize() { this.maximized = false; this.emit('unmaximize'); }
 }
 
 Object.defineProperty(globalThis, '__dirname', { value: 'fixture-main' });
@@ -61,6 +64,39 @@ test('読込中も窓を重複作成せず、closeで隠し同じ窓を復元す
   window.destroyed = true; window.emit('closed');
   assert.equal(manager.current, null);
   manager.show(); manager.hide();
+});
+
+test('normal DIP bounds survive state changes; maximize/minimize events never overwrite them; flush drains save', async () => {
+  const manager = new CoachWindow();
+  const saved: unknown[] = [];
+  const writing = deferred<void>();
+  await manager.create(async () => {}, () => false, { workAreas: () => [{ x: -1920, y: 0, width: 1920, height: 1080 }],
+    saved: { x: -1800, y: 80, width: 900, height: 650 }, save: async bounds => { saved.push(bounds); await writing.promise; } });
+  const window = FixtureWindow.all.at(-1)!;
+  assert.equal(window.options.x, -1800);
+  window.bounds = { x: -1600, y: 100, width: 1000, height: 660 }; window.emit('move');
+  window.maximized = true; window.bounds = { x: -1920, y: 0, width: 1920, height: 1080 }; window.emit('resize');
+  window.maximized = false; window.minimized = true; window.bounds = { x: -32000, y: -32000, width: 800, height: 600 }; window.emit('move');
+  let completed = false;
+  const flush = manager.flush(true).then(() => { completed = true; });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(completed, false);
+  assert.deepEqual(saved, [{ x: -1600, y: 100, width: 1000, height: 660 }]);
+  writing.resolve(); await flush;
+  window.minimized = false; window.emit('move'); await manager.flush();
+  assert.equal(saved.length, 1, 'disposed window cannot enqueue a late write');
+});
+
+test('display removal corrects the normal rectangle and retains maximized/minimized state', async () => {
+  const manager = new CoachWindow();
+  await manager.create(async () => {}, () => false, { workAreas: () => [{ x: 0, y: 0, width: 1280, height: 720 }], save: async () => {} });
+  const window = FixtureWindow.all.at(-1)!;
+  window.bounds = { x: -1800, y: 50, width: 1000, height: 650 };
+  window.maximized = true;
+  manager.correctBounds();
+  assert.equal(window.maximized, true);
+  assert.deepEqual(window.bounds, { x: 0, y: 50, width: 1000, height: 650 });
+  await manager.flush(true);
 });
 
 test('窓の隔離設定と外部遷移拒否を維持する', async () => {
