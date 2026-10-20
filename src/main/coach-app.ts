@@ -13,6 +13,7 @@ import { NotificationWindow } from './notification';
 import { runCoachSmoke } from './smoke';
 import { runStorageSmoke } from './storage-smoke';
 import { runMigrationSmoke } from './migration-smoke';
+import { seedComparisonCoverage, runRecordsComparisonSmoke } from './records-comparison-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 import { learningReadModel } from '../core/learning';
@@ -59,6 +60,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return answer.response === 0;
   });
   const common = { date: localDate, now: () => performance.now(), notify: (value: import('../shared/coach').Notice) => notice.show(value), changed: publish };
+  const comparisonFixture = fixture && process.argv.includes('--comparison-smoke');
+  if (comparisonFixture) {
+    if (!(repository instanceof SqliteRepository)) throw new Error('Comparison fixture requires isolated SQLite');
+    await seedComparisonCoverage(repository);
+  }
   const coach = repository instanceof SqliteRepository
     ? new DurableCoach({ ...common, repository, session: repository.session,
       capabilities: () => fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : [] })
@@ -180,10 +186,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   if (fixture) {
     if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
-    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | undefined;
     try {
       report = await Promise.race([
-        migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           chooseDelete: (response) => { fixtureDeleteResponse = response; } }),
         new Promise<never>((_, reject) => {

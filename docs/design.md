@@ -38,7 +38,7 @@
 - #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。7日記録表示は`RecordsPage.tsx`に置き、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](learning-ui.md)。
 - #18の3学習状態はSharedで解決し、Mainが検証した`setLearningState`をCoreの直列キューから既存settings保存へ渡す。DurableCoachの確定済みcounts/settings/revisionから一覧を生成する。Coreの通知適格性はlearningの確証済みmouseのみで毎回評価し、標準Toastのadapterは#26へ分離する。全状態で記録を継続し、失敗時の保留は成功状態として表示しない。[保存・互換・検証範囲](learning-ui.md#3状態18)。
 - #19の記録ページはCoreの`records.ts`で操作別7日集計とKPIを生成する。限定`getRecordSummary`がCore直列キュー→Repositoryの7日query→同一revision確認→12行/KPIを返す。Rendererは全履歴を取得せず、共通Shellに縦積み/4列表を表示する。[記録の契約・検証](records-ui.md)。
-- #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。比較とinfoの表示は#21。[記録queryの契約](records-ui.md)。
+- #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。#21のRecordsPageはこの比較値をKPI/操作行へ表示し、MissingCoverageInfoが説明のhover/focus/クリックと画面内配置を担当する。[記録queryの契約](records-ui.md)。
 - C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。

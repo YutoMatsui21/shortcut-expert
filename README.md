@@ -2,7 +2,7 @@
 
 Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。別画面へ移動・最大化・最小化・最大化から復元・閉じるを条件付きで検出し、日別のmouse/key回数を記録する。全11候補の横に参考ショートカットを表示する。実アプリの認識率と公開前条件は未合格。
 
-Navy Shellの「ショートカット一覧」「記録」へ切り替える構成。一覧は正式12操作を全て「準備中」と表示し、実際に取得した直近7日のキー率を示す。各行で学習中・習得済み・対象外を変更して保存できる。全状態で記録を続け、習得済み・対象外は通知を止める。記録画面は直近7暦日のKPI・率バー・正式12操作を表示する。期間/対象選択は#20、比較は#21、Windows標準Toastへの統合は#26で行う。[記録の契約・検証範囲](docs/records-ui.md)。[一覧・assets・検証範囲](docs/learning-ui.md)。
+Navy Shellの「ショートカット一覧」「記録」へ切り替える構成。一覧は正式12操作を全て「準備中」と表示し、実際に取得した直近7日のキー率を示す。各行で学習中・習得済み・対象外を変更して保存できる。全状態で記録を続け、習得済み・対象外は通知を止める。記録画面は7/30暦日のKPI・率バー・正式12操作と前期間比を表示し、欠損があればinfoで説明する。Windows標準Toastへの統合は#26で行う。[記録の契約・検証範囲](docs/records-ui.md)。[一覧・assets・検証範囲](docs/learning-ui.md)。
 
 **今後の製品要件の正本**：[UI刷新の確定要件](docs/ui-redesign-requirements.md)。本書は現行ビルドの使い方とロードマップ、[mvp-requirements.md](docs/mvp-requirements.md)は旧MVPの要件・工程記録、[design.md](docs/design.md)は設計・実装状況、[research.md](docs/research.md)は調査・実測原本。
 
@@ -74,6 +74,8 @@ node scripts/smoke.mjs --storage
 node scripts/smoke.mjs --packaged --storage
 node scripts/smoke.mjs --migration
 node scripts/smoke.mjs --packaged --migration
+node scripts/smoke.mjs --comparison
+node scripts/smoke.mjs --packaged --comparison --package-dir release/issue-21
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
 ```
 
@@ -87,7 +89,7 @@ protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配
 
 窓管理・IPC・画面状態処理の整理に対する回帰試験では、unitで窓の重複生成防止・不正IPC拒否・Preload購読解除を確認する。smokeは×で非表示、人工second-instanceイベントから同じ窓の再表示と最小化復元、画面再読込後の状態取得と操作も確認する。実際の二重起動やトレイのOSイベント配送はこの人工イベント試験の対象外。
 
-記録画面のqueryは今日を含む7/30日、現在の学習状態に基づく3フィルタ、5ソートを扱い、両期間を最大60日で読込む。隔離smokeはcontrols→限定IPC→集計→行/KPIの反映、状態変更、画面往復保持、Renderer再読込時の初期値復帰も確認する。比較値と欠損infoの表示は#21へ引き継ぐ。[記録queryの契約](docs/records-ui.md)。
+記録画面のqueryは今日を含む7/30日、現在の学習状態に基づく3フィルタ、5ソートを扱い、両期間を最大60日で読込む。隔離smokeはcontrols→限定IPC→集計→行/KPIの反映、状態変更、画面往復保持、Renderer再読込時の初期値復帰も確認する。`--comparison`は専用の隔離SQLiteに取得済みcountsとcoverageを作り、J01の比較・既知0・unknown・legacy、欠損infoの有無、4幅、hover/focus/Space/Esc/クリック、フィルタ/期間/状態変更を本番IPCとReactで確認する。[記録queryの契約](docs/records-ui.md)。
 
 操作追加版のsmokeは正式12行のキーと準備中表示、追加4操作それぞれのmouse/key→helper通信→判定→保存→Reactも確認する。追加4操作の通知画面はfixture通知で別途表示確認し、Coreの通知判断はunit試験で確認する。製品の通知間隔は変更しない。
 
