@@ -15,7 +15,9 @@ test('test CLI selects a file and name while retaining module mock support', () 
     writeFileSync(join(cwd, 'tests/selected.test.ts'), `
       import { test, mock } from 'node:test';
       import assert from 'node:assert/strict';
+      import { resolve } from 'node:path';
       mock.module('node:os', { namedExports: { hostname: () => 'fixture' } });
+      assert.equal(process.env.TEMP, resolve('.tools/test-temp'));
       const { hostname } = await import('node:os');
       test('selected case', () => assert.equal(hostname(), 'fixture'));
       test('excluded case', () => assert.fail('name filter ignored'));

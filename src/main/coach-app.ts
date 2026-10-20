@@ -193,7 +193,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       await stopObservation();
     } catch (error) {
       report = undefined;
-      console.error('COACH_SMOKE_STAGE_FAILED ' + (error instanceof Error ? error.message : 'unknown'));
+      console.error('COACH_SMOKE_STAGE_FAILED ' + (error instanceof Error ? error.stack ?? error.message : 'unknown'));
     }
     finally {
       clearTimeout(deadline); clearInterval(ticker);

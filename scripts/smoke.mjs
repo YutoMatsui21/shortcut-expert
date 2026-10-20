@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import electron from 'electron';
+import { developmentEnvironment } from './dev-environment.mjs';
+import { smokeSucceeded, smokeFailureSummary } from './smoke-result.mjs';
 
 const packaged = process.argv.includes('--packaged');
 const packageOption = process.argv.indexOf('--package-dir');
@@ -12,7 +14,7 @@ const migration = process.argv.includes('--migration');
 const options = [migration ? '--migration-smoke' : process.argv.includes('--storage') ? '--storage-smoke' : '--coach-smoke'];
 if (process.argv.includes('--real-display')) options.push('--real-display-smoke');
 const args = packaged ? options : [resolve('.'), ...options];
-const environment = { ...process.env };
+const environment = developmentEnvironment();
 mkdirSync(resolve('.tools/tests'), { recursive: true });
 environment.COACH_TEST_DATA_DIR = mkdtempSync(join(resolve('.tools/tests'), 'coach-'));
 delete environment.ELECTRON_RUN_AS_NODE;
@@ -28,8 +30,11 @@ const result = spawnSync(executable, args, {
 });
 if (result.stdout) process.stdout.write(result.stdout);
 if (result.error) console.error(result.error.message);
-const success = result.status === 0 && result.stdout?.includes('COACH_SMOKE_OK ');
+const success = smokeSucceeded(result);
 if (!success && result.stderr) process.stderr.write(result.stderr);
-if (!success) process.exit(1);
+if (!success) {
+  console.error(smokeFailureSummary(result, options[0], boot + 1));
+  process.exit(1);
+}
 }
 process.exit(0);
