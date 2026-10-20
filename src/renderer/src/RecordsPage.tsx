@@ -1,66 +1,73 @@
-import { useEffect, useRef, useState } from 'react';
-import type { RecordRange } from '../../shared/storage';
-import { localDate as today } from '../../core/dates';
-import { operations } from '../../shared/coach';
+import { Fragment, useEffect, useState } from 'react';
+import type { RecordsReadModel } from '../../shared/records';
+import { learningOperations } from '../../shared/learning';
+import { localDate } from '../../core/dates';
 import { useCoach } from './useCoach';
+import { Icon } from './icons';
 
+const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP') + '回';
+const rate = (value: number | null | undefined) => value == null ? '—' : value.toFixed(1) + '%';
+function RateBar({ value, primary = false }: { value: number | null; primary?: boolean }) {
+  return <div className={'record-rate-bar' + (primary ? ' primary' : '')} data-known={value !== null} aria-hidden="true">
+    {value !== null && <span style={{ width: value + '%' }} />}
+  </div>;
+}
+function RateHelp() {
+  return <span className="help" tabIndex={0} role="note" aria-label="キー率の計算方法"><Icon name="imgHelpIconHover" />
+    <span className="tooltip">キー操作回数 ÷（キー操作回数＋マウス操作回数）。記録なしと0%は区別します。</span></span>;
+}
 export function RecordsPage({ coach }: { coach: ReturnType<typeof useCoach> }) {
-  const { snapshot, busy, message, command, setMuted, deleteCounts } = coach;
-  const [day, setDay] = useState(today());
-  const priorToday = useRef(today());
+  const [day, setDay] = useState(localDate());
+  const [result, setResult] = useState<RecordsReadModel>();
+  const [readError, setReadError] = useState(false);
+  useEffect(() => { const timer = setInterval(() => setDay(localDate()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => {
-    const current = today();
-    if (day === priorToday.current && current !== priorToday.current) setDay(current);
-    priorToday.current = current;
-  }, [snapshot?.revision, day]);
-  const [queried, setQueried] = useState<{ day: string; value: RecordRange } | null>(null);
-  useEffect(() => {
-    let current = true;
-    if (snapshot?.coverage && !snapshot.error && window.coach.getRecords) {
-      void window.coach.getRecords(day, day).then(value => { if (current) setQueried({ day, value }); }, () => { if (current) setQueried(null); });
-    }
-    return () => { current = false; };
-  }, [day, snapshot?.revision, snapshot?.error]);
-  const dates = [...new Set([today(), ...Object.keys(snapshot?.counts ?? {})])].sort().reverse();
-  const selected = snapshot?.coverage ? day : dates.includes(day) ? day : today();
-  const view = queried?.day === selected && queried.value.revision >= (snapshot?.revision ?? 0) ? queried.value : snapshot;
-  const counts = view?.counts[selected] ?? {};
-  const known = (id: import('../../shared/coach').OperationId) => !snapshot?.coverage || !!counts[id] || view?.coverage?.[selected]?.[id]?.knowledge === 'observed';
-  const visible = operations.filter(op => !snapshot?.coverage || op.id !== 'W09');
-  const anyKnown = visible.some(op => known(op.id));
-  const total = visible.reduce((sum, op) => ({ mouse: sum.mouse + (counts[op.id]?.mouse ?? 0), key: sum.key + (counts[op.id]?.key ?? 0) }), { mouse: 0, key: 0 });
-  const paused = snapshot?.notificationsPaused ?? false;
-  const observing = snapshot?.observing ?? false;
-  return <main className="dashboard">
-    <header><div><p className="eyebrow">WINDOW SHORTCUT COACH</p><h1>今日の操作、次はキーで。</h1></div>
-      <span className={'badge ' + (observing ? 'running' : 'stopped')}>{observing ? paused ? '記録中 · 通知停止' : '記録中' : '全停止'}</span></header>
-    <p className="intro">別画面への移動・最大化・最小化・最大化からの復元・閉じる操作を記録します。成立条件を確認できた観測だけを数えます。</p>
-    {snapshot?.coverage && <p className="footnote">検出精度は未検証です。取得した記録を表示し、観測の根拠がない項目は「—」と表示します。</p>}
-    <div className="controls">
-      <button disabled={busy || !snapshot || !observing} onClick={() => command(paused ? 'resume-notifications' : 'pause-notifications')}>{paused ? '通知を再開' : '通知を停止'}</button>
-      <button className="secondary" disabled={busy || !snapshot || (!observing && snapshot.pendingSave)} onClick={() => command(observing ? 'stop' : 'start')}>{observing ? '計測を全停止' : '計測を再開'}</button>
-      <span>画面を閉じても記録を続けます。</span>
-    </div>
-    {(snapshot?.error || message) && <div className="error" role="alert"><p>{snapshot?.error ?? message}</p>
-      {snapshot?.pendingSave && <><p>{snapshot.coverage ? '未保存または保存結果を確認できていない記録があります。' : '表示中の数値には未保存分があります。'}</p><button disabled={busy} onClick={() => command('retry-save')}>保存を再試行</button></>}
+    let active = true;
+    setResult(undefined);
+    void window.coach.getRecordSummary().then(value => {
+      if (active) { setResult(value); setReadError(false); }
+    }, () => { if (active) { setResult(undefined); setReadError(true); } });
+    return () => { active = false; };
+  }, [day, coach.snapshot?.revision, coach.snapshot?.error, coach.snapshot?.settings]);
+  const model = result?.to === day && result.revision >= (coach.snapshot?.revision ?? 0) ? result : undefined;
+  return <div className="records-page">
+    <header className="records-header content-width"><h1>記録</h1>
+      <div className="records-scope"><span>期間 <strong>直近7日間</strong></span><span>集計対象 <strong>すべての操作</strong></span></div>
+    </header>
+    {(readError || coach.snapshot?.error || coach.message) && <div className="error content-width" role="alert">
+      {coach.snapshot?.error ?? coach.message ?? '記録を読み込めません。'}
+      {coach.snapshot?.pendingSave && <button disabled={coach.busy} onClick={() => coach.command('retry-save')}>保存を再試行</button>}
     </div>}
-    <section className="records" aria-label="日別の観測記録">
-      <div className="record-head"><h2>{selected === today() ? '今日の記録' : '保存した記録'}</h2>
-        <label>日付{snapshot?.coverage ? <input type="date" value={selected} max={today()} onChange={event => { if (event.target.value) setDay(event.target.value); }} /> : <select value={selected} onChange={(event) => setDay(event.target.value)}>{dates.map((date) => <option key={date} value={date}>{date}</option>)}</select>}</label></div>
-      <div className="totals"><div><span>マウス操作</span><strong>{anyKnown ? total.mouse : '—'}<small>回</small></strong></div><div><span>キー操作</span><strong>{anyKnown ? total.key : '—'}<small>回</small></strong></div></div>
-      <table><thead><tr><th>操作</th><th>マウス</th><th>キー</th><th>通知</th></tr></thead><tbody>
-        {visible.map((op) => <tr key={op.id} data-operation={op.id} className={op.implemented ? '' : 'upcoming'}>
-          <th scope="row">{op.label} <span className="shortcut">（{op.shortcut}）</span>{!op.implemented && <span className="prepared">準備中</span>}
-            {op.condition && <small className="shortcut-condition">{op.condition}</small>}</th>
-          <td data-kind="mouse">{known(op.id) ? counts[op.id]?.mouse ?? 0 : '—'}</td><td data-kind="key">{known(op.id) ? counts[op.id]?.key ?? 0 : '—'}</td>
-          <td><label className="toggle"><input aria-label={op.label + 'の通知'} type="checkbox" disabled={busy || !snapshot || !op.implemented}
-            checked={op.implemented && !snapshot?.settings.muted.includes(op.id)}
-            onChange={(event) => void setMuted(op.id, !event.target.checked)} /><span>{op.implemented ? snapshot?.settings.muted.includes(op.id) ? 'OFF' : 'ON' : '—'}</span></label></td>
-        </tr>)}
-      </tbody></table>
-      <p className="footnote">通知を止めても記録は続きます。観測数は全操作の実行回数や習得率を表しません。</p>
-    </section>
-    <footer><button className="text-button danger" disabled={busy || !snapshot} onClick={() => void deleteCounts()}>全日分の記録を削除</button>
-      <button className="text-button" disabled={busy} onClick={() => command('quit')}>アプリを終了</button></footer>
-  </main>;
+    <main className="records-scroll content-width" aria-label="直近7日間の観測記録" aria-busy={!model && !readError}>
+      <section className="record-kpis" aria-label="7日間の集計">
+        <div className="record-usage"><p>ショートカット使用率</p><strong data-kpi="rate">{rate(model?.summary.rate)}</strong>
+          <RateBar value={model?.summary.barRate ?? null} primary /></div>
+        <div className="record-counts"><p>操作回数</p><dl>
+          <div><dt>ショートカット</dt><dd data-kpi="key">{count(model?.summary.key)}</dd></div>
+          <div><dt>マウス</dt><dd data-kpi="mouse">{count(model?.summary.mouse)}</dd></div>
+        </dl></div>
+      </section>
+      <div className="record-table-heading"><h2>操作別</h2><span className="compact-help"><RateHelp /></span>
+        <span className="record-period">{model ? model.from + ' 〜 ' + model.to : '読み込み中'}</span></div>
+      {model?.summary.total === null && <p className="records-empty" role="status">この期間の記録はありません。</p>}
+      <table className="record-table"><thead><tr><th>操作</th><th>ショートカット</th><th>キー率 <RateHelp /></th><th>前期間比</th></tr></thead>
+        <tbody>{learningOperations.map(operation => {
+          const row = model?.rows.find(row => row.id === operation.id);
+          return <tr key={operation.id} data-operation={operation.id}>
+            <th scope="row"><span>{operation.label}</span><span className="availability">準備中</span></th>
+            <td className="record-shortcut"><div className="shortcut-keys" aria-label={operation.hint ?? operation.keys.join(' + ')} title={operation.hint}>
+              {operation.keys.map((key, i) => <Fragment key={key}>{i > 0 && <span className="key-plus">+</span>}<kbd>{key}</kbd></Fragment>)}
+            </div></td>
+            <td className="record-rate"><span className="compact-rate-label">キー率 </span><span>{rate(row?.rate)}</span>
+              {row?.total != null && <span className="record-fraction">（{row.key}/{row.total}）</span>}
+              <RateBar value={row?.barRate ?? null} />
+              <span className="visually-hidden">マウス <span data-kind="mouse">{row?.mouse ?? '—'}</span>回、キー <span data-kind="key">{row?.key ?? '—'}</span>回</span>
+            </td>
+            <td className="record-comparison" aria-label="前期間比は準備中">—</td>
+          </tr>;
+        })}</tbody>
+      </table>
+      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目は「—」です。12操作とも検出精度は未検証です。前期間との比較は準備中です。</p>
+    </main>
+  </div>;
 }

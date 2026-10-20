@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Coach } from '../core/coach';
 import { SqliteRepository } from './sqlite-repository';
-import { chooseDay, waitFor } from './storage-smoke';
+import { waitFor } from './storage-smoke';
 import { selectPage } from './learning-smoke';
 
 export async function runMigrationSmoke({ coach, window, repository }: {
@@ -23,13 +23,14 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   const rows = await repository.query(old, old);
   assert.equal(rows.counts[old].W03?.mouse, 7); assert.equal(rows.counts[old].W03?.key, 5);
   assert.equal(rows.counts[old].W09?.mouse, 100); assert.equal(rows.coverage[old].W03?.knowledge, 'legacy-unknown');
-  await chooseDay(window, old);
-  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='7' &&
-    document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent==='5' &&
+  const summary = await window.webContents.executeJavaScript('window.coach.getRecordSummary()');
+  assert.equal(summary.summary.total, null);
+  assert.equal(summary.rows.length, 12);
+  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='—' &&
     document.querySelector('[data-operation="W09"]')===null &&
-    document.querySelector('.totals strong')?.textContent==='7回'`, 'migration-renderer');
+    document.querySelector('[data-kpi="key"]')?.textContent==='—'`, 'migration-renderer');
   assert.equal(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'),
     '  {"schemaVersion":1,"days":{"2020-01-02":{"W03":{"mouse":7,"key":5},"W09":{"mouse":100,"key":100}}}}\n');
   return { fixtureOnly: true, migratedRows: true, legacyUnknown: true, excludedRetained: true,
-    sourceBytesPreserved: true, oldDayRenderer: true, deferredOperationsExcluded: true, naturalInputVerified: false };
+    sourceBytesPreserved: true, oldRecordsExcludedFromSevenDays: true, deferredOperationsExcluded: true, naturalInputVerified: false };
 }

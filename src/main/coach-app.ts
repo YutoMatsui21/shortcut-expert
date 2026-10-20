@@ -16,6 +16,7 @@ import { runMigrationSmoke } from './migration-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 import { learningReadModel } from '../core/learning';
+import { recordsReadModel } from '../core/records';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -113,6 +114,17 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return coach.snapshot();
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
+    getRecordSummary: () => control.run(async () => {
+      try {
+        const today = localDate();
+        if (coach instanceof DurableCoach) return await coach.getRecordSummary(today);
+        const snapshot = coach.snapshot();
+        return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today);
+      } catch {
+        if (!coach.snapshot().error) coach.fault('記録を読み込めません。元のデータは保持しています。');
+        throw new Error('記録を読み込めません。');
+      }
+    }),
     getLearning: () => control.run(async () => {
       const today = localDate();
       try {
