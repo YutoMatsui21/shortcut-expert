@@ -11,16 +11,20 @@ test('development runner passes workspace TEMP and caches to child tools on ever
   const root = mkdtempSync(resolve('.tools/tests/dev-tools-'));
   t.after(() => rmSync(root, { recursive:true, force:true }));
   mkdirSync(join(root,'node_modules/electron-vite/bin'), {recursive:true});
-  writeFileSync(join(root,'node_modules/electron-vite/bin/electron-vite.js'), `console.log(JSON.stringify({temp:process.env.TEMP,tmp:process.env.TMP,electron:process.env.ELECTRON_CACHE,builder:process.env.ELECTRON_BUILDER_CACHE,args:process.argv.slice(2)}));`);
+  mkdirSync(join(root,'node_modules/electron-builder'), {recursive:true});
+  const probe = `console.log(JSON.stringify({temp:process.env.TEMP,tmp:process.env.TMP,electron:process.env.ELECTRON_CACHE,builder:process.env.ELECTRON_BUILDER_CACHE,args:process.argv.slice(2)}));`;
+  writeFileSync(join(root,'node_modules/electron-vite/bin/electron-vite.js'), probe);
+  writeFileSync(join(root,'node_modules/electron-builder/cli.js'), probe);
   const env = developmentEnvironment(root, { ...process.env, TEMP:'unwritable-old-temp', ELECTRON_CACHE:'old-cache' });
   checkWritableDirectories(env);
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = spawnSync(process.execPath, [resolve('scripts/dev-run.mjs'),'electron-vite','build','a & b'], {
+  for (const tool of ['electron-vite','electron-builder']) {
+    const result = spawnSync(process.execPath, [resolve('scripts/dev-run.mjs'),tool,'build','a & b'], {
       cwd:root, env:{...process.env,TEMP:'unwritable-old-temp'}, encoding:'utf8', windowsHide:true
     });
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(JSON.parse(result.stdout), { temp:join(root,'.tools/test-temp'), tmp:join(root,'.tools/test-temp'),
-      electron:join(root,'.tools/electron-cache'), builder:join(root,'.tools/builder-cache'), args:['build','a & b'] });
+      electron:join(root,'.tools/electron-cache'), builder:join(root,'.tools/builder-cache'),
+      args:['build','a & b', ...(tool === 'electron-builder' ? [`--config.electronDownload.cache=${join(root,'.tools/electron-cache')}`] : [])] });
   }
 });
 

@@ -29,6 +29,8 @@ if (tool === 'check') {
 if (!Object.hasOwn(entries, tool)) throw new Error('Expected check, npm-ci, electron-install, electron-vite, electron-builder or tsc');
 const entry = resolve(entries[tool]);
 if (!existsSync(entry)) throw new Error('Tool is missing; run npm.cmd ci in this workspace first');
-const result = spawnSync(process.execPath, [entry, ...(tool === 'npm-ci' ? ['ci'] : []), ...args], { env, stdio: 'inherit', windowsHide: true });
+// Builder's Electron downloader reads its config, unlike electron/install.js.
+const extra = tool === 'electron-builder' ? [`--config.electronDownload.cache=${env.ELECTRON_CACHE}`] : [];
+const result = spawnSync(process.execPath, [entry, ...(tool === 'npm-ci' ? ['ci'] : []), ...args, ...extra], { env, stdio: 'inherit', windowsHide: true });
 if (result.error) console.error(result.error.message);
 process.exit(result.status ?? 1);

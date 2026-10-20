@@ -4,7 +4,7 @@
 
 `npm.cmd run dev:check`は作業先のTEMPとElectron/builderキャッシュでwrite→renameを確認し、Electron・固定SDK・helperの有無を要約する。必要な部品は`-- --require=electron,sdk,helper`で指定する。部品の存在確認はソースの新しさや検証成功を保証しない。
 
-依存は`npm.cmd run dev:install`、Electron本体だけ不足する場合は`npm.cmd run dev:electron`を使う。installはネットワークを使う明示的な操作。`dev-run.mjs`を通るnpm入口、unit/native runner、helper build、smokeは各子プロセスへ作業先のTEMP/cacheを渡す。前のshellで設定した環境変数を引き継ぐ必要はない。SDKの版はglobal.json、各入口はpackage.jsonを正本とする。
+依存は`npm.cmd run dev:install`、Electron本体だけ不足する場合は`npm.cmd run dev:electron`を使う。installはネットワークを使う明示的な操作。`dev-run.mjs`を通るnpm入口、unit/native runner、helper build、smokeは各子プロセスへ作業先のTEMP/cacheを渡す。builderのElectron取得は環境変数だけを参照しないため、wrapperが`electronDownload.cache`も明示する。前のshellで設定した環境変数を引き継ぐ必要はない。SDKの版はglobal.json、各入口はpackage.jsonを正本とする。
 
 権限・接続失敗時は最初の原因を確認し、設定修正や承認済みの再実行で条件を変えてから再試行する。同じURLの接続切断を別HTTPクライアントでも繰り返したら、接続先/実行環境を切り分け、版・licenseを確認できる配布経路へ移る。別worktreeの依存や古い生成物を標準の代替にしない。
 
