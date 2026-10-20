@@ -13,7 +13,7 @@ export function SettingsPopover({ gear, snapshot, busy, command, close, deleteCo
   const focusAssigned = useRef(false);
   useEffect(() => {
     if (focusAssigned.current) return;
-    const first = panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    const first = panel.current?.querySelector<HTMLButtonElement>('.settings-switch:not(:disabled)');
     if (first) { first.focus(); focusAssigned.current = true; }
   }, [busy, snapshot]);
   useEffect(() => {

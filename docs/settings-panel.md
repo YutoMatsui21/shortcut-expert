@@ -12,6 +12,8 @@ Enter/Spaceでgearとswitchを操作し、開いた時は最初の有効switch�
 
 初期snapshot待ち・command処理中に開いて全buttonが無効な場合は、最初に操作が有効になった時にfocusを移す。一度focusを割り当てた後はsnapshot配信で利用者のfocusを奪わない。隔離smokeは実settings保存をdeferredで保留し、この操作列の修正前失敗と修正後成功を確認する。
 
+初期focusの対象は有効な設定switchだけとし、保存保留で両switchが無効ならgearに留める。削除buttonへ自動でfocusしない。閉じているpanelへのclose要求はfocusを変えず、通常のnav・最大化/復元のキーボード操作を維持する。保存失敗後の展開とnav/最大化のfocus保持も修正前失敗・修正後成功の回帰に含める。
+
 ## 検証
 
 `tests/settings-state.test.ts` は遅いsnapshot応答とトレイcommandを確認する。`learning-state.test.ts` は実SQLite Workerの保存遅延・停止・再開禁止・新世代再開・旧世代拒否・新世代通知を確認する。

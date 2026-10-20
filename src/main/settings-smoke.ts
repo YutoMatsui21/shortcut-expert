@@ -45,6 +45,32 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
     await key('Escape'); await closed();
   } finally { release(); repository.saveSettings = saveSettings; }
   await js(`window.coach.setLearningState('W12', 'learning')`);
+  // No switch is enabled after a failed settings save. Opening the panel must not focus deletion.
+  repository.saveSettings = async () => { throw new Error('fixture settings failure'); };
+  try {
+    await js(`(() => {
+      const select = document.querySelector('[data-learning-operation="W12"] select');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'mastered');
+      select.dispatchEvent(new Event('change', {bubbles:true}));
+    })()`);
+    await waitForLearning(window, `${gear}.getAttribute('aria-busy') === 'false' && !!document.querySelector('.page-frame .error')`);
+    await js(`${gear}.focus()`); await open();
+    const pendingFocusGear = await js(`document.activeElement === ${gear}`);
+    await key('Escape'); await closed();
+    repository.saveSettings = saveSettings;
+    await js(`window.coach.command('retry-save')`); await js(`window.coach.command('start')`);
+    await js(`window.coach.setLearningState('W12', 'learning')`);
+    await js(`document.querySelector('nav button[aria-label="記録"]').focus()`); await key('Enter');
+    await waitForLearning(window, `document.querySelector('nav button[aria-label="記録"]').getAttribute('aria-current') === 'page'`);
+    const navFocusRetained = await js(`document.activeElement === document.querySelector('nav button[aria-label="記録"]')`);
+    await js(`document.querySelector('button[aria-label="最大化"]').focus()`); await key('Enter');
+    await waitForLearning(window, `!!document.querySelector('button[aria-label="復元"]')`);
+    const maximizeFocusRetained = await js(`document.activeElement === document.querySelector('button[aria-label="復元"]')`);
+    await js(`document.querySelector('button[aria-label="復元"]').click()`);
+    await waitForLearning(window, `!!document.querySelector('button[aria-label="最大化"]')`);
+    assert.deepEqual({pendingFocusGear,navFocusRetained,maximizeFocusRetained},
+      {pendingFocusGear:true,navFocusRetained:true,maximizeFocusRetained:true});
+  } finally { repository.saveSettings = saveSettings; }
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 600);

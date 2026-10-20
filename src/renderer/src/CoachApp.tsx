@@ -20,7 +20,7 @@ export function CoachApp() {
   const [maximized, setMaximized] = useState(false);
   useEffect(() => { if (coach.snapshot?.windowMaximized !== undefined) setMaximized(coach.snapshot.windowMaximized); }, [coach.snapshot?.windowMaximized]);
   const gear = useRef<HTMLButtonElement>(null);
-  const closeSettings = useCallback(() => { setSettings(false); gear.current?.focus(); }, []);
+  const closeSettings = useCallback(() => { if (settings) { setSettings(false); gear.current?.focus(); } }, [settings]);
   const changePage = (next: typeof page) => { closeSettings(); setPage(next); };
   useEffect(() => { const timer = setInterval(() => setDay(localDate()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => {
