@@ -143,6 +143,20 @@ test('delete drains an in-flight durable write, discards queued old candidates a
   finally { await reopened.close(); }
 });
 
+test('retry completes confirmed deletion after an earlier pending record write keeps failing', async t => {
+  const h = await fixture(t), commit = h.repository.commit.bind(h.repository);
+  h.repository.commit = async () => { throw new Error('fixture write failure'); };
+  await h.coach.accept(candidate);
+  await h.coach.deleteCounts();
+  assert.equal(h.coach.snapshot().pendingSave,true);
+  h.repository.commit = commit;
+  await h.coach.retrySave();
+  assert.equal(h.coach.snapshot().pendingSave,false);
+  assert.deepEqual(h.coach.snapshot().counts,{},'retry must finish deletion, not only save the old write');
+  assert.deepEqual(h.coach.snapshot().coverage,{});
+  assert.equal((await h.repository.load('2026-10-19')).epoch,2);
+});
+
 test('lost ACK through real worker commit retains exact pending mutation; retry and reopen are nonduplicating', async t => {
   const h = await fixture(t); const commit = h.repository.commit.bind(h.repository); let lose = true;
   h.repository.commit = async value => { await commit(value); if (lose) { lose = false; throw new Error('lost ACK'); } };

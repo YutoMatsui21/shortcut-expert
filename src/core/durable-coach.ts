@@ -32,13 +32,14 @@ export class DurableCoach {
   private writeSequence = 0;
   private session: string;
   private pending: RecordMutation | null = null;
+  private deleting = false;
   private pendingSettings: Settings | null = null;
   private queue = new SerialQueue();
   private baseline: { day: string; time: number; observing: boolean; capabilities: Capability[] } | null = null;
   private deps: Dependencies;
   constructor(deps: Dependencies) { this.deps = deps; this.session = deps.session; }
   async initialize(): Promise<void> {
-    if (this.pending || this.pendingSettings) return;
+    if (this.pending || this.pendingSettings || this.deleting) return;
     this.loaded = false;
     try {
       this.data = await this.deps.repository.load(this.deps.date());
@@ -52,7 +53,7 @@ export class DurableCoach {
     this.error = message; this.stop();
   }
   begin(generation: number): void {
-    if (!this.loaded || this.error || this.observerError || this.pending || this.pendingSettings) return;
+    if (!this.loaded || this.error || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
     this.generation = generation; this.candidateSequence = 0; this.observing = true;
     this.protocol = null; this.transactions.clear(); this.latestTransaction = 0;
     this.baseline = { day: this.deps.date(), time: this.deps.now(), observing: true, capabilities: this.deps.capabilities() };
@@ -98,13 +99,14 @@ export class DurableCoach {
       this.data = { ...this.data, ...await this.deps.repository.query(daysBefore(today, 59), today),
         epoch: value.reset ? value.epoch + 1 : value.epoch, highWater: value.today };
       this.pending = null;
+      if (value.reset) this.deleting = false;
       this.error = null;
     } catch { this.fail(); }
     this.publish();
   }
   tick(): Promise<void> {
     return this.queue.run(async () => {
-      if (this.pending || this.error || this.pendingSettings) return;
+      if (this.pending || this.error || this.pendingSettings || this.deleting) return;
       const value = this.prepare(); if (value) await this.persist(value);
     });
   }
@@ -113,6 +115,9 @@ export class DurableCoach {
       if (this.pending || this.pendingSettings) await this.deps.repository.reconnect();
       if (this.pending) await this.persist(this.pending);
       if (this.pendingSettings) await this.settings(this.pendingSettings);
+      if (this.deleting && !this.pending) {
+        const value = this.prepare(undefined, true); if (value) await this.persist(value);
+      }
       this.publish();
     });
   }
@@ -153,6 +158,7 @@ export class DurableCoach {
     return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), normalBounds: { ...normalBounds } }, false));
   }
   deleteCounts(): Promise<void> {
+    this.deleting = this.loaded;
     this.stop();
     return this.queue.run(async () => {
       if (!this.loaded) return;
@@ -191,6 +197,6 @@ export class DurableCoach {
   snapshot(): Snapshot {
     return { counts: structuredClone(this.data.counts), coverage: structuredClone(this.data.coverage), revision: this.data.revision,
       settings: structuredClone(this.data.settings), observing: this.observing, notificationsPaused: this.paused,
-      error: this.observerError ?? this.error ?? this.settingsError, pendingSave: !!this.pending || !!this.pendingSettings };
+      error: this.observerError ?? this.error ?? this.settingsError, pendingSave: !!this.pending || !!this.pendingSettings || this.deleting };
   }
 }
