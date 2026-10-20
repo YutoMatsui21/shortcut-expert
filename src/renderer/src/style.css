@@ -1,4 +1,13 @@
 @import './assets/fonts/fonts.css';
+.delete-dialog { position: fixed; inset: 0; margin: auto; width: 440px; height: 218px; max-width: calc(100vw - 32px); padding: 24px 23px 21px; border: 1px solid #c5c9cd; border-radius: 12px; background: white; color: #24272d; box-shadow: 0 12px 26px #212b3d2e; -webkit-app-region: no-drag; }
+.delete-dialog::backdrop { inset: 32px 0 0 48px; background: #1a264038; }
+.delete-dialog h2 { margin: 0; font-size: 17px; line-height: 26px; font-weight: 500; }
+.delete-dialog p { margin: 25px 0 0; font-size: 12px; line-height: 18px; color: #5e646b; }
+.delete-dialog footer { position: absolute; left: 23px; right: 23px; bottom: 21px; height: 55px; border-top: 1px solid #ebedf2; display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; }
+.delete-dialog button { height: 34px; padding: 0; font-size: 12px; line-height: 18px; font-weight: 500; border-radius: 6px; }
+.delete-dialog .delete-cancel { width: 100px; color: #24272d; background: white; border: 1px solid #c5c9cd; }
+.delete-dialog .delete-confirm { width: 118px; background: #ad292e; border: 0; }
+.delete-error { display: block; margin-top: 10px; color: #ad292e; font-size: 11px; }
 :root { font-family: 'Noto Sans JP', sans-serif; color: #24272d; background: white; font-synthesis: none;
   --shell: #253a70; --selected: #405989; --shell-text: #f7f9ff; --secondary: #5e646b; --group-border: #edeeeb;
   --learning-bg: #eaf2ff; --learning-fg: #2563eb; --mastered-bg: #e7f5eb; --mastered-fg: #247a49; --excluded-bg: #f1f2f4; --excluded-fg: #606670;

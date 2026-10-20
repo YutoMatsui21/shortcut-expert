@@ -20,7 +20,6 @@ type SmokeContext = {
   window: BrowserWindow;
   getNotificationWindow(): BrowserWindow | null;
   directory: string;
-  chooseDelete(response: number): void;
   verifyWindowExit(): Promise<void>;
 };
 
@@ -44,7 +43,7 @@ async function click(window: BrowserWindow, label: string): Promise<void> {
   if (!clicked) throw new Error('ui-button-' + label);
 }
 
-export async function runCoachSmoke({ coach, observer, notice, window, getNotificationWindow, directory, chooseDelete, verifyWindowExit }: SmokeContext) {
+export async function runCoachSmoke({ coach, observer, notice, window, getNotificationWindow, directory, verifyWindowExit }: SmokeContext) {
   if (!coach.snapshot().observing) throw new Error('observer');
   const display = screen.getPrimaryDisplay();
   const physical = screen.dipToScreenRect(null, display.bounds);
@@ -77,7 +76,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   ].map((request) => request.then(() => false, () => true)))`);
   if (!rejected.every((value: boolean) => value)) throw new Error('ipc-invalid-payload');
   const isolated = await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
-    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecordSummary,getRecords,getSnapshot,setLearningState,setMuted,subscribe,windowCommand'`);
+    Object.keys(window.coach).sort().join(',') === 'cancelDelete,command,deleteCounts,getLearning,getNotice,getRecordSummary,getRecords,getSnapshot,requestDelete,setLearningState,setMuted,subscribe,windowCommand'`);
   if (!isolated) throw new Error('renderer-capabilities');
   const disk = JSON.parse(await readFile(join(directory, 'counts.json'), 'utf8'));
   if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
@@ -151,11 +150,15 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await coach.idle();
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '3'`, 'seven-day-total');
   await window.webContents.executeJavaScript('if (!document.querySelector(".settings-popover")) document.querySelector(".gear-button").click()');
-  chooseDelete(0); await click(window, 'すべての記録を削除…');
+  await click(window, 'すべての記録を削除…');
+  await waitRenderer(window, `!!document.querySelector('.delete-dialog[open]')`, 'delete-open');
+  await click(window, 'キャンセル');
   await waitRenderer(window, `!document.querySelector('.settings-popover') && document.querySelector('.gear-button').getAttribute('aria-busy') === 'false'`, 'delete-cancel-settled');
   if (!coach.snapshot().counts[previousDate]) throw new Error('delete-cancel');
   await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
-  chooseDelete(1); await click(window, 'すべての記録を削除…');
+  await click(window, 'すべての記録を削除…');
+  await waitRenderer(window, `document.querySelector('.delete-confirm')?.disabled === false`, 'delete-ready');
+  await click(window, '記録を削除');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '—'`, 'ui-delete-confirm');
   const cleared = await new JsonRepository(directory).load();
   if (Object.keys(cleared.counts).length || cleared.settings.muted.join() !== 'W03') throw new Error('delete-settings-retained');

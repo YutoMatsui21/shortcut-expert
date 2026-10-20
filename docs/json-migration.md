@@ -18,7 +18,7 @@ W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。
 
 ## 全削除
 
-件数・coverage削除とepoch更新のtransactionで移行metaをpending purgeにする。続けて旧counts.json/settings.jsonを削除し、完了metaを保存してから応答する。原本削除前にもDBは消費済みauthorityを維持する。cleanup失敗は未保存エラーとして停止し、同じ要求のretryまたは次のWorker起動時に残りを削除する。設定・状態・opened・source消費identityはDBへ残す。stagingはactivation時に移動済みで記録の別backupは作らない。SSDの物理消去は保証しない。
+件数・coverage・legacy_days削除とepoch更新のtransactionで移行metaと`deletion_cleanup`をpending purgeにする。続けて旧counts.json/settings.json、その`.tmp`、固定staging `migration-v1/`を削除し、完了metaを保存してから応答する。新規SQLite利用者の削除も`deletion_cleanup`で追跡する。原本削除前にもDBは消費済みauthorityを維持する。cleanup失敗は未保存エラーとして停止し、同じ要求のretryまたは次のWorker起動時に残りを削除する。設定・状態・opened・normal bounds・source消費identityはDBへ残す。stagingは通常activation時に移動済みで記録の別backupは作らない。SSDの物理消去は保証しない。
 
 ## identityと検証
 

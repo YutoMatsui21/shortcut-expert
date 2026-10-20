@@ -122,6 +122,41 @@ test('one writer; stale epochs and sessions; constant checkpoint; ACK loss retry
     try { assert.equal(metaDb.prepare('SELECT count(*) AS n FROM meta').get()!.n, 1); } finally { metaDb.close(); }
   } finally { store.close(); }
 });
+test('delete drains an in-flight durable write, discards queued old candidates and remains empty after reopen', async t => {
+  const h = await fixture(t), commit = h.repository.commit.bind(h.repository);
+  let release!: () => void, entered!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  h.repository.commit = async value => { if (value.count) { entered(); await held; } await commit(value); };
+  const writing = h.coach.accept(candidate); await started;
+  const queued = h.coach.accept({...candidate,sequence:2});
+  const deletion = h.coach.deleteCounts();
+  assert.equal(h.coach.snapshot().observing,false);
+  release(); await Promise.all([writing,queued,deletion]);
+  assert.deepEqual(h.coach.snapshot().counts,{});
+  assert.deepEqual(h.coach.snapshot().coverage,{});
+  h.coach.begin(3); await h.coach.accept({...candidate,sequence:3});
+  assert.deepEqual(h.coach.snapshot().counts,{});
+  await h.repository.close();
+  const reopened = new SqliteRepository(h.root,worker);
+  try { assert.deepEqual((await reopened.load('2026-10-19')).counts,{}); }
+  finally { await reopened.close(); }
+});
+
+test('retry completes confirmed deletion after an earlier pending record write keeps failing', async t => {
+  const h = await fixture(t), commit = h.repository.commit.bind(h.repository);
+  h.repository.commit = async () => { throw new Error('fixture write failure'); };
+  await h.coach.accept(candidate);
+  await h.coach.deleteCounts();
+  assert.equal(h.coach.snapshot().pendingSave,true);
+  h.repository.commit = commit;
+  await h.coach.retrySave();
+  assert.equal(h.coach.snapshot().pendingSave,false);
+  assert.deepEqual(h.coach.snapshot().counts,{},'retry must finish deletion, not only save the old write');
+  assert.deepEqual(h.coach.snapshot().coverage,{});
+  assert.equal((await h.repository.load('2026-10-19')).epoch,2);
+});
+
 test('lost ACK through real worker commit retains exact pending mutation; retry and reopen are nonduplicating', async t => {
   const h = await fixture(t); const commit = h.repository.commit.bind(h.repository); let lose = true;
   h.repository.commit = async value => { await commit(value); if (lose) { lose = false; throw new Error('lost ACK'); } };

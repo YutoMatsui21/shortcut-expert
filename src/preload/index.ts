@@ -11,7 +11,9 @@ const coach: CoachBridge = {
   command: (command) => ipcRenderer.invoke('coach:command', command),
   setMuted: (operation, muted) => ipcRenderer.invoke('coach:set-muted', operation, muted),
   setLearningState: (operation, state) => ipcRenderer.invoke('coach:set-learning-state', operation, state),
-  deleteCounts: () => ipcRenderer.invoke('coach:delete'),
+  requestDelete: () => ipcRenderer.invoke('coach:request-delete'),
+  cancelDelete: token => ipcRenderer.invoke('coach:cancel-delete', token),
+  deleteCounts: token => ipcRenderer.invoke('coach:delete', token),
   subscribe: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, snapshot: Snapshot) => listener(snapshot);
     ipcRenderer.on('coach:changed', handler);

@@ -4,6 +4,7 @@ import { operations, type CoachBridge } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
 import { daysBefore } from '../shared/storage.ts';
 import { isLearningState, learningOperations } from '../shared/learning.ts';
+import { DeleteConfirmation } from './delete-confirmation.ts';
 
 type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'getRecordSummary' | 'windowCommand'>;
 type Command = Parameters<CoachBridge['command']>[0];
@@ -14,6 +15,12 @@ function isCommand(value: unknown): value is Command {
 }
 
 export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSender: (id: number) => boolean, requests: Requests): void {
+  const confirmation = new DeleteConfirmation();
+  const boundWindows = new WeakSet<BrowserWindow>();
+  const tokenArgument = (token: unknown): string => {
+    if (typeof token !== 'string' || !/^[a-f0-9-]{36}$/.test(token)) throw new Error('Invalid delete confirmation.');
+    return token;
+  };
   const assertSender = (event: IpcMainInvokeEvent, notice = false) => {
     const allowed = notice ? noticeSender(event.sender.id) : event.sender === getWindow()?.webContents;
     if (!allowed || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.');
@@ -53,5 +60,24 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
     if (!supported || !isLearningState(state)) throw new Error('Invalid learning state.');
     return requests.setLearningState(supported.id, state);
   });
-  ipcMain.handle('coach:delete', (event) => { assertSender(event); return requests.deleteCounts(); });
+  ipcMain.handle('coach:request-delete', (event) => {
+    assertSender(event);
+    const window = getWindow()!;
+    if (!boundWindows.has(window)) {
+      boundWindows.add(window);
+      window.on('hide', () => confirmation.clear());
+      window.on('closed', () => confirmation.clear());
+      window.webContents.on('did-start-navigation', () => confirmation.clear());
+    }
+    return confirmation.issue(event.senderFrame!);
+  });
+  ipcMain.handle('coach:cancel-delete', (event, token: unknown) => {
+    assertSender(event); confirmation.cancel(event.senderFrame!, tokenArgument(token));
+  });
+  ipcMain.handle('coach:delete', (event, token: unknown) => {
+    assertSender(event);
+    const value = tokenArgument(token);
+    confirmation.consume(event.senderFrame!, value);
+    return requests.deleteCounts(value);
+  });
 }
