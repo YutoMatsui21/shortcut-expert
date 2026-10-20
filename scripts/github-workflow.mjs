@@ -50,8 +50,8 @@ export function issueSection(body, title) {
       return [];
     }
     if (delimiter && (delimiter[0] === '~' || !suffix.includes('`'))) { fence = delimiter; return []; }
-    const match = /^(#{1,6})\s+(.+?)\s*\r?$/.exec(line);
-    return match ? [{ index, level: match[1].length, title: match[2] }] : [];
+    const match = /^ {0,3}(#{1,6})([ \t][^\r\n]*)?\r?$/.exec(line);
+    return match ? [{ index, level: match[1].length, title: (match[2] ?? '').replace(/[ \t]+#+[ \t]*$/, '').trim() }] : [];
   });
   if (title === undefined) return headings.map(h => '#'.repeat(h.level) + ' ' + h.title).join('\n');
   const matches = headings.filter(h => h.title === title);
@@ -78,8 +78,13 @@ export function summarizePullRequest(pr, expectedHead) {
     ? { name:c.name, status:c.status, conclusion:c.conclusion } : { name:c.context, status:c.state, conclusion:c.state });
   const truncated = !!contexts?.pageInfo.hasNextPage || !!pr.reviews.pageInfo.hasPreviousPage || !!pr.reviewThreads.pageInfo.hasNextPage
     || pr.reviewThreads.nodes.some(thread => thread.comments.pageInfo.hasNextPage);
+  // This repository's Quality job is required even when unrelated bot checks finish first.
+  const requiredChecks = ['windows-quality'];
+  const requiredChecksPassed = requiredChecks.every(name => checks.some(c => c.name === name &&
+    (c.status === 'SUCCESS' || c.status === 'COMPLETED' && c.conclusion === 'SUCCESS')));
   return { head:expectedHead, state:pr.state, mergeable:pr.mergeable, checks, truncated,
-    checksPassed: !truncated && checks.length > 0 && checks.every(c => c.status === 'SUCCESS' || c.status === 'COMPLETED' && ['SUCCESS','NEUTRAL','SKIPPED'].includes(c.conclusion)),
+    requiredChecks,
+    checksPassed: !truncated && requiredChecksPassed && checks.every(c => c.status === 'SUCCESS' || c.status === 'COMPLETED' && ['SUCCESS','NEUTRAL','SKIPPED'].includes(c.conclusion)),
     reviews:pr.reviews.nodes.map(r => ({ id:r.databaseId, author:r.author?.login, state:r.state, head:r.commit?.oid })),
     comments:pr.comments.nodes.map(c => ({ id:c.databaseId, author:c.author?.login, createdAt:c.createdAt })),
     feedbackRevision:hash(JSON.stringify([pr.reviews,pr.comments,pr.reviewThreads])),
@@ -103,7 +108,8 @@ export function pullRequestStatus({ root, repo, number, head, details = false, f
   const previous = existsSync(file) ? readJson(file) : null;
   const changed = previous?.digest !== digest;
   writeJson(file, { digest, head });
-  return { changed, ...(changed || details ? summary : { head, checksPassed:summary.checksPassed, unresolvedThreads:summary.unresolvedThreads, truncated:summary.truncated }),
+  return { changed, ...(changed || details ? summary : { head, checksPassed:summary.checksPassed, requiredChecks:summary.requiredChecks,
+    unresolvedThreads:summary.unresolvedThreads, truncated:summary.truncated, earlierCommentsOmitted:summary.earlierCommentsOmitted }),
     ...(details ? { feedback:{ reviews:pr.reviews, comments:pr.comments, threads:pr.reviewThreads } } : {}) };
 }
 

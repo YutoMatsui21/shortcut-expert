@@ -20,7 +20,7 @@ type Pr = {
 };
 function pr(): Pr {
   return {headRefOid:head,state:'OPEN',mergeable:'MERGEABLE',
-    commits:{nodes:[{commit:{statusCheckRollup:{contexts:{pageInfo:{hasNextPage:false},nodes:[{__typename:'CheckRun',name:'Quality',status:'COMPLETED',conclusion:'SUCCESS'}]}}}}]},
+    commits:{nodes:[{commit:{statusCheckRollup:{contexts:{pageInfo:{hasNextPage:false},nodes:[{__typename:'CheckRun',name:'windows-quality',status:'COMPLETED',conclusion:'SUCCESS'}]}}}}]},
     reviews:{pageInfo:{hasPreviousPage:false},nodes:[]},comments:{pageInfo:{hasPreviousPage:false},nodes:[]},
     reviewThreads:{pageInfo:{hasNextPage:false},nodes:[]}};
 }
@@ -97,4 +97,28 @@ test('spec headings stay inside fences until a matching delimiter with whitespac
     assert.doesNotMatch(issueSection(body),/Fake heading/);
     assert.equal(issueSection(body,'Real heading'),'## Real heading\ncontract\n');
   }
+});
+
+test('spec sections accept up to three indentation spaces and optional ATX closing hashes',()=>{
+  const body='  ## Storage ##\ncontract\n   ### Failure\nEACCES\n    ## Code heading\n##Next-is-not-a-heading\n ## UI\nview\n';
+  assert.equal(issueSection(body),'## Storage\n### Failure\n## UI');
+  assert.equal(issueSection(body,'Storage'),'  ## Storage ##\ncontract\n   ### Failure\nEACCES\n    ## Code heading\n##Next-is-not-a-heading');
+});
+
+test('PR success needs the expected Quality check and cannot be supplied by unrelated or skipped checks',t=>{
+  const root=fixture(t),value=pr();
+  assert.ok(value.commits.nodes[0].commit.statusCheckRollup);
+  const check=value.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[0];
+  const options={root,repo:'fixture/project',number:4,head,fetchJson:()=>({data:{repository:{pullRequest:value}}})};
+  check.name='unrelated-bot'; assert.equal(pullRequestStatus(options).checksPassed,false);
+  check.name='windows-quality'; check.conclusion='SKIPPED'; assert.equal(pullRequestStatus(options).checksPassed,false);
+  check.conclusion='SUCCESS'; assert.equal(pullRequestStatus(options).checksPassed,true);
+});
+
+test('unchanged compact PR polls retain the warning about omitted older comments',t=>{
+  const root=fixture(t),value=pr(); value.comments.pageInfo.hasPreviousPage=true;
+  const options={root,repo:'fixture/project',number:4,head,fetchJson:()=>({data:{repository:{pullRequest:value}}})};
+  assert.equal(pullRequestStatus(options).earlierCommentsOmitted,true);
+  const compact=pullRequestStatus(options);
+  assert.equal(compact.changed,false); assert.equal(compact.earlierCommentsOmitted,true);
 });

@@ -17,7 +17,7 @@ node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert
 node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert --section="見出し一覧にある正確な見出し"
 ```
 
-cacheは`.tools/issues/<owner>--<repo>/<number>.json`。該当見出しと下位節だけを出力し、code fence内の見出しは検索対象にしない。同名見出しが複数あるときはcacheの行位置から読む。仕様更新が必要なら`--refresh`で再取得する。取得・identity検証が失敗した場合は正常cacheを置換しない。cache破損は自動採用せずrefreshを要求する。
+cacheは`.tools/issues/<owner>--<repo>/<number>.json`。ATX（#形式）の該当見出しと下位節だけを出力し、3文字までの字下げ・末尾の閉じる#を扱う。code fence内の見出しは検索対象にしない。他形式や同名見出しが複数あるときはcacheの行位置から読む。仕様更新が必要なら`--refresh`で再取得する。取得・identity検証が失敗した場合は正常cacheを置換しない。cache破損は自動採用せずrefreshを要求する。
 
 `gh auth status`は利用する実行環境で一度確認する。CLIが使えない場合は接続済みGitHubツールで取得し、必要節をファイル編集APIで保存する。本文全体をshellの引数へ再生成して運ばない。取得元・updated_at/revisionと保存成功を確認し、必要になった節だけを読む。認証・権限の失敗を別環境の恒久的な失敗とみなさない。
 
@@ -32,9 +32,11 @@ $prHead = git rev-parse HEAD
 node scripts/github-workflow.mjs pr-status 64 --repo=YutoMatsui21/shortcut-expert --head=$prHead
 ```
 
-同じheadで状態が変わらない場合は小さな要約だけを返す。コメント本文の編集やthreadの変化も差分として検出する。30秒以上空け、状態不変なら60秒へ延ばす。必要な指摘本文と最終確認は`--details`で取得する。
+同じheadで状態が変わらない場合は小さな要約だけを返し、過去コメントの省略警告も保持する。コメント本文の編集やthreadの変化も差分として検出する。30秒以上空け、状態不変なら60秒へ延ばす。必要な指摘本文と最終確認は`--details`で取得する。
 
 head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。最新headのCodex完了通知・指摘・未解決threadを人間可読の本文で確認する。CLIはmergeやレビュー依頼を実行しない。
+
+成功には本リポジトリのQuality job `windows-quality`の成功を必要とし、未開始・skip・無関係なbot checkだけでは合格にしない。job名を変更する時はworkflowと`github-workflow.mjs`のrequiredChecksを同時に更新する。branch protection等の追加条件は最終merge確認で照合する。
 
 GitHub APIが使える限り、待機中にrun/job/全コメントを別々に全面取得しない。取得失敗を成功扱いせず、対応する接続済みツールへ切り替える場合も最新headを維持する。
 
