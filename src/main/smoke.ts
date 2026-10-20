@@ -151,6 +151,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await coach.idle();
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '3'`, 'seven-day-total');
   chooseDelete(0); await click(window, 'すべての記録を削除…');
+  await waitRenderer(window, `[...document.querySelectorAll('.settings-popover button')].some(button => button.textContent === 'すべての記録を削除…' && !button.disabled)`, 'delete-cancel-settled');
   if (!coach.snapshot().counts[previousDate]) throw new Error('delete-cancel');
   chooseDelete(1); await click(window, 'すべての記録を削除…');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '—'`, 'ui-delete-confirm');
