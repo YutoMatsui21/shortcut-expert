@@ -77,6 +77,8 @@ node scripts/smoke.mjs --packaged --storage
 node scripts/smoke.mjs --migration
 node scripts/smoke.mjs --packaged --migration
 node scripts/smoke.mjs --comparison
+node scripts/smoke.mjs --settings
+node scripts/smoke.mjs --packaged --settings --package-dir release/issue-23
 node scripts/smoke.mjs --packaged --comparison --package-dir release/issue-21
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
 ```
@@ -96,6 +98,8 @@ protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配
 操作追加版のsmokeは正式12行のキーと準備中表示、追加4操作それぞれのmouse/key→helper通信→判定→保存→Reactも確認する。追加4操作の通知画面はfixture通知で別途表示確認し、Coreの通知判断はunit試験で確認する。製品の通知間隔は変更しない。
 
 `package:dir`は直前にbuildした内容から`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は別の出力先を指定し、同じ出力先のexeを検証する。
+
+`--settings`は隔離SQLiteと実UIで共通gearの2スイッチ、停止中の通知希望値保持、トレイの共通command、4幅×2ページ、キーボード・focus・閉じ方を確認する。[設定パネルの契約と証拠の範囲](docs/settings-panel.md)。OSトレイの実クリック配送と実入力精度は別の受入試験。
 
 ```powershell
 npm.cmd run build

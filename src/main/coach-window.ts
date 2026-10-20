@@ -16,6 +16,7 @@ export class CoachWindow {
   private saves = new SerialQueue();
   private disposed = false;
   private snapshot?: Snapshot;
+  private stateVersion = 0;
   private dirty = false;
 
   get current(): BrowserWindow | null {
@@ -105,8 +106,9 @@ export class CoachWindow {
     else window.maximize();
   }
 
-  withWindowState(snapshot: Snapshot): Snapshot { return { ...snapshot, windowMaximized: this.current?.isMaximized() ?? false }; }
+  withWindowState(snapshot: Snapshot): Snapshot { return { ...snapshot, stateVersion: this.stateVersion, windowMaximized: this.current?.isMaximized() ?? false }; }
   publish(snapshot: Snapshot): void {
+    this.stateVersion++;
     this.snapshot = snapshot;
     this.current?.webContents.send('coach:changed', this.withWindowState(snapshot));
   }

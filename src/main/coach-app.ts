@@ -16,6 +16,8 @@ import { runMigrationSmoke } from './migration-smoke';
 import { seedComparisonCoverage, runRecordsComparisonSmoke } from './records-comparison-smoke';
 import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
+import { coachTrayMenu } from './coach-tray';
+import { runSettingsSmoke } from './settings-smoke';
 import { learningReadModel } from '../core/learning';
 import { recordsReadModel } from '../core/records';
 
@@ -47,12 +49,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     coachWindow.publish(snapshot);
     if (tray) {
       tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
-      tray.setContextMenu(Menu.buildFromTemplate([
-        { label: '記録を見る', click: showCoach },
-        { label: snapshot.notificationsPaused ? '通知を再開' : '通知を停止', enabled: snapshot.observing, click: () => { void command(snapshot.notificationsPaused ? 'resume-notifications' : 'pause-notifications'); } },
-        { label: snapshot.observing ? '全停止' : '計測を再開', click: () => { void command(snapshot.observing ? 'stop' : 'start'); } },
-        { type: 'separator' }, { label: '終了', click: () => { void quit(); } }
-      ]));
+      tray.setContextMenu(Menu.buildFromTemplate(coachTrayMenu(snapshot, command, showCoach, quit)));
     }
     if (snapshot.error && !errorStop) { errorStop = true; notice.dismiss(); void observer.stop().catch(() => {}); }
   };
@@ -94,7 +91,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
   };
   const command = (value: string) => control.run(async () => {
-    if (exitRequested) return coach.snapshot();
+    if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
     switch (value) {
       case 'pause-notifications': coach.pauseNotifications(true); notice.dismiss(); break;
       case 'resume-notifications': coach.pauseNotifications(false); break;
@@ -104,7 +101,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       case 'quit': break;
       default: throw new Error('Unknown command.');
     }
-    return coach.snapshot();
+    return coachWindow.withWindowState(coach.snapshot());
   });
   const performQuit = async () => {
     exitRequested = true;
@@ -131,17 +128,17 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return exiting;
   };
   const deleteCounts = () => control.run(async () => {
-    if (exitRequested) return coach.snapshot();
+    if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
     const window = coachWindow.current;
-    if (!window) return coach.snapshot();
+    if (!window) return coachWindow.withWindowState(coach.snapshot());
     // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
     const result = fixture && fixtureDeleteResponse !== null ? { response: fixtureDeleteResponse } : await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
       detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
     fixtureDeleteResponse = null;
-    if (result.response !== 1) return coach.snapshot();
+    if (result.response !== 1) return coachWindow.withWindowState(coach.snapshot());
     const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
     if (!coach.snapshot().error && resume) await startObservation();
-    return coach.snapshot();
+    return coachWindow.withWindowState(coach.snapshot());
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
     getRecordSummary: (query) => control.run(async () => {
@@ -177,16 +174,16 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     },
     getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
     getNotice: async () => notice.current(),
-    command: value => value === 'quit' ? quit().then(() => coach.snapshot()) : command(value),
+    command: value => value === 'quit' ? quit().then(() => coachWindow.withWindowState(coach.snapshot())) : command(value),
     setMuted: (operation, muted) => control.run(async () => {
-      if (exitRequested) return coach.snapshot();
-      await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coach.snapshot();
+      if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
+      await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coachWindow.withWindowState(coach.snapshot());
     }),
     setLearningState: (operation, state) => control.run(async () => {
-      if (exitRequested) return coach.snapshot();
+      if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
       await coach.setLearningState(operation, state);
       if (state !== 'learning') notice.dismiss();
-      return coach.snapshot();
+      return coachWindow.withWindowState(coach.snapshot());
     }),
     deleteCounts
   });
@@ -224,10 +221,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   if (fixture) {
     if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
-    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | undefined;
     try {
       report = await Promise.race([
-        comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           chooseDelete: (response) => { fixtureDeleteResponse = response; },
           verifyWindowExit: async () => {

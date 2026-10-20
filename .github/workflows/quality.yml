@@ -82,6 +82,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --migration 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-migration-smoke.log
           exit $LASTEXITCODE
+      - name: Settings panel and tray commands (isolated SQLite)
+        run: |
+          node scripts/smoke.mjs --settings 2>&1 | Tee-Object -FilePath .tools/test-results/settings-smoke.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/smoke.mjs --packaged --settings 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-settings-smoke.log
+          exit $LASTEXITCODE
       - name: Fixture diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -96,6 +102,7 @@ jobs:
             .tools/tests/coach-*/records-*.png
             .tools/tests/coach-*/records-layout.json
             .tools/tests/coach-*/records-comparison-*.json
+            .tools/tests/coach-*/settings-*.png
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3

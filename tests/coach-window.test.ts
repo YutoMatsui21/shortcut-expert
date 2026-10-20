@@ -120,6 +120,11 @@ test('窓の隔離設定と外部遷移拒否を維持する', async () => {
   const manager = new CoachWindow();
   await manager.create(async (_window, mode) => { assert.equal(mode, 'coach'); }, () => false);
   const window = FixtureWindow.all.at(-1)!;
+  const snapshot = { counts: {}, settings: { muted: [], opened: false }, observing: true, notificationsPaused: false, error: null, pendingSave: false };
+  manager.publish(snapshot);
+  const older = manager.withWindowState(snapshot);
+  manager.publish({ ...snapshot, observing: false });
+  assert.ok(manager.withWindowState(snapshot).stateVersion! > older.stateVersion!);
   assert.deepEqual(window.options.webPreferences, {
     preload: window.options.webPreferences?.preload, contextIsolation: true, nodeIntegration: false, sandbox: true
   });

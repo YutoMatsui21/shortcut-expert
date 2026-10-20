@@ -90,8 +90,8 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await runRecordsSmoke(window);
   await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
 
-  await click(window, '通知を停止');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-notification-pause');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="通知"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-notification-pause');
   await observer.inject({ ...value, sequence: 4, origin: 'key', route: 'win-up' }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.key !== 2 || notice.current()) throw new Error('paused-counting');
   const additions: { candidate: Candidate; key: string }[] = [
@@ -125,14 +125,14 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
     if (await observer.focusToken() !== focus || notice.focusable()) throw new Error('added-notice-focus');
     notice.dismiss();
   }
-  await click(window, '計測を全停止');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('計測を再開')`, 'ui-stop');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="計測"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="計測"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-stop');
   await observer.inject({ ...value, sequence: ++addedSequence }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.mouse !== 1) throw new Error('stop-counting');
-  await click(window, '計測を再開');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-start');
-  await click(window, '通知を再開');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-notification-resume');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="計測"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-start');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="通知"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'true' && !document.querySelector('.settings-switch[aria-label="通知"]').disabled`, 'ui-notification-resume');
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'excluded')`);
   await window.webContents.executeJavaScript(`(() => {
     const select = document.querySelector('.records-page select[aria-label="集計対象"]');
@@ -150,9 +150,11 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await observer.inject({ ...value, generation: 2, sequence: 1, date: previousDate, origin: 'key', route: 'win-up' });
   await coach.idle();
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '3'`, 'seven-day-total');
+  await window.webContents.executeJavaScript('if (!document.querySelector(".settings-popover")) document.querySelector(".gear-button").click()');
   chooseDelete(0); await click(window, 'すべての記録を削除…');
-  await waitRenderer(window, `[...document.querySelectorAll('.settings-popover button')].some(button => button.textContent === 'すべての記録を削除…' && !button.disabled)`, 'delete-cancel-settled');
+  await waitRenderer(window, `!document.querySelector('.settings-popover') && document.querySelector('.gear-button').getAttribute('aria-busy') === 'false'`, 'delete-cancel-settled');
   if (!coach.snapshot().counts[previousDate]) throw new Error('delete-cancel');
+  await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
   chooseDelete(1); await click(window, 'すべての記録を削除…');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '—'`, 'ui-delete-confirm');
   const cleared = await new JsonRepository(directory).load();
@@ -176,10 +178,10 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await selectPage(window, '記録');
   await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
   if (!coach.snapshot().settings.muted.includes('W03')) throw new Error('ui-reload-snapshot');
-  await click(window, '通知を停止');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-reload-command');
-  await click(window, '通知を再開');
-  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-reload-subscription');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="通知"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-reload-command');
+  await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="通知"]').click()`);
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'true' && !document.querySelector('.settings-switch[aria-label="通知"]').disabled`, 'ui-reload-subscription');
   const caption = await window.webContents.executeJavaScript(`({
     drag: getComputedStyle(document.querySelector('.titlebar')).getPropertyValue('-webkit-app-region'),
     controls: getComputedStyle(document.querySelector('.window-controls')).getPropertyValue('-webkit-app-region')
