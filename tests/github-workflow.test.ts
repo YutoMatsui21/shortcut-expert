@@ -16,7 +16,7 @@ type Pr = {
   commits:{nodes:{commit:{statusCheckRollup:null | {contexts:{pageInfo:{hasNextPage:boolean};nodes:{__typename:string;name:string;status:string;conclusion:string}[]}}}}[]};
   reviews:{pageInfo:{hasPreviousPage:boolean};nodes:unknown[]};
   comments:{pageInfo:{hasPreviousPage:boolean};nodes:Comment[]};
-  reviewThreads:{pageInfo:{hasNextPage:boolean};nodes:{isResolved:boolean;isOutdated:boolean;comments:{nodes:unknown[]}}[]};
+  reviewThreads:{pageInfo:{hasNextPage:boolean};nodes:{isResolved:boolean;isOutdated:boolean;comments:{pageInfo:{hasNextPage:boolean};nodes:{body:string;path:string;author:{login:string}}[]}}[]};
 };
 function pr(): Pr {
   return {headRefOid:head,state:'OPEN',mergeable:'MERGEABLE',
@@ -54,7 +54,7 @@ test('PR polling summarizes changes, detects edited feedback, refuses other head
   value.comments.nodes[0].body='new finding';
   assert.equal(pullRequestStatus(options).changed,true);
   const detailed=pullRequestStatus({...options,details:true}); assert.ok(detailed.feedback); assert.equal(detailed.feedback.comments.nodes[0].body,'new finding');
-  value.reviewThreads.nodes.push({isResolved:false,isOutdated:true,comments:{nodes:[]}});
+  value.reviewThreads.nodes.push({isResolved:false,isOutdated:true,comments:{pageInfo:{hasNextPage:false},nodes:[]}});
   assert.equal(pullRequestStatus(options).unresolvedThreads,1);
   assert.ok(value.commits.nodes[0].commit.statusCheckRollup);
   value.commits.nodes[0].commit.statusCheckRollup.contexts.pageInfo.hasNextPage=true;
@@ -65,4 +65,28 @@ test('PR polling summarizes changes, detects edited feedback, refuses other head
   assert.throws(()=>pullRequestStatus(options),/head changed/);
   assert.throws(()=>pullRequestStatus({...options,head:'short'}),/full --head/);
   assert.equal(calls,9);
+});
+
+test('PR details retain original findings with replies, detect edits and reject truncated thread conversations',t=>{
+  const root=fixture(t), value=pr();
+  value.reviewThreads.nodes.push({isResolved:false,isOutdated:false,comments:{pageInfo:{hasNextPage:false},nodes:[
+    {body:'original finding',path:'src/example.ts',author:{login:'reviewer'}},
+    {body:'author reply',path:'src/example.ts',author:{login:'author'}}
+  ]}});
+  const options={root,repo:'fixture/project',number:4,head,fetchJson:(args:string[])=>{
+    const returned=structuredClone(value);
+    // Simulate the GraphQL connection selection so last:1 really omits the finding.
+    if (args.some(arg=>arg.includes('comments(last:1)'))) {
+      returned.reviewThreads.nodes[0].comments.nodes=returned.reviewThreads.nodes[0].comments.nodes.slice(-1);
+    }
+    return {data:{repository:{pullRequest:returned}}};
+  }};
+  const detail=pullRequestStatus({...options,details:true}); assert.ok(detail.feedback);
+  assert.deepEqual(detail.feedback.threads.nodes[0].comments.nodes.map((c:{body:string})=>c.body),['original finding','author reply']);
+  assert.equal(pullRequestStatus(options).changed,false);
+  value.reviewThreads.nodes[0].comments.nodes[0].body='edited original finding';
+  assert.equal(pullRequestStatus(options).changed,true);
+  value.reviewThreads.nodes[0].comments.pageInfo.hasNextPage=true;
+  const truncated=pullRequestStatus({...options,details:true});
+  assert.equal(truncated.truncated,true); assert.equal(truncated.checksPassed,false);
 });

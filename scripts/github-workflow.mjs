@@ -67,7 +67,7 @@ const prQuery = `query($owner:String!,$name:String!,$number:Int!){repository(own
   }}}}}}
   reviews(last:100){pageInfo{hasPreviousPage} nodes{databaseId author{login} state body commit{oid}}}
   comments(last:20){pageInfo{hasPreviousPage} nodes{databaseId author{login} body createdAt updatedAt}}
-  reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved isOutdated comments(last:1){nodes{path body author{login}}}}}
+  reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved isOutdated comments(first:100){pageInfo{hasNextPage} nodes{path body author{login}}}}}
 }}}`;
 
 export function summarizePullRequest(pr, expectedHead) {
@@ -76,7 +76,8 @@ export function summarizePullRequest(pr, expectedHead) {
   const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
   const checks = (contexts?.nodes ?? []).map(c => c.__typename === 'CheckRun'
     ? { name:c.name, status:c.status, conclusion:c.conclusion } : { name:c.context, status:c.state, conclusion:c.state });
-  const truncated = !!contexts?.pageInfo.hasNextPage || !!pr.reviews.pageInfo.hasPreviousPage || !!pr.reviewThreads.pageInfo.hasNextPage;
+  const truncated = !!contexts?.pageInfo.hasNextPage || !!pr.reviews.pageInfo.hasPreviousPage || !!pr.reviewThreads.pageInfo.hasNextPage
+    || pr.reviewThreads.nodes.some(thread => thread.comments.pageInfo.hasNextPage);
   return { head:expectedHead, state:pr.state, mergeable:pr.mergeable, checks, truncated,
     checksPassed: !truncated && checks.length > 0 && checks.every(c => c.status === 'SUCCESS' || c.status === 'COMPLETED' && ['SUCCESS','NEUTRAL','SKIPPED'].includes(c.conclusion)),
     reviews:pr.reviews.nodes.map(r => ({ id:r.databaseId, author:r.author?.login, state:r.state, head:r.commit?.oid })),

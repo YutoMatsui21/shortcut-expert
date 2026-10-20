@@ -34,7 +34,7 @@ node scripts/github-workflow.mjs pr-status 64 --repo=YutoMatsui21/shortcut-exper
 
 同じheadで状態が変わらない場合は小さな要約だけを返す。コメント本文の編集やthreadの変化も差分として検出する。30秒以上空け、状態不変なら60秒へ延ばす。必要な指摘本文と最終確認は`--details`で取得する。
 
-head不一致・取得エラー・checks/reviews/threadsのページ上限超過では完了扱いにしない。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。commentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。最新headのCodex完了通知・指摘・未解決threadを人間可読の本文で確認する。CLIはmergeやレビュー依頼を実行しない。
+head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。最新headのCodex完了通知・指摘・未解決threadを人間可読の本文で確認する。CLIはmergeやレビュー依頼を実行しない。
 
 GitHub APIが使える限り、待機中にrun/job/全コメントを別々に全面取得しない。取得失敗を成功扱いせず、対応する接続済みツールへ切り替える場合も最新headを維持する。
 
