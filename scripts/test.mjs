@@ -1,5 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { developmentEnvironment } from './dev-environment.mjs';
 
 const suite = process.argv[2];
 if (!['unit', 'native'].includes(suite)) throw new Error('Expected unit or native suite');
@@ -30,6 +31,6 @@ const files = (selected.length ? [...new Set(selected)] : available).sort().map(
 if (!files.length) throw new Error(`No ${suite} tests discovered`);
 const args = ['--experimental-test-module-mocks', '--test', '--test-timeout=' + (suite === 'native' ? '60000' : '10000')];
 if (process.argv.includes('--coverage')) args.push('--experimental-test-coverage', '--test-coverage-include=src/**/*.ts');
-const result = spawnSync(process.execPath, [...args, ...forwarded, ...files], { stdio: 'inherit', windowsHide: true });
+const result = spawnSync(process.execPath, [...args, ...forwarded, ...files], { stdio: 'inherit', windowsHide: true, env: developmentEnvironment() });
 if (result.error) console.error(result.error.message);
 process.exit(result.status ?? 1);

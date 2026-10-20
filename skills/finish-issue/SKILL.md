@@ -9,7 +9,7 @@ description: shortcut-expertの実装Issueが完了したとき、PRのCI・Code
 
 1. **実装と検証**：担当Issueの受入条件を確認し、変更箇所のテストを行う。テスト選定は[テスト設計Skill](../test-shortcut-coach/SKILL.md)。人工fixtureを実入力の成功証拠にしない。
 2. **PRを作る**：作業ブランチへcommit・pushし、main向けPRを作る。本文に対象Issue（例：`Closes #17`）、変更点、テスト結果、未検証事項を記載する。既にmainへ反映されている場合は、重複PRを作らず取り込み済みであることを確認する。
-3. **レビューを終える**：PR最新headのCI・GitHub上のCodexコードレビュー・必要な指摘対応を確認する。修正時は再pushし、最新headで再確認する。競合やbranch protectionなどの必須条件も満たす。
+3. **レビューを終える**：[PR監視入口](../../docs/development-tools.md#pr監視)で最新headの状態差分を読み、完了時に同headのCI・GitHub上のCodexレビュー本文・未解決指摘を確認する。保存・移行変更はテスト設計Skillの故障境界も照合する。修正時は再pushし、最新headで再確認する。競合やbranch protectionなどの必須条件も満たす。
 4. **mainにマージ**：条件を満たしたPRをmainにmergeする。CI失敗、レビュー未完了、未解決の重大指摘、権限不足時は**mergeしない**。失敗を成功扱いせず理由を報告する。
 5. **GitHubを更新**：mainへの取り込みを確認してから、対象Issueを`Closed (completed)`にする。`ready-for-agent`と不要な`blocked`を外し、`ui-redesign`・`kind:...`など分類ラベルを残す。親Issueの進捗を更新する。後続Issueは**全ての着手条件**を確認し、満たせば`blocked`を外して`ready-for-agent`にする。
 6. **結果を報告**：PR/merge先、テスト・レビュー結果、更新したIssue・ラベル、残作業を簡潔に伝える。

@@ -43,10 +43,10 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 ### 開発の進め方
 
 1. 実装前に`git status --short --branch`、`git worktree list`、`git log -1 --oneline`を確認する。対象Issueの依存・受入条件と基準コミットを照合し、作業先を1つに決める。detached HEADの場合は実装前に`codex/`ブランチへ所属させる。別コピーへの移し替え、他のworktreeの依存フォルダーや生成物の流用は通常の準備手順にしない。commit・pushの範囲はユーザーの依頼に従う。
-2. 長いIssue本文は成功した取得1回を`.tools/issue-<番号>.txt`などへ保存し、見出しを`rg -n '^#'`で探して該当節だけ読む。再取得は仕様更新の確認が必要な時に行う。取得失敗なら内容を仕様として使わず、終了コード・保存ファイルの内容を確認する。PowerShellではnativeコマンド失敗後も後続処理が続くため、依存するコマンドの間で`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を使う。
-3. 必要なツールと版は`package.json`・`global.json`で照合し、不足分だけ下記手順で準備する。権限・ネットワークによる失敗は承認された再実行か環境修正で解決する。修正前に同じコマンドを繰り返さず、承認拒否時は理由と未完了箇所を報告する。試験のTEMPに書込権限の問題がある場合は、この作業先の`.tools/test-temp`を作成し、そのコマンドの`TEMP`/`TMP`だけそこへ向ける。
-4. 修正中は下記のファイル・名前指定で関連試験を実行し、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証は変更内容・基準コミット・実行コマンドと対応づけ、ソース・依存・生成物・環境が変わった範囲を再検証する。調査の任意追加確認とIssueの必須条件を分け、次Issueの案内前にも依存条件を確認する。
-5. pushとCI・レビュー確認まで依頼された場合は、push後のhead SHAを固定して状態と未解決指摘を確認する。同じheadの実行中状態は30秒以上空け、変化がなければ60秒へ延ばす。正常待機中は状態の要約、失敗時に該当jobのログ、レビュー時に対象指摘を読む。新しいpush後はSHAを取り直し、古いheadの成功を完了根拠にしない。
+2. 仕様は[取得・読取入口](docs/development-tools.md#仕様の取得と読取)で成功した本文とrevisionを保存し、見出し→必要節の順に読む。ソースは型・関数・呼出し元で範囲を絞り、変更後はdiffを中心に確認する。
+3. `npm.cmd run dev:check`でTEMP/cacheのwrite・renameと部品の有無を確認し、`package.json`・`global.json`に沿って不足分を準備する。実行入口が子プロセスごとに作業先のTEMP/cacheを設定する。[環境と失敗時の切り分け](docs/development-tools.md#実行環境)に従う。PowerShellで依存するnativeコマンドを続ける時は`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を挟む。
+4. UI/API変更ではテスト設計Skillで影響するfixture・mock・selector・期待値を先に確認する。修正中は関連試験を絞り、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証はソース・依存・生成物・環境と対応づけ、変わった範囲を再検証する。必須条件と追加確認を分け、次Issueの案内前に依存を確認する。
+5. push後のhead SHAを固定し、[PR監視入口](docs/development-tools.md#pr監視)で差分を確認する。通常は状態要約、変化・失敗・指摘確認時に詳細を読む。最新headのCI・Codexレビュー・未解決指摘を確認してから完了とする。
 
 ### 実行環境
 
@@ -54,7 +54,8 @@ Windows x64、Node.js 24系・npm。作業フォルダーのPowerShellで実行�
 
 ```powershell
 pwsh -File .\scripts\setup-dotnet.ps1
-npm.cmd ci
+npm.cmd run dev:install
+npm.cmd run dev:check -- --require=electron,sdk
 npm.cmd run build
 npm.cmd run dev
 ```

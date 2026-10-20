@@ -78,6 +78,24 @@
 
 テスト実行入口`scripts/test.mjs`はunit/nativeの分類、module mock有効化、timeout、coverage条件を共通化する。ファイル・名前・reporter指定の使い方は[README](../README.md#修正中のテスト絞り込み)に集約する。`tests/test-runner.test.ts`は隔離fixtureを別プロセスで実行し、選択したテストだけの実行、失敗終了コードの伝播、既定の全件実行、native分類、誤った引数の拒否を確認する。製品の検出・保存・通知経路の試験とは分ける。
 
+開発用の`scripts/dev-environment.mjs`は子プロセスのTEMP/cache、`dev-run.mjs`はNode製toolの起動と準備確認を担当する。`github-workflow.mjs`は開発Issueのrevision/hash付きcacheとhead固定のPR状態要約を扱う。製品Core/Mainの保存や通信には接続しない。実行方法は[開発用ツール](development-tools.md)。smoke失敗のstackとプロセス診断は隔離fixture経路だけに出力する。
+
+<a id="storage-review"></a>
+
+### 保存・移行の故障境界
+
+保存・移行を変える時、該当する下表を実装前の試験選定とPR前のレビューで照合する。既存試験が同じ本番経路を通すなら再利用し、無関係なケースを機械的に追加しない。
+
+| 故障境界 | 操作列と期待する保護 |
+| --- | --- |
+| 未作成と読取不能 | ENOENT / EACCES / I/O失敗を分け、後二者を空データや新規authorityへ変えない |
+| 公開・同期の中断 | marker/DB/有効化の各変更境界で中断→再起動し、所有情報と原本を保持して安全に再実行する |
+| 一部欠落 | DB・marker・補助表を個別に欠落/破損させ、移行済みデータを空の初期化へ戻さない |
+| 空データと全件照合 | 空日付・設定だけの旧データ、同じ総和で異なる行を区別して再open照合する |
+| 削除と再送 | active/stagingを分け、削除中断→再起動、ACK喪失→同じ書込再送で復活・二重計上を防ぐ |
+
+レビューは仕様文の有無だけでなく、選んだ故障操作列の結果と本番処理を確認する。根拠がない場合は未検証として残す。
+
 ### #13：型付き証拠とprotocol v2の併設
 
 Sharedの`ObserverCandidate`は旧`Candidate`と`CandidateV2`のunion。v2はgeneration/最終送信sequence/入力transaction/完了日/由来/route/注入・競合と、`window`・`shell-display`・`activation`・`global`の証拠を分ける。Nativeの`CandidateProtocol`は限定された証拠recordを直列送信し、Mainがvariantの必須項目・型・ID範囲を検査して許可項目だけをCoreへ渡す。未知の能力はnullのまま保持し、成功へ変換しない。生キー列・窓token・process ID・タイトル・path・UIA treeは通信型に含めない。hookへUIA処理は追加していない。

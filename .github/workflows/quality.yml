@@ -37,7 +37,9 @@ jobs:
           node --version
           npm.cmd --version
           dotnet --version
-      - run: npm.cmd ci
+          npm.cmd run dev:check -- --require=sdk
+          exit $LASTEXITCODE
+      - run: npm.cmd run dev:install
       - name: Types
         run: npm.cmd run typecheck
       - name: Fast tests
