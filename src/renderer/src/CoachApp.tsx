@@ -1,3 +1,4 @@
+import { defaultRecordsQuery, type RecordsQuery } from '../../shared/records';
 import { useEffect, useRef, useState } from 'react';
 import type { LearningReadModel } from '../../shared/learning';
 import { localDate } from '../../core/dates';
@@ -9,6 +10,7 @@ import { Icon } from './icons';
 export function CoachApp() {
   const coach = useCoach();
   const [page, setPage] = useState<'learning' | 'records'>('learning');
+  const [recordsQuery, setRecordsQuery] = useState<RecordsQuery>({ ...defaultRecordsQuery });
   const [collapsed, setCollapsed] = useState<number[]>([]);
   const [model, setModel] = useState<LearningReadModel>();
   const [readError, setReadError] = useState(false);
@@ -46,7 +48,7 @@ export function CoachApp() {
         <LearningPage model={model} busy={coach.busy} change={coach.setLearningState} collapsed={collapsed} toggle={group => setCollapsed(value => value.includes(group) ? value.filter(id => id !== group) : [...value, group])} />
       </main>
     </div>
-    <div className="records-frame" hidden={page !== 'records'}><RecordsPage coach={coach} /></div>
+    <div className="records-frame" hidden={page !== 'records'}><RecordsPage coach={coach} query={recordsQuery} changeQuery={setRecordsQuery} /></div>
     {settings && <div className="settings-popover" ref={popover} role="dialog" aria-label="設定">
       <button disabled={coach.busy || !coach.snapshot?.observing} onClick={() => coach.command(coach.snapshot?.notificationsPaused ? 'resume-notifications' : 'pause-notifications')}>{coach.snapshot?.notificationsPaused ? '通知を再開' : '通知を停止'}</button>
       <button disabled={coach.busy || !coach.snapshot || (!coach.snapshot.observing && coach.snapshot.pendingSave)} onClick={() => coach.command(coach.snapshot?.observing ? 'stop' : 'start')}>{coach.snapshot?.observing ? '計測を全停止' : '計測を再開'}</button>

@@ -9,9 +9,44 @@ export async function runRecordsSmoke(window: BrowserWindow) {
   await selectPage(window, '記録');
   await waitForLearning(window, `document.querySelector('[data-kpi="rate"]')?.textContent === '50.0%'`);
   const model = await window.webContents.executeJavaScript('window.coach.getRecordSummary()');
-  assert.deepEqual(model.rows.map((row: { id: string }) => row.id), learningOperations.map(op => op.id));
+  assert.deepEqual(model.query, {period:7,filter:'learning-mastered',sort:'rate'});
+  assert.deepEqual(model.rows.map((row: { id: string }) => row.id), ['W03', ...learningOperations.filter(op => op.id !== 'W03').map(op => op.id)]);
   assert.equal(model.summary.mouse, 1); assert.equal(model.summary.key, 1);
   assert.equal('counts' in model, false); assert.equal('coverage' in model, false);
+  const choose = async (label: string, value: string) => {
+    await window.webContents.executeJavaScript(`(() => {
+      const select = document.querySelector('.records-page select[aria-label="${label}"]');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, '${value}');
+      select.dispatchEvent(new Event('change', {bubbles:true}));
+    })()`);
+    await waitForLearning(window, `document.querySelector('.records-page select[aria-label="${label}"]').value === '${value}' && document.querySelector('.records-scroll').getAttribute('aria-busy') === 'false'`);
+  };
+  assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s => s.options.length)`), [2,3,5]);
+  await choose('期間', '30');
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','excluded')`);
+  await waitForLearning(window, `document.querySelector('.records-scroll').getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 11`);
+  await choose('集計対象','all');
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 12`);
+  for (const sort of ['mouse','improvement','key','total','rate']) {
+    await choose('並び替え', sort);
+    const expected = await window.webContents.executeJavaScript(`window.coach.getRecordSummary({period:30,filter:'all',sort:'${sort}'}).then(m => m.rows.map(r=>r.id))`);
+    assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.record-table tbody tr')].map(r=>r.dataset.operation)`),expected);
+  }
+  await choose('並び替え','total');
+  await selectPage(window,'ショートカット一覧'); await selectPage(window,'記録');
+  assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['30','all','total']);
+  await choose('集計対象','learning');
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '—' && document.querySelectorAll('.record-table tbody tr').length === 11`);
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','mastered')`);
+  await choose('集計対象','learning-mastered');
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 12`);
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','learning')`);
+  const loaded = new Promise<void>(resolve => window.webContents.once('did-finish-load', () => resolve()));
+  window.webContents.reload(); await loaded;
+  await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]')?.getAttribute('aria-current') === 'page'`);
+  assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['7','learning-mastered','rate']);
+  await selectPage(window,'記録');
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%'`);
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 700);

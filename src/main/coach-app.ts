@@ -114,12 +114,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return coach.snapshot();
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
-    getRecordSummary: () => control.run(async () => {
+    getRecordSummary: (query) => control.run(async () => {
       try {
         const today = localDate();
-        if (coach instanceof DurableCoach) return await coach.getRecordSummary(today);
+        if (coach instanceof DurableCoach) return await coach.getRecordSummary(today, query);
         const snapshot = coach.snapshot();
-        return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today);
+        return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today, query);
       } catch {
         if (!coach.snapshot().error) coach.fault('記録を読み込めません。元のデータは保持しています。');
         throw new Error('記録を読み込めません。');

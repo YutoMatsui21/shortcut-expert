@@ -11,9 +11,11 @@ mock.module('electron', { namedExports: {
   contextBridge: { exposeInMainWorld: (name: string, value: CoachBridge) => { assert.equal(name, 'coach'); bridge = value; } }
 } });
 await import('../src/preload/index.ts');
-test('record summary exposes a parameterless bounded query', async () => {
+test('record summary exposes only period/filter/sort for a bounded query', async () => {
   await bridge.getRecordSummary();
-  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:get-record-summary']);
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:get-record-summary', undefined]);
+  await bridge.getRecordSummary({period:30,filter:'all',sort:'total'});
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:get-record-summary', {period:30,filter:'all',sort:'total'}]);
 });
 test('three-state changes use only the limited IPC channel and arguments', async () => {
   await bridge.setLearningState('W12', 'mastered');

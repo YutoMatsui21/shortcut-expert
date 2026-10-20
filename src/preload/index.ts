@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { CoachBridge, Snapshot } from '../shared/coach';
 
 const coach: CoachBridge = {
-  getRecordSummary: () => ipcRenderer.invoke('coach:get-record-summary'),
+  getRecordSummary: (query) => ipcRenderer.invoke('coach:get-record-summary', query),
   getLearning: () => ipcRenderer.invoke('coach:get-learning'),
   windowCommand: (command) => ipcRenderer.invoke('coach:window', command),
   getRecords: (from, to) => ipcRenderer.invoke('coach:get-records', from, to),

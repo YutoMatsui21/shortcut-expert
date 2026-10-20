@@ -133,6 +133,11 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await click(window, '通知を再開');
   await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-notification-resume');
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'excluded')`);
+  await window.webContents.executeJavaScript(`(() => {
+    const select = document.querySelector('.records-page select[aria-label="集計対象"]');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'all');
+    select.dispatchEvent(new Event('change', {bubbles:true}));
+  })()`);
   const reload = await new JsonRepository(directory).load();
   if (reload.settings.muted.join() !== 'W03' || reload.counts[localDate()].W03?.key !== 2) throw new Error('settings-reload');
   const restarted = new FreshCoach({ repository: new JsonRepository(directory), date: localDate, now: () => 0,

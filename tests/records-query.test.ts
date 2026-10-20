@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import { DurableCoach } from '../src/core/durable-coach.ts';
+import { mock } from 'node:test';
 import { candidateFixture } from './support/fixtures.ts';
 
 test('record summary queries real Worker for seven days and serializes counts/settings/revision', async t => {
@@ -23,13 +24,23 @@ test('record summary queries real Worker for seven days and serializes counts/se
   const sample = candidateFixture({date: today});
   const writing = coach.accept(sample);
   const setting = coach.setLearningState('W03', 'mastered');
+  const bounded = mock.method(repository, 'query');
   const reading = coach.getRecordSummary(today);
   await Promise.all([writing, setting]);
   const result = await reading;
+  assert.deepEqual(bounded.mock.calls.at(-1)?.arguments, ['2026-10-06', '2026-10-19']);
+  assert.equal(result.previous.total, 198);
   assert.equal(result.summary.mouse, 4); assert.equal(result.summary.key, 7);
   assert.equal(result.revision, coach.snapshot().revision);
   assert.equal(result.rows.find(row => row.id === 'W03')?.state, 'mastered');
   assert.equal('counts' in result, false); assert.equal('coverage' in result, false);
+  await coach.setLearningState('W03','excluded');
+  assert.equal((await coach.getRecordSummary(today)).summary.total,6);
+  const all = await coach.getRecordSummary(today,{period:30,filter:'all',sort:'total'});
+  assert.deepEqual(bounded.mock.calls.at(-1)?.arguments,['2026-08-21','2026-10-19']);
+  assert.equal(all.summary.total,209);
+  assert.equal(all.rows.find(r=>r.id==='W03')?.state,'excluded');
+  await coach.setLearningState('W03','mastered');
   today = '2026-10-26';
   assert.equal((await coach.getRecordSummary(today)).summary.total, null, 'stopped/idle display follows calendar without creating zeros');
   today = '2026-10-19';
