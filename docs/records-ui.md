@@ -1,4 +1,4 @@
-# 記録ページの集計・期間・フィルタ・ソート（#19・#20）
+# 記録ページの集計・期間・フィルタ・ソート・比較（#19〜#21）
 
 今日を含むローカル暦日7日／30日と、同日数の直前期間を扱う。12操作は学習一覧と同じregistry・正式名・キーを使い、全行に準備中を表示する。現在の学習状態から「学習中・習得済み」（初期値）、「学習中のみ」、「すべて」のいずれかで操作集合を選び、その同じ集合を両期間の操作行・KPI・率・比較・欠損判定へ適用する。「すべて」は対象外の継続記録も含める。保存済みcountsは変更せず、状態変更履歴や表示設定は保存しない。W09/W14の履歴は保持するが今回の表示集計には含めない。
 
@@ -6,9 +6,17 @@ CoreのrecordsReadModelが期間・集合・集約・比較・ソートを担当
 
 countsまたはobservedの根拠がある値だけを既知とする。根拠なしはnull／「—」、観測済み0件は0回、分母0の率はnull、mouseのみ正なら0.0%。対象集合0件もnullの空状態とし、0件を作らない。J01に従い部分観測・legacy countsも取得済み値で比較し、いずれかの値に根拠がなければ比較をnullにする。片方が既知0件なら回数差は計算できるが、率差は両方の分母が正の場合だけ。
 
-比較値と独立にhasMissingCoverageを返す。選択操作について両期間の各日を調べ、coverage欠落・非observed・gap・部分日のどれかがあればtrueとする。日付のローカル午前0時同士から日長を求め、DSTを24時間固定にしない。除外した操作の欠損は混ぜない。対象集合0件は警告なし。比較値とinfoの画面表示は#21へ引き継ぎ、現在の表の比較欄は「—／準備中」を維持する。
+比較値と独立にhasMissingCoverageを返す。選択操作について両期間の各日を調べ、coverage欠落・非observed・gap・部分日のどれかがあればtrueとする。日付のローカル午前0時同士から日長を求め、DSTを24時間固定にしない。除外した操作の欠損は混ぜない。対象集合0件は警告なし。
 
 5ソートはキー率昇順／mouse降順／改善pt降順／key降順／total降順。指標のnullは末尾、同値はregistry順。率と改善ptはBigIntの分数の整数積で比較し、丸め前の順序を守る。率・ptの表示用値は小数1桁、ちょうど中間は絶対値側へ四捨五入、負0を正規化する。バーには丸め前の率を返す。
+
+## 比較と欠損info（#21）
+
+Spec v2 §8.3/J01（#14）を適用し、#20から渡された比較値とhasMissingCoverageをそのまま表示する。KPIは率のpt差、key/mouseの回数差、操作行は率のpt差。正数に+、率差は小数1桁のpt、回数差は整数を使う。比較のどちらかに根拠がない場合は「—」。観測済み0件は0回・率「記録なし」、分母0の率差は「—」。mouseのみの正回数は0.0%とする。対象集合0件は空状態でinfoを表示しない。
+
+KPIは対象集合全体、行はその操作の両期間について欠損を示す。数値や「—」の横に既存18px info assetを置き、「一部の時間帯で記録を取得できていないため、実際の利用状況と異なる可能性があります。」を表示する。hover/focusで開き、クリック（Enter/Spaceを含む）で固定・解除、Esc/外側pointerdownで閉じる。説明へポインターを移動でき、フォーカス中はマウスが外れても維持する。配置はスクロール・リサイズに追従し、画面の左右端・下端で切れない。既存のキー率計算helpとはasset・accessible name・説明を分ける。query/設定/revision変更で古いモデルを破棄し、古いinfoも破棄する。
+
+Figmaの参照は[欠損あり・説明表示 367:3715](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=367-3715)、[欠損あり4幅 370:4129](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=370-4129)、[観測済み0回 371:3664](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=371-3664)。#12の完了契約と367:3715/371:3664のdesign context・画像を照合した。既存Shell/controlsは保持し、比較・info・既知0の表示を今回の対象とした。
 
 SharedがRecordsQueryと限定された型・検証を所有し、Preloadはその値だけを専用IPCへ渡す。Mainは既存mainFrameと7/30・3フィルタ・5ソートを検査し、追加のfieldや不正値を拒否する。省略時は初期queryを使う。Mainが現在localDateを決め、DurableCoachの直列キュー内で両期間を単一Repository.query（14日／60日）で読み、確定settingsと同じrevisionを確認する。Rendererへは選択行・KPI・期間・比較値・欠損flag・query・revisionだけを返す。任意SQL・保存先・全履歴の複製は追加しない。旧JSON経路は隔離回帰fixture用に同じCore集計を使う。
 
@@ -29,3 +37,9 @@ records-smokeは隔離JSON/SQLiteの人工mouse1/key1を本番IPCとReactへ接�
 Windows build 26300 / Node 24.11.1 / .NET SDK 10.0.401 / Electron 44.7.0。型検査・build、unit 185件、native 6件（本番C# policy 63assert）が成功。通常版と`release/issue-20/win-unpacked/Window Shortcut Coach.exe`で旧JSON・SQLite・移行プロセス再起動の6種類の隔離smokeが成功した。4幅の寸法・自アプリPNG、期間/3フィルタ/5ソート、対象外・習得済みへの変更、往復保持・再読込reset、移行先でのプロセス再起動reset、query障害後の復旧を確認した。SQLite試験のTEMPはこのworktreeの`.tools/test-temp`へ限定した。Electron取得/同梱生成のcache renameと画面起動のsandbox制限は権限付き再実行で解消した。
 
 すべて隔離fixtureであり実入力の精度証拠ではない。実入力・混在DPI/文字拡大・#20 controlsの厳密なFigma外観照合・標準Toast・NSIS・通常60分・公開受入は未実施。比較値とinfoの画面表示は#21の範囲として残す。
+
+## #21の検証（2026-10-20）
+
+Windows build 26300 / Node 24.11.1 / .NET SDK 10.0.401 / Electron 44.7.0（同梱Node 24.21.0）。型検査・build、unit全体、native 6件が成功。`--comparison`では実SQLite Worker→DurableCoach→Main/Preload→Reactを通し、取得済み合計・legacy正回数の警告付き比較、前期間不明/現在期間不明、部分観測の既知0、完全coverageの既知0、分母0、0.0%、3フィルタ・期間/状態変更を検証する。各判断を操作行・KPIの表示値でassertし、fixture用JSONへ結果を保存する。SQLiteのcommit契約は移行後のgapを消せないため、欠損なしのfixtureは初めからobservedとして作る。
+
+800/920/1120/1360pxで寸法・自アプリPNGを確認。infoのhover/focus/Space/クリック/Esc/外側pointerdown、行の画面端配置、フィルタ変更による開いた説明の破棄、キー率helpとの区別が成功。通常版・ローカル配布版の比較smokeに同じ入口を追加し、CIでも実行する。実入力認識率、混在DPI/文字拡大、スクリーンリーダーの実読上げ、標準Toast、NSIS導入/通常60分・公開受入は未確認。自アプリ画像以外や通常userDataは使用していない。

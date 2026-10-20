@@ -4,9 +4,18 @@ import { learningOperations } from '../../shared/learning';
 import { localDate } from '../../core/dates';
 import { useCoach } from './useCoach';
 import { Icon } from './icons';
+import { MissingCoverageInfo } from './MissingCoverageInfo';
 
 const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP') + '回';
 const rate = (value: number | null | undefined) => value == null ? '—' : value.toFixed(1) + '%';
+const difference = (value: number | null | undefined, points = false) => value == null ? '—' :
+  (value > 0 ? '+' : '') + (points ? value.toFixed(1) + 'pt' : value.toLocaleString('ja-JP'));
+function Comparison({ value, missing, label, points = false }: { value: number | null; missing: boolean; label: string; points?: boolean }) {
+  return <span className="comparison-value" aria-label={label}>
+    <span data-comparison={points ? 'improvement' : 'count'} data-direction={points && value !== null ? Math.sign(value) : undefined}>{difference(value, points)}</span>
+    {missing && <MissingCoverageInfo label={label} />}
+  </span>;
+}
 function RateBar({ value, primary = false }: { value: number | null; primary?: boolean }) {
   return <div className={'record-rate-bar' + (primary ? ' primary' : '')} data-known={value !== null} aria-hidden="true">
     {value !== null && <span style={{ width: value + '%' }} />}
@@ -47,11 +56,12 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
     </div>}
     <main className="records-scroll content-width" aria-label={`直近${query.period}日間の観測記録`} aria-busy={!model && !readError}>
       <section className="record-kpis" aria-label={`${query.period}日間の集計`}>
-        <div className="record-usage"><p>ショートカット使用率</p><strong data-kpi="rate">{rate(model?.summary.rate)}</strong>
+        <div className="record-usage"><p>ショートカット使用率</p><div className="record-value-line"><strong data-kpi="rate" data-empty={model?.summary.total === 0}>{model?.summary.total === 0 ? '記録なし' : rate(model?.summary.rate)}</strong>
+          {model && <Comparison value={model.comparison.improvement} missing={model.comparison.hasMissingCoverage} label="ショートカット使用率の前期間比" points />}</div>
           <RateBar value={model?.summary.barRate ?? null} primary /></div>
         <div className="record-counts"><p>操作回数</p><dl>
-          <div><dt>ショートカット</dt><dd data-kpi="key">{count(model?.summary.key)}</dd></div>
-          <div><dt>マウス</dt><dd data-kpi="mouse">{count(model?.summary.mouse)}</dd></div>
+          <div><dt>ショートカット</dt><dd><span data-kpi="key">{count(model?.summary.key)}</span>{model && <span className="count-comparison">（<Comparison value={model.comparison.key} missing={model.comparison.hasMissingCoverage} label="ショートカット回数の前期間比" />）</span>}</dd></div>
+          <div><dt>マウス</dt><dd><span data-kpi="mouse">{count(model?.summary.mouse)}</span>{model && <span className="count-comparison">（<Comparison value={model.comparison.mouse} missing={model.comparison.hasMissingCoverage} label="マウス回数の前期間比" />）</span>}</dd></div>
         </dl></div>
       </section>
       <div className="record-table-heading"><h2>操作別</h2><span className="compact-help"><RateHelp /></span>
@@ -67,16 +77,16 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
             <td className="record-shortcut"><div className="shortcut-keys" aria-label={operation.hint ?? operation.keys.join(' + ')} title={operation.hint}>
               {operation.keys.map((key, i) => <Fragment key={key}>{i > 0 && <span className="key-plus">+</span>}<kbd>{key}</kbd></Fragment>)}
             </div></td>
-            <td className="record-rate"><span className="compact-rate-label">キー率 </span><span>{rate(row?.rate)}</span>
-              {row?.total != null && <span className="record-fraction">（{row.key}/{row.total}）</span>}
+            <td className="record-rate"><span className="compact-rate-label">キー率 </span><span>{row.total === 0 ? '記録なし' : rate(row.rate)}</span>
+              {row.total !== null && row.total > 0 && <span className="record-fraction">（{row.key}/{row.total}）</span>}
               <RateBar value={row?.barRate ?? null} />
               <span className="visually-hidden">マウス <span data-kind="mouse">{row?.mouse ?? '—'}</span>回、キー <span data-kind="key">{row?.key ?? '—'}</span>回</span>
             </td>
-            <td className="record-comparison" aria-label="前期間比は準備中">—</td>
+            <td className="record-comparison"><Comparison value={row.comparison.improvement} missing={row.comparison.hasMissingCoverage} label={operation.label + 'の前期間比'} points /></td>
           </tr>;
         })}</tbody>
       </table>
-      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目は「—」です。12操作とも検出精度は未検証です。前期間との比較は準備中です。</p>
+      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目と率の分母が0の比較は「—」です。前期間比は直前の{query.period}日間との差です。欠測の0埋めや時間補正は行いません。12操作とも検出精度は未検証です。</p>
     </main>
   </div>;
 }

@@ -70,6 +70,12 @@ jobs:
         run: |
           node scripts/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
           exit $LASTEXITCODE
+      - name: Acquired-record comparison and coverage info (isolated SQLite)
+        run: |
+          node scripts/smoke.mjs --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/comparison-smoke.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/smoke.mjs --packaged --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-comparison-smoke.log
+          exit $LASTEXITCODE
       - name: JSON migration and process restart smoke
         run: |
           node scripts/smoke.mjs --migration 2>&1 | Tee-Object -FilePath .tools/test-results/migration-smoke.log
@@ -89,6 +95,7 @@ jobs:
             .tools/tests/coach-*/learning-layout.json
             .tools/tests/coach-*/records-*.png
             .tools/tests/coach-*/records-layout.json
+            .tools/tests/coach-*/records-comparison-*.json
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3

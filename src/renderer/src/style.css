@@ -148,7 +148,19 @@ kbd { font: 500 12px/16px Inter, 'Noto Sans JP', sans-serif; min-height: 26px; d
 .record-kpis { display: grid; grid-template-columns: 60% minmax(0,1fr); gap: 16px; border-block: 1px solid #f0f0ef; }
 .record-kpis p { margin: 0; font-size: 13px; line-height: 20px; color: var(--secondary); text-align: center; }
 .record-usage { height: 130px; padding: 16px 28px 10px; background: #fafaf9; border-radius: 24px; text-align: center; }
-.record-usage > strong { display: block; font: 600 48px/58px Inter, sans-serif; margin: 9px 0 12px; }
+.record-value-line { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 9px 0 12px; }
+.record-value-line > strong { font: 600 48px/58px Inter, sans-serif; }
+.record-value-line > strong[data-empty=true] { font-family: 'Noto Sans JP', sans-serif; font-size: 40px; }
+.comparison-value { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-variant-numeric: tabular-nums; }
+.comparison-value > span { overflow-wrap: anywhere; }
+.record-value-line .comparison-value { font: 600 14px/22px Inter, 'Noto Sans JP', sans-serif; }
+[data-direction="1"] { color: #287254; }
+[data-direction="-1"] { color: #b14242; }
+.coverage-info { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 18px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer; vertical-align: middle; }
+.coverage-info .icon { width: 18px; height: 18px; }
+.coverage-info:focus-visible { outline: 2px solid #5575ff; outline-offset: 2px; }
+.coverage-tooltip { position: fixed; z-index: 30; width: 454px; max-width: calc(100vw - 16px); padding: 17px 14px; border-radius: 8px; background: var(--shell); color: white; font: 400 12px/22px 'Noto Sans JP', sans-serif; text-align: left; box-shadow: 0 4px 12px #0002; }
+.count-comparison { display: inline-flex; align-items: center; font-size: 14px; margin-left: 2px; max-width: 100%; }
 .record-rate-bar { height: 3px; border-radius: 999px; background: #f6f6f5; overflow: hidden; }
 .record-rate-bar span { display: block; height: 100%; border-radius: inherit; background: #5575ff; }
 .record-rate-bar[data-known=false] { visibility: hidden; }
