@@ -18,7 +18,9 @@
 
 checkpointはmetaの1行のみ。正常commitの応答だけが失われた場合、Workerを開き直して同じsession/sequence/payloadを送ると加算せず成功する。同じ識別子の異なる内容・飛んだsequence・旧session・旧epochは拒否する。Nativeのgenerationが再利用されてもMainのsessionとは別になる。新Mainは排他取得後に新sessionをclaimする。
 
-全削除は観測停止→Core queue drain→未確定commitの解決→counts/coverage削除とepoch更新のtransaction。設定は保持する。削除自身の応答喪失にも同じcheckpointで対応し、古い候補・古いepochから復活させない。#16で移行済みの場合は同じtransactionでpending purgeを立て、旧JSON両文書を削除してから成功を返す。失敗時は停止・再試行し、再起動時にも観測前にcleanupする。
+全削除は観測停止→Core queue drain→未確定commitの解決→counts/coverage/legacy_days削除とepoch更新のtransaction。学習状態・opened・normal boundsは保持する。削除自身の応答喪失にも同じcheckpointで対応し、古い候補・古いepochから復活させない。移行の有無にかかわらず同じtransactionで`deletion_cleanup.pending=1`を立て、旧JSON両文書・その`.tmp`・固定staging `migration-v1/`を掃除してから成功を返す。別のmigration backupは作成していない。失敗時は停止・再試行し、再起動時にも観測前にcleanupする。既存の移行metaのpending purgeも引き継ぐ。
+
+削除確認はRendererの440×218 dialogで行う。MainがmainFrameに紐付いた5分有効の単回tokenを発行し、確定時はcontrol queueへ入れる前に消費する。取消・新規確認・hide・navigation・終了で旧tokenを無効化する。確定までは計測を継続し、削除・掃除成功後は元が計測中のときだけ新世代で再開する。失敗時は完了表示せず既存の保存エラー/再試行へ返し、その削除の再試行が成功した場合も元の計測状態へ戻す。
 
 ## coverage・時計・失敗
 

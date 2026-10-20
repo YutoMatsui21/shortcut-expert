@@ -7,6 +7,7 @@ import { RecordsPage } from './RecordsPage';
 import { LearningPage, LearningSummary } from './LearningPage';
 import { Icon } from './icons';
 import { SettingsPopover } from './SettingsPopover';
+import { DeleteDialog } from './DeleteDialog';
 
 export function CoachApp() {
   const coach = useCoach();
@@ -17,9 +18,11 @@ export function CoachApp() {
   const [readError, setReadError] = useState(false);
   const [day, setDay] = useState(localDate());
   const [settings, setSettings] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [maximized, setMaximized] = useState(false);
   useEffect(() => { if (coach.snapshot?.windowMaximized !== undefined) setMaximized(coach.snapshot.windowMaximized); }, [coach.snapshot?.windowMaximized]);
   const gear = useRef<HTMLButtonElement>(null);
+  const closeDelete = useCallback(() => { setDeleting(false); gear.current?.focus(); }, []);
   const closeSettings = useCallback(() => { if (settings) { setSettings(false); gear.current?.focus(); } }, [settings]);
   const changePage = (next: typeof page) => { closeSettings(); setPage(next); };
   useEffect(() => { const timer = setInterval(() => setDay(localDate()), 1000); return () => clearInterval(timer); }, []);
@@ -46,6 +49,7 @@ export function CoachApp() {
       </main>
     </div>
     <div className="records-frame" hidden={page !== 'records'}><RecordsPage coach={coach} query={recordsQuery} changeQuery={setRecordsQuery} /></div>
-    {settings && <SettingsPopover gear={gear} snapshot={coach.snapshot} busy={coach.busy} command={coach.command} close={closeSettings} deleteCounts={coach.deleteCounts} />}
+    {settings && <SettingsPopover gear={gear} snapshot={coach.snapshot} busy={coach.busy} command={coach.command} close={closeSettings} deleteCounts={() => setDeleting(true)} />}
+    {deleting && <DeleteDialog close={closeDelete} confirm={coach.deleteCounts} />}
   </div>;
 }

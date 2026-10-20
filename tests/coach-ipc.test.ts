@@ -1,5 +1,6 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import type { CoachBridge, Snapshot } from '../src/shared/coach.ts';
 
 type Handler = (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown;
@@ -12,7 +13,7 @@ const { registerCoachIpc } = await import('../src/main/coach-ipc.ts');
 test('正規の要求だけ実行し、別窓・子frame・不正な引数を副作用の前に拒否する', async () => {
   // Only Electron's identity boundary is faked; registration and validation are production code.
   const mainFrame = {};
-  const contents = { id: 1, mainFrame };
+  const contents = Object.assign(new EventEmitter(), { id: 1, mainFrame });
   const notice = { id: 2, mainFrame: {} };
   const event = { sender: contents, senderFrame: mainFrame } as Electron.IpcMainInvokeEvent;
   const noticeEvent = { sender: notice, senderFrame: notice.mainFrame } as Electron.IpcMainInvokeEvent;
@@ -29,16 +30,33 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
     setLearningState: mock.fn<CoachBridge['setLearningState']>(async () => snapshot),
     deleteCounts: mock.fn(async () => snapshot)
   };
-  registerCoachIpc(() => ({ webContents: contents }) as Electron.BrowserWindow, (id) => id === 2, requests);
-  assert.equal(handlers.size, 10);
+  const window = Object.assign(new EventEmitter(), { webContents: contents }) as Electron.BrowserWindow;
+  registerCoachIpc(() => window, (id) => id === 2, requests);
+  assert.equal(handlers.size, 12);
   const invoke = (channel: string, from: Electron.IpcMainInvokeEvent, ...args: unknown[]) => handlers.get(channel)!(from, ...args);
   for (const channel of handlers.keys()) {
+    if (channel === 'coach:delete' || channel === 'coach:cancel-delete') continue;
     const sender = channel === 'coach:get-notice' ? noticeEvent : event;
     const args = channel === 'coach:set-learning-state' ? ['W13', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
     assert.throws(() => invoke(channel, { ...sender, senderFrame: {} } as Electron.IpcMainInvokeEvent, ...args), /Unknown sender/);
     assert.throws(() => invoke(channel, channel === 'coach:get-notice' ? event : noticeEvent, ...args), /Unknown sender/);
     await invoke(channel, sender, ...args);
   }
+  for (const channel of ['coach:delete', 'coach:cancel-delete']) {
+    for (const invalid of [undefined, null, {}, true, '', 'fake']) assert.throws(() => invoke(channel, event, invalid), /confirmation/);
+    assert.throws(() => invoke(channel, noticeEvent, '00000000-0000-0000-0000-000000000000'), /Unknown sender/);
+    assert.throws(() => invoke(channel, {...event, senderFrame:{}} as Electron.IpcMainInvokeEvent, '00000000-0000-0000-0000-000000000000'), /Unknown sender/);
+  }
+  const cancelled = await invoke('coach:request-delete', event);
+  await invoke('coach:cancel-delete', event, cancelled);
+  assert.throws(() => invoke('coach:delete', event, cancelled), /confirmation/);
+  const token = await invoke('coach:request-delete', event);
+  await invoke('coach:delete', event, token);
+  assert.throws(() => invoke('coach:delete', event, token), /confirmation/);
+  assert.equal(requests.deleteCounts.mock.callCount(), 1);
+  const hidden = await invoke('coach:request-delete', event);
+  window.emit('hide');
+  assert.throws(() => invoke('coach:delete', event, hidden), /confirmation/);
   for (const value of [null, {}, 'unknown', 1]) assert.throws(() => invoke('coach:command', event, value), /Unknown command/);
   for (const value of [null, {}, 'quit', 1]) assert.throws(() => invoke('coach:window', event, value), /Unknown window command/);
   assert.equal(requests.windowCommand.mock.callCount(), 1);

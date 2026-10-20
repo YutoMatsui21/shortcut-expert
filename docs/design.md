@@ -34,7 +34,7 @@
 
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
-- Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証を担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除確認・終了判断は`coach-app.ts`に残す。
+- Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証と`DeleteConfirmation`の短命・単回tokenを担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除実行・終了判断は`coach-app.ts`に残す。確認UIはRendererの`DeleteDialog`で、キャンセル初期focus・modal Tab拘束・Esc取消と二重click防止を持つ。
 - #22の通常boundsはCoachWindowがDIPで取得し、Mainのwindow-boundsがwork areaへ補正する。Coreの設定キューから既存SQLite Workerへ保存する。最大化状態は非永続のsnapshot項目。coach-appの終了は重複要求をまとめ、制御待機→停止→bounds/保存flush→未保存確認→helper/Worker終了を待つ。[契約・V03未確認条件](window-lifecycle.md)。
 - #23のSettingsPopoverは共通gearの下に2スイッチを表示し、トレイと同じMain commandでsessionの通知pause・計測stop/startを制御する。停止中は通知の希望値を保持して変更を無効にする。CoachWindowの非永続stateVersionで、Rendererが新しい配信後に届く古いIPC応答を無視する。[設定パネル・検証範囲](settings-panel.md)。
 - #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。7日記録表示は`RecordsPage.tsx`に置き、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](learning-ui.md)。
@@ -142,7 +142,7 @@ W03に加えW02・W04・W05・W11の条件付き検出を実装し、全11候補
 | 速いNode試験 | Coreの判定・時刻・状態列、Repository、ObserverClient、NotificationWindow | Electron/子プロセス/FS失敗を境界でfake。実入力・実画面の証拠ではない |
 | C# policy | 本番CandidateTrackerとDisplayPolicyをリンクした`tests/native-policy`、serialize出力→TS検証・判定 | 人工事象・状態。Win32配送・アプリ精度を保証しない。assertはC#で実行し、Nodeサブテストに水増ししない |
 | 実helper結合 | hook開始解除、start/stop/世代/EOF/shutdown | fixtureで入力payloadを読まない。callbackのOS取得は別確認 |
-| Electron smoke | 実Main/Preload/React、通知、画面操作、IPC拒否、設定再読込、削除取消/確定、解除・終了 | 人工候補・専用userData。削除確認だけOS dialogの返答を置換。通常tray・インストーラー・実認識精度は別 |
+| Electron smoke | 実Main/Preload/React、通知、画面操作、IPC拒否、設定再読込、削除取消/確定、解除・終了 | 人工候補・専用userData。削除確認も本番Renderer dialogとMain単回tokenを通す。通常tray・インストーラー・実認識精度は別 |
 | 同梱smoke | 同じbuildから生成したexe・preload・renderer・helper | 開発版と同じ隔離fixture。SDKなしでの導入とNSISは別 |
 | 実機受入 | Windows 11通常権限、対象app・1〜2画面、同等キー・入力精度・通常60分・導入と削除 | 本人の明示的な同意後に実施し、成果物版/hashと実施条件を残す。既存MVP基準を維持 |
 

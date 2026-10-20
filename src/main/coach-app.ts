@@ -33,11 +33,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   let tray: Tray | null = null;
   let ticker: NodeJS.Timeout | undefined;
   let errorStop = false;
-  let fixtureDeleteResponse: number | null = null;
   let fixtureQuitResponse: number | null = null;
   let fixtureTick: (() => void) | null = null;
   let exiting: Promise<void> | null = null;
   let exitRequested = false;
+  let deleteResume: boolean | null = null;
   const control = new SerialQueue();
   let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
@@ -99,7 +99,13 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       case 'resume-notifications': coach.pauseNotifications(false); break;
       case 'stop': await stopObservation(); break;
       case 'start': await startObservation(); break;
-      case 'retry-save': await coach.retrySave(); break;
+      case 'retry-save':
+        await coach.retrySave();
+        if (deleteResume !== null && !coach.snapshot().error && !coach.snapshot().pendingSave) {
+          const resume = deleteResume; deleteResume = null;
+          if (resume) await startObservation();
+        }
+        break;
       case 'quit': break;
       default: throw new Error('Unknown command.');
     }
@@ -131,15 +137,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   };
   const deleteCounts = () => control.run(async () => {
     if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
-    const window = coachWindow.current;
-    if (!window) return coachWindow.withWindowState(coach.snapshot());
-    // Replace only the OS confirmation response in the isolated smoke, not deletion logic.
-    const result = fixture && fixtureDeleteResponse !== null ? { response: fixtureDeleteResponse } : await dialog.showMessageBox(window, { type: 'question', message: '保存した全日分の記録を削除しますか？',
-      detail: '操作別の通知設定は残ります。', buttons: ['キャンセル', '記録を削除'], defaultId: 0, cancelId: 0 });
-    fixtureDeleteResponse = null;
-    if (result.response !== 1) return coachWindow.withWindowState(coach.snapshot());
-    const resume = coach.snapshot().observing; await stopObservation(); await coach.deleteCounts();
-    if (!coach.snapshot().error && resume) await startObservation();
+    deleteResume ??= coach.snapshot().observing;
+    await stopObservation(); await coach.deleteCounts();
+    if (!coach.snapshot().error && !coach.snapshot().pendingSave) {
+      const resume = deleteResume; deleteResume = null;
+      if (resume) await startObservation();
+    }
     return coachWindow.withWindowState(coach.snapshot());
   });
   registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
@@ -226,9 +229,8 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | undefined;
     try {
       report = await Promise.race([
-        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
-          chooseDelete: (response) => { fixtureDeleteResponse = response; },
           verifyWindowExit: async () => {
             const save = repository.saveSettings.bind(repository);
             repository.saveSettings = async () => { throw new Error('fixture settings failure'); };

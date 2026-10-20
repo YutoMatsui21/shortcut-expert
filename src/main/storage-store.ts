@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync, unlinkSync } from 'node:fs';
+import { openSync, closeSync, readFileSync, writeFileSync, fsyncSync, renameSync, unlinkSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { operations, type OperationId, type Settings } from '../shared/coach.ts';
@@ -134,12 +134,19 @@ export class StorageStore {
   }
   private purgeLegacy(): void {
     if (this.mode !== 'active') return;
-    if (this.db.prepare('SELECT purge FROM migration WHERE id=1').get()?.purge !== 1) return;
-    for (const name of ['counts.json', 'settings.json']) {
+    const pending = this.db.prepare("SELECT name FROM sqlite_schema WHERE name='deletion_cleanup'").get() &&
+      this.db.prepare('SELECT pending FROM deletion_cleanup WHERE id=1').get()?.pending === 1;
+    if (!pending && this.db.prepare('SELECT purge FROM migration WHERE id=1').get()?.purge !== 1) return;
+    for (const name of ['counts.json', 'settings.json', 'counts.json.tmp', 'settings.json.tmp']) {
       try { unlinkSync(join(dirname(this.root), name)); }
       catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     }
-    this.db.prepare('UPDATE migration SET purge=2 WHERE id=1').run();
+    // Only the fixed migration directory produced by prepareStorage; never caller supplied paths.
+    rmSync(join(dirname(this.root), 'migration-v1'), { recursive: true, force: true });
+    this.transaction(() => {
+      this.db.prepare('UPDATE migration SET purge=2 WHERE id=1').run();
+      if (pending) this.db.exec('UPDATE deletion_cleanup SET pending=0 WHERE id=1');
+    });
   }
   load(today: string): StorageState {
     check(validDate(today), 'INVALID_DAY');
@@ -190,7 +197,10 @@ export class StorageStore {
         const future = this.db.prepare('SELECT day FROM counts WHERE day>? LIMIT 1').get(value.today);
         check(!future, 'FUTURE_RECORDS');
       }
-      if (value.reset) this.db.exec('DELETE FROM counts; DELETE FROM coverage; DELETE FROM legacy_days; UPDATE migration SET purge=1 WHERE id=1;');
+      if (value.reset) this.db.exec(`DELETE FROM counts; DELETE FROM coverage; DELETE FROM legacy_days;
+        UPDATE migration SET purge=1 WHERE id=1;
+        CREATE TABLE IF NOT EXISTS deletion_cleanup (id INTEGER PRIMARY KEY CHECK(id=1), pending INTEGER NOT NULL) STRICT;
+        INSERT INTO deletion_cleanup VALUES (1,1) ON CONFLICT(id) DO UPDATE SET pending=1;`);
       else {
         if (value.count) {
           const c = value.count;

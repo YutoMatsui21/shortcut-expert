@@ -11,6 +11,14 @@ mock.module('electron', { namedExports: {
   contextBridge: { exposeInMainWorld: (name: string, value: CoachBridge) => { assert.equal(name, 'coach'); bridge = value; } }
 } });
 await import('../src/preload/index.ts');
+test('delete confirmation has dedicated request, cancellation and token-only commit channels', async () => {
+  await bridge.requestDelete();
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:request-delete']);
+  await bridge.cancelDelete('token');
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:cancel-delete', 'token']);
+  await bridge.deleteCounts('token');
+  assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:delete', 'token']);
+});
 test('record summary exposes only period/filter/sort for a bounded query', async () => {
   await bridge.getRecordSummary();
   assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:get-record-summary', undefined]);

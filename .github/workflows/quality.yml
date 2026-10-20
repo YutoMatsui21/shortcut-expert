@@ -103,6 +103,7 @@ jobs:
             .tools/tests/coach-*/records-layout.json
             .tools/tests/coach-*/records-comparison-*.json
             .tools/tests/coach-*/settings-*.png
+            .tools/tests/coach-*/delete-*.png
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3

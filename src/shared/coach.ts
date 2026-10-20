@@ -55,7 +55,9 @@ export type CoachBridge = {
   command(command: 'pause-notifications' | 'resume-notifications' | 'stop' | 'start' | 'retry-save' | 'quit'): Promise<Snapshot>;
   setMuted(operation: OperationId, muted: boolean): Promise<Snapshot>;
   setLearningState(operation: OperationId, state: LearningState): Promise<Snapshot>;
-  deleteCounts(): Promise<Snapshot>;
+  requestDelete(): Promise<string>;
+  cancelDelete(token: string): Promise<void>;
+  deleteCounts(token: string): Promise<Snapshot>;
   subscribe(listener: (snapshot: Snapshot) => void): () => void;
 };
 

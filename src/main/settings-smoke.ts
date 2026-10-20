@@ -6,8 +6,10 @@ import type { CoachBridge, Snapshot } from '../shared/coach';
 import { coachTrayMenu } from './coach-tray';
 import { selectPage, waitForLearning } from './learning-smoke';
 import { SqliteRepository } from './sqlite-repository';
+import { runDeleteSmoke } from './delete-smoke';
+import type { Coach } from '../core/coach';
 
-export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command'], repository: unknown) {
+export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command'], repository: unknown, coach: Pick<Coach, keyof Coach>) {
   const js = (source: string) => window.webContents.executeJavaScript(source);
   const gear = `document.querySelector('.gear-button')`;
   const control = (name: string) => `document.querySelector('.settings-switch[aria-label="${name}"]')`;
@@ -121,5 +123,6 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
   await waitForLearning(window, `!document.querySelector('.settings-popover')`);
   window.show(); window.focus(); await closed();
   await open(); await js(`window.dispatchEvent(new Event('blur'))`); await closed();
-  return { settings: true, sizes, trayCommands: true, keyboard: true, stoppedPausePreserved: true };
+  const deletion = await runDeleteSmoke(window, coach, command, repository);
+  return { settings: true, sizes, trayCommands: true, keyboard: true, stoppedPausePreserved: true, ...deletion };
 }
