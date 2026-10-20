@@ -7,6 +7,7 @@ import { validDate } from '../core/dates.ts';
 import { SerialQueue } from '../core/serial-queue.ts';
 import { isLearningState } from '../shared/learning.ts';
 import { recordOperations } from '../shared/storage.ts';
+import { isNormalBounds } from '../shared/window.ts';
 
 function object(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -39,7 +40,8 @@ export function settingsDocument(value: unknown): Settings | null {
 }
 function validSettings(value: unknown): value is Settings {
   const ids = [...operations.map(op => op.id), ...recordOperations];
-  return object(value) && keys(value, ['muted', 'opened', 'states']) && typeof value.opened === 'boolean' &&
+  return object(value) && keys(value, ['muted', 'opened', 'states', 'normalBounds']) && typeof value.opened === 'boolean' &&
+    (value.normalBounds === undefined || isNormalBounds(value.normalBounds)) &&
     Array.isArray(value.muted) && value.muted.every((id) => ids.includes(id)) &&
     new Set(value.muted).size === value.muted.length && (value.states === undefined ||
       (object(value.states) && Object.entries(value.states).every(([id, state]) => ids.some(value => value === id) && isLearningState(state))));
@@ -54,7 +56,7 @@ export class JsonRepository implements Repository {
     const settingsFile = await this.read('settings.json', { schemaVersion: 1, muted: [], opened: false });
     const counts = countsDocument(countsFile);
     // v2 is used only by the retained JSON regression fixture. Legacy migration stays strict v1.
-    const settings = object(settingsFile) && settingsFile.schemaVersion === 2 && object(settingsFile.states)
+    const settings = object(settingsFile) && settingsFile.schemaVersion === 2 && (object(settingsFile.states) || isNormalBounds(settingsFile.normalBounds))
       ? (({ schemaVersion, ...value }) => validSettings(value) ? value : null)(settingsFile) : settingsDocument(settingsFile);
     if (!counts || !settings) throw new Error('保存データの形式が不正です。元のファイルは保持しています。');
     return { counts, settings };
@@ -65,7 +67,7 @@ export class JsonRepository implements Repository {
   }
   async saveSettings(settings: Settings): Promise<void> {
     if (!validSettings(settings)) throw new Error('保存データの形式が不正です。');
-    await this.write('settings.json', { schemaVersion: settings.states ? 2 : 1, ...settings });
+    await this.write('settings.json', { schemaVersion: settings.states || settings.normalBounds ? 2 : 1, ...settings });
   }
   private async read(name: string, fallback: unknown): Promise<unknown> {
     try { return JSON.parse(await readFile(join(this.directory, name), 'utf8')); }

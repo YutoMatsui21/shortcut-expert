@@ -1,24 +1,52 @@
 import { join } from 'node:path';
 import { BrowserWindow } from 'electron';
-import type { Snapshot } from '../shared/coach';
+import type { Bounds, Snapshot } from '../shared/coach';
+import { visibleNormalBounds } from './window-bounds.ts';
+import { isNormalBounds } from '../shared/window.ts';
+import { SerialQueue } from '../core/serial-queue.ts';
+
+type WindowPreferences = { saved?: Bounds; workAreas(): Bounds[]; save(bounds: Bounds): Promise<void> };
 
 export class CoachWindow {
   private window: BrowserWindow | null = null;
+  private preferences?: WindowPreferences;
+  private normal?: Bounds;
+  private timer?: NodeJS.Timeout;
+  private saving: Promise<void> = Promise.resolve();
+  private saves = new SerialQueue();
+  private disposed = false;
+  private snapshot?: Snapshot;
+  private dirty = false;
 
   get current(): BrowserWindow | null {
     return this.window && !this.window.isDestroyed() ? this.window : null;
   }
 
-  async create(load: (window: BrowserWindow, mode: string) => Promise<void>, isQuitting: () => boolean): Promise<BrowserWindow> {
+  async create(load: (window: BrowserWindow, mode: string) => Promise<void>, isQuitting: () => boolean, preferences?: WindowPreferences): Promise<BrowserWindow> {
     if (this.current) return this.current;
-    const window = new BrowserWindow({ width: 1120, height: 700, minWidth: 800, minHeight: 600, show: false, frame: false,
+    this.preferences = preferences; this.disposed = false;
+    this.normal = preferences ? visibleNormalBounds(preferences.saved, preferences.workAreas()) : undefined;
+    this.dirty = !!preferences && JSON.stringify(preferences.saved) !== JSON.stringify(this.normal);
+    const window = new BrowserWindow({ width: 1120, height: 700, ...this.normal, minWidth: 800, minHeight: 600, show: false, frame: false,
       autoHideMenuBar: true, backgroundColor: '#ffffff',
       webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     this.window = window;
+    const remember = () => {
+      if (!preferences || this.disposed || window.isMaximized() || window.isMinimized()) return;
+      const bounds = window.getNormalBounds();
+      if (!isNormalBounds(bounds) || JSON.stringify(bounds) === JSON.stringify(this.normal)) return;
+      this.normal = bounds;
+      this.dirty = true;
+      // Coalesce the latest value with a bounded write interval even during long drags.
+      this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush().catch(() => {}); }, 250);
+    };
+    window.on('move', remember); window.on('resize', remember);
+    const stateChanged = () => { if (this.snapshot) this.publish(this.snapshot); };
+    window.on('maximize', stateChanged); window.on('unmaximize', stateChanged);
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     window.webContents.on('will-navigate', (event) => event.preventDefault());
     window.on('close', (event) => { if (!isQuitting()) { event.preventDefault(); this.hide(); } });
-    window.on('closed', () => { if (this.window === window) this.window = null; });
+    window.on('closed', () => { clearTimeout(this.timer); this.timer = undefined; if (this.window === window) this.window = null; });
     await load(window, 'coach');
     return window;
   }
@@ -27,11 +55,46 @@ export class CoachWindow {
     const window = this.current;
     if (!window) return;
     if (window.isMinimized()) window.restore();
+    this.correctBounds();
     window.show();
     window.focus();
   }
 
   hide(): void { this.current?.hide(); }
+
+  correctBounds(): void {
+    const window = this.current;
+    if (!window || !this.preferences || this.disposed) return;
+    const before = window.getNormalBounds();
+    const next = visibleNormalBounds(before, this.preferences.workAreas());
+    if (JSON.stringify(before) === JSON.stringify(next)) return;
+    const maximized = window.isMaximized();
+    const minimized = window.isMinimized();
+    if (minimized) window.restore();
+    if (maximized) window.unmaximize();
+    window.setBounds(next);
+    this.normal = next;
+    this.dirty = true;
+    this.timer ??= setTimeout(() => { this.timer = undefined; void this.flush().catch(() => {}); }, 250);
+    if (maximized) window.maximize();
+    if (minimized) window.minimize();
+  }
+
+  async flush(dispose = false): Promise<void> {
+    if (dispose) this.disposed = true;
+    clearTimeout(this.timer); this.timer = undefined;
+    const bounds = this.normal;
+    if (bounds && this.preferences && this.dirty) {
+      this.dirty = false;
+      const save = this.preferences.save;
+      this.saving = this.saves.run(async () => {
+        try { await save(bounds); }
+        catch (error) { if (this.normal === bounds) this.dirty = true; throw error; }
+      });
+    }
+    await this.saving;
+  }
+  resumeBounds(): void { this.disposed = false; }
 
   command(command: 'minimize' | 'maximize' | 'hide'): void {
     const window = this.current;
@@ -42,5 +105,9 @@ export class CoachWindow {
     else window.maximize();
   }
 
-  publish(snapshot: Snapshot): void { this.current?.webContents.send('coach:changed', snapshot); }
+  withWindowState(snapshot: Snapshot): Snapshot { return { ...snapshot, windowMaximized: this.current?.isMaximized() ?? false }; }
+  publish(snapshot: Snapshot): void {
+    this.snapshot = snapshot;
+    this.current?.webContents.send('coach:changed', this.withWindowState(snapshot));
+  }
 }

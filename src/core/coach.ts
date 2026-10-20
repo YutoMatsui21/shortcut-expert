@@ -140,6 +140,20 @@ export class Coach {
       }
     });
   }
+  setNormalBounds(normalBounds: import('../shared/coach.ts').Bounds): Promise<void> {
+    return this.queue.run(async () => {
+      const notify = this.pendingSettings !== null;
+      const next = { ...(this.pendingSettings ?? this.settings), normalBounds: { ...normalBounds } };
+      try {
+        await this.dependencies.repository.saveSettings(next);
+        this.settings = next; this.pendingSettings = null;
+        if (!this.pendingSave && this.error === '設定を保存できません。再試行してください。') this.error = null;
+      } catch {
+        this.pendingSettings = next; this.error = '設定を保存できません。再試行してください。'; this.stop();
+      }
+      if (notify || this.pendingSettings) this.dependencies.changed(this.snapshot());
+    });
+  }
   private async refreshDate(): Promise<void> {
     const today = this.dependencies.date();
     if (!validDate(today) || Object.keys(this.counts).some((day) => day > today)) {

@@ -35,12 +35,13 @@ export type CandidateV2 = {
 export type ObserverCandidate = Candidate | CandidateV2;
 export type Counts = Record<string, Partial<Record<OperationId, { mouse: number; key: number }>>>;
 export type LearningState = 'learning' | 'mastered' | 'excluded';
-export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>> };
+export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>>; normalBounds?: Bounds };
 export type Snapshot = {
   counts: Counts; settings: Settings;
   coverage?: import('./storage.ts').CoverageDays; revision?: number;
   observing: boolean; notificationsPaused: boolean;
   error: string | null; pendingSave: boolean;
+  windowMaximized?: boolean;
 };
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
 export type CoachBridge = {

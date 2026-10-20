@@ -5,6 +5,7 @@ import { localDate } from '../../core/dates';
 import { useCoach } from './useCoach';
 import { Icon } from './icons';
 import { MissingCoverageInfo } from './MissingCoverageInfo';
+import { learningState } from '../../shared/learning';
 
 const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP') + '回';
 const rate = (value: number | null | undefined) => value == null ? '—' : value.toFixed(1) + '%';
@@ -29,6 +30,9 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
   const [day, setDay] = useState(localDate());
   const [result, setResult] = useState<RecordsReadModel>();
   const [readError, setReadError] = useState(false);
+  // Window state/bounds publications must not discard rows and reset the scroll position.
+  const selection = JSON.stringify(learningOperations.map(operation => coach.snapshot ? learningState(coach.snapshot.settings, operation.id) : null));
+  const recordsVersion = coach.snapshot?.revision ?? JSON.stringify(coach.snapshot?.counts);
   useEffect(() => { const timer = setInterval(() => setDay(localDate()), 1000); return () => clearInterval(timer); }, []);
   useEffect(() => {
     let active = true;
@@ -37,7 +41,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
       if (active) { setResult(value); setReadError(false); }
     }, () => { if (active) { setResult(undefined); setReadError(true); } });
     return () => { active = false; };
-  }, [query, day, coach.snapshot?.revision, coach.snapshot?.error, coach.snapshot?.settings]);
+  }, [query, day, recordsVersion, coach.snapshot?.error, selection]);
   const model = result?.to === day && result.query.period === query.period && result.query.filter === query.filter && result.query.sort === query.sort && result.revision >= (coach.snapshot?.revision ?? 0) ? result : undefined;
   const choose = (field: keyof RecordsQuery, value: string) => {
     const next = { ...query, [field]: field === 'period' ? Number(value) : value };
