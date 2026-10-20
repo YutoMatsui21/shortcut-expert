@@ -10,8 +10,13 @@ type Props = {
 
 export function SettingsPopover({ gear, snapshot, busy, command, close, deleteCounts }: Props) {
   const panel = useRef<HTMLDivElement>(null);
+  const focusAssigned = useRef(false);
   useEffect(() => {
-    panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    if (focusAssigned.current) return;
+    const first = panel.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    if (first) { first.focus(); focusAssigned.current = true; }
+  }, [busy, snapshot]);
+  useEffect(() => {
     const outside = (event: PointerEvent) => {
       if (!panel.current?.contains(event.target as Node) && !gear.current?.contains(event.target as Node)) {
         event.preventDefault(); close();

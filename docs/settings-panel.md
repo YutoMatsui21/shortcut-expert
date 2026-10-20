@@ -10,6 +10,8 @@ MainのCoachWindowは非永続のstateVersionを配信・IPC応答へ付ける�
 
 Enter/Spaceでgearとswitchを操作し、開いた時は最初の有効switchへfocusする。Esc・外click・gear再clickで閉じてgearへfocusを戻す。ページ切替・窓非表示・blurでも閉じる。削除入口はpanelを閉じ、既存のMain確認dialogへ渡す。正式な削除dialogと確認tokenは#24の範囲。
 
+初期snapshot待ち・command処理中に開いて全buttonが無効な場合は、最初に操作が有効になった時にfocusを移す。一度focusを割り当てた後はsnapshot配信で利用者のfocusを奪わない。隔離smokeは実settings保存をdeferredで保留し、この操作列の修正前失敗と修正後成功を確認する。
+
 ## 検証
 
 `tests/settings-state.test.ts` は遅いsnapshot応答とトレイcommandを確認する。`learning-state.test.ts` は実SQLite Workerの保存遅延・停止・再開禁止・新世代再開・旧世代拒否・新世代通知を確認する。

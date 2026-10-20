@@ -5,8 +5,9 @@ import { app, type BrowserWindow } from 'electron';
 import type { CoachBridge, Snapshot } from '../shared/coach';
 import { coachTrayMenu } from './coach-tray';
 import { selectPage, waitForLearning } from './learning-smoke';
+import { SqliteRepository } from './sqlite-repository';
 
-export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command']) {
+export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command'], repository: unknown) {
   const js = (source: string) => window.webContents.executeJavaScript(source);
   const gear = `document.querySelector('.gear-button')`;
   const control = (name: string) => `document.querySelector('.settings-switch[aria-label="${name}"]')`;
@@ -23,6 +24,27 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
   const closed = () => waitForLearning(window, `!document.querySelector('.settings-popover') && document.activeElement === ${gear}`);
   window.show(); window.focus();
   await waitForLearning(window, 'document.hasFocus()');
+  assert.ok(repository instanceof SqliteRepository);
+  const saveSettings = repository.saveSettings.bind(repository);
+  let release!: () => void, entered!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const saving = new Promise<void>(resolve => { entered = resolve; });
+  repository.saveSettings = async value => { entered(); await held; await saveSettings(value); };
+  try {
+    await js(`(() => {
+      const select = document.querySelector('[data-learning-operation="W12"] select');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'mastered');
+      select.dispatchEvent(new Event('change', {bubbles:true}));
+    })()`);
+    await saving;
+    await open();
+    assert.equal(await js(`!!document.querySelector('.settings-popover button:not(:disabled)')`), false);
+    release();
+    await state('通知', true);
+    await waitForLearning(window, `document.activeElement === ${control('通知')}`);
+    await key('Escape'); await closed();
+  } finally { release(); repository.saveSettings = saveSettings; }
+  await js(`window.coach.setLearningState('W12', 'learning')`);
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 600);

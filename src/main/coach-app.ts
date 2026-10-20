@@ -81,7 +81,9 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (snapshot.error) await coach.initialize();
     if (coach.snapshot().error) return;
     try { const generation = await observer.start(); errorStop = false; coach.begin(generation); publish(coach.snapshot()); }
-    catch (error) { coach.fault(error instanceof Error && error.message === 'arranged-api-unavailable'
+    catch (error) {
+      if (fixture) console.error('COACH_FIXTURE_START_FAILED ' + (error instanceof Error ? error.message : 'unknown'));
+      coach.fault(error instanceof Error && error.message === 'arranged-api-unavailable'
       ? '最大化判定に必要なWindows機能を取得できません。'
       : 'Windowsの観測を開始できません。再開してください。'); }
   };
@@ -224,7 +226,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | undefined;
     try {
       report = await Promise.race([
-        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           chooseDelete: (response) => { fixtureDeleteResponse = response; },
           verifyWindowExit: async () => {
