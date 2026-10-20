@@ -8,6 +8,8 @@ settingsのoptional `normalBounds: { x, y, width, height }`に整数DIPだけを
 
 move/resizeでgetNormalBoundsを取得し、最大化・最小化中のイベントは採用しない。250ms以内の変更を最後の通常値へまとめ、連続drag中も書込みを無期限に延期しない。終了前に残りをflushする。保存失敗は既存のpendingSaveと再試行へつなぐ。窓位置の正常保存だけでは記録画面を更新せず、サイズ変更で行とスクロールを破棄しない。
 
+boundsだけの保存は記録ReadModelを変えないためmeta.revisionを進めない。学習状態など他のsettings変更は従来どおりrevisionを進める。実Worker試験でこの差と再open後のbounds保持を確認する。
+
 起動・再表示・display追加/除去/metrics変更時に現在のwork areaと照合する。有効な負座標は保持し、caption全体（窓controlsを含む）が1画面内に残らなければ、最も重なるwork areaへ補正する。補正が必要な場合は画面に収まる大きさへ制限するが最小寸法を下げない。800×600 DIP未満のwork areaでは全体収容を保証できない。最大化中の補正は通常位置を直してから最大化へ戻す。最大化状態自体は永続化しない。
 
 トレイの表示/double-clickとsecond-instanceはshowCoachを共用し、最小化からrestore→位置補正→show→focusする。初期化中の表示要求も初期化後に反映する。通常の再起動表示はopenedに従い、通知cold起動は#27に残す。

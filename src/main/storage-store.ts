@@ -221,8 +221,12 @@ export class StorageStore {
   saveSettings(settings: Settings): void {
     validateSettings(settings);
     this.transaction(() => {
+      const previous: Settings = JSON.parse(String(this.db.prepare('SELECT value FROM settings WHERE id=1').get()!.value));
+      validateSettings(previous);
+      const readModelSettings = (value: Settings) => JSON.stringify({ muted: value.muted, opened: value.opened, states: value.states });
       this.db.prepare('UPDATE settings SET value=? WHERE id=1').run(JSON.stringify(settings));
-      this.db.exec('UPDATE meta SET revision=revision+1 WHERE id=1');
+      // Normal window bounds do not change counts, coverage, filtering or learning state.
+      if (readModelSettings(previous) !== readModelSettings(settings)) this.db.exec('UPDATE meta SET revision=revision+1 WHERE id=1');
     });
   }
   close(): void { this.db.close(); }

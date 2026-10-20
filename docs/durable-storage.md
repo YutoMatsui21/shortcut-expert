@@ -30,6 +30,8 @@ checkpointはmetaの1行のみ。正常commitの応答だけが失われた場�
 
 UIは保存済みの数値を表示する。coverage根拠もcountもない操作は「—」とし、取得済みcountをunknownのために隠さない。queryのrevisionとeffect取消で古い返信が新しい選択・削除後の表示を上書きするのを防ぐ。期間比較・欠損infoの正式デザインは後続Issueの範囲。
 
+#22のnormalBoundsだけのsettings保存はReadModelへ影響しないためrevisionを進めない。他のsettings変更と記録transactionのrevision更新は維持する。[窓制御の契約](window-lifecycle.md)。
+
 保存失敗・結果不明は同じ差分をメモリーに残し、観測・通知を停止する。再試行はWorker再接続後に同一transactionを再送し、観測の自動再開や過去通知の再送はしない。DB破損等の読込失敗でも空のDBへ置き換えず、原本を保持する。プロセス終了時に未commitのメモリー分が失われる制約は従来どおり。
 
 ## 検証

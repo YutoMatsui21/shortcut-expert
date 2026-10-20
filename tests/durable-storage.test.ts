@@ -16,8 +16,12 @@ const worker = resolve('src/main/storage-worker.ts');
 test('normal bounds persist via the real worker, preserve learning settings and survive delete/reopen', async t => {
   const h = await fixture(t);
   const bounds = { x: -1200, y: 80, width: 1000, height: 650 };
+  const revision = h.coach.snapshot().revision;
   await h.coach.setNormalBounds(bounds);
+  assert.equal(h.coach.snapshot().revision, revision);
+  assert.equal((await h.repository.query('2026-10-19', '2026-10-19')).revision, revision, 'bounds-only writes do not invalidate record views');
   await h.coach.setLearningState('W03', 'mastered');
+  assert.notEqual(h.coach.snapshot().revision, revision, 'learning changes still invalidate record views');
   await h.coach.opened();
   await h.coach.deleteCounts();
   await h.repository.close();
