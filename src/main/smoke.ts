@@ -199,6 +199,6 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
     uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     windowHiddenAndRestored: true, rendererResubscribed: true, captionCommands: true,
-    pendingExitCancelledAndRecovered: true, windowEvidence,
+    pendingExitCancelledAndRecovered: true, failedExitTickerResumed: true, windowEvidence,
     realDisplayContext: process.argv.includes('--real-display-smoke') };
 }

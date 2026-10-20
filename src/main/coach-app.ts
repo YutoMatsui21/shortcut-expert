@@ -33,6 +33,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   let errorStop = false;
   let fixtureDeleteResponse: number | null = null;
   let fixtureQuitResponse: number | null = null;
+  let fixtureTick: (() => void) | null = null;
   let exiting: Promise<void> | null = null;
   let exitRequested = false;
   const control = new SerialQueue();
@@ -117,7 +118,8 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
       if (answer.response !== 1) { exitRequested = false; coachWindow.resumeBounds(); showCoach(); return; }
     }
-    clearInterval(ticker); await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close();
+    await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close();
+    clearInterval(ticker);
     quitting = true; tray?.destroy(); app.quit();
   };
   const quit = (): Promise<void> => {
@@ -211,6 +213,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (exitRequested) return;
     if (repository instanceof SqliteRepository) void coach.tick();
     else if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
+    fixtureTick?.();
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
   powerMonitor.on('suspend', () => { if (coach.snapshot().observing) { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); } });
@@ -240,6 +243,17 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
             fixtureQuitResponse = null;
             await coach.retrySave();
             if (coach.snapshot().pendingSave) throw new Error('quit-retry-save');
+            const shutdown = observer.shutdown.bind(observer);
+            observer.shutdown = async () => { throw new Error('fixture unconfirmed helper exit'); };
+            await quit();
+            observer.shutdown = shutdown;
+            if (quitting || !window.isVisible()) throw new Error('quit-failure-recovery');
+            await command('start');
+            if (!coach.snapshot().observing) throw new Error('quit-failure-restart');
+            await new Promise<void>((resolve, reject) => {
+              const timeout = setTimeout(() => { fixtureTick = null; reject(new Error('quit-failure-ticker')); }, 3000);
+              fixtureTick = () => { fixtureTick = null; clearTimeout(timeout); resolve(); };
+            });
           } }),
         new Promise<never>((_, reject) => {
           deadline = setTimeout(() => reject(new Error('smoke-timeout')), 25_000);
