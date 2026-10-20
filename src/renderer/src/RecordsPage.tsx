@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import type { RecordsReadModel } from '../../shared/records';
+import { isRecordsQuery, type RecordsQuery, type RecordsReadModel } from '../../shared/records';
 import { learningOperations } from '../../shared/learning';
 import { localDate } from '../../core/dates';
 import { useCoach } from './useCoach';
@@ -16,7 +16,7 @@ function RateHelp() {
   return <span className="help" tabIndex={0} role="note" aria-label="キー率の計算方法"><Icon name="imgHelpIconHover" />
     <span className="tooltip">キー操作回数 ÷（キー操作回数＋マウス操作回数）。記録なしと0%は区別します。</span></span>;
 }
-export function RecordsPage({ coach }: { coach: ReturnType<typeof useCoach> }) {
+export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<typeof useCoach>; query: RecordsQuery; changeQuery(value: RecordsQuery): void }) {
   const [day, setDay] = useState(localDate());
   const [result, setResult] = useState<RecordsReadModel>();
   const [readError, setReadError] = useState(false);
@@ -24,22 +24,29 @@ export function RecordsPage({ coach }: { coach: ReturnType<typeof useCoach> }) {
   useEffect(() => {
     let active = true;
     setResult(undefined);
-    void window.coach.getRecordSummary().then(value => {
+    void window.coach.getRecordSummary(query).then(value => {
       if (active) { setResult(value); setReadError(false); }
     }, () => { if (active) { setResult(undefined); setReadError(true); } });
     return () => { active = false; };
-  }, [day, coach.snapshot?.revision, coach.snapshot?.error, coach.snapshot?.settings]);
-  const model = result?.to === day && result.revision >= (coach.snapshot?.revision ?? 0) ? result : undefined;
+  }, [query, day, coach.snapshot?.revision, coach.snapshot?.error, coach.snapshot?.settings]);
+  const model = result?.to === day && result.query.period === query.period && result.query.filter === query.filter && result.query.sort === query.sort && result.revision >= (coach.snapshot?.revision ?? 0) ? result : undefined;
+  const choose = (field: keyof RecordsQuery, value: string) => {
+    const next = { ...query, [field]: field === 'period' ? Number(value) : value };
+    if (isRecordsQuery(next)) changeQuery(next);
+  };
   return <div className="records-page">
     <header className="records-header content-width"><h1>記録</h1>
-      <div className="records-scope"><span>期間 <strong>直近7日間</strong></span><span>集計対象 <strong>すべての操作</strong></span></div>
+      <div className="records-scope">
+        <label>期間<select aria-label="期間" value={query.period} onChange={e => choose('period', e.target.value)}><option value={7}>直近7日間</option><option value={30}>直近30日間</option></select></label>
+        <label>集計対象<select aria-label="集計対象" value={query.filter} onChange={e => choose('filter', e.target.value)}><option value="learning-mastered">学習中・習得済み</option><option value="learning">学習中のみ</option><option value="all">すべて</option></select></label>
+      </div>
     </header>
     {(readError || coach.snapshot?.error || coach.message) && <div className="error content-width" role="alert">
       {coach.snapshot?.error ?? coach.message ?? '記録を読み込めません。'}
       {coach.snapshot?.pendingSave && <button disabled={coach.busy} onClick={() => coach.command('retry-save')}>保存を再試行</button>}
     </div>}
-    <main className="records-scroll content-width" aria-label="直近7日間の観測記録" aria-busy={!model && !readError}>
-      <section className="record-kpis" aria-label="7日間の集計">
+    <main className="records-scroll content-width" aria-label={`直近${query.period}日間の観測記録`} aria-busy={!model && !readError}>
+      <section className="record-kpis" aria-label={`${query.period}日間の集計`}>
         <div className="record-usage"><p>ショートカット使用率</p><strong data-kpi="rate">{rate(model?.summary.rate)}</strong>
           <RateBar value={model?.summary.barRate ?? null} primary /></div>
         <div className="record-counts"><p>操作回数</p><dl>
@@ -48,11 +55,13 @@ export function RecordsPage({ coach }: { coach: ReturnType<typeof useCoach> }) {
         </dl></div>
       </section>
       <div className="record-table-heading"><h2>操作別</h2><span className="compact-help"><RateHelp /></span>
-        <span className="record-period">{model ? model.from + ' 〜 ' + model.to : '読み込み中'}</span></div>
-      {model?.summary.total === null && <p className="records-empty" role="status">この期間の記録はありません。</p>}
+        <label className="record-sort"><span className="visually-hidden">並び替え</span><select aria-label="並び替え" value={query.sort} onChange={e => choose('sort', e.target.value)}>
+          <option value="rate">キー率が低い順</option><option value="mouse">マウス操作が多い順</option><option value="improvement">改善が大きい順</option><option value="key">キー操作が多い順</option><option value="total">操作回数が多い順</option>
+        </select></label><span className="record-period">{model ? model.from + ' 〜 ' + model.to : '読み込み中'}</span></div>
+      {model?.summary.total === null && <p className="records-empty" role="status">{model.rows.length === 0 ? '集計対象の操作はありません。' : 'この期間の記録はありません。'}</p>}
       <table className="record-table"><thead><tr><th>操作</th><th>ショートカット</th><th>キー率 <RateHelp /></th><th>前期間比</th></tr></thead>
-        <tbody>{learningOperations.map(operation => {
-          const row = model?.rows.find(row => row.id === operation.id);
+        <tbody>{model?.rows.map(row => {
+          const operation = learningOperations.find(operation => operation.id === row.id)!;
           return <tr key={operation.id} data-operation={operation.id}>
             <th scope="row"><span>{operation.label}</span><span className="availability">準備中</span></th>
             <td className="record-shortcut"><div className="shortcut-keys" aria-label={operation.hint ?? operation.keys.join(' + ')} title={operation.hint}>

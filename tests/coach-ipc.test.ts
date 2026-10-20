@@ -19,7 +19,7 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true },
     observing: true, notificationsPaused: false, error: null, pendingSave: false };
   const requests = {
-    getRecordSummary: mock.fn(async () => ({ from: '2026-10-13', to: '2026-10-19', revision: 0, rows: [], summary: { mouse: null, key: null, total: null, rate: null, barRate: null } })),
+    getRecordSummary: mock.fn(async () => ({ query: { period: 7 as const, filter: 'learning-mastered' as const, sort: 'rate' as const }, priorFrom: '2026-10-06', priorTo: '2026-10-12', previous: { mouse: null, key: null, total: null, rate: null, barRate: null }, comparison: {mouse:null,key:null,total:null,improvement:null,hasMissingCoverage:true}, from: '2026-10-13', to: '2026-10-19', revision: 0, rows: [], summary: { mouse: null, key: null, total: null, rate: null, barRate: null } })),
     getLearning: mock.fn(async () => ({ from: '2026-10-13', to: '2026-10-19', revision: 0, rows: [] })),
     windowCommand: mock.fn(async () => {}),
     getRecords: mock.fn(async () => ({ counts: {}, coverage: {}, revision: 0 })),
@@ -44,6 +44,12 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   assert.equal(requests.windowCommand.mock.callCount(), 1);
   assert.equal(requests.getLearning.mock.callCount(), 1);
   assert.equal(requests.getRecordSummary.mock.callCount(), 1);
+  for (const value of [null, [], {}, {period:60,filter:'all',sort:'rate'}, {period:30,filter:'excluded',sort:'rate'}, {period:30,filter:'all',sort:'unknown'}, {period:30,filter:'all',sort:'rate',sql:'SELECT *'}]) {
+    assert.throws(() => invoke('coach:get-record-summary', event, value), /Invalid records query/);
+  }
+  await invoke('coach:get-record-summary', event, {period:30,filter:'all',sort:'improvement'});
+  assert.equal(requests.getRecordSummary.mock.callCount(), 2);
+  assert.deepEqual(requests.getRecordSummary.mock.calls.at(-1)?.arguments, [{period:30,filter:'all',sort:'improvement'}]);
   for (const args of [[null, '2026-10-19'], ['2026-02-30', '2026-03-01'], ['2020-01-01', '2026-10-19'], ['2026-10-19', '2026-10-01']]) {
     assert.throws(() => invoke('coach:get-records', event, ...args), /Invalid range/);
   }

@@ -18,6 +18,7 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   assert.equal(learning.rows.length, 12);
   assert.equal(learning.rows.find((row: { id: string }) => row.id === 'W03').state, 'excluded');
   assert.equal(learning.rows.some((row: { id: string }) => row.id === 'W09' || row.id === 'W14'), false);
+  assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['7','learning-mastered','rate']);
   await selectPage(window, '記録');
   const old = '2020-01-02';
   const rows = await repository.query(old, old);
@@ -25,7 +26,13 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   assert.equal(rows.counts[old].W09?.mouse, 100); assert.equal(rows.coverage[old].W03?.knowledge, 'legacy-unknown');
   const summary = await window.webContents.executeJavaScript('window.coach.getRecordSummary()');
   assert.equal(summary.summary.total, null);
-  assert.equal(summary.rows.length, 12);
+  assert.equal(summary.rows.length, 11);
+  assert.equal(summary.rows.some((row: {id:string}) => row.id === 'W03'),false);
+  await window.webContents.executeJavaScript(`(() => {
+    const select = document.querySelector('.records-page select[aria-label="集計対象"]');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'all');
+    select.dispatchEvent(new Event('change', {bubbles:true}));
+  })()`);
   await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='—' &&
     document.querySelector('[data-operation="W09"]')===null &&
     document.querySelector('[data-kpi="key"]')?.textContent==='—'`, 'migration-renderer');

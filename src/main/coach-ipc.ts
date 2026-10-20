@@ -1,3 +1,4 @@
+import { defaultRecordsQuery, isRecordsQuery } from '../shared/records.ts';
 import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
 import { operations, type CoachBridge } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
@@ -19,7 +20,11 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
   };
   ipcMain.handle('coach:get-snapshot', (event) => { assertSender(event); return requests.getSnapshot(); });
   ipcMain.handle('coach:get-learning', (event) => { assertSender(event); return requests.getLearning(); });
-  ipcMain.handle('coach:get-record-summary', (event) => { assertSender(event); return requests.getRecordSummary(); });
+  ipcMain.handle('coach:get-record-summary', (event, query: unknown = defaultRecordsQuery) => {
+    assertSender(event);
+    if (!isRecordsQuery(query)) throw new Error('Invalid records query.');
+    return requests.getRecordSummary({ period: query.period, filter: query.filter, sort: query.sort });
+  });
   ipcMain.handle('coach:window', (event, value: unknown) => {
     assertSender(event);
     if (value !== 'minimize' && value !== 'maximize' && value !== 'hide') throw new Error('Unknown window command.');

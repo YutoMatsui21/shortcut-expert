@@ -68,7 +68,7 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
   const query = repository.query.bind(repository);
   let failQuery = true;
   repository.query = async (from, to) => {
-    if (from === daysBefore(today, 6) && failQuery) { failQuery = false; throw new Error('fixture query failure'); }
+    if (from === daysBefore(today, 13) && failQuery) { failQuery = false; throw new Error('fixture query failure'); }
     return query(from, to);
   };
   await window.webContents.executeJavaScript(`window.coach.getRecordSummary().catch(() => {})`);
