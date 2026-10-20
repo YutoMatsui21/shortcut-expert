@@ -45,6 +45,7 @@ export type Snapshot = {
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
 export type CoachBridge = {
   getLearning(): Promise<import('./learning.ts').LearningReadModel>;
+  getRecordSummary(): Promise<import('./records.ts').RecordsReadModel>;
   windowCommand(command: 'minimize' | 'maximize' | 'hide'): Promise<void>;
   getRecords?(from: string, to: string): Promise<import('./storage.ts').RecordRange>;
   getNotice(): Promise<Notice | null>;

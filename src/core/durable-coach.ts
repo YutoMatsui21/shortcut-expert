@@ -7,6 +7,7 @@ import { validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
 import { learningState, withLearningState, type LearningState } from '../shared/learning.ts';
 import { learningReadModel } from './learning.ts';
+import { recordsReadModel } from './records.ts';
 
 export type Capability = { operation: OperationId; revision: string };
 type Dependencies = {
@@ -136,6 +137,13 @@ export class DurableCoach {
     return this.queue.run(async () => {
       // Counts, settings and revision must come from the same serialized writer state.
       return learningReadModel(this.data, this.data.settings, today);
+    });
+  }
+  getRecordSummary(today: string) {
+    return this.queue.run(async () => {
+      const records = await this.deps.repository.query(daysBefore(today, 6), today);
+      if (records.revision !== this.data.revision) throw new Error('記録の版が一致しません。');
+      return recordsReadModel(records, this.data.settings, today);
     });
   }
   opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }

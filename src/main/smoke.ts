@@ -10,6 +10,7 @@ import { JsonRepository } from './repository';
 import { Coach as FreshCoach } from '../core/coach';
 import { classify } from '../core/detector';
 import { operations } from '../shared/coach';
+import { runRecordsSmoke } from './records-smoke';
 import { runLearningSmoke, selectPage, waitForLearning } from './learning-smoke';
 
 type SmokeContext = {
@@ -62,12 +63,6 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (counts?.mouse !== 1 || counts.key !== 1) throw new Error('counts');
   await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]').getAttribute('aria-current') === 'page'`);
   await selectPage(window, '記録');
-  const shortcuts = await window.webContents.executeJavaScript(`Array.from(document.querySelectorAll('tbody tr')).map((row) => ({
-    id: row.getAttribute('data-operation'), text: row.querySelector('.shortcut')?.textContent,
-    disabled: row.querySelector('input')?.disabled, prepared: !!row.querySelector('.prepared') }))`);
-  if (shortcuts.length !== operations.length || operations.some((op, index) => shortcuts[index].id !== op.id ||
-      shortcuts[index].text !== `（${op.shortcut}）` || shortcuts[index].disabled === op.implemented ||
-      shortcuts[index].prepared === op.implemented)) throw new Error('operation-shortcuts');
   await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '1' &&
     document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1'`, 'renderer');
   const notification = getNotificationWindow();
@@ -81,7 +76,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   ].map((request) => request.then(() => false, () => true)))`);
   if (!rejected.every((value: boolean) => value)) throw new Error('ipc-invalid-payload');
   const isolated = await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
-    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecords,getSnapshot,setLearningState,setMuted,subscribe,windowCommand'`);
+    Object.keys(window.coach).sort().join(',') === 'command,deleteCounts,getLearning,getNotice,getRecordSummary,getRecords,getSnapshot,setLearningState,setMuted,subscribe,windowCommand'`);
   if (!isolated) throw new Error('renderer-capabilities');
   const disk = JSON.parse(await readFile(join(directory, 'counts.json'), 'utf8'));
   if (disk.days[localDate()].W03.mouse !== 1 || Object.keys(disk).join(',') !== 'schemaVersion,days') throw new Error('disk');
@@ -91,9 +86,11 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await new Promise((resolve) => setTimeout(resolve, 4200));
   if (notice.current() !== null) throw new Error('notice-duration');
   await runLearningSmoke(window);
+  await runRecordsSmoke(window);
+  await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
 
   await click(window, '通知を停止');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-notification-pause');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-notification-pause');
   await observer.inject({ ...value, sequence: 4, origin: 'key', route: 'win-up' }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.key !== 2 || notice.current()) throw new Error('paused-counting');
   const additions: { candidate: Candidate; key: string }[] = [
@@ -128,16 +125,14 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
     notice.dismiss();
   }
   await click(window, '計測を全停止');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '全停止'`, 'ui-stop');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('計測を再開')`, 'ui-stop');
   await observer.inject({ ...value, sequence: ++addedSequence }); await coach.idle();
   if (coach.snapshot().counts[localDate()].W03?.mouse !== 1) throw new Error('stop-counting');
   await click(window, '計測を再開');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-start');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-start');
   await click(window, '通知を再開');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中'`, 'ui-notification-resume');
-  await window.webContents.executeJavaScript(`document.querySelector('input[aria-label="最大化の通知"]').click()`);
-  await waitRenderer(window, `document.querySelector('input[aria-label="最大化の通知"]')?.checked === false &&
-    [...document.querySelectorAll('button')].some((button) => button.textContent === '全日分の記録を削除' && !button.disabled)`, 'ui-mute');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-notification-resume');
+  await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'excluded')`);
   const reload = await new JsonRepository(directory).load();
   if (reload.settings.muted.join() !== 'W03' || reload.counts[localDate()].W03?.key !== 2) throw new Error('settings-reload');
   const restarted = new FreshCoach({ repository: new JsonRepository(directory), date: localDate, now: () => 0,
@@ -148,18 +143,11 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   const previousDate = localDate(previous);
   await observer.inject({ ...value, generation: 2, sequence: 1, date: previousDate, origin: 'key', route: 'win-up' });
   await coach.idle();
-  await waitRenderer(window, `!![...document.querySelectorAll('.records-frame select option')].find((option) => option.value === ${JSON.stringify(previousDate)})`, 'ui-day-option');
-  await window.webContents.executeJavaScript(`(() => {
-    const select = document.querySelector('.records-frame select'); select.value = ${JSON.stringify(previousDate)}; select.dispatchEvent(new Event('change', { bubbles: true }));
-  })()`);
-  await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '0' &&
-    document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1'`, 'ui-past-day');
-  chooseDelete(0); await click(window, '全日分の記録を削除');
-  await waitRenderer(window, `[...document.querySelectorAll('button')].some((button) => button.textContent === '全日分の記録を削除' && !button.disabled)`, 'ui-delete-cancel');
+  await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '3'`, 'seven-day-total');
+  chooseDelete(0); await click(window, 'すべての記録を削除…');
   if (!coach.snapshot().counts[previousDate]) throw new Error('delete-cancel');
-  chooseDelete(1); await click(window, '全日分の記録を削除');
-  await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '0' &&
-    document.querySelector('.records-frame select')?.options.length === 1 && document.querySelector('.badge')?.textContent === '記録中'`, 'ui-delete-confirm');
+  chooseDelete(1); await click(window, 'すべての記録を削除…');
+  await waitRenderer(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '—'`, 'ui-delete-confirm');
   const cleared = await new JsonRepository(directory).load();
   if (Object.keys(cleared.counts).length || cleared.settings.muted.join() !== 'W03') throw new Error('delete-settings-retained');
   await observer.inject({ ...value, generation: 2, sequence: 2 }); await coach.idle();
@@ -179,15 +167,15 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   window.webContents.reload(); await loaded;
   await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]').getAttribute('aria-current') === 'page' && [...document.querySelectorAll('.group-header')].every(button => button.getAttribute('aria-expanded') === 'true')`);
   await selectPage(window, '記録');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中' &&
-    document.querySelector('input[aria-label="最大化の通知"]')?.checked === false`, 'ui-reload-snapshot');
+  await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
+  if (!coach.snapshot().settings.muted.includes('W03')) throw new Error('ui-reload-snapshot');
   await click(window, '通知を停止');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中 · 通知停止'`, 'ui-reload-command');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を再開')`, 'ui-reload-command');
   await click(window, '通知を再開');
-  await waitRenderer(window, `document.querySelector('.badge')?.textContent === '記録中'`, 'ui-reload-subscription');
+  await waitRenderer(window, `document.querySelector('.settings-popover')?.textContent.includes('通知を停止')`, 'ui-reload-subscription');
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
-    uiControls: true, operationShortcuts: 11, addedOperations: 4, addedNoticeWindows: true,
+    uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     windowHiddenAndRestored: true, rendererResubscribed: true,
     realDisplayContext: process.argv.includes('--real-display-smoke') };

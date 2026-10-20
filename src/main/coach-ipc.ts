@@ -4,7 +4,7 @@ import { validDate } from '../core/dates.ts';
 import { daysBefore } from '../shared/storage.ts';
 import { isLearningState, learningOperations } from '../shared/learning.ts';
 
-type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'windowCommand'>;
+type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'getRecordSummary' | 'windowCommand'>;
 type Command = Parameters<CoachBridge['command']>[0];
 
 function isCommand(value: unknown): value is Command {
@@ -19,6 +19,7 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
   };
   ipcMain.handle('coach:get-snapshot', (event) => { assertSender(event); return requests.getSnapshot(); });
   ipcMain.handle('coach:get-learning', (event) => { assertSender(event); return requests.getLearning(); });
+  ipcMain.handle('coach:get-record-summary', (event) => { assertSender(event); return requests.getRecordSummary(); });
   ipcMain.handle('coach:window', (event, value: unknown) => {
     assertSender(event);
     if (value !== 'minimize' && value !== 'maximize' && value !== 'hide') throw new Error('Unknown window command.');

@@ -48,6 +48,7 @@ export async function runLearningSmoke(window: BrowserWindow) {
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 700);
+    await waitForLearning(window, `Math.abs(innerWidth - ${width}) <= 1`);
     // Win32 invisible borders can leave setContentSize one DIP short at high DPI.
     // Keep both measurements; the layout assertions use actual CSS viewport width.
     const nominal = { bounds: window.getBounds(), content: window.getContentBounds(), viewport: await window.webContents.executeJavaScript('({width:innerWidth,height:innerHeight,dpr:devicePixelRatio})') };
