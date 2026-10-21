@@ -20,9 +20,10 @@ export async function waitFor(window: BrowserWindow, condition: string, stage: s
   })`);
 }
 
-export async function runStorageSmoke({ coach, observer, window, repository, verifyPendingExit }: {
+export async function runStorageSmoke({ coach, observer, window, repository, verifyPendingExit, verifyNotifications }: {
   coach: Pick<Coach, keyof Coach>; observer: ObserverClient; window: BrowserWindow; repository: unknown;
   verifyPendingExit?: () => Promise<void>;
+  verifyNotifications?: (sample: import('../shared/coach').Candidate) => Promise<void>;
 }) {
   assert.ok(repository instanceof SqliteRepository);
   assert.equal(coach.snapshot().observing, true);
@@ -132,6 +133,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, ver
   await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1' && document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '1'`, 'masked-read-recovery-rows');
   await window.webContents.executeJavaScript(`window.coach.command('start')`);
   await verifyPendingExit?.();
+  await verifyNotifications?.(sample);
   await observer.stop();
   coach.stop(); powerMonitor.emit('suspend'); assert.equal(coach.snapshot().error, null, 'intentional stop stays stopped during sleep');
   await coach.idle(); await repository.close();
@@ -142,7 +144,8 @@ export async function runStorageSmoke({ coach, observer, window, repository, ver
     await fresh.initialize(); assert.equal(fresh.snapshot().error, null); assert.equal(fresh.snapshot().counts[today].W03?.key, 1);
     assert.equal((await reopened.query(oldDay, oldDay)).counts[oldDay].W03?.key, 1);
   } finally { await reopened.close(); }
-  return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: 1, key: 1, sevenDayRenderer: true, retained120Days: true,
+  return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: verifyNotifications ? 4 : 1, key: 1, sevenDayRenderer: true, retained120Days: true,
+    standardToastRequests: verifyNotifications ? 3 : 0, osToastDisplayVerified: false,
     reopened: true, boundedIpc: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
     saveErrorWidths: [800, 920, 1120, 1360], pendingStartBlocked: true, pendingExitRecovered: !!verifyPendingExit,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };

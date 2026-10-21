@@ -14,7 +14,7 @@ Sharedの`LearningState`を共通に使い、`learningState`で明示状態→�
 
 互換のmutedはlearning以外の両状態で通知OFFに同期し、互換setMutedで通知ONへ戻すとlearning、OFFでexcludedになる。通常起動はSQLiteのみ。旧JSON回帰fixtureは状態を持つ設定だけschemaVersion 2で保存・再読込し、実データ移行のv1厳格読込は維持する。SQLite schema変更は不要。
 
-本番DurableCoachは、同等キーが確証されたmouseを保存成功後に毎回通知依存へ渡す。旧10秒/60秒間引きと2秒TTLはこのCore経路から撤去する。発行直前のpause/stop/世代/学習状態を確認し、保存失敗時・通知結果不明時の自動再送はしない。標準Toastへの交換とOS表示・クリック起動は#26。既存独自通知adapterの同時1件・全画面抑制等、旧JSON Coachの旧通知policyは回帰用に残り、現段階の実画面表示を毎回通知の完成証拠にしない。#20のfilter/KPI接続も別工程。
+本番DurableCoachは、同等キーが確証されたmouseを保存成功後に毎回通知依存へ渡す。旧10秒/60秒間引きと2秒TTLはこのCore経路から撤去する。発行直前のpause/stop/世代/学習状態を確認し、保存失敗時・通知結果不明時の自動再送はしない。標準Toastへの交換は#26で接続済み。[発行・寿命・検証範囲](standard-notifications.md)を参照。旧独自通知adapterと旧JSON Coachは隔離回帰用に残す。OS表示・履歴click・導入後の起動は別途受入が必要。
 
 `getLearning`はMainでローカル日付から7日間を決め、SQLite Workerの有界query（旧JSONではCore snapshot）を集計して返す。Rendererから任意期間・ファイル・SQLを受け取らない。通知窓と子frameには許可しない。`windowCommand`も同じsender検証で最小化・最大化/復元・hideのみを許可する。contextIsolation・sandboxを維持する。
 

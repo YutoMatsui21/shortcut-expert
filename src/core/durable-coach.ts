@@ -1,25 +1,26 @@
 import { defaultRecordsQuery, type RecordsQuery } from '../shared/records.ts';
-import type { ObserverCandidate, Notice, OperationId, Settings, Snapshot, SnapshotErrorKind } from '../shared/coach.ts';
-import { operations } from '../shared/coach.ts';
+import type { ObserverCandidate, ShortcutNotice, OperationId, Settings, Snapshot, SnapshotErrorKind } from '../shared/coach.ts';
 import type { DurableRepository, RecordMutation, StorageState } from '../shared/storage.ts';
 import { daysBefore, recordOperations } from '../shared/storage.ts';
 import { classify } from './detector.ts';
 import { validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
-import { learningState, withLearningState, type LearningState } from '../shared/learning.ts';
+import { learningOperations, learningState, withLearningState, type LearningState } from '../shared/learning.ts';
 import { learningReadModel } from './learning.ts';
 import { recordRanges, recordsReadModel } from './records.ts';
 
 export type Capability = { operation: OperationId; revision: string };
 type Dependencies = {
   repository: DurableRepository; session: string; date(): string; now(): number;
-  capabilities(): Capability[]; notify(value: Notice): Promise<boolean>; changed(value: Snapshot): void;
+  capabilities(): Capability[]; notify(value: ShortcutNotice): Promise<boolean>; changed(value: Snapshot): void;
 };
 // Durable path for new and migrated users; legacy Coach is retained for isolated regression fixtures.
 export class DurableCoach {
   private data: StorageState = { counts: {}, coverage: {}, settings: { muted: [], opened: false }, epoch: 1, highWater: '', revision: 0 };
   private observing = false;
   private paused = false;
+  private noticeEpoch = 0;
+  private operationNoticeEpoch = new Map<OperationId, number>();
   private error: string | null = null;
   private errorKind: SnapshotErrorKind | null = null;
   private clockError: string | null = null;
@@ -69,7 +70,7 @@ export class DurableCoach {
     if (!this.observing && this.errorKind === 'storage') return;
     this.fail(message, 'storage');
   }
-  pauseNotifications(paused: boolean): void { if (this.observing) { this.paused = paused; this.publish(); } }
+  pauseNotifications(paused: boolean): void { if (this.observing) { if (paused) this.noticeEpoch++; this.paused = paused; this.publish(); } }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   private prepare(count?: RecordMutation['count'], reset?: boolean): RecordMutation | null {
     const today = this.deps.date();
@@ -158,6 +159,8 @@ export class DurableCoach {
     return this.setLearningState(id, muted ? 'excluded' : 'learning');
   }
   setLearningState(id: OperationId, state: LearningState): Promise<void> {
+    // Invalidate before entering the writer queue: a save may currently be awaiting I/O.
+    if (state !== 'learning') this.operationNoticeEpoch.set(id, (this.operationNoticeEpoch.get(id) ?? 0) + 1);
     return this.queue.run(() => this.settings(withLearningState(this.pendingSettings ?? this.data.settings, id, state)));
   }
   getLearning(today: string) {
@@ -203,14 +206,17 @@ export class DurableCoach {
         for (const seen of this.transactions) if (seen <= this.latestTransaction - 4096) this.transactions.delete(seen);
       }
       const observation = classify(candidate); if (!observation) return;
+      const token = { epoch: this.noticeEpoch, operationEpoch: this.operationNoticeEpoch.get(observation.operation) ?? 0,
+        eligible: !this.paused && observation.origin === 'mouse' && !!observation.shortcut && learningState(this.data.settings, observation.operation) === 'learning' };
       const value = this.prepare({ day: observation.date, operation: observation.operation, origin: observation.origin });
       if (!value) return;
       await this.persist(value);
-      if (this.error || this.pending || !this.observing || candidate.generation !== this.generation || this.paused ||
-        observation.origin !== 'mouse' || !observation.shortcut || !observation.monitor || learningState(this.data.settings, observation.operation) !== 'learning') return;
-      const label = operations.find(op => op.id === observation.operation)!.label;
-      // The legacy window adapter still owns its display policy until #26. Core requests every eligible notice.
-      try { await this.deps.notify({ operation: observation.operation, label, shortcut: observation.shortcut, monitor: observation.monitor, expiresAt: Infinity }); }
+      if (!token.eligible || token.epoch !== this.noticeEpoch || token.operationEpoch !== (this.operationNoticeEpoch.get(observation.operation) ?? 0) ||
+        this.error || this.pending || !this.observing || candidate.generation !== this.generation || this.paused ||
+        !observation.shortcut || learningState(this.data.settings, observation.operation) !== 'learning') return;
+      const label = learningOperations.find(op => op.id === observation.operation)!.label;
+      // Delivery events must not hold the count writer; the token is consumed once.
+      try { void this.deps.notify({ operation: observation.operation, label, shortcut: observation.shortcut }).catch(() => {}); }
       catch { /* An unknown delivery result must never trigger an automatic resend. */ }
     });
   }

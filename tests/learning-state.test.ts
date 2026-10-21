@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import { learningState } from '../src/shared/learning.ts';
-import type { Notice } from '../src/shared/coach.ts';
+import type { ShortcutNotice } from '../src/shared/coach.ts';
 import { candidateFixture, deferred } from './support/fixtures.ts';
 
 test('three states: real worker persistence, restart, unchanged history and notification eligibility', async t => {
@@ -16,12 +16,12 @@ test('three states: real worker persistence, restart, unchanged history and noti
   // Exercise the production legacy migration, including muted -> excluded.
   await writeFile(join(root, 'settings.json'), JSON.stringify({ schemaVersion: 1, opened: true, muted: ['W03'] }));
   await writeFile(join(root, 'counts.json'), JSON.stringify({ schemaVersion: 1, days: { '2026-10-18': { W03: { mouse: 4, key: 2 } } } }));
-  const notices: Notice[] = [];
+  const notices: ShortcutNotice[] = [];
   const makeCoach = () => new DurableCoach({ repository, session: repository.session, date: () => '2026-10-19',
     now: () => 0, capabilities: () => [], changed: () => {}, notify: async notice => { notices.push(notice); return true; } });
   let coach = makeCoach(); await coach.initialize(); coach.begin(1);
   assert.equal(learningState(coach.snapshot().settings, 'W03'), 'excluded');
-  const sample = candidateFixture({ date: '2026-10-19' });
+  const sample = candidateFixture({ date: '2026-10-19', monitor: null });
   let sequence = 0, generation = 1;
   const mouse = () => coach.accept({ ...sample, generation, sequence: ++sequence });
   const key = () => coach.accept({ ...sample, generation, sequence: ++sequence, origin: 'key', route: 'win-up' });
@@ -35,6 +35,7 @@ test('three states: real worker persistence, restart, unchanged history and noti
     const before: number = notices.length;
     await mouse(); await mouse(); await key();
     assert.equal(notices.length - before, state === 'learning' ? 2 : 0, 'consecutive requests have no cooldown');
+    if (state === 'learning') assert.equal(notices.at(-1)?.label, 'ウィンドウを最大化する');
     coach.pauseNotifications(true); await mouse(); await key(); coach.pauseNotifications(false);
     assert.equal(notices.length - before, state === 'learning' ? 2 : 0, 'pause only disables notices');
     coach.stop(); const stoppedCounts = coach.snapshot().counts;
@@ -87,14 +88,14 @@ test('settings failure keeps confirmed state; retry keeps latest choices and cou
   assert.equal(coach.snapshot().pendingSave, false);
 });
 
-for (const action of ['delay', 'pause', 'stop', 'stop-restart', 'failure', 'delivery-unknown'] as const) {
+for (const action of ['delay', 'pause', 'pause-resume', 'mastered', 'stop', 'stop-restart', 'failure', 'delivery-unknown', 'delivery-hung'] as const) {
   test(`notification after persistence: ${action}`, async t => {
     const root = await mkdtemp(join(tmpdir(), 'coach-learning-delivery-'));
     const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
     t.after(async () => { await repository.close(); await rm(root, { recursive: true, force: true }); });
     let now = 0, requests = 0;
     const coach = new DurableCoach({ repository, session: repository.session, date: () => '2026-10-19', now: () => now,
-      capabilities: () => [], changed: () => {}, notify: async () => { requests++; if (action === 'delivery-unknown') throw new Error('unknown'); return true; } });
+      capabilities: () => [], changed: () => {}, notify: async () => { requests++; if (action === 'delivery-unknown') throw new Error('unknown'); if (action === 'delivery-hung') return new Promise<boolean>(() => {}); return true; } });
     await coach.initialize(); coach.begin(1);
     const commit = repository.commit.bind(repository), entered = deferred<void>(), release = deferred<void>();
     repository.commit = async value => { entered.resolve(); await release.promise; if (action === 'failure') throw new Error('disk'); await commit(value); };
@@ -102,6 +103,8 @@ for (const action of ['delay', 'pause', 'stop', 'stop-restart', 'failure', 'deli
     await entered.promise; assert.equal(requests, 0);
     now = 5000;
     if (action === 'pause') coach.pauseNotifications(true);
+    if (action === 'pause-resume') { coach.pauseNotifications(true); coach.pauseNotifications(false); }
+    const stateChange = action === 'mastered' ? coach.setLearningState('W03', 'mastered') : Promise.resolve();
     if (action === 'stop') coach.stop();
     if (action === 'stop-restart') {
       coach.pauseNotifications(true); coach.stop();
@@ -110,11 +113,18 @@ for (const action of ['delay', 'pause', 'stop', 'stop-restart', 'failure', 'deli
       coach.begin(2);
       assert.equal(coach.snapshot().observing, false, 'an in-flight save blocks restart');
     }
-    release.resolve(); await pending;
-    assert.equal(requests, action === 'delay' || action === 'delivery-unknown' ? 1 : 0);
+    release.resolve(); await pending; await stateChange;
+    const delivered = ['delay', 'delivery-unknown', 'delivery-hung'].includes(action) ? 1 : 0;
+    assert.equal(requests, delivered);
     repository.commit = commit; await coach.retrySave();
     assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 1);
-    assert.equal(requests, action === 'delay' || action === 'delivery-unknown' ? 1 : 0, 'retry never replays a notice');
+    assert.equal(requests, delivered, 'retry never replays a notice');
+    if (action === 'failure' || action === 'delivery-hung') {
+      coach.begin(2);
+      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 }));
+      assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 2);
+      assert.equal(requests, delivered + 1, 'new operations resume without waiting for delivery');
+    }
     if (action === 'stop-restart') {
       coach.begin(2); coach.pauseNotifications(false);
       await coach.accept(candidateFixture({ date: '2026-10-19', generation: 1, sequence: 2 }));

@@ -1,7 +1,7 @@
 import { join, basename } from 'node:path';
 import { mkdirSync, mkdtempSync } from 'node:fs';
-import { app, type BrowserWindow } from 'electron';
-import { runCoach, showCoach } from './coach-app';
+import { app, Notification, type BrowserWindow } from 'electron';
+import { runCoach, showCoach } from './coach-app.ts';
 
 const fixture = process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
 if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
@@ -22,7 +22,13 @@ async function loadWindow(window: BrowserWindow, mode: string): Promise<void> {
 
 if (!app.requestSingleInstanceLock()) app.exit(1);
 else {
-  app.whenReady().then(() => runCoach(loadWindow, fixture)).catch(() => {
+  app.whenReady().then(() => {
+    if (!fixture) {
+      app.setAppUserModelId('local.window-shortcut-coach');
+      Notification.handleActivation(() => showCoach());
+    }
+    return runCoach(loadWindow, fixture);
+  }).catch(() => {
     console.error('COACH_START_FAILED'); app.exit(1);
   });
   app.on('second-instance', showCoach);
