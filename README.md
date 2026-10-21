@@ -48,7 +48,7 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 2. 仕様は[取得・読取入口](docs/development-tools.md#仕様の取得と読取)で成功した本文とrevisionを保存し、見出し→必要節の順に読む。ソースは型・関数・呼出し元で範囲を絞り、変更後はdiffを中心に確認する。
 3. `npm.cmd run dev:check`でTEMP/cacheのwrite・renameと部品の有無を確認し、`package.json`・`global.json`に沿って不足分を準備する。実行入口が子プロセスごとに作業先のTEMP/cacheを設定する。[環境と失敗時の切り分け](docs/development-tools.md#実行環境)に従う。PowerShellで依存するnativeコマンドを続ける時は`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を挟む。
 4. UI/API変更ではテスト設計Skillで影響するfixture・mock・selector・期待値を先に確認する。修正中は関連試験を絞り、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証はソース・依存・生成物・環境と対応づけ、変わった範囲を再検証する。必須条件と追加確認を分け、次Issueの案内前に依存を確認する。
-5. push後のhead SHAを固定し、[PR監視入口](docs/development-tools.md#pr監視)で差分を確認する。通常は状態要約、変化・失敗・指摘確認時に詳細を読む。最新headのCI・Codexレビュー・未解決指摘を確認してから完了とする。
+5. push後にPRへ`@codex review`を投稿して明示的にレビューを依頼する（PR未作成なら先に作る）。最新headのSHAを固定し、[PR監視入口](docs/development-tools.md#pr監視)でCI・レビューを確認する。**両方が完了するまで修正を始めない**。結果が揃ったら[GitHub操作Skill](skills/github-workflow/SKILL.md)に従い指摘を評価・修正し、再push時もレビューを再依頼する。
 
 ### 実行環境
 
