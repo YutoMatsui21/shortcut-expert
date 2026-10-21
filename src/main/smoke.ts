@@ -180,6 +180,9 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]').getAttribute('aria-current') === 'page' && [...document.querySelectorAll('.group-header')].every(button => button.getAttribute('aria-expanded') === 'true')`);
   await selectPage(window, '記録');
   await window.webContents.executeJavaScript('document.querySelector(".gear-button").click()');
+  // DOM content can finish before useCoach's initial snapshot arrives after reload.
+  // A native click on a disabled switch is a no-op, so wait for the actual command control.
+  await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'true' && !document.querySelector('.settings-switch[aria-label="通知"]').disabled`, 'ui-reload-ready');
   if (!coach.snapshot().settings.muted.includes('W03')) throw new Error('ui-reload-snapshot');
   await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="通知"]').click()`);
   await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="通知"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-reload-command');

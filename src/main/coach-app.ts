@@ -154,7 +154,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         const snapshot = coach.snapshot();
         return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today, query);
       } catch {
-        if (!coach.snapshot().error) coach.fault('記録を読み込めません。元のデータは保持しています。');
+        coach.storageFault('記録を読み込めません。元のデータは保持しています。');
         throw new Error('記録を読み込めません。');
       }
     }),
@@ -166,7 +166,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         if (coach instanceof DurableCoach) return await coach.getLearning(today);
         const records = { counts: snapshot.counts, coverage: {}, revision: 0 };
         return learningReadModel(records, snapshot.settings, today);
-      } catch { if (!coach.snapshot().error) coach.fault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
+      } catch { coach.storageFault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
     }),
     windowCommand: async (value) => { if (!exitRequested) coachWindow.command(value); },
     getRecords: async (from, to) => {
@@ -175,7 +175,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         if (repository instanceof SqliteRepository) return await repository.query(from, to);
         const loaded = await repository.load();
         return { counts: Object.fromEntries(Object.entries(loaded.counts).filter(([day]) => day >= from && day <= to)), coverage: {}, revision: 0 };
-      } catch { coach.fault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
+      } catch { coach.storageFault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
     },
     getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
     getNotice: async () => notice.current(),
@@ -229,7 +229,23 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | undefined;
     try {
       report = await Promise.race([
-        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository }) : runCoachSmoke({ coach, observer, notice, window,
+        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository,
+          verifyPendingExit: async () => {
+            window.show();
+            const save = repository.saveSettings.bind(repository);
+            repository.saveSettings = async () => { throw new Error('fixture quit settings failure'); };
+            fixtureQuitResponse = 0;
+            try {
+              await coach.setNormalBounds(window.getNormalBounds());
+              await Promise.all([quit(), command('start'), quit(), command('retry-save')]);
+              if (quitting || !coach.snapshot().pendingSave || coach.snapshot().observing || exitRequested) {
+                throw new Error('durable-quit-cancel-pending ' + JSON.stringify({ quitting, pending: coach.snapshot().pendingSave, observing: coach.snapshot().observing, exitRequested }));
+              }
+            } finally { repository.saveSettings = save; fixtureQuitResponse = null; }
+            await command('retry-save');
+            if (coach.snapshot().pendingSave || coach.snapshot().observing) throw new Error('durable-quit-retry-stopped');
+          }
+        }) : runCoachSmoke({ coach, observer, notice, window,
           getNotificationWindow: () => previews.notification, directory: app.getPath('userData'),
           verifyWindowExit: async () => {
             const save = repository.saveSettings.bind(repository);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import { app, screen, powerMonitor, type BrowserWindow } from 'electron';
 import { runLearningSmoke, selectPage, waitForLearning } from './learning-smoke';
 import { runRecordsSmoke } from './records-smoke';
@@ -19,8 +20,9 @@ export async function waitFor(window: BrowserWindow, condition: string, stage: s
   })`);
 }
 
-export async function runStorageSmoke({ coach, observer, window, repository }: {
+export async function runStorageSmoke({ coach, observer, window, repository, verifyPendingExit }: {
   coach: Pick<Coach, keyof Coach>; observer: ObserverClient; window: BrowserWindow; repository: unknown;
+  verifyPendingExit?: () => Promise<void>;
 }) {
   assert.ok(repository instanceof SqliteRepository);
   assert.equal(coach.snapshot().observing, true);
@@ -45,11 +47,47 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'mastered');
     select.dispatchEvent(new Event('change', { bubbles: true }));
   })()`);
-  await waitForLearning(window, `document.querySelector('.page-frame .error')?.textContent.includes('設定を保存できません') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'learning'`);
+  await waitForLearning(window, `document.querySelector('.page-header + .save-error-banner')?.textContent.includes('設定を保存できません') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'learning'`);
   assert.equal(coach.snapshot().pendingSave, true); assert.equal(coach.snapshot().observing, false);
+  const layouts = [];
+  for (const width of [800, 920, 1120, 1360]) {
+    window.setContentSize(width, 600);
+    await waitFor(window, `Math.abs(innerWidth - ${width}) <= 1`, 'save-error-width');
+    const actual = await window.webContents.executeJavaScript('innerWidth');
+    if (actual !== width) window.setSize(window.getSize()[0] + width - actual, window.getSize()[1]);
+    await waitFor(window, `innerWidth === ${width}`, 'save-error-exact-width');
+    for (const [page, frame] of [['ショートカット一覧', '.page-frame'], ['記録', '.records-page']] as const) {
+      await selectPage(window, page);
+      const result = await window.webContents.executeJavaScript(`(() => {
+        const frame = document.querySelector('${frame}');
+        const header = frame.querySelector('header').getBoundingClientRect();
+        const banner = frame.querySelector('.save-error-banner'); const box = banner.getBoundingClientRect();
+        const scroll = frame.querySelector('main'); const body = scroll.getBoundingClientRect();
+        const button = banner.querySelector('button').getBoundingClientRect();
+        const icon = banner.querySelector('img'); const iconBox = icon.getBoundingClientRect();
+        scroll.scrollTop = 200;
+        return {width:innerWidth,page:'${page}',height:box.height,headerGap:box.top-header.bottom,
+          bodyGap:body.top-box.bottom,fixed:banner.getBoundingClientRect().top === box.top,
+          buttonInside:button.right <= box.right && button.left >= box.left && button.bottom <= box.bottom,
+          buttonWidth:button.width,buttonHeight:button.height,iconWidth:iconBox.width,iconHeight:iconBox.height,
+          iconLoaded:icon.complete && icon.naturalWidth > 0,alert:banner.getAttribute('role'),
+          noOverflow:document.documentElement.scrollWidth === innerWidth};
+      })()`);
+      assert.equal(result.height, 52); assert.equal(result.headerGap, 0); assert.equal(result.bodyGap, 0);
+      assert.equal(result.fixed, true); assert.equal(result.buttonInside, true); assert.equal(result.noOverflow, true);
+      assert.equal(result.buttonWidth, 92); assert.equal(result.buttonHeight, 32);
+      assert.equal(result.iconWidth, 18); assert.equal(result.iconHeight, 18); assert.equal(result.iconLoaded, true);
+      assert.equal(result.alert, 'alert'); layouts.push(result);
+      await writeFile(join(app.getPath('userData'), `save-error-${width}-${frame === '.page-frame' ? 'learning' : 'records'}.png`), (await window.webContents.capturePage()).toPNG());
+    }
+  }
+  await writeFile(join(app.getPath('userData'), 'save-error-layout.json'), JSON.stringify(layouts));
+  await selectPage(window, 'ショートカット一覧');
+  await window.webContents.executeJavaScript(`window.coach.command('start')`);
+  assert.equal(coach.snapshot().observing, false, 'start must not discard a pending settings write');
   repository.saveSettings = saveSettings;
-  await window.webContents.executeJavaScript(`document.querySelector('.page-frame .error button').click()`);
-  await waitForLearning(window, `!document.querySelector('.page-frame .error') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'mastered'`);
+  await window.webContents.executeJavaScript(`document.querySelector('.page-header + .save-error-banner button').click()`);
+  await waitForLearning(window, `!document.querySelector('.save-error-banner') && document.querySelector('[data-learning-operation="W03"] select')?.value === 'mastered'`);
   assert.equal(coach.snapshot().pendingSave, false);
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03', 'learning')`);
   await window.webContents.executeJavaScript(`window.coach.command('start')`);
@@ -72,14 +110,28 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
     return query(from, to);
   };
   await window.webContents.executeJavaScript(`window.coach.getRecordSummary().catch(() => {})`);
-  await waitFor(window, `!!document.querySelector('.error')`, 'query-error');
+  await waitFor(window, `document.querySelector('.records-header + .save-error-banner')?.dataset.errorKind === 'storage'`, 'query-error');
   assert.equal(coach.snapshot().observing, false);
   const revision = coach.snapshot().revision;
-  await window.webContents.executeJavaScript(`window.coach.command('start')`);
-  await waitFor(window, `!document.querySelector('.error') && document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent==='1' &&
+  await window.webContents.executeJavaScript(`document.querySelector('.records-header + .save-error-banner button').click()`);
+  await waitFor(window, `!document.querySelector('.save-error-banner') && document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent==='1' &&
     document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='1'`, 'historical-query-recovery');
   assert.equal(coach.snapshot().revision, revision, 'recovery must refetch even with unchanged revision');
+  assert.equal(coach.snapshot().observing, false, 'storage recovery must not resume the observer');
+  await window.webContents.executeJavaScript(`window.coach.command('start')`);
   repository.query = query;
+  coach.fault('fixture independent observer fault');
+  repository.query = async () => { throw new Error('fixture concurrent read failure'); };
+  await window.webContents.executeJavaScript(`window.coach.getRecordSummary().catch(() => {})`);
+  assert.equal(coach.snapshot().canRetrySave, true, 'an existing observer fault must not hide a new storage failure');
+  await waitFor(window, `document.querySelectorAll('.record-table tbody tr').length === 0 && document.querySelector('.records-scroll')?.getAttribute('aria-busy') === 'false'`, 'masked-read-error');
+  repository.query = query;
+  await window.webContents.executeJavaScript(`window.coach.command('retry-save')`);
+  assert.equal(coach.snapshot().error, 'fixture independent observer fault');
+  assert.equal(coach.snapshot().observing, false);
+  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1' && document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '1'`, 'masked-read-recovery-rows');
+  await window.webContents.executeJavaScript(`window.coach.command('start')`);
+  await verifyPendingExit?.();
   await observer.stop();
   coach.stop(); powerMonitor.emit('suspend'); assert.equal(coach.snapshot().error, null, 'intentional stop stays stopped during sleep');
   await coach.idle(); await repository.close();
@@ -92,5 +144,6 @@ export async function runStorageSmoke({ coach, observer, window, repository }: {
   } finally { await reopened.close(); }
   return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: 1, key: 1, sevenDayRenderer: true, retained120Days: true,
     reopened: true, boundedIpc: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
+    saveErrorWidths: [800, 920, 1120, 1360], pendingStartBlocked: true, pendingExitRecovered: !!verifyPendingExit,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };
 }

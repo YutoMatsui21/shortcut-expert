@@ -87,6 +87,13 @@ html, body, #root { height: 100%; overflow: hidden; }
 .page-header { flex-shrink: 0; min-height: 114px; padding-top: 24px; padding-bottom: 32px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .page-header h1 { font-size: 20px; line-height: 30px; font-weight: 500; }
 .page-header p { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; line-height: 20px; color: var(--secondary); }
+.save-error-banner { flex-shrink: 0; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 9px 17px 9px 15px; border: 1px solid #f1d2c9; border-radius: 8px; background: #fff8f6; color: #872e29; font-size: 13px; font-weight: 500; line-height: 20px; }
+.save-error-icon { position: relative; flex: 0 0 18px; width: 18px; height: 18px; }
+.save-error-icon img { display: block; }
+.save-error-icon > span { position: absolute; inset: 0; text-align: center; color: white; font-size: 12px; line-height: 18px; }
+.save-error-message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.save-error-banner button { flex: 0 0 92px; min-height: 32px; padding: 0 12px; border: 1px solid #f1d2c9; border-radius: 6px; background: white; color: #872e29; font-size: 12px; font-weight: 500; line-height: 18px; white-space: nowrap; }
+.save-error-banner button:disabled { opacity: .55; }
 .page-scroll { flex: 1; min-height: 0; overflow: auto; margin-top: 0; margin-bottom: 0; padding: 0 0 32px; max-width: none; scrollbar-width: none; }
 .learning-content { display: flex; flex-direction: column; gap: 20px; }
 .group-header { width: 100%; min-height: 28px; display: flex; align-items: center; gap: 9px; padding: 0 4px 0 2px; border: 0; color: #24272d; background: transparent; text-align: left; font-size: 16px; line-height: 28px; font-weight: 500; }
@@ -160,6 +167,7 @@ kbd { font: 500 12px/16px Inter, 'Noto Sans JP', sans-serif; min-height: 26px; d
 .records-page { height: 100%; display: flex; flex-direction: column; min-width: 0; }
 .records-header { flex-shrink: 0; min-height: 100px; padding: 24px 0 25px; align-items: flex-start; }
 .records-header h1 { font-size: 20px; line-height: 30px; font-weight: 500; }
+.records-header + .save-error-banner { margin-top: 0; }
 .records-scope { display: flex; gap: 24px; color: var(--secondary); font-size: 12px; }
 .records-scope > span { display: flex; flex-direction: column; gap: 4px; }
 .records-scope strong { font-size: 13px; line-height: 20px; font-weight: 400; color: #24272d; }

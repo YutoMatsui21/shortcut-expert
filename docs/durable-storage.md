@@ -36,6 +36,25 @@ UIは保存済みの数値を表示する。coverage根拠もcountもない操�
 
 保存失敗・結果不明は同じ差分をメモリーに残し、観測・通知を停止する。再試行はWorker再接続後に同一transactionを再送し、観測の自動再開や過去通知の再送はしない。DB破損等の読込失敗でも空のDBへ置き換えず、原本を保持する。プロセス終了時に未commitのメモリー分が失われる制約は従来どおり。
 
+保存・読込エラーはSnapshotの`errorKind`で記録保存、設定保存、保存先読込、時計、observerに区別する。両画面は固定header直下に共通SaveErrorBannerを表示し、本文を押し下げる。保存保留と保存先読込は再試行できる。読込再試行は同じSQLite authorityを再接続・再読込し、元のobserver故障や時計異常は解除しない。記録保存の再試行は同じwriteSession/sequence/checkpointを使う。保存障害時に取消済みの通知要求は復旧後に再生成しない。観測再開は設定panelまたはtrayでの明示操作だけで行う。
+
+時計故障は保存・読込エラーと独立して保持する。Snapshotの`canRetrySave`は、表示上優先されるobserver/時計故障があっても保存の再試行を可能にする。明示startで再検査するまで、保存成功だけで観測へ戻さない。#24で確定した削除の成功後に元の計測状態へ戻す契約は維持する。
+
+Mainは既存のobserver/時計故障がある時も新しい読込失敗をCoreへ渡す。停止中の同じ保存先故障は再配信せず、Reactの読込→故障配信→再読込の循環を防ぐ。`--storage` smokeでobserver故障→query失敗→retry→observer故障と停止の保持を実IPCから確認する。
+
+retryは保留記録・設定を確定してから残る読込故障を再検査し、設定保留と読込故障の同時発生でも1回で復旧する。RecordsPageは`canRetrySave`の変化でも再取得し、優先されるobserverメッセージ・revision・設定が不変でも復旧後の行を戻す。Codex指摘に対する回帰はCoreの単回retryと実Rendererの`masked-read-recovery-rows`で確認する。
+
+### #25：保存エラー・保留・再試行の受入対応
+
+| 条件 | 本番経路と検証 |
+| --- | --- |
+| 正式バナー・両画面 | Figma `348:1950`の52px、警告SVG、色、枠、文言、92×32 buttonを採用。`--storage` smokeで800/920/1120/1360×両画面のheader直下、本文押下げ、固定表示、icon/buttonのgeometryと画像を取得する |
+| count/設定/Worker/disk/応答喪失 | `durable-storage.test.ts`で実Worker強制終了、SQL triggerによるtransaction失敗、count/設定のcommit後応答喪失、同じcheckpointのretry連打を確認。元のcounts/coverage/設定を保ち、保留差分だけを一度反映する |
+| 障害後の通知非再送 | 通知適格なmouse候補の保存失敗/ACK喪失→retry→新Repository/Core再生成まで、過去通知0を確認。Noticeはpending mutation/DBに含めず、世代と処理中の候補はruntimeだけに置く。新世代の新規適格操作だけ通知要求へ進む。標準Toast adapter自体は#26 |
+| 読込・start・retry・終了競合 | 原本保持のload失敗、pending中start、retry連打、observer/時計故障の独立保持をunitで確認。`--storage` smokeは実Main command/Preload/Reactでretry、pending start拒否、未保存終了取消と競合したstart/retryの無効化、復旧後も停止維持を通す |
+
+smokeは空の隔離userDataと人工helper候補だけを使用する。`save-error-*.png`と`save-error-layout.json`が配置の証拠。物理disk full・電源断・OS crash・混在DPI/文字拡大・自然入力精度は本Issueのfixture成功で代替せず、V02/V03/V05の受入に残す。
+
 ## 検証
 
 ### PR #57のCI・レビュー修正

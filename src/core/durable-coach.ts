@@ -1,5 +1,5 @@
 import { defaultRecordsQuery, type RecordsQuery } from '../shared/records.ts';
-import type { ObserverCandidate, Notice, OperationId, Settings, Snapshot } from '../shared/coach.ts';
+import type { ObserverCandidate, Notice, OperationId, Settings, Snapshot, SnapshotErrorKind } from '../shared/coach.ts';
 import { operations } from '../shared/coach.ts';
 import type { DurableRepository, RecordMutation, StorageState } from '../shared/storage.ts';
 import { daysBefore, recordOperations } from '../shared/storage.ts';
@@ -21,6 +21,8 @@ export class DurableCoach {
   private observing = false;
   private paused = false;
   private error: string | null = null;
+  private errorKind: SnapshotErrorKind | null = null;
+  private clockError: string | null = null;
   private observerError: string | null = null;
   private settingsError: string | null = null;
   private loaded = false;
@@ -44,28 +46,35 @@ export class DurableCoach {
     try {
       this.data = await this.deps.repository.load(this.deps.date());
       this.loaded = true;
-      this.error = null; this.observerError = null; this.baseline = null;
+      this.error = null; this.errorKind = null; this.clockError = null; this.observerError = null; this.baseline = null;
       await this.tick();
-    } catch { this.fail('保存データを読み込めません。元のデータは保持しています。'); }
+    } catch { this.fail('保存データを読み込めません。元のデータは保持しています。', 'storage'); }
   }
   private publish(): void { this.deps.changed(this.snapshot()); }
-  private fail(message = '記録を保存できません。保存先を確認して再試行してください。'): void {
-    this.error = message; this.stop();
+  private fail(message = '記録を保存できません。保存先を確認して再試行してください。', kind: SnapshotErrorKind = 'record-save'): void {
+    if (kind === 'clock') this.clockError = message;
+    else { this.error = message; this.errorKind = kind; }
+    this.stop();
   }
   begin(generation: number): void {
-    if (!this.loaded || this.error || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
+    if (!this.loaded || this.error || this.clockError || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
     this.generation = generation; this.candidateSequence = 0; this.observing = true;
     this.protocol = null; this.transactions.clear(); this.latestTransaction = 0;
     this.baseline = { day: this.deps.date(), time: this.deps.now(), observing: true, capabilities: this.deps.capabilities() };
   }
   stop(): void { this.observing = false; this.generation++; this.baseline = null; this.publish(); }
   fault(message: string): void { this.observerError = message; this.stop(); }
+  storageFault(message: string): void {
+    // Repeated read-model failures must not create a publish/refetch feedback loop.
+    if (!this.observing && this.errorKind === 'storage') return;
+    this.fail(message, 'storage');
+  }
   pauseNotifications(paused: boolean): void { if (this.observing) { this.paused = paused; this.publish(); } }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   private prepare(count?: RecordMutation['count'], reset?: boolean): RecordMutation | null {
     const today = this.deps.date();
     if (!validDate(today) || (!reset && (this.data.highWater > today || Object.keys(this.data.counts).some(day => day > today) || (count && count.day > today)))) {
-      this.fail('端末の日付が記録より前です。日付を確認してください。'); return null;
+      this.fail('端末の日付が記録より前です。日付を確認してください。', 'clock'); return null;
     }
     const time = this.deps.now(), prior = this.baseline;
     const current = this.deps.capabilities();
@@ -99,24 +108,35 @@ export class DurableCoach {
       this.data = { ...this.data, ...await this.deps.repository.query(daysBefore(today, 59), today),
         epoch: value.reset ? value.epoch + 1 : value.epoch, highWater: value.today };
       this.pending = null;
-      if (value.reset) this.deleting = false;
-      this.error = null;
+      if (value.reset) { this.deleting = false; this.clockError = null; }
+      if (this.errorKind === 'record-save' || this.errorKind === 'storage') {
+        this.error = null; this.errorKind = null;
+      }
     } catch { this.fail(); }
     this.publish();
   }
   tick(): Promise<void> {
     return this.queue.run(async () => {
-      if (this.pending || this.error || this.pendingSettings || this.deleting) return;
+      if (this.pending || this.error || this.clockError || this.pendingSettings || this.deleting) return;
       const value = this.prepare(); if (value) await this.persist(value);
     });
   }
   retrySave(): Promise<void> {
     return this.queue.run(async () => {
-      if (this.pending || this.pendingSettings) await this.deps.repository.reconnect();
+      if (this.pending || this.pendingSettings || this.errorKind === 'storage') await this.deps.repository.reconnect();
       if (this.pending) await this.persist(this.pending);
       if (this.pendingSettings) await this.settings(this.pendingSettings);
+      if (this.errorKind === 'storage' && !this.pending && !this.pendingSettings) {
+        try {
+          this.data = await this.deps.repository.load(this.deps.date());
+          this.loaded = true; this.error = null; this.errorKind = null; this.baseline = null;
+        } catch { this.fail('保存データを読み込めません。元のデータは保持しています。', 'storage'); }
+      }
       if (this.deleting && !this.pending) {
         const value = this.prepare(undefined, true); if (value) await this.persist(value);
+      }
+      if (this.loaded && !this.pending && !this.pendingSettings && !this.deleting && !this.error && !this.clockError) {
+        const value = this.prepare(); if (value) await this.persist(value);
       }
       this.publish();
     });
@@ -197,6 +217,9 @@ export class DurableCoach {
   snapshot(): Snapshot {
     return { counts: structuredClone(this.data.counts), coverage: structuredClone(this.data.coverage), revision: this.data.revision,
       settings: structuredClone(this.data.settings), observing: this.observing, notificationsPaused: this.paused,
-      error: this.observerError ?? this.error ?? this.settingsError, pendingSave: !!this.pending || !!this.pendingSettings || this.deleting };
+      error: this.observerError ?? this.clockError ?? this.error ?? this.settingsError,
+      errorKind: this.observerError ? 'observer' : this.clockError ? 'clock' : this.error ? this.errorKind : this.settingsError ? 'settings-save' : null,
+      canRetrySave: !!this.pending || !!this.pendingSettings || this.deleting || this.errorKind === 'storage',
+      pendingSave: !!this.pending || !!this.pendingSettings || this.deleting };
   }
 }

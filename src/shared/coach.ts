@@ -36,11 +36,12 @@ export type ObserverCandidate = Candidate | CandidateV2;
 export type Counts = Record<string, Partial<Record<OperationId, { mouse: number; key: number }>>>;
 export type LearningState = 'learning' | 'mastered' | 'excluded';
 export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>>; normalBounds?: Bounds };
+export type SnapshotErrorKind = 'record-save' | 'settings-save' | 'storage' | 'clock' | 'observer';
 export type Snapshot = {
   counts: Counts; settings: Settings;
   coverage?: import('./storage.ts').CoverageDays; revision?: number;
   observing: boolean; notificationsPaused: boolean;
-  error: string | null; pendingSave: boolean;
+  error: string | null; errorKind?: SnapshotErrorKind | null; pendingSave: boolean; canRetrySave?: boolean;
   windowMaximized?: boolean;
   stateVersion?: number;
 };

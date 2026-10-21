@@ -55,7 +55,7 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'mastered');
       select.dispatchEvent(new Event('change', {bubbles:true}));
     })()`);
-    await waitForLearning(window, `${gear}.getAttribute('aria-busy') === 'false' && !!document.querySelector('.page-frame .error')`);
+    await waitForLearning(window, `${gear}.getAttribute('aria-busy') === 'false' && !!document.querySelector('.page-frame .save-error-banner')`);
     await js(`${gear}.focus()`); await open();
     const pendingFocusGear = await js(`document.activeElement === ${gear}`);
     await key('Escape'); await closed();
