@@ -26,6 +26,20 @@ API根拠：[固定Electron 44.7 Notification](https://github.com/electron/elect
 
 ## J03配布版の残る受入
 
+### V01の実OS発行入口（#44）
+
+ユーザーの明示同意を得てNSIS導入版を`--os-notification-acceptance`で起動する。
+このmodeは通常userDataを使わず、fixture専用userDataとSQLite、本番helperの人工候補入口を使う。
+hookはfixture動作で実入力payloadを読まない。最大化2件と復元1件を3秒間隔で保存し、本番の
+StandardNotifications/Electron Notificationへ個別要求する。通常smokeのNotification fakeは使わない。
+`V01_DELIVERY`は人工通知のUUIDとrequested/api-returned/show-event/failed/unknownだけを出力し、
+`V01_FIXTURE_COMMITTED`は人工件数の確認であり、バナー可視表示の成功ではない。
+発行後はtrayと窓を維持する。instance/global clickは`V01_ACTIVATION`で区別する。
+通常版の観測processをtrayで完全終了してから起動し、cold activationも試す際は受入modeをtrayから終了する。
+OSがCOMで起動する際は通常起動となるため、cold起動の確認は通常userDataに戻る点も区別する。
+この入口は同一/異操作の実adapter要求と履歴clickの切り分け用であり、保存故障・遅延・GC・更新・
+DND等のV01全ケースや自然入力精度の合格を自動判定しない。専用profile/VMを原則とし、例外の環境は受入記録に残す。
+
 専用Windows user/VMで、同一buildのper-user NSISを導入する。現在のユーザーの登録を書き換える開発版やunpacked版を代用しない。
 
 1. clean install後の最初の発行、OSバナー/通知センター、AUMID・shortcutのCLSID・HKCU LocalServer32と実行exeの一致を確認する。isSupported/API返却だけでCOM登録readyと判定しない。
