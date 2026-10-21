@@ -79,6 +79,10 @@ jobs:
         run: |
           node scripts/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
           exit $LASTEXITCODE
+      - name: V02 packaged storage fault acceptance (isolated synthetic disk fixtures)
+        run: |
+          npm.cmd run acceptance:storage 2>&1 | Tee-Object -FilePath .tools/test-results/v02.log
+          exit $LASTEXITCODE
       - name: Acquired-record comparison and coverage info (isolated SQLite)
         run: |
           node scripts/smoke.mjs --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/comparison-smoke.log
@@ -111,6 +115,9 @@ jobs:
           path: |
             .tools/test-results/*.log
             .tools/test-results/build-hashes.json
+            .tools/validation/v02-*/build.json
+            .tools/validation/v02-*/results.json
+            .tools/validation/v02-*/runtime.log
             .tools/tests/coach-*/coach-preview.png
             .tools/tests/coach-*/notice-preview.png
             .tools/tests/coach-*/learning-*.png

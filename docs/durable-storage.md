@@ -57,6 +57,8 @@ smokeは空の隔離userDataと人工helper候補だけを使用する。`save-e
 
 ## 検証
 
+#45の製品配布Workerによるdisk故障・移行・削除受入は[専用入口と証拠](storage-acceptance.md)を参照。SQLiteの実FULLと実ボリューム枯渇、明示境界のprocess中断と電源断を区別する。
+
 ### PR #57のCI・レビュー修正
 
 最新mainのprotocol v2と結合し、DurableCoachもObserverCandidateを受け取る。世代内のprotocol固定、4096 transaction範囲の重複拒否、採用前の候補複製をJSON経路と揃えた。起動時load失敗では設定を書かず、設定保存成功は設定由来のエラーだけを解除する。読込時にも設定の形式を検査する。

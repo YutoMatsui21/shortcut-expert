@@ -72,6 +72,7 @@ npm.cmd run smoke
 npm.cmd run smoke:dev
 npm.cmd run package:dir
 npm.cmd run smoke:packaged
+npm.cmd run acceptance:storage
 node scripts/smoke.mjs --storage
 node scripts/smoke.mjs --packaged --storage
 node scripts/smoke.mjs --migration
