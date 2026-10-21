@@ -18,6 +18,8 @@ export class CoachWindow {
   private snapshot?: Snapshot;
   private stateVersion = 0;
   private dirty = false;
+  private ready = false;
+  private showRequested = false;
 
   get current(): BrowserWindow | null {
     return this.window && !this.window.isDestroyed() ? this.window : null;
@@ -32,6 +34,7 @@ export class CoachWindow {
       autoHideMenuBar: true, backgroundColor: '#ffffff',
       webPreferences: { preload: join(__dirname, '../preload/index.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     this.window = window;
+    this.ready = false;
     const remember = () => {
       if (!preferences || this.disposed || window.isMaximized() || window.isMinimized()) return;
       const bounds = window.getNormalBounds();
@@ -49,19 +52,23 @@ export class CoachWindow {
     window.on('close', (event) => { if (!isQuitting()) { event.preventDefault(); this.hide(); } });
     window.on('closed', () => { clearTimeout(this.timer); this.timer = undefined; if (this.window === window) this.window = null; });
     await load(window, 'coach');
+    this.ready = true;
+    if (this.showRequested) this.show();
     return window;
   }
 
   show(): void {
+    this.showRequested = true;
     const window = this.current;
-    if (!window) return;
+    if (!window || !this.ready) return;
+    this.showRequested = false;
     if (window.isMinimized()) window.restore();
     this.correctBounds();
     window.show();
     window.focus();
   }
 
-  hide(): void { this.current?.hide(); }
+  hide(): void { this.showRequested = false; this.current?.hide(); }
 
   correctBounds(): void {
     const window = this.current;

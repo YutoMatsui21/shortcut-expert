@@ -15,9 +15,12 @@ const executable = packaged ? resolve(packageDir, 'win-unpacked/Window Shortcut 
 const migration = process.argv.includes('--migration');
 const comparison = process.argv.includes('--comparison');
 const settings = process.argv.includes('--settings');
+const activation = process.argv.includes('--activation');
+if (activation && (settings || migration || comparison)) throw new Error('--activation uses its own SQLite restart fixture');
 if (migration && comparison) throw new Error('--comparison and --migration use different fixtures');
 if (settings && (migration || comparison)) throw new Error('--settings uses its own empty SQLite fixture');
-const options = [migration ? '--migration-smoke' : process.argv.includes('--storage') || comparison || settings ? '--storage-smoke' : '--coach-smoke'];
+const options = [migration ? '--migration-smoke' : process.argv.includes('--storage') || comparison || settings || activation ? '--storage-smoke' : '--coach-smoke'];
+if (activation) options.push('--activation-smoke');
 if (settings) options.push('--settings-smoke');
 if (comparison) options.push('--comparison-smoke');
 if (process.argv.includes('--real-display')) options.push('--real-display-smoke');
@@ -30,6 +33,7 @@ if (migration) {
   writeFileSync(join(environment.COACH_TEST_DATA_DIR, 'counts.json'), '  {"schemaVersion":1,"days":{"2020-01-02":{"W03":{"mouse":7,"key":5},"W09":{"mouse":100,"key":100}}}}\n');
   writeFileSync(join(environment.COACH_TEST_DATA_DIR, 'settings.json'), '{"schemaVersion":1,"muted":["W03","W09"],"opened":true}');
 }
+if (activation) writeFileSync(join(environment.COACH_TEST_DATA_DIR, 'settings.json'), '{"schemaVersion":1,"muted":[],"opened":true}');
 if (comparison) {
   const today = new Date();
   const day = offset => { const date = new Date(today); date.setDate(date.getDate() - offset); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; };
@@ -38,9 +42,11 @@ if (comparison) {
     [day(7)]:{W04:{mouse:2,key:0},W07:{mouse:1,key:0},W11:{mouse:1,key:1}}
   }}));
 }
-for (let boot = 0; boot < (migration ? 2 : 1); boot++) {
-const result = spawnSync(executable, args, {
-  encoding: 'utf8', windowsHide: true, timeout: 30_000,
+for (let boot = 0; boot < (activation ? 3 : migration ? 2 : 1); boot++) {
+const result = spawnSync(executable, activation && boot === 2 ? [...args, '--activation-failure-smoke'] : args, {
+  // STARTUPINFO's hidden show state overrides the first ShowWindow on Windows.
+  // Activation checks must observe the app's actual initial display request.
+  encoding: 'utf8', windowsHide: !activation, timeout: 30_000,
   maxBuffer: 65_536, env: environment
 });
 if (result.stdout) process.stdout.write(result.stdout);

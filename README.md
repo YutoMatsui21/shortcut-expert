@@ -78,6 +78,8 @@ node scripts/smoke.mjs --migration
 node scripts/smoke.mjs --packaged --migration
 node scripts/smoke.mjs --comparison
 node scripts/smoke.mjs --settings
+node scripts/smoke.mjs --activation
+node scripts/smoke.mjs --packaged --activation --package-dir release/issue-27
 node scripts/smoke.mjs --packaged --settings --package-dir release/issue-23
 node scripts/smoke.mjs --packaged --comparison --package-dir release/issue-21
 node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operation-detection
@@ -90,6 +92,8 @@ protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配
 `smoke`は隔離データの人工mouse1／key1からhelper→判定→保存→React→通知へ接続し、実UIの通知停止/全停止/再開/学習状態と7日集計、削除取消/確定、設定再読込、不正IPC拒否、解除・終了も確認する。削除確認も本番Renderer dialogと単回tokenのIPCを通す。fixture中のhookは実入力payloadを読まない。数値はテスト値で、実入力認識率の証拠ではない。画像保存はこの試験で自分の画面だけに行う。`--real-display`は全画面抑制を実際のWindows画面状態で確認し、全画面があれば表示試験は不成功となる。
 
 `--settings`は設定panelの回帰に加え、本番Main/Preload/React/SQLiteで削除dialogの4幅・初期focus・Tab/Esc・取消、確定前の計測継続、重送防止、旧世代拒否、失敗/retry、元の計測状態への復帰を確認する。`tests/delete-purge.test.ts`は掃除失敗と再起動、旧write拒否、設定保持を実SQLiteで確認する。
+
+`--activation`はopened=trueの隔離SQLiteで3プロセスを順に起動し、cold表示要求→一覧/計測開始、instance click・共通global入口・second-instanceの重複→既存窓復元/停止・pause保持、再起動時の初期値、初期化失敗時の一覧エラーを確認する。OS通知・COM配送はfakeで、通常userDataと実入力を使わない。Windowsの初回ShowWindowをhidden指定で抑えないよう、このmodeだけ試験processのwindowsHideを外す。NSIS導入と実OS通知clickの受入は[通知契約](docs/standard-notifications.md)を参照。
 
 テスト追加の選び方は[Skill](skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](docs/design.md#test-design)。CI定義は[quality.yml](.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。
 
