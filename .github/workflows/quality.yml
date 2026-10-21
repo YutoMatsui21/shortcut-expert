@@ -94,6 +94,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --activation 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-activation-smoke.log
           exit $LASTEXITCODE
+      - name: Identify the tested foundation build
+        run: |
+          $roots = @('out', 'resources/native-helper', 'release/win-unpacked/resources')
+          $files = @($roots | ForEach-Object { Get-ChildItem -LiteralPath $_ -File -Recurse })
+          $files += Get-Item -LiteralPath 'release/win-unpacked/Window Shortcut Coach.exe'
+          $hashes = @($files | Sort-Object FullName | ForEach-Object {
+            @{ path = [IO.Path]::GetRelativePath($PWD.Path, $_.FullName); sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
+          })
+          @{ commit = $env:GITHUB_SHA; run = $env:GITHUB_RUN_ID; attempt = $env:GITHUB_RUN_ATTEMPT; files = $hashes;
+            fixtureOnly = $true; twelveOperationAcceptance = $false } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 .tools/test-results/build-hashes.json
       - name: Fixture diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -101,6 +111,7 @@ jobs:
           name: fixture-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             .tools/test-results/*.log
+            .tools/test-results/build-hashes.json
             .tools/tests/coach-*/coach-preview.png
             .tools/tests/coach-*/notice-preview.png
             .tools/tests/coach-*/learning-*.png
