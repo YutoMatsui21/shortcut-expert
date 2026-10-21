@@ -6,6 +6,7 @@ import { useCoach } from './useCoach';
 import { Icon } from './icons';
 import { MissingCoverageInfo } from './MissingCoverageInfo';
 import { learningState } from '../../shared/learning';
+import { SaveErrorBanner } from './SaveErrorBanner';
 
 const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP') + '回';
 const rate = (value: number | null | undefined) => value == null ? '—' : value.toFixed(1) + '%';
@@ -54,10 +55,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
         <label>集計対象<select aria-label="集計対象" value={query.filter} onChange={e => choose('filter', e.target.value)}><option value="learning-mastered">学習中・習得済み</option><option value="learning">学習中のみ</option><option value="all">すべて</option></select></label>
       </div>
     </header>
-    {(readError || coach.snapshot?.error || coach.message) && <div className="error content-width" role="alert">
-      {coach.snapshot?.error ?? coach.message ?? '記録を読み込めません。'}
-      {coach.snapshot?.pendingSave && <button disabled={coach.busy} onClick={() => coach.command('retry-save')}>保存を再試行</button>}
-    </div>}
+    <SaveErrorBanner snapshot={coach.snapshot} busy={coach.busy} retry={() => { void coach.command('retry-save'); }} message={coach.message ?? undefined} fallback={readError ? { message: '記録を読み込めません。保存データは保持しています。', kind: 'storage' } : undefined} />
     <main className="records-scroll content-width" aria-label={`直近${query.period}日間の観測記録`} aria-busy={!model && !readError}>
       <section className="record-kpis" aria-label={`${query.period}日間の集計`}>
         <div className="record-usage"><p>ショートカット使用率</p><div className="record-value-line"><strong data-kpi="rate" data-empty={model?.summary.total === 0}>{model?.summary.total === 0 ? '記録なし' : rate(model?.summary.rate)}</strong>

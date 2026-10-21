@@ -1,4 +1,4 @@
-import type { ObserverCandidate, Counts, Notice, Observation, OperationId, Settings, Snapshot } from '../shared/coach.ts';
+import type { ObserverCandidate, Counts, Notice, Observation, OperationId, Settings, Snapshot, SnapshotErrorKind } from '../shared/coach.ts';
 import { operations } from '../shared/coach.ts';
 import { classify } from './detector.ts';
 import { cutoffDate, validDate } from './dates.ts';
@@ -43,6 +43,7 @@ export class Coach {
   private lastOperation = new Map<OperationId, number>();
   private error: string | null = null;
   private observerError: string | null = null;
+  private errorKind: SnapshotErrorKind | null = null;
   private pendingSave = false;
   private readonly queue = new SerialQueue();
   private pendingSettings: Settings | null = null;
@@ -65,20 +66,27 @@ export class Coach {
       this.settings = loaded.settings;
       await this.refreshDate();
     } catch {
-      this.error ??= '保存データを読み込めません。元のデータは保持しています。';
+      this.error ??= '保存データを読み込めません。元のデータは保持しています。'; this.errorKind = 'storage';
       this.stop();
     }
   }
   async retrySave(): Promise<void> {
     await this.queue.run(async () => {
+      if (this.errorKind === 'storage' && !this.pendingSave && !this.pendingSettings) {
+        try {
+          const loaded = await this.dependencies.repository.load();
+          this.counts = loaded.counts; this.settings = loaded.settings; this.error = null; this.errorKind = null;
+          await this.refreshDate();
+        } catch { this.error = '保存データを読み込めません。元のデータは保持しています。'; this.errorKind = 'storage'; }
+      }
       if (this.pendingSave) await this.persist();
       if (this.pendingSettings) {
         try {
           await this.dependencies.repository.saveSettings(this.pendingSettings);
           this.settings = this.pendingSettings;
           this.pendingSettings = null;
-          if (!this.pendingSave) this.error = null;
-        } catch { this.error = '設定を保存できません。再試行してください。'; }
+          if (!this.pendingSave && this.errorKind === 'settings-save') { this.error = null; this.errorKind = null; }
+        } catch { this.error = '設定を保存できません。再試行してください。'; this.errorKind = 'settings-save'; }
       }
       this.dependencies.changed(this.snapshot());
     });
@@ -105,6 +113,7 @@ export class Coach {
     this.observerError = message;
     this.stop();
   }
+  storageFault(message: string): void { this.error = message; this.errorKind = 'storage'; this.stop(); }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   tick(): Promise<void> { return this.queue.run(() => this.refreshDate()); }
   setMuted(operation: OperationId, muted: boolean): Promise<void> {
@@ -117,10 +126,11 @@ export class Coach {
         await this.dependencies.repository.saveSettings(next);
         this.settings = next;
         this.pendingSettings = null;
-        if (!this.pendingSave && this.error === '設定を保存できません。再試行してください。') this.error = null;
+        if (!this.pendingSave && this.errorKind === 'settings-save') { this.error = null; this.errorKind = null; }
       } catch {
         this.pendingSettings = next;
         this.error = '設定を保存できません。再試行してください。';
+        this.errorKind = 'settings-save';
         this.stop();
       }
       this.dependencies.changed(this.snapshot());
@@ -136,6 +146,7 @@ export class Coach {
       } catch {
         this.pendingSettings = next;
         this.error = '設定を保存できません。再試行してください。';
+        this.errorKind = 'settings-save';
         this.stop();
       }
     });
@@ -147,9 +158,9 @@ export class Coach {
       try {
         await this.dependencies.repository.saveSettings(next);
         this.settings = next; this.pendingSettings = null;
-        if (!this.pendingSave && this.error === '設定を保存できません。再試行してください。') this.error = null;
+        if (!this.pendingSave && this.errorKind === 'settings-save') { this.error = null; this.errorKind = null; }
       } catch {
-        this.pendingSettings = next; this.error = '設定を保存できません。再試行してください。'; this.stop();
+        this.pendingSettings = next; this.error = '設定を保存できません。再試行してください。'; this.errorKind = 'settings-save'; this.stop();
       }
       if (notify || this.pendingSettings) this.dependencies.changed(this.snapshot());
     });
@@ -158,6 +169,7 @@ export class Coach {
     const today = this.dependencies.date();
     if (!validDate(today) || Object.keys(this.counts).some((day) => day > today)) {
       this.error = '端末の日付が記録より前です。日付を確認してください。';
+      this.errorKind = 'clock';
       this.stop();
       return;
     }
@@ -174,9 +186,11 @@ export class Coach {
       await this.dependencies.repository.saveCounts(this.counts);
       this.pendingSave = false;
       this.error = this.pendingSettings ? '設定を保存できません。再試行してください。' : null;
+      if (this.errorKind === 'record-save' || this.errorKind === 'settings-save') this.errorKind = this.pendingSettings ? 'settings-save' : null;
     } catch {
       this.pendingSave = true;
       this.error = '記録を保存できません。保存先を確認して再試行してください。';
+      this.errorKind = 'record-save';
       this.stop();
     }
     this.dependencies.changed(this.snapshot());
@@ -236,6 +250,8 @@ export class Coach {
   }
   snapshot(): Snapshot {
     return { counts: structuredClone(this.counts), settings: structuredClone(this.settings), observing: this.observing,
-      notificationsPaused: this.notificationsPaused, error: this.observerError ?? this.error, pendingSave: this.pendingSave || this.pendingSettings !== null };
+      notificationsPaused: this.notificationsPaused, error: this.observerError ?? this.error,
+      errorKind: this.observerError ? 'observer' : this.error ? this.errorKind : null,
+      pendingSave: this.pendingSave || this.pendingSettings !== null };
   }
 }

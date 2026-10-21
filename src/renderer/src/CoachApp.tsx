@@ -8,6 +8,7 @@ import { LearningPage, LearningSummary } from './LearningPage';
 import { Icon } from './icons';
 import { SettingsPopover } from './SettingsPopover';
 import { DeleteDialog } from './DeleteDialog';
+import { SaveErrorBanner } from './SaveErrorBanner';
 
 export function CoachApp() {
   const coach = useCoach();
@@ -43,8 +44,8 @@ export function CoachApp() {
       <button aria-label="記録" title="記録" aria-current={page === 'records' ? 'page' : undefined} onClick={() => changePage('records')}><Icon name="imgIconChart" /></button></nav>
     <div className="page-frame" hidden={page !== 'learning'}>
       <header className="page-header content-width"><div><h1>ショートカット一覧</h1><p>学習中の操作をマウスで行うと、ショートカットを通知します。 <span className="help" tabIndex={0} role="note" aria-label="学習と記録について"><Icon name="imgInfoIcon" /><span className="tooltip">対象外でも記録は継続します。12操作とも検出精度は未検証のため準備中です。</span></span></p></div><LearningSummary model={model} /></header>
+      <SaveErrorBanner snapshot={coach.snapshot} busy={coach.busy} retry={() => { void coach.command('retry-save'); }} message={coach.message ?? undefined} fallback={readError ? { message: '一覧を読み込めません。保存データは保持しています。', kind: 'storage' } : undefined} />
       <main className="page-scroll content-width" aria-label="ショートカット一覧の本文">
-        {(readError || coach.snapshot?.error || coach.message) && <div className="error" role="alert">{coach.snapshot?.error ?? coach.message ?? '一覧を読み込めません。'}{coach.snapshot?.pendingSave && <button disabled={coach.busy} onClick={() => coach.command('retry-save')}>保存を再試行</button>}</div>}
         <LearningPage model={model} busy={coach.busy} change={coach.setLearningState} collapsed={collapsed} toggle={group => setCollapsed(value => value.includes(group) ? value.filter(id => id !== group) : [...value, group])} />
       </main>
     </div>

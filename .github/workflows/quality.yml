@@ -104,6 +104,8 @@ jobs:
             .tools/tests/coach-*/records-comparison-*.json
             .tools/tests/coach-*/settings-*.png
             .tools/tests/coach-*/delete-*.png
+            .tools/tests/coach-*/save-error-*.png
+            .tools/tests/coach-*/save-error-*.json
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 3
