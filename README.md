@@ -97,6 +97,8 @@ protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配
 
 テスト追加の選び方は[Skill](skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](docs/design.md#test-design)。CI定義は[quality.yml](.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。
 
+[#43の先行fixture統合の対応表と未通過経路](docs/fixture-integration.md)。既存5操作は厳格v2 parseから実SQLite Worker、両ページ用モデル、通知adapterまでを3学習状態で結合試験する。残る7操作のCore採用は未実装で、12行表示や取得済みcountsの投入はその代わりにならない。
+
 窓管理・IPC・画面状態処理の整理に対する回帰試験では、unitで窓の重複生成防止・不正IPC拒否・Preload購読解除を確認する。smokeは×で非表示、人工second-instanceイベントから同じ窓の再表示と最小化復元、画面再読込後の状態取得と操作も確認する。実際の二重起動やトレイのOSイベント配送はこの人工イベント試験の対象外。
 
 記録画面のqueryは今日を含む7/30日、現在の学習状態に基づく3フィルタ、5ソートを扱い、両期間を最大60日で読込む。隔離smokeはcontrols→限定IPC→集計→行/KPIの反映、状態変更、画面往復保持、Renderer再読込時の初期値復帰も確認する。`--comparison`は専用の隔離SQLiteに取得済みcountsとcoverageを作り、J01の比較・既知0・unknown・legacy、欠損infoの有無、4幅、hover/focus/Space/Esc/クリック、フィルタ/期間/状態変更を本番IPCとReactで確認する。[記録queryの契約](docs/records-ui.md)。
