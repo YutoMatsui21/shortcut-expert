@@ -24,6 +24,7 @@
     "smoke:dev": "node scripts/dev-run.mjs electron-vite dev -- --coach-smoke",
     "package:dir": "node scripts/dev-run.mjs electron-builder --dir --win --x64",
     "smoke:packaged": "node scripts/smoke.mjs --packaged",
+    "acceptance:storage": "node scripts/storage-acceptance.mjs",
     "probe:sqlite": "node scripts/sqlite-probe.mjs",
     "probe:sqlite:package": "node scripts/dev-run.mjs electron-builder --config validation/probes/sqlite/electron-builder.cjs --dir --win --x64",
     "probe:sqlite:packaged": "node scripts/sqlite-probe.mjs --packaged",
