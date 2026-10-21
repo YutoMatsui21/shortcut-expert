@@ -3,7 +3,9 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { app, dialog, Notification, type BrowserWindow } from 'electron';
 import { runCoach, showCoach } from './coach-app.ts';
 
-const fixture = process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
+const osAcceptance = process.argv.includes('--os-notification-acceptance');
+if (osAcceptance && !app.isPackaged) { console.error('V01_REQUIRES_INSTALLED_NSIS'); app.exit(1); }
+const fixture = osAcceptance || process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
 if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
 function fixtureData(): string {
   if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;
@@ -27,9 +29,9 @@ else {
   let activationPresenter: Electron.Notification | undefined;
   app.once('will-quit', () => { activationPresenter?.removeAllListeners(); activationPresenter = undefined; });
   app.whenReady().then(() => {
-    if (!fixture) {
+    if (!fixture || osAcceptance) {
       app.setAppUserModelId('local.window-shortcut-coach');
-      Notification.handleActivation(() => showCoach());
+      Notification.handleActivation(() => { if (osAcceptance) console.log('V01_ACTIVATION global'); showCoach(); });
       activationPresenter = new Notification();
     }
     if (fixture && process.argv.includes('--activation-smoke')) showCoach();
