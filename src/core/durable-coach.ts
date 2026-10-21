@@ -124,14 +124,14 @@ export class DurableCoach {
   retrySave(): Promise<void> {
     return this.queue.run(async () => {
       if (this.pending || this.pendingSettings || this.errorKind === 'storage') await this.deps.repository.reconnect();
+      if (this.pending) await this.persist(this.pending);
+      if (this.pendingSettings) await this.settings(this.pendingSettings);
       if (this.errorKind === 'storage' && !this.pending && !this.pendingSettings) {
         try {
           this.data = await this.deps.repository.load(this.deps.date());
           this.loaded = true; this.error = null; this.errorKind = null; this.baseline = null;
         } catch { this.fail('保存データを読み込めません。元のデータは保持しています。', 'storage'); }
       }
-      if (this.pending) await this.persist(this.pending);
-      if (this.pendingSettings) await this.settings(this.pendingSettings);
       if (this.deleting && !this.pending) {
         const value = this.prepare(undefined, true); if (value) await this.persist(value);
       }

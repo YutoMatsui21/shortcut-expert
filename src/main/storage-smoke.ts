@@ -124,10 +124,12 @@ export async function runStorageSmoke({ coach, observer, window, repository, ver
   repository.query = async () => { throw new Error('fixture concurrent read failure'); };
   await window.webContents.executeJavaScript(`window.coach.getRecordSummary().catch(() => {})`);
   assert.equal(coach.snapshot().canRetrySave, true, 'an existing observer fault must not hide a new storage failure');
+  await waitFor(window, `document.querySelectorAll('.record-table tbody tr').length === 0 && document.querySelector('.records-scroll')?.getAttribute('aria-busy') === 'false'`, 'masked-read-error');
   repository.query = query;
   await window.webContents.executeJavaScript(`window.coach.command('retry-save')`);
   assert.equal(coach.snapshot().error, 'fixture independent observer fault');
   assert.equal(coach.snapshot().observing, false);
+  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="key"]')?.textContent === '1' && document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent === '1'`, 'masked-read-recovery-rows');
   await window.webContents.executeJavaScript(`window.coach.command('start')`);
   await verifyPendingExit?.();
   await observer.stop();

@@ -241,6 +241,16 @@ test('settings ACK loss preserves confirmed state until retry; newest pending se
   assert.equal(h.coach.snapshot().settings.states?.W04, 'excluded');
   assert.equal(h.coach.snapshot().pendingSave, false); assert.equal(h.coach.snapshot().observing, false);
 });
+test('one retry resolves pending settings and a separate storage read fault together', async t => {
+  const h = await fixture(t), save = h.repository.saveSettings.bind(h.repository);
+  h.repository.saveSettings = async () => { throw new Error('fixture settings failure'); };
+  await h.coach.setLearningState('W03', 'mastered');
+  h.coach.storageFault('fixture separate read failure'); h.repository.saveSettings = save;
+  await h.coach.retrySave();
+  assert.equal(h.coach.snapshot().settings.states?.W03, 'mastered');
+  assert.equal(h.coach.snapshot().pendingSave, false); assert.equal(h.coach.snapshot().canRetrySave, false);
+  assert.equal(h.coach.snapshot().error, null); assert.equal(h.coach.snapshot().observing, false);
+});
 test('existing JSON remains byte-identical; authority/missing DB/unknown schema never fall back or overwrite', async t => {
   const root = await mkdtemp(join(tmpdir(), 'coach-legacy-')); t.after(() => rm(root, { recursive: true, force: true }));
   const original = '{"schemaVersion":99,"days":{}}'; await writeFile(join(root, 'counts.json'), original);

@@ -42,6 +42,8 @@ UIは保存済みの数値を表示する。coverage根拠もcountもない操�
 
 Mainは既存のobserver/時計故障がある時も新しい読込失敗をCoreへ渡す。停止中の同じ保存先故障は再配信せず、Reactの読込→故障配信→再読込の循環を防ぐ。`--storage` smokeでobserver故障→query失敗→retry→observer故障と停止の保持を実IPCから確認する。
 
+retryは保留記録・設定を確定してから残る読込故障を再検査し、設定保留と読込故障の同時発生でも1回で復旧する。RecordsPageは`canRetrySave`の変化でも再取得し、優先されるobserverメッセージ・revision・設定が不変でも復旧後の行を戻す。Codex指摘に対する回帰はCoreの単回retryと実Rendererの`masked-read-recovery-rows`で確認する。
+
 ### #25：保存エラー・保留・再試行の受入対応
 
 | 条件 | 本番経路と検証 |

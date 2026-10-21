@@ -42,7 +42,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
       if (active) { setResult(value); setReadError(false); }
     }, () => { if (active) { setResult(undefined); setReadError(true); } });
     return () => { active = false; };
-  }, [query, day, recordsVersion, coach.snapshot?.error, selection]);
+  }, [query, day, recordsVersion, coach.snapshot?.error, coach.snapshot?.canRetrySave, selection]);
   const model = result?.to === day && result.query.period === query.period && result.query.filter === query.filter && result.query.sort === query.sort && result.revision >= (coach.snapshot?.revision ?? 0) ? result : undefined;
   const choose = (field: keyof RecordsQuery, value: string) => {
     const next = { ...query, [field]: field === 'period' ? Number(value) : value };
