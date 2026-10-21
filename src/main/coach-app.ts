@@ -1,6 +1,7 @@
 import { app, type BrowserWindow, dialog, Menu, nativeImage, screen, Tray, powerMonitor } from 'electron';
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { EventEmitter } from 'node:events';
 import { Coach } from '../core/coach';
 import { DurableCoach } from '../core/durable-coach';
 import { selectRepositoryWithRetry, SqliteRepository } from './sqlite-repository';
@@ -10,6 +11,7 @@ import { localDate } from '../core/dates';
 import type { Snapshot } from '../shared/coach';
 import { ObserverClient } from './observer';
 import { NotificationWindow } from './notification';
+import { StandardNotifications, type NotificationResult } from './standard-notification';
 import { runCoachSmoke } from './smoke';
 import { runStorageSmoke } from './storage-smoke';
 import { runMigrationSmoke } from './migration-smoke';
@@ -45,6 +47,15 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     notice.dismiss(); coach.fault('Windowsの観測が停止しました。再開してください。');
   }, fixture);
   const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
+  const fixtureNoticeResults: NotificationResult[] = [];
+  const standardNotices = new StandardNotifications(showCoach, result => {
+    if (fixture) fixtureNoticeResults.push(result);
+    if (result.status === 'failed' || result.status === 'unknown') console.error('COACH_NOTIFICATION_' + result.status.toUpperCase());
+  }, fixture ? () => {
+    const events = new EventEmitter();
+    return Object.assign(events, { show: () => { events.emit('show'); } });
+  } : undefined);
+  app.once('will-quit', () => standardNotices.dispose());
   const publish = (snapshot: Snapshot) => {
     coachWindow.publish(snapshot);
     if (tray) {
@@ -64,7 +75,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       buttons: ['再試行', '終了'], defaultId: 0, cancelId: 1 });
     return answer.response === 0;
   });
-  const common = { date: localDate, now: () => performance.now(), notify: (value: import('../shared/coach').Notice) => notice.show(value), changed: publish };
+  const common = { date: localDate, now: () => performance.now(), changed: publish };
   const comparisonFixture = fixture && process.argv.includes('--comparison-smoke');
   if (comparisonFixture) {
     if (!(repository instanceof SqliteRepository)) throw new Error('Comparison fixture requires isolated SQLite');
@@ -72,8 +83,9 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   }
   const coach = repository instanceof SqliteRepository
     ? new DurableCoach({ ...common, repository, session: repository.session,
+      notify: value => standardNotices.show(value),
       capabilities: () => fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : [] })
-    : new Coach({ ...common, repository });
+    : new Coach({ ...common, repository, notify: value => notice.show(value) });
   const startObservation = async () => {
     if (exitRequested) return;
     const snapshot = coach.snapshot();
@@ -230,6 +242,22 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     try {
       report = await Promise.race([
         process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository,
+          verifyNotifications: async sample => {
+            await stopObservation();
+            const generation = await observer.start(); coach.begin(generation); coach.pauseNotifications(false);
+            const before = coach.snapshot().counts[localDate()]?.W03?.mouse ?? 0;
+            const offset = fixtureNoticeResults.length;
+            for (let sequence = 1; sequence <= 3; sequence++) {
+              await observer.inject({ ...sample, generation, sequence, origin: 'mouse', route: 'max-button', monitor: null });
+            }
+            await coach.idle();
+            const results = fixtureNoticeResults.slice(offset);
+            if (coach.snapshot().counts[localDate()]?.W03?.mouse !== before + 3 ||
+              results.filter(value => value.status === 'requested').length !== 3 ||
+              results.filter(value => value.status === 'api-returned').length !== 3 ||
+              results.filter(value => value.status === 'show-event').length !== 3 ||
+              new Set(results.map(value => value.id)).size !== 3 || previews.notification !== null) throw new Error('standard-notification-fixture');
+          },
           verifyPendingExit: async () => {
             window.show();
             const save = repository.saveSettings.bind(repository);

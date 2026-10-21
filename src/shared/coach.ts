@@ -46,6 +46,7 @@ export type Snapshot = {
   stateVersion?: number;
 };
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
+export type ShortcutNotice = Pick<Notice, 'operation' | 'label' | 'shortcut'>;
 export type CoachBridge = {
   getLearning(): Promise<import('./learning.ts').LearningReadModel>;
   getRecordSummary(query?: import('./records.ts').RecordsQuery): Promise<import('./records.ts').RecordsReadModel>;
