@@ -39,6 +39,7 @@ const { CoachWindow } = await import('../src/main/coach-window.ts');
 
 test('読込中も窓を重複作成せず、closeで隠し同じ窓を復元する', async () => {
   const manager = new CoachWindow();
+  manager.show();
   const loading = deferred<void>();
   let loads = 0;
   let quitting = false;
@@ -47,7 +48,11 @@ test('読込中も窓を重複作成せず、closeで隠し同じ窓を復元す
   const window = FixtureWindow.all.at(-1)!;
   assert.equal(await manager.create(load, () => quitting), manager.current);
   assert.equal(loads, 1);
+  manager.show(); manager.show();
+  assert.equal(window.visible, false, 'activation must wait for the renderer to finish loading');
   loading.resolve(); await pending;
+  assert.equal(window.visible, true, 'early activation is restored after safe initialization and load');
+  assert.deepEqual(window.calls, ['show', 'focus']);
   const event = { preventDefault: mock.fn() };
   manager.show();
   window.emit('close', event);

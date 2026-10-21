@@ -22,3 +22,5 @@ nsis:
   allowElevation: false
   runAfterFinish: false
   deleteAppDataOnUninstall: false
+  createStartMenuShortcut: true
+  shortcutName: Window Shortcut Coach

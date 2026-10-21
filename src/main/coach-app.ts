@@ -20,14 +20,13 @@ import { CoachWindow } from './coach-window';
 import { registerCoachIpc } from './coach-ipc';
 import { coachTrayMenu } from './coach-tray';
 import { runSettingsSmoke } from './settings-smoke';
+import { runActivationSmoke } from './activation-smoke';
 import { learningReadModel } from '../core/learning';
 import { recordsReadModel } from '../core/records';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
-let showRequested = false;
 export function showCoach(): void {
-  showRequested = true;
   coachWindow.show();
 }
 
@@ -48,11 +47,13 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   }, fixture);
   const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
   const fixtureNoticeResults: NotificationResult[] = [];
+  const fixtureNoticeEvents: EventEmitter[] = [];
   const standardNotices = new StandardNotifications(showCoach, result => {
     if (fixture) fixtureNoticeResults.push(result);
     if (result.status === 'failed' || result.status === 'unknown') console.error('COACH_NOTIFICATION_' + result.status.toUpperCase());
   }, fixture ? () => {
     const events = new EventEmitter();
+    fixtureNoticeEvents.push(events);
     return Object.assign(events, { show: () => { events.emit('show'); } });
   } : undefined);
   app.once('will-quit', () => standardNotices.dispose());
@@ -76,6 +77,9 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return answer.response === 0;
   });
   const common = { date: localDate, now: () => performance.now(), changed: publish };
+  const activationFixture = fixture && process.argv.includes('--activation-smoke');
+  const activationFailureFixture = activationFixture && process.argv.includes('--activation-failure-smoke');
+  if (activationFailureFixture) repository.load = async () => { throw new Error('fixture initialization failure'); };
   const comparisonFixture = fixture && process.argv.includes('--comparison-smoke');
   if (comparisonFixture) {
     if (!(repository instanceof SqliteRepository)) throw new Error('Comparison fixture requires isolated SQLite');
@@ -211,7 +215,6 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     workAreas: () => [screen.getPrimaryDisplay(), ...screen.getAllDisplays().filter(display => display.id !== screen.getPrimaryDisplay().id)].map(display => display.workArea),
     save: bounds => coach.setNormalBounds(bounds)
   });
-  if (showRequested) showCoach();
   if (!fixture) {
     const pixels = Buffer.alloc(16 * 16 * 4);
     for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) if ((x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36) {
@@ -238,10 +241,11 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   if (fixture) {
     if (storageFixture) clearInterval(ticker);
     let deadline: NodeJS.Timeout | undefined;
-    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | undefined;
+    let report: Awaited<ReturnType<typeof runCoachSmoke>> | Awaited<ReturnType<typeof runStorageSmoke>> | Awaited<ReturnType<typeof runMigrationSmoke>> | Awaited<ReturnType<typeof runRecordsComparisonSmoke>> | Awaited<ReturnType<typeof runSettingsSmoke>> | Awaited<ReturnType<typeof runActivationSmoke>> | undefined;
     try {
       report = await Promise.race([
-        process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository,
+        activationFixture ? runActivationSmoke({ window, snapshot: () => coach.snapshot(), command, activate: showCoach,
+          failed: activationFailureFixture, notifications: standardNotices, notificationEvents: fixtureNoticeEvents }) : process.argv.includes('--settings-smoke') ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparisonFixture ? runRecordsComparisonSmoke(window) : migrationFixture ? runMigrationSmoke({ coach, window, repository }) : storageFixture ? runStorageSmoke({ coach, observer, window, repository,
           verifyNotifications: async sample => {
             await stopObservation();
             const generation = await observer.start(); coach.begin(generation); coach.pauseNotifications(false);
