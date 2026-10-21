@@ -64,7 +64,11 @@ export class DurableCoach {
   }
   stop(): void { this.observing = false; this.generation++; this.baseline = null; this.publish(); }
   fault(message: string): void { this.observerError = message; this.stop(); }
-  storageFault(message: string): void { this.fail(message, 'storage'); }
+  storageFault(message: string): void {
+    // Repeated read-model failures must not create a publish/refetch feedback loop.
+    if (!this.observing && this.errorKind === 'storage') return;
+    this.fail(message, 'storage');
+  }
   pauseNotifications(paused: boolean): void { if (this.observing) { this.paused = paused; this.publish(); } }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   private prepare(count?: RecordMutation['count'], reset?: boolean): RecordMutation | null {

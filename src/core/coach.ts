@@ -113,7 +113,10 @@ export class Coach {
     this.observerError = message;
     this.stop();
   }
-  storageFault(message: string): void { this.error = message; this.errorKind = 'storage'; this.stop(); }
+  storageFault(message: string): void {
+    if (!this.observing && this.errorKind === 'storage') return;
+    this.error = message; this.errorKind = 'storage'; this.stop();
+  }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
   tick(): Promise<void> { return this.queue.run(() => this.refreshDate()); }
   setMuted(operation: OperationId, muted: boolean): Promise<void> {

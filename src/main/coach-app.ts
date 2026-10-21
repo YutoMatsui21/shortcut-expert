@@ -154,7 +154,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         const snapshot = coach.snapshot();
         return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today, query);
       } catch {
-        if (!coach.snapshot().error) coach.storageFault('記録を読み込めません。元のデータは保持しています。');
+        coach.storageFault('記録を読み込めません。元のデータは保持しています。');
         throw new Error('記録を読み込めません。');
       }
     }),
@@ -166,7 +166,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         if (coach instanceof DurableCoach) return await coach.getLearning(today);
         const records = { counts: snapshot.counts, coverage: {}, revision: 0 };
         return learningReadModel(records, snapshot.settings, today);
-      } catch { if (!coach.snapshot().error) coach.storageFault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
+      } catch { coach.storageFault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
     }),
     windowCommand: async (value) => { if (!exitRequested) coachWindow.command(value); },
     getRecords: async (from, to) => {

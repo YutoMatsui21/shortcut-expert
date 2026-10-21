@@ -120,6 +120,15 @@ export async function runStorageSmoke({ coach, observer, window, repository, ver
   assert.equal(coach.snapshot().observing, false, 'storage recovery must not resume the observer');
   await window.webContents.executeJavaScript(`window.coach.command('start')`);
   repository.query = query;
+  coach.fault('fixture independent observer fault');
+  repository.query = async () => { throw new Error('fixture concurrent read failure'); };
+  await window.webContents.executeJavaScript(`window.coach.getRecordSummary().catch(() => {})`);
+  assert.equal(coach.snapshot().canRetrySave, true, 'an existing observer fault must not hide a new storage failure');
+  repository.query = query;
+  await window.webContents.executeJavaScript(`window.coach.command('retry-save')`);
+  assert.equal(coach.snapshot().error, 'fixture independent observer fault');
+  assert.equal(coach.snapshot().observing, false);
+  await window.webContents.executeJavaScript(`window.coach.command('start')`);
   await verifyPendingExit?.();
   await observer.stop();
   coach.stop(); powerMonitor.emit('suspend'); assert.equal(coach.snapshot().error, null, 'intentional stop stays stopped during sleep');
