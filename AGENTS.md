@@ -6,7 +6,7 @@
 - Windowsの窓操作を効率化する目的・動作要件・公開前の受け入れ条件は[要件書](docs/mvp-requirements.md)、操作の成立条件は[技術判断](docs/research.md#operations)を参照する。習得数自体を目的にしない。
 - 実装着手・仕様取得・CI待機は[開発の進め方](README.md#development-workflow)、実行手順・変更範囲に応じた検証は[README](README.md#開発確認)と[package.json](package.json)、.NET SDKの版は[global.json](global.json)を参照する。
 - テスト追加・バグ修正・CI変更では[テスト設計Skill](skills/test-shortcut-coach/SKILL.md)を読み、変更した本番経路に対応する検証を選ぶ。
-- Issue実装後のPRレビュー・merge・ラベル更新では[Issue完了Skill](skills/finish-issue/SKILL.md)を読み、完了処理まで行う。
+- Issue・PR・レビュー依頼・merge・ラベル更新などGitHub操作では[GitHub操作Skill](skills/github-workflow/SKILL.md)を読み、`gh`を最優先で使用する。
 - 必要な資料だけ読み、過去の検証結果や設計上の仮説を現行実装の確認済み事実として扱わない。
 
 ## 変更と安全性
@@ -16,7 +16,7 @@
 - 入力由来・操作結果・代替キーの同等性が不明なら推測で案内・集計しない。ElectronのcontextIsolation・sandboxと限定されたpreload APIを維持する。
 - 通常の保存は日別・操作別mouse/key集計、設定、および[#15の承認済み保存契約](https://github.com/YutoMatsui21/shortcut-expert/issues/15)・Spec §8.3/§9で定めた日別coverage集約（knownness・稼働量・gap・能力revision）と保存整合用metaに限定する。文字・キー生ログ・入力時刻列・活動履歴・URL・窓タイトル・ファイル名やパス・clipboard・画面画像は保存せず、外部送信しない。
 - 自動検証は隔離したfixtureデータを使う。実入力の観測を伴う試験はユーザーの明示的な同意を得る。人工入力の成功を実入力精度の証拠としない。
-- 実装Issueでは、作業ブランチへのcommit・push→PR作成→最新headのCIとGitHub上のCodexレビュー確認・指摘対応→mainへのmerge→Issueの完了処理・ラベル・親/後続Issueの更新まで行う。CI・レビュー・権限等の条件が満たせない場合はmerge/完了扱いにせず阻害要因を報告する。**アプリの公開・リリースは別途承認が必要。**
+- 実装Issueでは、commit・push→PR作成→`@codex review`で明示的にレビュー依頼→最新headのCIとCodexレビューの両方が完了してから指摘・失敗に対応→mainへmerge→Issue・ラベル・親/後続Issueを更新する。修正をpushしたらレビューを再依頼する。CI・レビュー・権限等の条件が満たせない場合はmerge/完了扱いにせず阻害要因を報告する。**アプリの公開・リリースは別途承認が必要。**
 - 責務・依存方向・動作・要件を変更したら、同じ変更内で関連する設計書・正本・テストを更新する。
 - 規則の詳細は設計書、実行手順はREADMEに集約し、このファイルでは重複した規則・一時的な作業状況を削る。
 - 完了時は変更内容、検証結果、未確認事項を簡潔に報告する。
