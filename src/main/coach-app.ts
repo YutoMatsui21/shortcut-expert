@@ -24,6 +24,7 @@ import { runActivationSmoke } from './activation-smoke';
 import { learningReadModel } from '../core/learning';
 import { recordsReadModel } from '../core/records';
 import { runNotificationAcceptance } from './notification-acceptance';
+import { runUiAcceptance } from './ui-acceptance';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -33,6 +34,7 @@ export function showCoach(): void {
 
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   const osAcceptance = fixture && process.argv.includes('--os-notification-acceptance');
+  const uiAcceptance = fixture && process.argv.includes('--ui-acceptance');
   let tray: Tray | null = null;
   let ticker: NodeJS.Timeout | undefined;
   let errorStop = false;
@@ -70,7 +72,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   };
   // Keep the established JSON smoke as legacy regression. New storage has its own empty-userData smoke.
   const migrationFixture = process.argv.includes('--migration-smoke');
-  const storageFixture = osAcceptance || process.argv.includes('--storage-smoke') || migrationFixture;
+  const storageFixture = osAcceptance || uiAcceptance || process.argv.includes('--storage-smoke') || migrationFixture;
   if (fixture && !storageFixture) await writeFile(join(app.getPath('userData'), 'counts.json'), JSON.stringify({ schemaVersion: 1, days: {} }), { flag: 'wx' });
   const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
   const repository = fixture && !storageFixture ? new JsonRepository(app.getPath('userData')) : await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
@@ -218,7 +220,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     workAreas: () => [screen.getPrimaryDisplay(), ...screen.getAllDisplays().filter(display => display.id !== screen.getPrimaryDisplay().id)].map(display => display.workArea),
     save: bounds => coach.setNormalBounds(bounds)
   });
-  if (!fixture || osAcceptance) {
+  if (!fixture || osAcceptance || uiAcceptance) {
     const pixels = Buffer.alloc(16 * 16 * 4);
     for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) if ((x - 7.5) ** 2 + (y - 7.5) ** 2 <= 36) {
       const at = (y * 16 + x) * 4; pixels[at] = 72; pixels[at + 1] = 122; pixels[at + 2] = 33; pixels[at + 3] = 255;
@@ -247,6 +249,14 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (!(coach instanceof DurableCoach)) throw new Error('V01 requires isolated SQLite');
     await runNotificationAcceptance(coach, observer);
     return; // Keep real notification instances and tray alive for manual history clicks.
+  }
+  if (uiAcceptance) {
+    showCoach();
+    try { await runUiAcceptance(window); }
+    catch (error) { console.error('V03_MATRIX_FAILED', error); await quit(); return; }
+    console.log('V03_READY fixture-only; real input observation disabled; exit via tray');
+    if (process.argv.includes('--ui-acceptance-exit')) await quit();
+    return;
   }
   if (fixture) {
     if (storageFixture) clearInterval(ticker);

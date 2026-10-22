@@ -5,7 +5,7 @@ import { runCoach, showCoach } from './coach-app.ts';
 
 const osAcceptance = process.argv.includes('--os-notification-acceptance');
 if (osAcceptance && !app.isPackaged) { console.error('V01_REQUIRES_INSTALLED_NSIS'); app.exit(1); }
-const fixture = osAcceptance || process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
+const fixture = osAcceptance || process.argv.includes('--ui-acceptance') || process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
 if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
 function fixtureData(): string {
   if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;

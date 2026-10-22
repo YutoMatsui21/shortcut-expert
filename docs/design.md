@@ -17,6 +17,8 @@
 既存の工程記録・旧MVP要件・除外前Specの実施順より、この現行方針を優先する。Issue [#14](https://github.com/YutoMatsui21/shortcut-expert/issues/14)は検出器側の技術審査であり、UI/保存の着手ゲートではない。
 ## 現行アーキテクチャ
 
+#46の隔離UI受入はMainの`ui-acceptance.ts`が本番CoachWindow/Rendererを計測する。起動scriptが新規fixture保存先と配布物hashを記録し、helperは実入力を読まない。[責務・結果・証拠の範囲](ui-acceptance.md)。
+
 日別保存は[保存契約と検証](durable-storage.md)に従う。Mainの`sqlite-repository.ts`が単一writerと専用`storage-worker.ts`を所有し、`storage-store.ts`だけがSQLiteへアクセスする。Coreの`durable-coach.ts`は限定Repository契約を介して、件数・coverage・時計高水位・非重複checkpointを同時保存する。Core/Rendererは最大60日のread modelだけを持つ。Worker起動時の`storage-migration.ts`が旧JSONの厳格検査とstagingへの移行・再open照合・有効化を担当する。旧JSON用`Coach`/`JsonRepository`は隔離回帰試験用に維持し、通常起動は30日剪定を通さない。移行・削除の故障時も旧JSONへのfallbackは行わない。[移行契約](json-migration.md)を参照。限定bridgeの`getRecords`はMainでsender/mainFrame・実在日付・最大60日を再検証する。
 
 機能追加・リファクタ・責務配置の判断に用いる。下記の責務分担を現行方針とし、後続の工程記録は当時の状態を示す。
