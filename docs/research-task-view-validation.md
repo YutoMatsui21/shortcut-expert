@@ -112,6 +112,10 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 結果の正本は [匿名化した試行集約](../validation/evidence/task-view-summary-20261022.json)。ローカルJSONLのSHA-256と当時のsource/exe hashを含む。個々のsnapshotに手動ラベルを貼っておらず、本人の回答は各session全体の目視oracleである。採取ごとの表示時刻・開閉時刻・入力由来は測定していない。
 
+当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・窓名等の観測内容を含むソースではない。
+
+`node scripts/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
+
 | session（`.tools/validation/task-view/` 以下） | 秒 / 採取数 | 探索完了 / 不完全 | 結果 |
 | --- | --- | --- | --- |
 | `sampling-1792665092630.jsonl` | 60 / 22 | 21 / 1 | snapshotとDesktop直下探索。本体仮説0。最後のworkerは総時間上限で打切り |
@@ -124,7 +128,9 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 [AutomationElement.FromPoint](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.frompoint) は物理画面座標を受け取るため、worker内でthreadのDPI contextをPerMonitorV2へ変更して主画面中央を求め、終了時に復元する。cursor位置・画像は使わない。主画面だけの診断であり、別画面の受入試験ではない。
 
-中央の要素からRawViewの親を最大9要素たどる。PIDを一時照合し、従来の5種Shell hostだけのclass/controlType/固定role/offscreenを保存する。対象外の親は除外markerのみとし、Name/AutomationId/ClassNameは読まない。対象外processの実行元がWindowsのSystem32/SystemApps配下の場合だけprocess名を候補として残す。pathは一時照合のみで保存しない。これは配置場所の確認であり、署名検証・Shell認定ではない。`unidentified` は両ディレクトリの外、またはmetadata取得不能を含むため、非Windowsプロセスとの断定には使わない。
+中央の要素からRawViewの親を最大9要素たどる。PIDを一時照合し、従来の5種Shell hostだけのclass/controlType/固定role/offscreenを保存する。対象外の親は除外markerのみとし、Name/AutomationId/ClassNameは読まない。対象外processの実行元pathは一時照合だけに使い、保存するのは固定カテゴリ `windows-system32` / `windows-systemapps` / `outside-system-directories` / `metadata-unavailable` のみ。発見した実行ファイル名は保存しない。これは配置場所の確認であり、署名検証・Shell認定ではない。self-testはSystem32/SystemAppsの分類と、類似prefix・`..`でディレクトリを出る負例を確認する。
+
+3回目の採取時の中間版はSystem32/SystemApps配下のprocess名を返す実装だったが、今回の全45件の出力は `unidentified` であり、発見したprocess名は記録されていない。この旧値は両ディレクトリの外、またはmetadata取得不能を含むため、非Windowsプロセスとの断定には使わない。レビュー後の実行版は上記の固定カテゴリへ変更し、過去の採取結果を書き換えていない。
 
 対象外の親を通過しているため、閉→開→閉を識別できるtreeの完全取得は主張しない。除外・上限到達・読取失敗はunknownのまま。サンプリングはこれら3方式を交互に実行し、workerごと最大15秒かつ残り総時間までに制限する。samplingファイルの完走は、各snapshotの完了や検出成功を意味しない。
 

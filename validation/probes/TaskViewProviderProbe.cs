@@ -31,18 +31,21 @@ class TaskViewProviderProbe {
         "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "MultitaskingViewFrame",
         "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow"
     };
-    // Unfamiliar Windows-host metadata may identify the next provider to investigate.
+    // Persist a fixed directory category, never a discovered executable basename.
     // This is a location check, not a trust/signature check or a Shell selector.
-    static string SystemHostCandidate(Process process) {
+    static string SystemHostCategory(string windows, string executable) {
+        string file=Path.GetFullPath(executable);
+        foreach(string folder in new [] { "System32", "SystemApps" }) {
+            string prefix=Path.Combine(Path.GetFullPath(windows),folder)+Path.DirectorySeparatorChar;
+            if(file.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)) return "windows-"+folder.ToLowerInvariant();
+        }
+        return "outside-system-directories";
+    }
+    static string SystemHostCategory(Process process) {
         try {
-            string windows=Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            string file=Path.GetFullPath(process.MainModule.FileName);
-            foreach(string folder in new [] { "System32", "SystemApps" }) {
-                string prefix=Path.Combine(windows,folder)+Path.DirectorySeparatorChar;
-                if(file.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)) return process.ProcessName;
-            }
+            return SystemHostCategory(Environment.GetFolderPath(Environment.SpecialFolder.Windows),process.MainModule.FileName);
         } catch { }
-        return "unidentified";
+        return "metadata-unavailable";
     }
     static void Emit(object value) { Console.WriteLine(Json.Serialize(value)); Console.Out.Flush(); }
 
@@ -65,7 +68,11 @@ class TaskViewProviderProbe {
            Verdict(false,1)!="unknown" || Verdict(true,1)!="candidate-only" ||
            Complete(false,1,0,false,true) || Complete(true,0,0,false,true) ||
            Complete(true,1,1,false,true) || Complete(true,1,0,true,true) ||
-           Complete(true,1,0,false,false) || !Complete(true,1,0,false,true))
+           Complete(true,1,0,false,false) || !Complete(true,1,0,false,true) ||
+           SystemHostCategory(@"C:\Windows",@"C:\Windows\System32\fixture.exe")!="windows-system32" ||
+           SystemHostCategory(@"C:\Windows",@"C:\Windows\SystemApps\fixture.exe")!="windows-systemapps" ||
+           SystemHostCategory(@"C:\Windows",@"C:\Windows\System32-other\fixture.exe")!="outside-system-directories" ||
+           SystemHostCategory(@"C:\Windows",@"C:\Windows\System32\..\Temp\fixture.exe")!="outside-system-directories")
             throw new Exception("Research evidence boundary failed");
         Emit(new { kind="self-test", result="PASS", liveObservation=false });
     }
@@ -193,7 +200,7 @@ class TaskViewProviderProbe {
                     } else {
                         excluded++;
                         Emit(new {kind="point-exclusion",depth=index,reason="outside-shell-scope",
-                            systemHostCandidate=SystemHostCandidate(process)});
+                            systemHostCategory=SystemHostCategory(process)});
                     }
                 }
                 if(nodes>MaxDepth) break;
