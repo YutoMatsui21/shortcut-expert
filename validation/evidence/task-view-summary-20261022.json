@@ -1,0 +1,126 @@
+{
+  "issue": 4,
+  "date": "2026-10-22",
+  "osBuild": 26340,
+  "verdict": "unknown",
+  "acceptancePassed": false,
+  "captures": [
+    {
+      "file": "sampling-1792665092630.jsonl",
+      "sha256": "cd62a57d89968349bc772e671086533be27959fc485e93037e4bdcd35ac3ea51",
+      "durationSeconds": 60,
+      "sourceSha256": "d7cf44daaca4bd1bc29999a174f4787a37ce785566e40448683527bbd64b5023",
+      "probeSha256": "2584b8544ea93ee81138a7514d68c91322b98d855ab0590b6824de8201344f09",
+      "modes": [
+        {
+          "mode": "--discover-hosts",
+          "samples": 11,
+          "workerSucceeded": 11,
+          "completed": 11,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 0.0,
+          "pointExclusions": 0.0
+        },
+        {
+          "mode": "--snapshot",
+          "samples": 11,
+          "workerSucceeded": 10,
+          "completed": 10,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 6.0,
+          "pointExclusions": 0.0
+        }
+      ],
+      "manualOracle": "User confirmed both Win+Tab and Task View button displayed Task View and Escape dismissed it.",
+      "originMeasured": false,
+      "selectorVerified": false
+    },
+    {
+      "file": "sampling-1792665337090.jsonl",
+      "sha256": "e54177d9283f78d00b8676851751d5806ef682451d96dff8e25017ab84354cb8",
+      "durationSeconds": 60,
+      "sourceSha256": "63c17e1a34b85c3c7ffbc280ea492293909050387307f01573b43f0d6183c083",
+      "probeSha256": "0056d87a461e8c0fcb3b889850adb7b9c17374732bef90c5d0f5a27e8b913500",
+      "modes": [
+        {
+          "mode": "--discover-hosts",
+          "samples": 9,
+          "workerSucceeded": 9,
+          "completed": 9,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 0.0,
+          "pointExclusions": 0.0
+        },
+        {
+          "mode": "--point-host",
+          "samples": 10,
+          "workerSucceeded": 10,
+          "completed": 0,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 0.0,
+          "pointExclusions": 90.0
+        },
+        {
+          "mode": "--snapshot",
+          "samples": 10,
+          "workerSucceeded": 9,
+          "completed": 9,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 11.0,
+          "pointExclusions": 0.0
+        }
+      ],
+      "manualOracle": "User confirmed both Win+Tab and Task View button displayed Task View and Escape dismissed it.",
+      "originMeasured": false,
+      "selectorVerified": false
+    },
+    {
+      "file": "sampling-1792665519624.jsonl",
+      "sha256": "a2f82d46170edcc48052dd1338d6e4e1b0c90ad936feea48439ed12e20f7ff41",
+      "durationSeconds": 30,
+      "sourceSha256": "c8e7e489da59bf70fd1f408c5b1914609ef09b86388e09c2d62e7e3c96e14429",
+      "probeSha256": "485aedcf69585009a15af72d2877e58db005ff8a2cf18892034745ca7d3bb556",
+      "modes": [
+        {
+          "mode": "--discover-hosts",
+          "samples": 4,
+          "workerSucceeded": 4,
+          "completed": 4,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 0.0,
+          "pointExclusions": 0.0
+        },
+        {
+          "mode": "--point-host",
+          "samples": 5,
+          "workerSucceeded": 5,
+          "completed": 0,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 0.0,
+          "pointExclusions": 45.0
+        },
+        {
+          "mode": "--snapshot",
+          "samples": 5,
+          "workerSucceeded": 4,
+          "completed": 4,
+          "bodyHypotheses": 0.0,
+          "entranceNodes": 6.0,
+          "pointExclusions": 0.0
+        }
+      ],
+      "manualOracle": "User confirmed Win+Tab displayed Task View and Escape dismissed it.",
+      "originMeasured": false,
+      "selectorVerified": false
+    }
+  ],
+  "limitations": [
+    "Manual oracle covers each sampling session, not individual snapshots.",
+    "Sampling intervals do not identify input origin or exact transition times.",
+    "WorkerSucceeded means process success, not complete or correct Task View observation.",
+    "Final sampling worker can be cut off by the total deadline.",
+    "Point ancestry excludes non-whitelisted hosts and stops after nine nodes.",
+    "unidentified system host means outside the two Windows directories or unavailable process metadata.",
+    "No Task View body hypothesis was found; this is not proof that no provider exists."
+  ]
+}

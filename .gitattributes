@@ -1,0 +1,2 @@
+# Historical research source bytes must continue to match recorded SHA-256 values.
+validation/evidence/task-view-sources/*.cs.txt -text

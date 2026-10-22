@@ -75,6 +75,13 @@ node scripts/task-view-probe.mjs --snapshot
 
 # Desktop直下のShell host候補を列挙する。内部ツリーは探索しない。
 node scripts/task-view-probe.mjs --discover-hosts
+
+# 主画面中央の一点から親だけを最大9要素たどる。
+node scripts/task-view-probe.mjs --point-host
+
+# 実入力観測なしのself-test後、3方式を60秒間交互に実行する。
+# 別途案内された本人の手動操作中に実施する。
+node scripts/task-view-sample.mjs --seconds=60
 ```
 
 実施済みの出力は `TASK_VIEW_PROBE_SELF_TEST_OK (no live observation)`。self-testは入口buttonと本体仮説の分離、候補0・不完全な観測をunknownにする境界を確認する。OS上の表示検出や入力精度の試験ではない。`npm.cmd run dev:check` は依存部品の存在とSDK 10.0.401の解決を確認しただけで、製品受入ではない。
@@ -98,3 +105,37 @@ OS版は [RtlGetVersion](https://learn.microsoft.com/en-us/windows/win32/devnote
 最初の2つのユーザーデスクトップsnapshotのosBuild=9200は、manifestなし.NET Frameworkの互換版表示だったため環境比較に使わない。修正後のRtlGetVersionによるbuild26340と、過去記録のbuild26300を区別する。新しいroot5の取得もTask View本体の取得成功ではない。
 
 PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索前の上限確認、cross-process不完全扱い、EnumWindows失敗、offscreen単一読取、GetClassName失敗）をコードと照合して修正した。修正後self-testには列挙失敗・root0・読取失敗・上限・不完全treeをcompletedにしない負例を含む。実機由来の精度を保証するテストではない。
+
+## 150秒の本人操作中サンプリング（追加調査）
+
+2026-10-22、本人の「準備できた」を受け、60秒・60秒・30秒の3回を実施した。最初の2回はWin+Tab→10秒維持→Esc、Task Viewボタン→10秒維持→Escを依頼し、両方の表示・解除を本人が確認した。最後の30秒はWin+Tabによる表示・解除を依頼し、本人が実施を確認した。自動キー送出は使っていない。
+
+結果の正本は [匿名化した試行集約](../validation/evidence/task-view-summary-20261022.json)。ローカルJSONLのSHA-256と当時のsource/exe hashを含む。個々のsnapshotに手動ラベルを貼っておらず、本人の回答は各session全体の目視oracleである。採取ごとの表示時刻・開閉時刻・入力由来は測定していない。
+
+当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・窓名等の観測内容を含むソースではない。
+
+`node scripts/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
+
+| session（`.tools/validation/task-view/` 以下） | 秒 / 採取数 | 探索完了 / 不完全 | 結果 |
+| --- | --- | --- | --- |
+| `sampling-1792665092630.jsonl` | 60 / 22 | 21 / 1 | snapshotとDesktop直下探索。本体仮説0。最後のworkerは総時間上限で打切り |
+| `sampling-1792665337090.jsonl` | 60 / 29 | 18 / 11 | 上記に中央一点の親探索を追加。本体仮説0。親探索10件はすべてShell対象外9要素で上限到達。最後のsnapshotは時間上限で打切り |
+| `sampling-1792665519624.jsonl` | 30 / 14 | 8 / 6 | 親探索の対象外プロセスがSystem32/SystemApps由来かを一時照合。本体仮説0。親探索5件はすべて9要素で上限到達し、システムhost候補はunidentified。最後のsnapshotは時間上限で打切り |
+
+合計65採取、本体仮説0。worker正常終了は62件だが、親探索15件は対象外/上限到達で不完全であり、正常終了を探索完了へ読み替えない。時間上限の3件は実providerの15秒timeoutを証明するものではない。
+
+### 中央一点の親探索の範囲
+
+[AutomationElement.FromPoint](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.frompoint) は物理画面座標を受け取るため、worker内でthreadのDPI contextをPerMonitorV2へ変更して主画面中央を求め、終了時に復元する。cursor位置・画像は使わない。主画面だけの診断であり、別画面の受入試験ではない。
+
+中央の要素からRawViewの親を最大9要素たどる。PIDを一時照合し、従来の5種Shell hostだけのclass/controlType/固定role/offscreenを保存する。対象外の親は除外markerのみとし、Name/AutomationId/ClassNameは読まない。対象外processの実行元pathは一時照合だけに使い、保存するのは固定カテゴリ `windows-system32` / `windows-systemapps` / `outside-system-directories` / `metadata-unavailable` のみ。発見した実行ファイル名は保存しない。これは配置場所の確認であり、署名検証・Shell認定ではない。self-testはSystem32/SystemAppsの分類と、類似prefix・`..`でディレクトリを出る負例を確認する。
+
+3回目の採取時の中間版はSystem32/SystemApps配下のprocess名を返す実装だったが、今回の全45件の出力は `unidentified` であり、発見したprocess名は記録されていない。この旧値は両ディレクトリの外、またはmetadata取得不能を含むため、非Windowsプロセスとの断定には使わない。レビュー後の実行版は上記の固定カテゴリへ変更し、過去の採取結果を書き換えていない。
+
+対象外の親を通過しているため、閉→開→閉を識別できるtreeの完全取得は主張しない。除外・上限到達・読取失敗はunknownのまま。サンプリングはこれら3方式を交互に実行し、workerごと最大15秒かつ残り総時間までに制限する。samplingファイルの完走は、各snapshotの完了や検出成功を意味しない。
+
+### 判定と次の技術課題
+
+本人の自然操作でTask Viewが表示・解除されたことは確認できたが、既知root/限定host/中央一点の親探索では本体provider・selectorへ到達しなかった。Task Viewボタンの存在やtaskbar rootの増減は本体表示判定へ採用しない。自然入力の各20回・95%以上、誤判定0、toggle/cancel/別画面/Shell再起動、入力由来の自動照合は未検証であり、**B03とIssue #4はOPENを維持する**。
+
+今回の限定UIA経路では成立を実証できなかった。未探索のhost/providerやMSAA等の別経路の有無は未確定であり、Task Viewの検出が一般に不可能との結論ではない。次段階では候補host/アクセス経路を別に特定する必要がある。同じ限定probeで本人の操作回数だけを増やしても、このselector欠落は解消しないため追加の自然操作は依頼していない。
