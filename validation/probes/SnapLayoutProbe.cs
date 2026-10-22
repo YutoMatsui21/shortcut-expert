@@ -27,6 +27,7 @@ class SnapLayoutProbe {
     }
     [DllImport("ntdll.dll", CharSet=CharSet.Unicode)] static extern int RtlGetVersion(ref OsVersion version);
     static readonly JavaScriptSerializer Json=new JavaScriptSerializer();
+    static string FailureStage="arguments";
     static readonly HashSet<string> Hosts=new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
         "explorer", "ShellHost", "ShellExperienceHost", "StartMenuExperienceHost", "ApplicationFrameHost"
     };
@@ -64,11 +65,13 @@ class SnapLayoutProbe {
                 if(current.ProcessId!=(int)pid) { excluded++; continue; }
                 Emit(new {kind="uia-node",root=root,index=index,parent=item.Parent,depth=item.Depth,
                     controlType=current.ControlType.Id,role=Role(current.AutomationId ?? ""),offscreen=current.IsOffscreen});
+                if(item.Depth>=8 || nodes+queue.Count>=256) { limited=true; continue; }
                 var child=walker.GetFirstChild(item.Element);
-                if(item.Depth>=8) { if(child!=null) limited=true; continue; }
                 while(child!=null) {
                     if(nodes+queue.Count>=256) { limited=true; break; }
-                    queue.Enqueue(new Pending(child,item.Depth+1,index)); child=walker.GetNextSibling(child);
+                    queue.Enqueue(new Pending(child,item.Depth+1,index));
+                    if(nodes+queue.Count>=256) { limited=true; break; }
+                    child=walker.GetNextSibling(child);
                 }
             } catch { failures++; }
         }
@@ -114,21 +117,26 @@ class SnapLayoutProbe {
             limited=limited,completed=failures==0 && !limited && queue.Count==0});
     }
     static void Snapshot(int targetPid) {
+        FailureStage="target-process";
         IntPtr target;
         using(var process=Process.GetProcessById(targetPid)) {
             if(!String.Equals(process.MainModule.FileName,Process.GetCurrentProcess().MainModule.FileName,StringComparison.OrdinalIgnoreCase))
                 throw new Exception("Target is not this probe");
+            FailureStage="target-window";
             target=process.MainWindowHandle;
         }
         if(target==IntPtr.Zero) throw new Exception("Target unavailable");
+        FailureStage="os-version";
         var version=new OsVersion(); version.Size=(uint)Marshal.SizeOf(typeof(OsVersion));
         if(RtlGetVersion(ref version)!=0) throw new Exception("OS unavailable");
         Emit(new {kind="session",osBuild=version.Build,targetForeground=GetForegroundWindow()==target,
             inputHooks=false,keysSent=false,namesRead=false,selectorVerified=false,originMeasured=false});
+        FailureStage="shell-enumeration";
         int roots=0,failures=0; bool limited=false;
         bool enumerated=EnumWindows(delegate(IntPtr window,IntPtr ignored) {
             try {
-                uint pid; GetWindowThreadProcessId(window,out pid);
+                uint pid;
+                if(GetWindowThreadProcessId(window,out pid)==0 || pid==0) throw new Exception("PID unavailable");
                 using(var process=Process.GetProcessById((int)pid)) { if(!Hosts.Contains(process.ProcessName)) return true; }
                 if(!IsWindowVisible(window)) return true;
                 if(roots>=24) { limited=true; return true; }
@@ -161,11 +169,14 @@ class SnapLayoutProbe {
             int targetPid;
             if(args.Length==2 && args[0]=="--snapshot" && int.TryParse(args[1],out targetPid)) {
                 bool failed=false;
-                var worker=new Thread(delegate() { try { Snapshot(targetPid); } catch { failed=true; } });
+                var worker=new Thread(delegate() {
+                    try { Snapshot(targetPid); }
+                    catch { failed=true; Emit(new {kind="worker-failure",stage=FailureStage}); }
+                });
                 worker.SetApartmentState(ApartmentState.MTA); worker.Start(); worker.Join();
                 return failed ? 1 : 0;
             }
             return 2;
-        } catch { Console.Error.WriteLine("SNAP_PROBE_FAILED"); return 1; }
+        } catch { Emit(new {kind="worker-failure",stage=FailureStage}); return 1; }
     }
 }

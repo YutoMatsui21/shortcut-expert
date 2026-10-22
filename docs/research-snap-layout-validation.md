@@ -38,6 +38,7 @@ node scripts/snap-layout-probe.mjs --sample
 - MSAAはOBJID_CLIENTのIAccessibleから最大128node・深さ6、数値role/state/childCountのみ。WindowFromAccessibleObjectで同一Shell processを確認できない枝は読まない。provider不足・失敗・打切りを記録し、本体識別へ補完しない。[AccessibleObjectFromWindow](https://learn.microsoft.com/en-us/windows/win32/api/oleacc/nf-oleacc-accessibleobjectfromwindow)、[AccessibleChildren](https://learn.microsoft.com/en-us/windows/win32/api/oleacc/nf-oleacc-accessiblechildren)、[WindowFromAccessibleObject](https://learn.microsoft.com/en-us/windows/win32/api/oleacc/nf-oleacc-windowfromaccessibleobject)。
 - 隔離窓とのowner-chain一致とforeground一致はbooleanのみ。HWND/PID・入力列・名前・タイトル・path・画像は採取結果へ保存しない。source/exeのSHA-256を付け、`.tools/validation/snap-layout/`へ保存する。
 - workerは最大5秒、全体最大90秒。プロバイダー停止や途中出力を失敗として残す。`enumerationCompleted`は列挙の完走であり、全providerの完走・表示成功を意味しない。
+- 取得失敗のstageは`target-process`、`target-window`、`os-version`、`shell-enumeration`の固定値で出力する。例外本文やprocess情報は出さない。spawn前にhashを計算し、起動後はready待ちから後片付けの範囲に含める。
 - 全結果は`verdict=unknown`、`selectorVerified=false`、`originMeasured=false`。入力hook・開閉event・自然入力分類は未実装。連続snapshotだけで入力と本体の因果を確定しない。
 
 ## 再開時の比較表

@@ -29,14 +29,14 @@ if (mode === '--self-test') {
   if (result.result !== 'PASS' || result.liveObservation !== false) throw new Error('Self-test failed');
   console.log('SNAP_LAYOUT_PROBE_SELF_TEST_OK (no live observation)');
 } else {
-  // This mode explicitly opens an interactive fixture window for the operator.
-  const target = spawn(probe, ['--target'], { windowsHide: false, stdio: ['ignore', 'pipe', 'ignore'] });
-  let targetExited = false;
-  target.on('exit', () => { targetExited = true; });
   const hash = async file => createHash('sha256').update(await readFile(file)).digest('hex');
   const rows = [{ kind: 'research-session', sourceSha256: await hash(source), probeSha256: await hash(probe),
     durationLimitSeconds: 90, selectorVerified: false, originMeasured: false }];
   const file = path.join(output, `sampling-${Date.now()}.jsonl`);
+  // This mode explicitly opens an interactive fixture window for the operator.
+  const target = spawn(probe, ['--target'], { windowsHide: false, stdio: ['ignore', 'pipe', 'ignore'] });
+  let targetExited = false;
+  target.on('exit', () => { targetExited = true; });
   try {
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('Target window did not become ready')), 5_000);
