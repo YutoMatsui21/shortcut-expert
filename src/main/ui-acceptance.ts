@@ -15,6 +15,9 @@ export async function runUiAcceptance(window: BrowserWindow): Promise<void> {
   const samples = [];
   for (const page of ['ショートカット一覧', '記録'] as const) {
     await selectPage(window, page);
+    await waitForLearning(window, page === '記録'
+      ? `document.querySelector('.records-scroll')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 12`
+      : `document.querySelectorAll('.learning-row').length === 12`);
     for (const [width, height] of [[800,600],[800,700],[919,700],[920,700],[1119,700],[1120,700],[1359,700],[1360,700]]) {
       window.setContentSize(width, height);
       await waitForLearning(window, `Math.abs(innerWidth - ${width}) <= 1 && Math.abs(innerHeight - ${height}) <= 1`);

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { developmentEnvironment } from './dev-environment.mjs';
+import { packageManifest, waitForUiAcceptance } from './ui-acceptance-runtime.mjs';
 
 const option = process.argv.indexOf('--package-dir');
 if (option < 0 || !process.argv[option + 1]) throw new Error('Pass --package-dir release/<build>');
@@ -18,12 +19,13 @@ const sha256 = path => createHash('sha256').update(readFileSync(path)).digest('h
 const build = { fixtureOnly:true, directory, executable, node:process.version,
   hashes:{ executable:sha256(executable), asar:sha256(join(packageDirectory,'resources/app.asar')),
     helper:sha256(join(packageDirectory,'resources/native-helper/WindowObserver.exe')) } };
+const manifest = packageManifest(packageDirectory);
+const manifestSha256 = createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
+writeFileSync(join(directory,'package-manifest.json'),JSON.stringify({sha256:manifestSha256,files:manifest},null,2));
+Object.assign(build,{manifestSha256,manifestFiles:manifest.length});
 writeFileSync(join(directory,'build.json'),JSON.stringify(build,null,2));
 console.log(JSON.stringify(build));
 const child = spawn(executable, ['--ui-acceptance', ...(process.argv.includes('--matrix-only') ? ['--ui-acceptance-exit'] : [])],
   {env:environment,windowsHide:false,stdio:['ignore','pipe','pipe']});
-let output = '';
-const log = chunk => { output += chunk; process.stdout.write(chunk); appendFileSync(join(directory,'session.log'),chunk); };
-child.stdout.on('data',log); child.stderr.on('data',log);
-child.on('error',error => { console.error(error.message); process.exitCode = 1; });
-child.on('exit',code => { process.exitCode = code === 0 && output.includes('V03_READY') ? 0 : 1; });
+const log = chunk => { process.stdout.write(chunk); appendFileSync(join(directory,'session.log'),chunk); };
+process.exitCode = await waitForUiAcceptance(child,log,process.argv.includes('--matrix-only') ? 60_000 : 0);

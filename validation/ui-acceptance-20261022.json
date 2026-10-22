@@ -3,12 +3,14 @@
   "gate": "V03",
   "accepted": false,
   "fixtureOnly": true,
-  "package": "release/issue-46-final/win-unpacked",
+  "package": "release/issue-46-reviewed/win-unpacked",
   "hashes": {
-    "executable": "0525fc49163cb1cee4b59537d0069ae02cdf684a45d68ec53faf697b58233148",
-    "asar": "48dee2b6515b26ca7802c4b73ef5ff0183299e834a5126dea39b1467c9a631e4",
+    "executable": "0dac58b9eee6175a615c68205ba0e8013d0865a516a25740d4f1079496fadd19",
+    "asar": "b7b519ebda28d7e94a3a2ac9773494719dc9fda32da05ba56d18e4f7b0833f92",
     "helper": "596a0e1828aa8685b448745b670986288efd7a96075e9e6932811ca97d0e9146"
   },
+  "manifestSha256": "c564bea68fb3f0b0f3e90e24252fd7787a2a6915f376a55820cac197a58924b3",
+  "manifestFiles": 349,
   "initial": {
     "bounds": {
       "x": 160,

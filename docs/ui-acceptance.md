@@ -19,11 +19,12 @@ node scripts/ui-acceptance.mjs --package-dir release/issue-46 --matrix-only
 node scripts/ui-acceptance.mjs --package-dir release/issue-46
 ```
 
-`ui-acceptance.mjs`は配布exe/ASAR/helperのSHA-256を記録し、毎回新しい`.tools/tests/ui-acceptance-*`を作って`--ui-acceptance`を渡す。
+`ui-acceptance.mjs`は配布ディレクトリー全ファイルのSHA-256 manifestとそのhashを記録し、毎回新しい`.tools/tests/ui-acceptance-*`を作って`--ui-acceptance`を渡す。
 Main indexでfixtureとして分離し、helperは既存のfixtureモード（実入力payloadを読まない）、保存は本番SQLite Worker、通知adapterはfakeとなる。
 通常保存先を使わず、本番Renderer/Preload/IPC/CoachWindowと実トレイを接続する。Rendererへ試験用APIを追加しない。
 Mainの`ui-acceptance.ts`が16サイズを計測し、各画像と`ui-acceptance.json`へ外形/content/viewport/DPR・画面構成を保存する。
-`--matrix-only`は計測後に本番終了処理を通す。省略時はUI操作用に残るので、トレイの「終了」で終了する。実UI操作には別途同意が必要。
+`--matrix-only`は計測後に本番終了処理を通し、stdout/stderr完了後に成否を判定する。60秒を超えたら自分が起動した子を終了し失敗を返す。
+省略時はUI操作用に残るので、トレイの「終了」で終了する。実UI操作には別途同意が必要。
 
 `V03_MATRIX_COMPLETE`は計測完了を表す。`dimensionMismatches`を必ず確認する。
 `V03_READY`や終了code 0はV03合格を意味しない。要求した高さと一致しなくても実測を保持し、未合格条件として報告する。
@@ -31,15 +32,16 @@ Mainの`ui-acceptance.ts`が16サイズを計測し、各画像と`ui-acceptance
 
 ## 今回の配布物と原本
 
-配布物：`release/issue-46-final/win-unpacked`。以下は同一配布物のhash。
+配布物：`release/issue-46-reviewed/win-unpacked`。以下は同一配布物のhash。
 
 | 対象 | SHA-256 |
 | --- | --- |
-| exe | `0525fc49163cb1cee4b59537d0069ae02cdf684a45d68ec53faf697b58233148` |
-| app.asar | `48dee2b6515b26ca7802c4b73ef5ff0183299e834a5126dea39b1467c9a631e4` |
+| exe | `0dac58b9eee6175a615c68205ba0e8013d0865a516a25740d4f1079496fadd19` |
+| app.asar | `b7b519ebda28d7e94a3a2ac9773494719dc9fda32da05ba56d18e4f7b0833f92` |
 | helper | `596a0e1828aa8685b448745b670986288efd7a96075e9e6932811ca97d0e9146` |
 
-原本は`.tools/tests/ui-acceptance-eHQXf3/{build.json,ui-acceptance.json,session.log,ui-*.png}`。
+全349ファイルのmanifest hash：`c564bea68fb3f0b0f3e90e24252fd7787a2a6915f376a55820cac197a58924b3`。
+原本は`.tools/tests/ui-acceptance-BVN77a/{build.json,package-manifest.json,ui-acceptance.json,session.log,ui-*.png}`。
 配布smokeのログは`.tools/issue-46-final-{smoke,settings,comparison,storage}.log`。
 JSON計測値の転記は[受入証拠](../validation/ui-acceptance-20261022.json)に固定した。
 画像・ローカルログはGitへ追加せず、fixture経路・build hashと対応づける。
@@ -60,7 +62,9 @@ JSON計測値の転記は[受入証拠](../validation/ui-acceptance-20261022.jso
 | 混在DPI移動・文字拡大・画面着脱 | 画面構成だけ取得 | **未確認**。物理着脱は人手での実施が必要 |
 | 通知復元後のUI/窓状態 | 未確認 | OS click配送は#44、復元後の状態は#46で確認する |
 
-typecheck/build成功、unit **233/233**成功。最終配布物の通常・settings・comparison・storageの4モードで`COACH_SMOKE_OK`を確認した。
+typecheck/build成功、unit **236/236**成功。サンドボックス実行の1回は既存の保存fixtureで失敗したが、権限制約のない実行環境では全件成功した（失敗原因の断定はしない）。
+出力drain前のexit、子process stall、runtimeファイル変更の3回帰試験は修正前失敗/修正後成功を確認。
+記録ページの計測は`aria-busy=false`と12行の読込を待つ。最終配布物の通常・settings・comparison・storageの4モードで`COACH_SMOKE_OK`を確認した。
 matrix終了時の`coach:get-learning: 終了処理中です。`は、窓サイズ復元後の読込と安全終了が重なった拒否ログで、試験成功markerとは区別する。
 
 ## Figma照合
