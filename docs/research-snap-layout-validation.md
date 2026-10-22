@@ -18,6 +18,8 @@ Windows build **26340**、Node 24.11.1、通常のユーザーデスクトップ
 
 正本は[試行集約](../validation/evidence/snap-layout-summary-20261022.json)。ローカルJSONL、source/exeのSHA-256を含む。各時点のsourceはhash一致を検証して`validation/evidence/snap-layout-sources/`へ保存した。EXEはcscの再buildでhashが変わるため、各sessionの実行時hashを残す。
 
+保存ソースは`.gitattributes`の`-text`で改行変換を止める。`tests/research-evidence.test.ts`は隔離Gitリポジトリでautocrlfを有効にし、登録後のblobと記録hashを照合する。作業ファイルだけの照合ではGit内の改行変換を検出できないため、登録後のbytesも確認する。
+
 | 採取ファイル | 操作と本人の回答 | worker数 / endあり | 採取結果 |
 | --- | --- | --- | --- |
 | `sampling-1792676353448.jsonl` | 同一隔離窓でhoverとWin+Z。両方の表示・解除を確認 | 19 / 18 | 延べ325root、うちXaml2。owner一致0。Snap仮説はtaskbar内buttonのみ。1workerは途中出力で終了 |
