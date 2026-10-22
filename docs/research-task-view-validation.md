@@ -6,7 +6,7 @@
 
 初回調査時のmainのHEADは `e42ff72`。既存ソース・ローカル調査artifactと、Issue #4・#14・#49を読み取った。その後origin/mainを取得し、`844c8df` を基準に `codex/issue-4` で調査専用probeを追加した。製品コードは変更していない。
 
-ユーザーは同日に実入力/UIA/キー送出とcommit/push/PRの別途承認制約を解除し、最後まで進めるよう指示した。Issue本文にある旧承認条件を未承認の根拠として扱わない。ただし、Computer Useでexplorer.exeの状態を取得しようとした呼出しは `Computer Use app approval timed out` で不成功となった。これはproviderの不応答・Task View本体の不在を示す証拠ではない。アプリ承認経路を別手段で迂回せず、実機観測を保留している。キー送出・Shell再起動・自然入力試験は行っていない。
+ユーザーは同日に実入力/UIA/キー送出とcommit/push/PRの別途承認制約を解除し、最後まで進めるよう指示した。Issue本文にある旧承認条件を未承認の根拠として扱わない。Computer Useの初回取得は `Computer Use app approval timed out` で不成功となったが、本人の再試行許可後にexplorerへのアクセスを確認できた。sandboxでは対象root0、同意済みのユーザーデスクトップでの実行ではroot5を取得した。両環境の結果をTask Viewの表示有無として比較しない。キー自動送出・Shell再起動・入力由来の自動測定は行っていない。
 
 Specは `node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert` で検証したcacheを使用した。updatedAtは `2026-10-18T12:50:27Z`、本文SHA-256は `bdb040c9d2311e2f49bd547b46f01ab842f9c86397efa9435106b1983bcc7f89`。§6 A03と§12 B03を参照。旧Specの14操作という総数を現行の12操作要件へ転用しない。
 
@@ -35,9 +35,9 @@ Specは `node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-
 
 hashは動作・安全性・ソース対応の証明ではない。過去の承認やself-testを今回の実行許可として流用しない。実行前にソースを回収するか、探索範囲・保存項目・終了処理を確認できる調査専用probeを用意する。
 
-## 承認後の実施案
+## 探索方針
 
-ユーザーの作業承認は受領済み。残る実行上の制約はComputer Useのアプリ承認であり、ユーザーへ承認画面の操作を依頼している。
+ユーザーの作業承認は受領済み。Computer Useのアプリ承認は再試行で解消した。UI操作とsnapshot取得の時差を考慮し、手動で開いたという回答だけで取得時の表示状態を確定しない。
 
 1. 対象hostを明示し、まずexplorer所有の既知Shell rootに限定する。対象外hostが必要になったら、候補と必要性を提示して再承認を得る。デスクトップ全体の無制限なUIA descendants探索をしない。
 2. プロセス別worker、全体timeout、root数・深さ・node数の上限と、読取失敗・除外理由・打切りを設ける。timeout・provider不応答・上限到達はclosedではなくunknownとする。
@@ -60,7 +60,7 @@ hashは動作・安全性・ソース対応の証明ではない。過去の承�
 
 ## 残作業
 
-ツール側のアプリ承認、現host/build確認、本体provider/selectorの特定、実入力由来との照合、全負例・別画面・Shell再起動の検証が残る。B03とIssue #4はOPENを維持し、後続Issueのblocked/readyラベルは変更しない。
+本体provider/selectorの特定、実入力由来との照合、全負例・別画面・Shell再起動の検証が残る。B03とIssue #4はOPENを維持し、後続Issueのblocked/readyラベルは変更しない。
 
 ## 再現入口と実施結果
 
@@ -70,12 +70,31 @@ hashは動作・安全性・ソース対応の証明ではない。過去の承�
 # 実機アクセスなし。今回実施してPASS。
 node scripts/task-view-probe.mjs
 
-# 実機アクセスあり。ツール側アプリ承認の解消後に実施する。今回は未実施。
+# 実機アクセスあり。本人の同意があるデスクトップで実行する。
 node scripts/task-view-probe.mjs --snapshot
+
+# Desktop直下のShell host候補を列挙する。内部ツリーは探索しない。
+node scripts/task-view-probe.mjs --discover-hosts
 ```
 
 実施済みの出力は `TASK_VIEW_PROBE_SELF_TEST_OK (no live observation)`。self-testは入口buttonと本体仮説の分離、候補0・不完全な観測をunknownにする境界を確認する。OS上の表示検出や入力精度の試験ではない。`npm.cmd run dev:check` は依存部品の存在とSDK 10.0.401の解決を確認しただけで、製品受入ではない。
 
-snapshotはexplorer所有の既知5クラスのtop-level窓だけを対象に、最大24root、rootごと256node・深さ8までRawViewを読む。異なるprocessのnodeは探索しない。未対象rootは除外件数だけを残す。任意host探索や自動入力は実装していない。許可classと仮説roleは研究用で、安定selectorの根拠ではない。
+snapshotはexplorer所有の既知5クラスのtop-level窓だけを対象に、最大24root、rootごと256node・深さ8までRawViewを読む。異なるprocessのnodeは探索せず不完全な観測とする。未対象rootは除外件数だけを残す。host-discoveryはDesktop直下の最大128要素のPIDを一時照合し、explorer/ShellHost/ShellExperienceHost/StartMenuExperienceHost/ApplicationFrameHostだけのhost名・class・offscreenを残す。他アプリの内容・任意host内部・自動入力は探索/実装しない。許可classと仮説roleは研究用で、安定selectorの根拠ではない。
 
 Name/titleは読まず、AutomationIdは一時的に固定roleへ分類し原文を出さない。保存するのはcontrolType、既知hostClass、固定role、tree内index/深さ、offscreen、失敗/打切りの集約。出力は `.tools/validation/task-view/` に隔離する。子processは15秒で打ち切り、途中出力を保存してcompleted=falseとする。完走してもsnapshot全体のverdictはunknown、selectorVerified/originMeasuredはfalseのままである。
+
+OS版は [RtlGetVersion](https://learn.microsoft.com/en-us/windows/win32/devnotes/rtlgetversion) で取得する。[EnumWindows](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows) と [GetClassName](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclassnamew) の失敗を意図的除外と分ける。深さ/node上限の確認後にのみ子・兄弟を要求する。最大深さに達した場合は追加照会をせず保守的に打切りとする。
+
+## 今回の新しい実機証拠
+
+| artifact（`.tools/validation/task-view/` 以下） | 条件 / 結果 |
+| --- | --- |
+| `snapshot-1792663325332.jsonl` | sandbox側。root0・除外0。本体不在の証拠にはしない |
+| `snapshot-1792663392556.jsonl` | ユーザーデスクトップの基準snapshot。root5、入口button2、本体仮説0、読取失敗/上限到達0 |
+| `snapshot-1792663473657.jsonl` | 本人の「Win+Tabで開いた」回答後。root3、すべて不可視、入口/本体仮説0。取得時の実表示は未照合であり、開状態の正解ラベルではない |
+| `snapshot-1792663602311.jsonl` | Desktop直下host-discovery。直下11要素、対象Shell host4（すべてexplorer）、他host7を除外、読取失敗0。本体host未特定 |
+| `snapshot-1792663665221.jsonl` | OS取得修正後。実build **26340**、root5、本体仮説0、cross-process除外/読取失敗/上限到達0 |
+
+最初の2つのユーザーデスクトップsnapshotのosBuild=9200は、manifestなし.NET Frameworkの互換版表示だったため環境比較に使わない。修正後のRtlGetVersionによるbuild26340と、過去記録のbuild26300を区別する。新しいroot5の取得もTask View本体の取得成功ではない。
+
+PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索前の上限確認、cross-process不完全扱い、EnumWindows失敗、offscreen単一読取、GetClassName失敗）をコードと照合して修正した。修正後self-testには列挙失敗・root0・読取失敗・上限・不完全treeをcompletedにしない負例を含む。実機由来の精度を保証するテストではない。
