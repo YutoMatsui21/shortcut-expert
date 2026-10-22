@@ -1,0 +1,962 @@
+{
+  "date": "2026-10-22",
+  "gate": "V03",
+  "accepted": false,
+  "fixtureOnly": true,
+  "package": "release/issue-46-final/win-unpacked",
+  "hashes": {
+    "executable": "0525fc49163cb1cee4b59537d0069ae02cdf684a45d68ec53faf697b58233148",
+    "asar": "48dee2b6515b26ca7802c4b73ef5ff0183299e834a5126dea39b1467c9a631e4",
+    "helper": "596a0e1828aa8685b448745b670986288efd7a96075e9e6932811ca97d0e9146"
+  },
+  "initial": {
+    "bounds": {
+      "x": 160,
+      "y": 76,
+      "width": 1120,
+      "height": 700
+    },
+    "content": {
+      "x": 161,
+      "y": 76,
+      "width": 1119,
+      "height": 700
+    },
+    "viewport": {
+      "width": 1119,
+      "height": 700,
+      "dpr": 2
+    },
+    "scaleFactor": 2
+  },
+  "displays": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "workArea": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 852
+      },
+      "scaleFactor": 2
+    },
+    {
+      "bounds": {
+        "x": 0,
+        "y": -1440,
+        "width": 2560,
+        "height": 1440
+      },
+      "workArea": {
+        "x": 0,
+        "y": -1440,
+        "width": 2560,
+        "height": 1392
+      },
+      "scaleFactor": 1
+    }
+  ],
+  "samples": [
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 800,
+        "height": 600
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 800,
+          "height": 601
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 799,
+          "height": 601
+        },
+        "viewport": {
+          "width": 799,
+          "height": 601,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 801,
+          "height": 601
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 800,
+          "height": 601
+        },
+        "viewport": {
+          "width": 800,
+          "height": 601,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": false,
+      "geometry": {
+        "x": 148,
+        "y": 191,
+        "width": 552,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 800,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 800,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 799,
+          "height": 700
+        },
+        "viewport": {
+          "width": 799,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 801,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 800,
+          "height": 700
+        },
+        "viewport": {
+          "width": 800,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 191,
+        "width": 552,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 919,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 918,
+          "height": 700
+        },
+        "viewport": {
+          "width": 918,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "viewport": {
+          "width": 919,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 191,
+        "width": 671,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 920,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "viewport": {
+          "width": 919,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 921,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "viewport": {
+          "width": 920,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 191,
+        "width": 672,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 1119,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1118,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1118,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1119,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 191,
+        "width": 871,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 1120,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1119,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1121,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1120,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 146,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 1359,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1358,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1358,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1359,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 267.5,
+        "y": 146,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "ショートカット一覧",
+      "requested": {
+        "width": 1360,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1359,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1361,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1360,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 268,
+        "y": 146,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 800,
+        "height": 600
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 800,
+          "height": 601
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 799,
+          "height": 601
+        },
+        "viewport": {
+          "width": 799,
+          "height": 601,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 801,
+          "height": 601
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 800,
+          "height": 601
+        },
+        "viewport": {
+          "width": 800,
+          "height": 601,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": false,
+      "geometry": {
+        "x": 148,
+        "y": 202,
+        "width": 552,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 800,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 800,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 799,
+          "height": 700
+        },
+        "viewport": {
+          "width": 799,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 801,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 800,
+          "height": 700
+        },
+        "viewport": {
+          "width": 800,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 202,
+        "width": 552,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 919,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 918,
+          "height": 700
+        },
+        "viewport": {
+          "width": 918,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "viewport": {
+          "width": 919,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 202,
+        "width": 671,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 920,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 919,
+          "height": 700
+        },
+        "viewport": {
+          "width": 919,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 921,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 920,
+          "height": 700
+        },
+        "viewport": {
+          "width": 920,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 202,
+        "width": 672,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 1119,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1118,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1118,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1119,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 202,
+        "width": 871,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 1120,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1119,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1119,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1121,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1120,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1120,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 148,
+        "y": 132,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 1359,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1358,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1358,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1359,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 267.5,
+        "y": 132,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    },
+    {
+      "page": "記録",
+      "requested": {
+        "width": 1360,
+        "height": 700
+      },
+      "nominal": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1359,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1359,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "corrected": {
+        "bounds": {
+          "x": 160,
+          "y": 76,
+          "width": 1361,
+          "height": 700
+        },
+        "content": {
+          "x": 161,
+          "y": 76,
+          "width": 1360,
+          "height": 700
+        },
+        "viewport": {
+          "width": 1360,
+          "height": 700,
+          "dpr": 2
+        },
+        "scaleFactor": 2
+      },
+      "dimensionsMatched": true,
+      "geometry": {
+        "x": 268,
+        "y": 132,
+        "width": 872,
+        "horizontalOverflow": false,
+        "bodyOverflow": false,
+        "rows": 12
+      }
+    }
+  ]
+}

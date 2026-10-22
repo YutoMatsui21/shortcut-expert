@@ -22,6 +22,8 @@ boundsだけの保存は記録ReadModelを変えないためmeta.revisionを進�
 
 ## 証拠の範囲とV03
 
+#46の同一配布物による16サイズ計測、初期/最小viewportの不一致、残る実窓試験は[V03受入台帳](ui-acceptance.md)を参照。V03は未合格。
+
 unitは負座標/画面外/小画面補正、状態変化中の上書き防止、保存待機と遅延イベント拒否、実SQLite Worker経由の保存・削除保持・再open・不正値拒否を確認する。Electron smokeは限定IPCからの最大化/復元、CSS drag/no-drag、hide中の計測状態、共通second-instance復元、保存失敗時の終了取消・保存再試行、重複終了要求から実helper shutdownまでを通す。外形/content/viewport/devicePixelRatio/scaleFactorをfixture結果に含める。
 
 **未合格：V03の実機確認。** 自前HTMLの最大化ボタンはnative captionのhit-testを実装しておらず、標準Snap Layoutのhover表示を実証していない。clickによる最大化成功やCSSのno-drag設定をSnap UI成功の証拠にしない。OS caption overlayは外観が変わる代替候補のため無断採用していない。

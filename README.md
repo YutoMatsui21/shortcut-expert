@@ -90,6 +90,10 @@ node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operati
 通常起動をtrayで完全終了してから実行する。隔離人工候補の保存後、本番OS adapterへ3要求を送り、
 窓とtrayを維持する。通知の可視表示・履歴clickは別途確認する。[入口と証拠の範囲](docs/standard-notifications.md#v01の実os発行入口44)。
 
+#46の隔離UI受入は`node scripts/ui-acceptance.mjs --package-dir release/<build> --matrix-only`。
+16サイズの外形/content/viewportとfixture画像を記録して終了する。`--matrix-only`を外すと実窓操作用に残る（操作には本人同意が必要）。
+寸法不一致を合格へ置き換えない。[V03の結果・残る実機確認](docs/ui-acceptance.md)。
+
 `test:unit`はhelperのpublishを待たず、判定・日付・集計・保存失敗・通知・通信を隔離fixtureで確認する。`test:native`はhelperを再buildし、本番C#候補生成/全画面policyの人工事象試験、C#→TS契約、hook開始終了を確認する。`test`は両方を順に実行する。Node 24のexperimental module mockはElectron/子プロセス/FS境界にのみ使う。`test:coverage`は速いsuiteのimport済みNode対象だけを計測し、未import・Renderer・C#を含む全体率ではない。
 
 protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配送/差替え/世代/版混在と、`test:native`のC#→v1/v2 JSON→Main parse→Coreを確認する。新helperとMainはv2を選択し、旧helper/Mainのv1経路も残す。同じ観測世代では混在させない。既存5操作の確証条件を維持し、未実証のShell・activation・globalは採用しない。型付き証拠の接続成功を自然入力精度や新操作対応の証明としない。契約の詳細は[設計](docs/design.md#test-design)を参照。
