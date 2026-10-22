@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-22",
+  "baselineCommit": "74c53852bd894d5300b4a7c05f18eb65c7e4f0a7",
+  "consent": "User explicitly resumed real-device trials and confirmed the session outcomes",
+  "verdict": "not-established",
+  "selectorVerified": false,
+  "originMeasured": false,
+  "localEvidenceDirectory": ".tools/validation/snap-layout",
+  "sessions": [
+    {
+      "file": "sampling-1792676353448.jsonl",
+      "sha256": "5d2af1f90e542feda6509988e94ae760ebdd0789a0f1459bea9d7a81fda5172b",
+      "protocol": "mixed-hover-key",
+      "sourceSha256": "27e5771bdeb8b2f9cd45e49376dbad6ba167f28c63cabf770a264cf7910e08e2",
+      "probeSha256": "75ec9c83c6a6f8127dae35dac131f3210584ee3705ddfd221585588521a52004",
+      "scope": "shell-hosts",
+      "operatorReport": "displayed-and-dismissed; fixture closed in separate trials",
+      "oracleGranularity": "session-only; no per-snapshot display/input labels",
+      "samples": 19,
+      "workersCompleted": 18,
+      "snapshotEnds": 18,
+      "osBuilds": [
+        26340
+      ],
+      "roots": 325,
+      "xamlRoots": 2,
+      "ownerMatches": 0,
+      "uiaCompleted": 305,
+      "uiaIncomplete": 20,
+      "msaaCompleted": 248,
+      "msaaIncomplete": 77,
+      "pointFixtureExclusions": 0,
+      "pointShellHosts": 0
+    },
+    {
+      "file": "sampling-1792676545035.jsonl",
+      "sha256": "004e949e8018190a0a3934ea845a4af746b46b6357935666fac9cae4f6a79345",
+      "protocol": "hover-only",
+      "sourceSha256": "9169fda81506b3731c63f8c8bd6a6e7fac8f5a7a1f088ac5ae5b0d36fbb06ec3",
+      "probeSha256": "37dfc46a9c78151386ccc6b7e87a3471637d0cdaf953cbe943a1fc6ee670750f",
+      "scope": "known-xaml-classes",
+      "operatorReport": "displayed-and-dismissed; fixture closed in separate trials",
+      "oracleGranularity": "session-only; no per-snapshot display/input labels",
+      "samples": 11,
+      "workersCompleted": 11,
+      "snapshotEnds": 11,
+      "osBuilds": [
+        26340
+      ],
+      "roots": 0,
+      "xamlRoots": 0,
+      "ownerMatches": 0,
+      "uiaCompleted": 0,
+      "uiaIncomplete": 0,
+      "msaaCompleted": 0,
+      "msaaIncomplete": 0,
+      "pointFixtureExclusions": 0,
+      "pointShellHosts": 0
+    },
+    {
+      "file": "sampling-1792676635543.jsonl",
+      "sha256": "2c6f5d73b07ffdfbd2437260c459a347b8adec934b054cf50a71226509d169f1",
+      "protocol": "key-only",
+      "sourceSha256": "9169fda81506b3731c63f8c8bd6a6e7fac8f5a7a1f088ac5ae5b0d36fbb06ec3",
+      "probeSha256": "a0c0f53113a3e4401c8ae596f70444f2115edcc03eae6130c1ad13e0ad917c3a",
+      "scope": "known-xaml-classes",
+      "operatorReport": "displayed-and-dismissed; fixture closed in separate trials",
+      "oracleGranularity": "session-only; no per-snapshot display/input labels",
+      "samples": 13,
+      "workersCompleted": 13,
+      "snapshotEnds": 13,
+      "osBuilds": [
+        26340
+      ],
+      "roots": 0,
+      "xamlRoots": 0,
+      "ownerMatches": 0,
+      "uiaCompleted": 0,
+      "uiaIncomplete": 0,
+      "msaaCompleted": 0,
+      "msaaIncomplete": 0,
+      "pointFixtureExclusions": 0,
+      "pointShellHosts": 0
+    },
+    {
+      "file": "sampling-1792676746463.jsonl",
+      "sha256": "bdc0742a66f66a0f6e995438246632c7a6f7b3b0e09e1979655b33d7d2901253",
+      "protocol": "key-only-point-discovery",
+      "sourceSha256": "3b15a2522e0de7c7da5213096255d479b699cd52bb747d0ed56f99e35517ca72",
+      "probeSha256": "d8e744d3afec8bdf9a67746b8bc33036e703319649546b47b80013686cf5bc4f",
+      "scope": "known-xaml-classes",
+      "operatorReport": "displayed-and-dismissed; fixture closed in separate trials",
+      "oracleGranularity": "session-only; no per-snapshot display/input labels",
+      "samples": 11,
+      "workersCompleted": 11,
+      "snapshotEnds": 11,
+      "osBuilds": [
+        26340
+      ],
+      "roots": 0,
+      "xamlRoots": 0,
+      "ownerMatches": 0,
+      "uiaCompleted": 0,
+      "uiaIncomplete": 0,
+      "msaaCompleted": 0,
+      "msaaIncomplete": 0,
+      "pointFixtureExclusions": 33,
+      "pointShellHosts": 0
+    }
+  ]
+}

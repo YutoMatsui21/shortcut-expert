@@ -126,7 +126,7 @@ node .\scripts\smoke.mjs --packaged --package-dir release/quality-tests
 
 原本probeは`validation/probes`のソースから再ビルドする。[再現手順](docs/research.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。
 
-#5のSnap Layout限定probeは`node scripts/snap-layout-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。手動操作と採取は準備段階で、再開指示後だけ`--sample`を使う。[範囲・再開手順・未確認条件](docs/research-snap-layout-validation.md)。
+#5のSnap Layout限定probeは`node scripts/snap-layout-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後の手動採取は`--sample`、既知Xaml classと隔離窓直下3点の限定探索は`--sample-xaml`。実機で表示・解除を目視確認したが、本体selector・対象照合は未成立。[結果・範囲・再開手順](docs/research-snap-layout-validation.md)。
 
 SQLite方式の検証（[#10の結果・採用方式・限界](docs/sqlite-storage-validation.md)）は以下で再実行する。製品ビルドや.NET SDKを使わず、同じ固定版Electron/ASAR/Windows x64の独立した無署名probe配布物を作る。hook・実入力・通常の保存先は使わず、毎回`.tools/validation/sqlite-*`へfixtureと結果JSONを出力する。故障試験では自分で起動したprobeを強制終了し、fixture DBだけにread-only属性・NTFS書込拒否ACLを設定してfinallyで解除する。配布物内ソースが現在のprobeと異なれば実行前に再packageを要求する。
 

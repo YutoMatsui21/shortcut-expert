@@ -18,6 +18,9 @@ class SnapLayoutProbe {
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr window, uint command);
+    [StructLayout(LayoutKind.Sequential)] struct Rect { public int Left,Top,Right,Bottom; }
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out Rect rect);
+    [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     [DllImport("oleacc.dll")] static extern int AccessibleObjectFromWindow(IntPtr window, uint objectId, ref Guid iid, [MarshalAs(UnmanagedType.Interface)] out object accessible);
     [DllImport("oleacc.dll")] static extern int AccessibleChildren(IAccessible accessible, int start, int count, [Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)] object[] children, out int obtained);
     [DllImport("oleacc.dll")] static extern int WindowFromAccessibleObject(IAccessible accessible, out IntPtr window);
@@ -116,7 +119,36 @@ class SnapLayoutProbe {
         Emit(new {kind="msaa-end",root=root,available=true,nodes=nodes,failures=failures,
             limited=limited,completed=failures==0 && !limited && queue.Count==0});
     }
-    static void Snapshot(int targetPid) {
+    // Three fixed points beneath our fixture's maximize button; no cursor or text reads.
+    static void PointHosts(IntPtr target,int targetPid) {
+        IntPtr previous=SetThreadDpiAwarenessContext(new IntPtr(-4));
+        if(previous==IntPtr.Zero) { Emit(new {kind="point-failure",stage="dpi-context"}); return; }
+        try {
+            Rect rect;
+            if(!GetWindowRect(target,out rect)) { Emit(new {kind="point-failure",stage="target-bounds"}); return; }
+            for(int point=0;point<3;point++) {
+                try {
+                    var element=AutomationElement.FromPoint(new System.Windows.Point(rect.Right-80-point*100,rect.Top+100+point*40));
+                    for(int depth=0;depth<8 && element!=null;depth++) {
+                        int pid=element.Current.ProcessId;
+                        if(pid==targetPid) { Emit(new {kind="point-exclusion",point=point,depth=depth,reason="fixture"}); break; }
+                        if(pid<=0) { Emit(new {kind="point-exclusion",point=point,depth=depth,reason="no-process"}); break; }
+                        using(var process=Process.GetProcessById(pid)) {
+                            if(!Hosts.Contains(process.ProcessName)) {
+                                Emit(new {kind="point-exclusion",point=point,depth=depth,reason="outside-shell-scope"}); break;
+                            }
+                            var current=element.Current;
+                            Emit(new {kind="point-host",point=point,depth=depth,host=process.ProcessName,
+                                hostClass=ClassCategory(current.ClassName),controlType=current.ControlType.Id,
+                                role=Role(current.AutomationId ?? ""),offscreen=current.IsOffscreen});
+                        }
+                        if(depth<7) element=TreeWalker.RawViewWalker.GetParent(element);
+                    }
+                } catch { Emit(new {kind="point-failure",point=point,stage="provider"}); }
+            }
+        } finally { SetThreadDpiAwarenessContext(previous); }
+    }
+    static void Snapshot(int targetPid,bool xamlOnly) {
         FailureStage="target-process";
         IntPtr target;
         using(var process=Process.GetProcessById(targetPid)) {
@@ -131,6 +163,7 @@ class SnapLayoutProbe {
         if(RtlGetVersion(ref version)!=0) throw new Exception("OS unavailable");
         Emit(new {kind="session",osBuild=version.Build,targetForeground=GetForegroundWindow()==target,
             inputHooks=false,keysSent=false,namesRead=false,selectorVerified=false,originMeasured=false});
+        if(xamlOnly) { FailureStage="point-provider"; PointHosts(target,targetPid); }
         FailureStage="shell-enumeration";
         int roots=0,failures=0; bool limited=false;
         bool enumerated=EnumWindows(delegate(IntPtr window,IntPtr ignored) {
@@ -140,8 +173,10 @@ class SnapLayoutProbe {
                 using(var process=Process.GetProcessById((int)pid)) { if(!Hosts.Contains(process.ProcessName)) return true; }
                 if(!IsWindowVisible(window)) return true;
                 if(roots>=24) { limited=true; return true; }
-                int root=roots++; var text=new StringBuilder(256);
+                var text=new StringBuilder(256);
                 if(GetClassName(window,text,text.Capacity)==0) throw new Exception("Class unavailable");
+                if(xamlOnly && text.ToString()!="XamlExplorerHostIslandWindow" && text.ToString()!="Windows.UI.Core.CoreWindow") return true;
+                int root=roots++;
                 Emit(new {kind="root",root=root,hostClass=ClassCategory(text.ToString()),ownerMatchesTarget=OwnerMatches(window,target)});
                 try { Uia(window,pid,root); } catch { Emit(new {kind="uia-end",root=root,completed=false}); }
                 try { Msaa(window,pid,root); } catch { Emit(new {kind="msaa-end",root=root,available=false,completed=false}); }
@@ -167,10 +202,10 @@ class SnapLayoutProbe {
                 Application.Run(form); return 0;
             }
             int targetPid;
-            if(args.Length==2 && args[0]=="--snapshot" && int.TryParse(args[1],out targetPid)) {
+            if(args.Length==2 && (args[0]=="--snapshot" || args[0]=="--snapshot-xaml") && int.TryParse(args[1],out targetPid)) {
                 bool failed=false;
                 var worker=new Thread(delegate() {
-                    try { Snapshot(targetPid); }
+                    try { Snapshot(targetPid,args[0]=="--snapshot-xaml"); }
                     catch { failed=true; Emit(new {kind="worker-failure",stage=FailureStage}); }
                 });
                 worker.SetApartmentState(ApartmentState.MTA); worker.Start(); worker.Join();
