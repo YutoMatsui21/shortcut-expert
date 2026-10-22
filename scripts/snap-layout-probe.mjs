@@ -10,8 +10,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 const run = promisify(execFile);
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mode = process.argv[2] ?? '--self-test';
-if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--sample'].includes(mode)) {
-  console.error('Use --self-test (default) or --sample (explicit consent required).');
+if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--sample', '--sample-xaml'].includes(mode)) {
+  console.error('Use --self-test (default), --sample or --sample-xaml (explicit consent required).');
   process.exit(2);
 }
 const output = path.join(root, '.tools/validation/snap-layout');
@@ -31,7 +31,7 @@ if (mode === '--self-test') {
 } else {
   const hash = async file => createHash('sha256').update(await readFile(file)).digest('hex');
   const session = { kind: 'research-session', sourceSha256: await hash(source), probeSha256: await hash(probe),
-    durationLimitSeconds: 90, selectorVerified: false, originMeasured: false };
+    durationLimitSeconds: 90, scope: mode === '--sample-xaml' ? 'known-xaml-classes' : 'shell-hosts', selectorVerified: false, originMeasured: false };
   const file = path.join(output, `sampling-${Date.now()}.jsonl`);
   await writeFile(file, JSON.stringify(session) + '\n', { encoding: 'utf8', flag: 'wx' });
   let samples = 0;
@@ -58,14 +58,15 @@ if (mode === '--self-test') {
       const remaining = 90_000 - (Date.now() - start);
       if (remaining <= 0) break;
       let stdout = '', completed = true;
-      try { ({ stdout } = await run(probe, ['--snapshot', String(target.pid)], {
+      const sampleStartMs = Date.now() - start;
+      try { ({ stdout } = await run(probe, [mode === '--sample-xaml' ? '--snapshot-xaml' : '--snapshot', String(target.pid)], {
         windowsHide: true, timeout: Math.min(5_000, remaining), maxBuffer: 4 * 1024 * 1024,
       })); } catch (error) { stdout = error.stdout ?? ''; completed = false; }
       const snapshot = [];
       for (const line of stdout.trim().split(/\r?\n/).filter(Boolean)) {
         try { snapshot.push(JSON.parse(line)); } catch { completed = false; }
       }
-      const sample = { kind: 'sample', index: samples++, workerCompleted: completed,
+      const sample = { kind: 'sample', index: samples++, startMs: sampleStartMs, endMs: Date.now() - start, workerCompleted: completed,
         hasEnd: snapshot.some(row => row.kind === 'snapshot-end'), rows: snapshot };
       await appendFile(file, JSON.stringify(sample) + '\n', 'utf8');
       consecutiveFailures = completed && snapshot.some(row => row.kind === 'snapshot-end') ? 0 : consecutiveFailures + 1;

@@ -1,2 +1,3 @@
 # Historical research source bytes must continue to match recorded SHA-256 values.
 validation/evidence/task-view-sources/*.cs.txt -text
+validation/evidence/snap-layout-sources/*.cs.txt -text whitespace=trailing-space,space-before-tab,cr-at-eol
