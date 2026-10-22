@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Web.Script.Serialization;
@@ -14,6 +15,8 @@ class TaskViewProviderProbe {
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int length);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
     [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] struct OsVersion {
         public uint Size, Major, Minor, Build, Platform;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst=128)] public string ServicePack;
@@ -28,6 +31,19 @@ class TaskViewProviderProbe {
         "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "MultitaskingViewFrame",
         "XamlExplorerHostIslandWindow", "Windows.UI.Core.CoreWindow"
     };
+    // Unfamiliar Windows-host metadata may identify the next provider to investigate.
+    // This is a location check, not a trust/signature check or a Shell selector.
+    static string SystemHostCandidate(Process process) {
+        try {
+            string windows=Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string file=Path.GetFullPath(process.MainModule.FileName);
+            foreach(string folder in new [] { "System32", "SystemApps" }) {
+                string prefix=Path.Combine(windows,folder)+Path.DirectorySeparatorChar;
+                if(file.StartsWith(prefix,StringComparison.OrdinalIgnoreCase)) return process.ProcessName;
+            }
+        } catch { }
+        return "unidentified";
+    }
     static void Emit(object value) { Console.WriteLine(Json.Serialize(value)); Console.Out.Flush(); }
 
     // These are search hints, never a verified Task View selector.
@@ -152,12 +168,50 @@ class TaskViewProviderProbe {
             completed=failures==0 && count>0 && count<128,rootLimitReached=count>=128,
             verdict="unknown",selectorVerified=false,originMeasured=false});
     }
+    // Sample one fixed physical point, not the user's cursor. Read no app names/content.
+    // Ancestors outside the Shell whitelist expose only an exclusion marker.
+    static void PointHost() {
+        IntPtr previous=SetThreadDpiAwarenessContext(new IntPtr(-4));
+        if(previous==IntPtr.Zero) throw new Exception("DPI context unavailable");
+        try {
+            int width=GetSystemMetrics(0), height=GetSystemMetrics(1);
+            if(width<=0 || height<=0) throw new Exception("Primary display unavailable");
+            var element=AutomationElement.FromPoint(new System.Windows.Point(width/2,height/2));
+            bool reachedRoot=false;
+            int nodes=0, excluded=0;
+            while(element!=null && nodes<=MaxDepth) {
+                int index=nodes++;
+                int pid=element.Current.ProcessId;
+                if(pid==0) { reachedRoot=true; break; }
+                using(var process=Process.GetProcessById(pid)) {
+                    string host=process.ProcessName;
+                    if(ShellProcesses.Contains(host)) {
+                        var current=element.Current;
+                        Emit(new {kind="point-host",depth=index,host=host,hostClass=current.ClassName,
+                            controlType=current.ControlType.Id,role=Role(current.AutomationId ?? ""),
+                            offscreen=current.IsOffscreen,selectorVerified=false,originMeasured=false});
+                    } else {
+                        excluded++;
+                        Emit(new {kind="point-exclusion",depth=index,reason="outside-shell-scope",
+                            systemHostCandidate=SystemHostCandidate(process)});
+                    }
+                }
+                if(nodes>MaxDepth) break;
+                element=TreeWalker.RawViewWalker.GetParent(element);
+                if(element==null) reachedRoot=true;
+            }
+            Emit(new {kind="snapshot-end",roots=nodes,excludedRoots=excluded,
+                completed=reachedRoot && excluded==0,rootLimitReached=!reachedRoot,
+                verdict="unknown",selectorVerified=false,originMeasured=false});
+        } finally { SetThreadDpiAwarenessContext(previous); }
+    }
     [MTAThread] static int Main(string[] args) {
         try {
             if(args.Length==1 && args[0]=="--self-test") { SelfTest(); return 0; }
             if(args.Length==1 && args[0]=="--snapshot") { Snapshot(); return 0; }
             if(args.Length==1 && args[0]=="--discover-hosts") { DiscoverHosts(); return 0; }
-            Console.Error.WriteLine("Use --self-test (offline), --snapshot or --discover-hosts (authorized live research only).");
+            if(args.Length==1 && args[0]=="--point-host") { PointHost(); return 0; }
+            Console.Error.WriteLine("Use --self-test (offline), --snapshot, --discover-hosts or --point-host (authorized live research only).");
             return 2;
         } catch { Console.Error.WriteLine("PROBE_FAILED"); return 1; }
     }

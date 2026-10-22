@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url';
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mode = process.argv[2] ?? '--self-test';
-if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--snapshot', '--discover-hosts'].includes(mode)) {
-  console.error('Windows only. Use --self-test (default), --snapshot or --discover-hosts (authorized live research).');
+if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--snapshot', '--discover-hosts', '--point-host'].includes(mode)) {
+  console.error('Windows only. Use --self-test (default), --snapshot, --discover-hosts or --point-host (authorized live research).');
   process.exit(2);
 }
 const output = path.join(root, '.tools', 'validation', 'task-view');
