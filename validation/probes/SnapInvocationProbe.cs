@@ -198,7 +198,7 @@ class SnapInvocationProbe {
         if(GetForegroundWindow()==window) counts[2]++;
     }
     static IntPtr OnKey(int code,IntPtr message,IntPtr data) {
-        if(code>=0 && observing) {
+        if(code>=0 && observing && Clock.ElapsedMilliseconds-started<60000) {
             hookCallbacks++;
             var key=(KeyData)Marshal.PtrToStructure(data,typeof(KeyData));
             if(key.Key==0x5a || key.Key==0x5b || key.Key==0x5c || key.Key==0x10 || key.Key==0x11 || key.Key==0x12 || (key.Key>=0xa0 && key.Key<=0xa5)) {
@@ -214,9 +214,14 @@ class SnapInvocationProbe {
     }
     static void Tick() {
         if(!observing) return;
+        if(StopExpired(started,Clock.ElapsedMilliseconds,()=>EndTrial("timeout-unknown"))) return;
         IntPtr previous=SetThreadDpiAwarenessContext(new IntPtr(-4));
         if(previous==IntPtr.Zero) { dpiFailures++; dwell.Step(IntPtr.Zero,Clock.ElapsedMilliseconds,(int)threshold.Value,false); return; }
         try { TickCore(); } finally { SetThreadDpiAwarenessContext(previous); }
+    }
+    static bool StopExpired(long start,long now,Action stop) {
+        if(now-start<60000) return false;
+        stop(); return true;
     }
     static void TickCore() {
         keys.ObserveNeutral(AllKeysReleased());
@@ -397,6 +402,9 @@ class SnapInvocationProbe {
         title.Bounds[5].Left=260; title.Bounds[3].Top=-1;
         Check(CaptionSource(title,window)==null,"out of window is unknown");
         title.Bounds[3]=new Rect(); Check(CaptionSource(title,window)==null,"partial geometry does not permit fallback");
+        int stops=0;
+        Check(!StopExpired(100,60099,()=>stops++) && stops==0,"trial remains active below cutoff");
+        Check(StopExpired(100,60100,()=>stops++) && stops==1,"cutoff stops before any DPI work");
         Console.WriteLine("SNAP_INVOCATION_SELF_TEST_OK ("+assertions+" assertions; no live observation)");
     }
     // Message-only fixture in a separate process. No input hooks or user-window queries.
