@@ -28,10 +28,12 @@ A＝希望する中核7、B＝補助4。優先度は検出容易性を意味し�
 | W05 | A | 最大化・スナップから復元 | Win+Shift+↓等：前後状態と合う場合。再起動とは別 |
 | W06 | A | 左右半分スナップ | Win+←/→：元状態と同じ結果になる定型配置。似た自由リサイズは除外 |
 | W07 | B | 四隅スナップ | Win+方向キーの順次操作：単一画面の四分割。順序・元状態は実装時確認 |
-| W08 | A | スナップレイアウトを開く | Win+Z：最大化ボタンhoverでメニューを開く操作。最終配置とは別 |
+| W08 | A | 配置候補を呼び出す | Win+Z／最大化ボタンの500ms以上のhoverを検出（設定OFF・対象なしを除外）。メニューの表示成功や最終配置の検出ではない |
 | W09 | B | デスクトップ表示 | Win+D：全体の表示切替。一窓最小化とは別 |
 | W10 | B | タスクビューを開く | Win+Tab：開く操作のみ。窓・仮想デスクトップ選択は別 |
 | W11 | B | ウィンドウを閉じる | Alt+F4：窓の×等。タブ・確認画面・独自動作は条件限定 |
+
+W08の2026-10-23改定・unknown時の非計上・API選択は[確定要件](ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)と[#83の実測](research-snap-invocation-validation.md)を優先する。自然入力受入の基準は維持する。
 
 キーの意味：[Microsoft](https://support.microsoft.com/ja-jp/accessibility/windows/keyboard-shortcuts-in-windows)、[Snap](https://support.microsoft.com/ja-jp/windows/experience/snap-your-windows)。W06・W08を2窓配置の入口として優先。レイアウトは画面サイズ等に依存。境界ドラッグによる連動リサイズは公式にあるが、任意比率の同等キーは今回未確認（不存在の断定ではない）。
 
