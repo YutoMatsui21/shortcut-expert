@@ -29,6 +29,18 @@ internal static class NativeMethods
 
     [StructLayout(LayoutKind.Sequential)] internal struct Point { public int X, Y; }
     [StructLayout(LayoutKind.Sequential)] internal struct Rect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)] internal struct TitleInfo
+    {
+        public uint Size; public Rect Bar;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)] public uint[] State;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)] public Rect[] Bounds;
+    }
+    [DllImport("user32.dll")] internal static extern nint GetDesktopWindow();
+    [DllImport("user32.dll")] internal static extern nint GetShellWindow();
+    [DllImport("user32.dll")] internal static extern bool GetPhysicalCursorPos(out Point point);
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint window, out Rect rect);
+    [DllImport("user32.dll")] internal static extern nint SetThreadDpiAwarenessContext(nint context);
+    [DllImport("user32.dll")] internal static extern bool SystemParametersInfoW(uint action, uint param, out int value, uint flags);
     [StructLayout(LayoutKind.Sequential)] internal struct Placement
     {
         public uint Length, Flags, Show; public Point Min, Max; public Rect Normal;

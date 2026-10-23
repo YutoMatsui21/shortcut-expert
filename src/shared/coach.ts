@@ -23,6 +23,9 @@ export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
 export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
   Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
 export type Evidence =
+  | { kind: 'snap-invocation'; profile: 'snap-invocation-v1'; targetMatched: boolean; eligible: boolean;
+      settingsEnabled: boolean | null; buttonSource: 'title-rect' | 'hit-fallback' | null; dwellMs: number;
+      inputAgeMs: number; monitor: Bounds | null }
   | { kind: 'window'; profile: CapabilityProfile; result: WindowEvidenceResult }
   | { kind: 'shell-display'; profile: 'unverified'; feature: 'task-view' | 'snap-layout'; wasVisible: boolean | null; visible: boolean | null; targetMatched: boolean | null }
   | { kind: 'activation'; profile: 'unverified'; slot: number | null; appMatched: boolean | null; targetMatched: boolean | null; individualEquivalent: boolean | null; result: 'launched' | 'activated' | 'unknown' }
@@ -71,7 +74,7 @@ export const operations: { id: OperationId; label: string; shortcut: string; con
   { id: 'W05', label: '復元', shortcut: 'Win + ↓', condition: '最大化から', implemented: true },
   { id: 'W06', label: '左右半分に配置', shortcut: 'Win + ← / →', implemented: false },
   { id: 'W07', label: '四隅に配置', shortcut: 'Win + ← / →、続けて ↑ / ↓', condition: 'Winを押したまま', implemented: false },
-  { id: 'W08', label: 'スナップレイアウト', shortcut: 'Win + Z', implemented: false },
+  { id: 'W08', label: '配置候補を呼び出す', shortcut: 'Win + Z', implemented: true },
   { id: 'W09', label: 'デスクトップ表示', shortcut: 'Win + D', implemented: false },
   { id: 'W10', label: 'タスクビュー', shortcut: 'Win + Tab', implemented: false },
   { id: 'W11', label: 'ウィンドウを閉じる', shortcut: 'Alt + F4', implemented: true }
