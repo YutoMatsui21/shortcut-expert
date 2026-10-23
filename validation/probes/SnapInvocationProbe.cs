@@ -27,6 +27,10 @@ class SnapInvocationProbe {
     }
     class Keys {
         bool left,right,z,tainted; readonly HashSet<uint> modifiers=new HashSet<uint>();
+        public void ObserveNeutral(bool allReleased) {
+            if(!allReleased) return;
+            left=right=z=tainted=false; modifiers.Clear();
+        }
         public bool Step(uint key,bool down,bool injected) {
             if(injected) { tainted=true; return false; }
             if(key==0x10 || key==0x11 || key==0x12 || (key>=0xa0 && key<=0xa5)) {
@@ -215,6 +219,7 @@ class SnapInvocationProbe {
         try { TickCore(); } finally { SetThreadDpiAwarenessContext(previous); }
     }
     static void TickCore() {
+        keys.ObserveNeutral(AllKeysReleased());
         while(PendingKeys.Count>0) {
             IntPtr window=PendingKeys.Dequeue();
             if(Eligible(window)) { keyCalls++; Count(window,0); }
@@ -283,8 +288,7 @@ class SnapInvocationProbe {
     }
     static void StartTrial() {
         if(observing) return;
-        if((GetAsyncKeyState(0x5b)&0x8000)!=0 || (GetAsyncKeyState(0x5c)&0x8000)!=0 || (GetAsyncKeyState(0x5a)&0x8000)!=0 ||
-           (GetAsyncKeyState(0x10)&0x8000)!=0 || (GetAsyncKeyState(0x11)&0x8000)!=0 || (GetAsyncKeyState(0x12)&0x8000)!=0) {
+        if(!AllKeysReleased()) {
             status.Text="Release Win, Z, Shift, Ctrl and Alt, then arm."; return;
         }
         startSettings=Settings(); keys=new Keys(); dwell=new Dwell(); Targets.Clear(); PendingKeys.Clear();
@@ -298,6 +302,10 @@ class SnapInvocationProbe {
         started=Clock.ElapsedMilliseconds; observing=true; trialNumber++;
         cases.Enabled=application.Enabled=activeState.Enabled=threshold.Enabled=arm.Enabled=false;
         finish.Enabled=true; status.Text="OBSERVING (60 seconds maximum). Perform one trial; select observed display and Finish.";
+    }
+    static bool AllKeysReleased() {
+        return (GetAsyncKeyState(0x5b)&0x8000)==0 && (GetAsyncKeyState(0x5c)&0x8000)==0 && (GetAsyncKeyState(0x5a)&0x8000)==0 &&
+            (GetAsyncKeyState(0x10)&0x8000)==0 && (GetAsyncKeyState(0x11)&0x8000)==0 && (GetAsyncKeyState(0x12)&0x8000)==0;
     }
     static void EndTrial(string outcome) {
         if(!observing) return;
@@ -352,6 +360,10 @@ class SnapInvocationProbe {
         var mixed=new Keys(); mixed.Step(0x5b,true,true); Check(!mixed.Step(0x5a,true,false),"injected modifier ignored");
         mixed.Step(0x5a,false,false); mixed.Step(0x5b,true,false);
         Check(!mixed.Step(0x5a,true,false),"injection requires a fresh neutral observation epoch");
+        mixed.ObserveNeutral(false); mixed.Step(0x5a,false,false);
+        Check(!mixed.Step(0x5a,true,false),"non-neutral observation cannot clear injection taint");
+        mixed.ObserveNeutral(true); mixed.Step(0x5b,true,false);
+        Check(mixed.Step(0x5a,true,false),"neutral observation restores physical chords in the same trial");
         foreach(uint modifier in new uint[]{0xa0,0xa1,0xa2,0xa3,0xa4,0xa5}) {
             var modified=new Keys(); modified.Step(modifier,true,false); modified.Step(0x5b,true,false);
             Check(!modified.Step(0x5a,true,false),"extra modifier rejected");

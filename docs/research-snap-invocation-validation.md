@@ -156,7 +156,7 @@ E trial 1は比較中にhover候補3となり、ARM後の入退場回数が確�
 - 左／右／中／X1／X2のいずれかがdownならhover時間を貯めない。取得失敗を退出と同一視せず、既に計上した滞在を勝手に再armしない。
 - 本体表示の成功は推定しない。入力由来の確証・通常の保存・通知・coverageへの接続は後続の製品実装で既存契約を維持する。本調査のcursor観測だけで注入されていないマウス入力を証明したとはしない。
 
-最終ソースのpure self-testは63assertion成功、別processのquery故障fixture成功、geometry診断完走、runner構文・diff検査成功。F試行のsource snapshotと現行ソースが一致する。自然入力各20回・95%以上は本人の指示で今回の完了判定から除外した。製品受入の合格にはしない。
+手動試行終了時のpure self-testは63assertion成功、別processのquery故障fixture成功、geometry診断完走、runner構文・diff検査成功。F試行のsource snapshotはPR初回headのソースと一致する。その後Codexレビューで指摘された、注入後の全キー解放を確認しても試行内復帰しない点を修正した。各pollで全対象キーupを確認した場合だけ状態を初期化し、非neutralでは復帰しない／neutral確認後は同じ試行内の物理Win+Zが復帰する2assertionを追加、最終self-testは65assertion成功。レビュー修正後の実操作は再試験せず、純粋状態機械と故障fixtureで検証した。自然入力各20回・95%以上は本人の指示で今回の完了判定から除外した。製品受入の合格にはしない。
 
 ## 結論と引継ぎ
 
