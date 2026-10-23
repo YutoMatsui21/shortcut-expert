@@ -170,7 +170,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 | W05 復元 | 最大化／arranged→通常・非arranged、button/input | placement＋arranged＋経路。移動開始の派生復元除外。Win+Shift+↓等は前後stateに合う場合 | **実装へ**。最大化復元とスナップ解除を区別 |
 | W06 左右半分 | arranged変化、最終可視rect・作業領域・元state、drag終端／input | 非arranged普通窓→arranged、左右半分の定型rect。Win+左右が同じ結果になる元状態のみ | **合成**。API利用・DPI・不可視枠補正は実装時確認。自由比率／境界リサイズ除外 |
 | W07 四隅 | W06＋四分割rect、元state、一連input | 非arranged→arranged四隅。方向キー順次操作の途中半分配置を重複計上しない | **合成**。具体的な順序・同等結果は実装時確認。任意layout除外 |
-| W08 layoutを開く | HTMAXBUTTON／button矩形、実hover、target popup出現 | hover＋識別したpopup非表示→表示。Win+Zは入口のみ | **UI待ち**。hover時間だけで成功にしない。専用の安定表示契約は今回未確認 |
+| W08 配置候補を呼び出す | Win+Z／最大化ボタン矩形優先・空矩形時hit fallback、実hover、対象窓、設定の既知状態 | 対象窓を伴う有効なWin+Zまたは500ms以上のhoverを各1操作として認識。メニュー本体の表示成功は問わない | **制約付き成立（#83）**。設定unknownは非計上。製品の自然入力精度・通常環境での合格は未確認 |
 | W09 desktop表示 | UIA Show desktop要素、click/key、表示前後 | 識別済み要素＋表示／復帰の対応。Win+D。一窓最小化・desktop通常click除外 | **UI待ち**。設定・要素ID・前後stateが未確定 |
 | W10 Task View | UIA button、click/key、識別済みTask View出現 | button＋対象UI出現。Win+Tab。以降の窓／desktop選択は別 | **UI待ち**。専用の安定state契約は今回未確認。Alt+Tab用eventsを代用しない |
 | W11 閉じる | activeなtop-level HWND、HTCLOSE／close rect、input、DESTROY／WindowClosed | クリック前からactiveな標準×＋同一窓の閉鎖。Alt+F4。閉鎖前のtarget・画面を保持 | **実装へ**。非active・tab×・確認／中止・tray格納・独自×除外。click／process終了だけで数えない |
@@ -183,9 +183,9 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 - IsWindowArrangedは方向・入力由来を返さない。showCmd通常でもarrangedの場合がある。資料にはprerelease注意・動的取得説明があり、対象runtimeでの利用は未実測。未提供なら配置判定はunknown。
 - rectはDPI仮想化・不可視枠、画面は作業領域を考慮して座標系をそろえる。固定pxだけでsnapと断定しない。
-- W08のEVENT_SYSTEM_ARRANGMENTPREVIEWはpreview rectの表示で、menu出現専用の証拠ではない。W10のSWITCHSTART/ENDはAlt+Tab用。
+- W08は2026-10-23に呼び出し推定方式へ仕様変更。EVENT_SYSTEM_ARRANGMENTPREVIEWはpreview rectの表示であり、W08の呼び出し証拠にも本体表示成功の証拠にも代用しない。W10のSWITCHSTART/ENDはAlt+Tab用。
 - W09の裸のdesktop表示をIAppVisibilityだけで断定しない。[API](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-iappvisibility)、[値](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/ne-shobjidl_core-monitor_app_visibility)
-- W08〜10の専用APIが存在しないとは断定しない。今回の公式資料から安定した表示成功契約を確定できなかったという結論。
+- W08〜10の専用APIが存在しないとは断定しない。旧W08の表示成功方式は未成立の調査記録として保持し、現行W08の根拠は[呼び出し推定の実測判断](research-snap-invocation-validation.md)と[確定要件](ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)を優先する。
 - UIA tree・提供eventsは固定保証がなく、action eventsにもuser/program両方がある。
 - key押下や中間stateを成功数にしない。観測回数を習得率・全操作成功数としない。常用4アプリへの一般化も未確認。
 
