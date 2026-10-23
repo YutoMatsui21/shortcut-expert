@@ -22,6 +22,7 @@ internal sealed class CandidateTracker
     private long lastCaptionAt = NoCaptionClickAt;
     private Point lastCaptionPoint;
     private int generation, sequence, transaction;
+    internal int NextTransaction() => checked(++transaction);
 
     internal void Reset(int newGeneration)
     {

@@ -3,6 +3,18 @@ import { validDate } from './dates.ts';
 
 export function classify(value: ObserverCandidate): Observation | null {
   if (value.protocolVersion === 1) return classifyWindow(value);
+  if (value.evidence.kind === 'snap-invocation') {
+    const e = value.evidence;
+    if (value.origin !== 'mouse' && value.origin !== 'key') return null;
+    if (e.profile !== 'snap-invocation-v1' || !validDate(value.date) || value.injected || value.conflicted ||
+        !e.targetMatched || !e.eligible || e.settingsEnabled !== true || e.inputAgeMs < 0 || e.inputAgeMs > 200 ||
+        !Number.isFinite(e.inputAgeMs) || !Number.isFinite(e.dwellMs)) return null;
+    if (value.origin === 'key' ? value.route !== 'win-z' || e.dwellMs !== 0 || e.buttonSource !== null :
+        value.origin !== 'mouse' || value.route !== 'max-button-hover' || e.dwellMs < 500 ||
+        !['title-rect', 'hit-fallback'].includes(e.buttonSource ?? '')) return null;
+    return { id: `${value.generation}:t${value.transaction}`, operation: 'W08', origin: value.origin,
+      date: value.date, shortcut: 'Win + Z', monitor: e.monitor };
+  }
   if (value.evidence.kind !== 'window' || value.evidence.profile !== 'legacy-window-v1') return null;
   const observation = classifyWindow({ ...value.evidence.result, type: 'candidate', protocolVersion: 1,
     generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,

@@ -5,7 +5,10 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(ShellDisplayEvidence), "shell-display")]
 [JsonDerivedType(typeof(ActivationEvidence), "activation")]
 [JsonDerivedType(typeof(GlobalEvidence), "global")]
+[JsonDerivedType(typeof(SnapInvocationEvidence), "snap-invocation")]
 internal abstract record Evidence(string profile);
+internal sealed record SnapInvocationEvidence(bool targetMatched, bool eligible, bool? settingsEnabled,
+    string? buttonSource, long dwellMs, long inputAgeMs, MonitorBounds? monitor) : Evidence("snap-invocation-v1");
 internal sealed record WindowResult(string app, string operation, CandidateState before, CandidateState after,
     bool? afterArranged, bool moving, bool elevated, bool targetMatched, long inputAgeMs, MonitorBounds? monitor,
     MonitorBounds? fromMonitor, MonitorBounds? toMonitor, string? moveDirection);
@@ -37,6 +40,16 @@ internal sealed class CandidateProtocol(Action<object> emit)
         lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
     }
     internal void Stop() { lock (gate) generation = 0; }
+    internal void Invocation(int epoch, int transaction, string origin, SnapInvocationEvidence evidence)
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation || version != 2) return;
+            emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction,
+                DateTime.Now.ToString("yyyy-MM-dd"), origin, origin == "key" ? "win-z" : "max-button-hover",
+                false, false, evidence));
+        }
+    }
     internal void Complete(WindowCandidate candidate)
     {
         lock (gate)

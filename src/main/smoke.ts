@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { app, screen, type BrowserWindow } from 'electron';
 import type { Coach } from '../core/coach';
 import { localDate } from '../core/dates';
-import type { Candidate } from '../shared/coach';
+import type { Candidate, CandidateV2 } from '../shared/coach';
 import type { ObserverClient } from './observer';
 import type { NotificationWindow } from './notification';
 import { JsonRepository } from './repository';
@@ -124,6 +124,20 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
     if (await observer.focusToken() !== focus || notice.focusable()) throw new Error('added-notice-focus');
     notice.dismiss();
   }
+  for (const origin of ['mouse', 'key'] as const) {
+    const sequence = ++addedSequence;
+    const invocation: CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: value.generation, sequence,
+      transaction: sequence, date: localDate(), origin, route: origin === 'mouse' ? 'max-button-hover' : 'win-z', injected: false, conflicted: false,
+      evidence: { kind: 'snap-invocation', profile: 'snap-invocation-v1', eligible: true, targetMatched: true,
+        settingsEnabled: true, buttonSource: origin === 'mouse' ? 'title-rect' : null, dwellMs: origin === 'mouse' ? 500 : 0,
+        inputAgeMs: 0, monitor: physical } };
+    await observer.inject(invocation); await observer.inject(invocation); await coach.idle();
+  }
+  await waitRenderer(window, `document.querySelector('[data-operation="W08"] [data-kind="mouse"]')?.textContent === '1' &&
+    document.querySelector('[data-operation="W08"] [data-kind="key"]')?.textContent === '1'`, 'snap-invocation-renderer');
+  const snapSaved = await new JsonRepository(directory).load();
+  if (snapSaved.counts[localDate()].W08?.mouse !== 1 || snapSaved.counts[localDate()].W08?.key !== 1 || notice.current())
+    throw new Error('snap-invocation-save-pause-replay');
   await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="計測"]').click()`);
   await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="計測"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-stop');
   await observer.inject({ ...value, sequence: ++addedSequence }); await coach.idle();
@@ -204,7 +218,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await verifyWindowExit();
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
-    uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true,
+    uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true, snapInvocationFixture: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     windowHiddenAndRestored: true, rendererResubscribed: true, captionCommands: true,
     pendingExitCancelledAndRecovered: true, failedExitTickerResumed: true, windowEvidence,

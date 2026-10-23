@@ -57,6 +57,15 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'snap-invocation':
+      if (raw.profile !== 'snap-invocation-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.eligible !== 'boolean' ||
+          !nullableBoolean(raw.settingsEnabled) || ![null, 'title-rect', 'hit-fallback'].includes(raw.buttonSource as null | string) ||
+          typeof raw.dwellMs !== 'number' || !Number.isFinite(raw.dwellMs) || raw.dwellMs < 0 ||
+          typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 ||
+          !(raw.monitor === null || bounds(raw.monitor))) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, targetMatched: raw.targetMatched, eligible: raw.eligible,
+        settingsEnabled: raw.settingsEnabled, buttonSource: raw.buttonSource as 'title-rect' | 'hit-fallback' | null,
+        dwellMs: raw.dwellMs, inputAgeMs: raw.inputAgeMs, monitor: bounds(raw.monitor) }; break;
     case 'window': {
       if (!(raw.profile === 'legacy-window-v1' || raw.profile === 'unverified') || !record(raw.result)) return null;
       const result = candidate({ ...raw.result, type: 'candidate', protocolVersion: 1,

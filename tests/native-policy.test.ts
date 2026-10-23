@@ -32,4 +32,9 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.deepEqual(v2.slice(0, observations.length).map((value: ReturnType<typeof classify>) => value && { ...value, id: 'comparison' }),
     observations.map((value: ReturnType<typeof classify>) => value && { ...value, id: 'comparison' }));
   assert.deepEqual(v2.slice(observations.length), [null, null, null]);
+  assert.deepEqual(report.snapSamples.map((sample: unknown) => {
+    const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed);
+    assert.ok(observed); assert.equal(observed.shortcut, 'Win + Z');
+    return [observed.id, observed.operation, observed.origin];
+  }), [['1:t1', 'W08', 'mouse'], ['1:t2', 'W08', 'key']]);
 });

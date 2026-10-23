@@ -11,6 +11,7 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
+    private readonly SnapInvocationObserver snap;
     // Native側がcallbackを呼ぶ間、解除までdelegateをGCから保護する。
     private readonly InputHook mouseCallback, keyCallback;
     private readonly EventHook eventCallback;
@@ -21,6 +22,7 @@ internal sealed class Observer : IDisposable
     internal Observer(Action<object> emit, bool fixture = false)
     {
         protocol = new CandidateProtocol(emit); this.fixture = fixture;
+        snap = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
@@ -52,10 +54,12 @@ internal sealed class Observer : IDisposable
             if (hook != 0) eventHooks.Add(hook);
         }
         if (!Active) { Stop(); throw new InvalidOperationException("hook-init-failed"); }
+        if (!fixture && protocolVersion == 2) snap.Start(newGeneration);
     }
     internal void Stop()
     {
         protocol.Stop();
+        snap.Stop();
         bool released = true;
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
@@ -81,7 +85,7 @@ internal sealed class Observer : IDisposable
         return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout());
     }
-    private static bool OrdinaryProcess(uint pid)
+    internal static bool OrdinaryProcess(uint pid)
     {
         nint process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid), token = 0;
         if (process == 0) return false;
@@ -100,6 +104,7 @@ internal sealed class Observer : IDisposable
         try
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
+            snap.Mouse(message, Marshal.PtrToStructure<MouseData>(data).Flags);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
@@ -126,8 +131,11 @@ internal sealed class Observer : IDisposable
     {
         try
         {
-            if (code < 0 || fixture || !Active || (message != WM_KEYDOWN && message != WM_SYSKEYDOWN)) return CallNextHookEx(0, code, message, data);
+            if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var key = Marshal.PtrToStructure<KeyData>(data);
+            bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+            snap.Key(key.Key, down, key.Flags);
+            if (!down) return CallNextHookEx(0, code, message, data);
             nint target = GetForegroundWindow();
             if (CandidateTracker.IsModifier(key.Key))
             {
@@ -183,5 +191,5 @@ internal sealed class Observer : IDisposable
         }
         catch { tracker.ClearInput(); }
     }
-    public void Dispose() { Stop(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); snap.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }
