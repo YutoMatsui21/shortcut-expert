@@ -130,6 +130,8 @@ node .\scripts\smoke.mjs --packaged --package-dir release/quality-tests
 
 #5のSnap Layout限定probeは`node scripts/snap-layout-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後の手動採取は`--sample`、既知Xaml classと隔離窓直下3点の限定探索は`--sample-xaml`。実機で表示・解除を目視確認したが、本体selector・対象照合は未成立。[結果・範囲・再開手順](docs/research-snap-layout-validation.md)。
 
+#83の呼び出し推定probeは`node scripts/snap-invocation-probe.mjs --self-test`で状態機械、`--query-self-test`で別processのtimeout、`--geometry-self-test`で自作窓のボタン矩形とhit testを確認する。同意後は`--observe-consented`で本人の画面へ2窓を開き、panelのARMからFINISHまでWin+Zと最大化hoverを観測する。probeは設定読取のみ。調査は矩形優先・空矩形時だけhit test、設定欠落はunknownで完了。[8ケース・追加実測・確定した実装判断](docs/research-snap-invocation-validation.md)。
+
 SQLite方式の検証（[#10の結果・採用方式・限界](docs/sqlite-storage-validation.md)）は以下で再実行する。製品ビルドや.NET SDKを使わず、同じ固定版Electron/ASAR/Windows x64の独立した無署名probe配布物を作る。hook・実入力・通常の保存先は使わず、毎回`.tools/validation/sqlite-*`へfixtureと結果JSONを出力する。故障試験では自分で起動したprobeを強制終了し、fixture DBだけにread-only属性・NTFS書込拒否ACLを設定してfinallyで解除する。配布物内ソースが現在のprobeと異なれば実行前に再packageを要求する。
 
 実行したElectronの版も`package.json`の固定版と照合する。SQLite保存・移行の回帰7件は通常の`test:unit`に含まれ、配布probeでは初期schema作成中の強制終了、JSON未作成、FULL後の同一書込の再送も確認する。
