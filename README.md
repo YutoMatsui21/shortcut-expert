@@ -48,7 +48,9 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 2. 仕様は[取得・読取入口](docs/development-tools.md#仕様の取得と読取)で成功した本文とrevisionを保存し、見出し→必要節の順に読む。ソースは型・関数・呼出し元で範囲を絞り、変更後はdiffを中心に確認する。
 3. `npm.cmd run dev:check`でTEMP/cacheのwrite・renameと部品の有無を確認し、`package.json`・`global.json`に沿って不足分を準備する。実行入口が子プロセスごとに作業先のTEMP/cacheを設定する。[環境と失敗時の切り分け](docs/development-tools.md#実行環境)に従う。PowerShellで依存するnativeコマンドを続ける時は`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を挟む。
 4. UI/API変更ではテスト設計Skillで影響するfixture・mock・selector・期待値を先に確認する。修正中は関連試験を絞り、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証はソース・依存・生成物・環境と対応づけ、変わった範囲を再検証する。必須条件と追加確認を分け、次Issueの案内前に依存を確認する。
-5. push後にPRへ`@codex review`を投稿して明示的にレビューを依頼する（PR未作成なら先に作る）。最新headのSHAを固定し、[PR監視入口](docs/development-tools.md#pr監視)でCI・レビューを確認する。**両方が完了するまで修正を始めない**。結果が揃ったら[GitHub操作Skill](skills/github-workflow/SKILL.md)に従い指摘を評価・修正し、再push時もレビューを再依頼する。
+5. 実装・ローカル検証後、PR作成前に原則`/review`で変更全体を確認し、[追加レビュー規則](docs/code-review.md)に従って指摘へ対応する。レビュー対象が意図した差分であることを確認し、専用レビュアーへの追加指示の適用は未確認のまま前提にしない。
+6. commit・pushしてPRを作成し、最新headのCI（`windows-quality`）を確認する。GitHubの`@codex review`は高リスク変更または明示依頼がある場合だけ追加する。[GitHub操作Skill](skills/github-workflow/SKILL.md)に従い、必須条件を満たしたらmergeする。
+7. CI失敗時は原因を修正し、変更した部分をローカルで再検証する。本番ロジック・重要な契約に影響する場合は前回レビュー以降の差分と影響範囲を再レビューし、再push後に最新headのCIを確認する。テスト期待値を変える場合も仕様との一致を確認する。
 
 ### 実行環境
 
