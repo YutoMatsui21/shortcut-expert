@@ -76,3 +76,42 @@ keyはmouse0/key1、mouseはmouse1/key0、負例は両0が正解。学習中・�
 既存JSON保存試験の保存エラー/timeoutも記録した。全244件の再実行は成功。自然入力結果をこれらの人工試験へ混ぜない。
 専用レビューで見つかったpause順序・途中中断の保持・他操作通知の分離・期限競合・session終了retry・panel異常終了の6件を修正し、
 全体再レビューと最後の終了処理に対する重点再レビューを実施した。最後の追加指摘は0。
+
+## 2026-10-24 製品の自然入力確認結果
+
+本人の明示同意と手動操作で、Windows build 26340／Chrome 155.0.8059.85の同じ同梱版を使用した。
+各ケース原則1回という本人指示に従い、以下の13ケースが期待するW08記録・通知要求と一致した。
+通常userData、人工入力、他アプリ画像は使っていない。対象アプリ・実操作と通知の可視表示は本人の報告で照合した。
+
+| ケース | mouse / key差分 | W08通知要求 |
+| --- | --- | --- |
+| 標準captionでWin+Z | 0 / 1 | 0 |
+| 標準captionで最大化hover | 1 / 0 | 1。本人が可視通知を確認 |
+| ChromeでWin+Z | 0 / 1 | 0 |
+| Chromeで最大化hover | 1 / 0 | 1。本人が可視通知を確認 |
+| 閉じるボタンhover | 0 / 0 | 0 |
+| Ctrl+Win+Z | 0 / 0 | 0 |
+| 左ボタンを押したまま最大化領域へ移動 | 0 / 0 | 0 |
+| 習得済みでhover | 1 / 0 | 0 |
+| 対象外でhover | 1 / 0 | 0 |
+| 通知pauseでhover | 1 / 0 | 0 |
+| デスクトップでWin+Z | 0 / 0 | 0 |
+| Snap全体OFFでWin+Zとhover | 0 / 0 | 0 |
+| Snap ON・hover表示OFFでWin+Zとhover | 0 / 1 | 0 |
+
+記録は`.tools/validation/w08-natural/session-dyk2nB`（11試行）と`session-FxZsHQ`（3試行）。
+最初のsessionの試行3はpanelの期待値がmouseのままWin+Zを押したと本人が訂正し、実測key1・mouse0・通知要求0と一致した。
+この設定取り違えを別注記し、元の`detectorPassed=false`等を上書きしていない。正常条件の追加反復は求めなかった。
+13ケースとは別のこの1試行を含め、生の試行記録は計14件である。
+
+両sessionの全347ファイルmanifest SHA-256は`babae0994d6280309db7122badd95aab7e77026d2f57ef2182b6e53a718123f8`で一致する。
+実行コードのcommitは`68d41f696be09134268851b729f976cc720405fe`。その後の試行方針変更は文書のみで、本番コード・実行物を変えていない。
+試行の設定・集計差分は各`data/status.json`、本人の訂正・目視報告は`manual-oracle.json`、build全体hashは`build.json`に分けて保持する。
+
+本人がSnap全体とhover表示をONへ復元し、本人アカウントのWindowArrangementActive文字列1・EnableSnapAssistFlyout DWORD 1を読取照合した。
+両製品processは終了code 0。終了後に隔離SQLiteをread-onlyで再openし、`integrity_check=ok`とW08集計を確認した。
+最初のsessionはmouse5/key3（設定取り違えのkey1を含む）、次のsessionはmouse0/key1で、試行差分の総和と一致する。
+
+これは改定R02による当該ケースの機能確認であり、95%精度や他OS build・全アプリへの保証ではない。
+499/500ms・200ms空白・query失敗/unknown・注入・repeat/再入場・保存障害後の非再送等は、本番policyと隔離fixtureの結果を別の証拠として保持する。
+12操作が完成した最終buildでの#47再受入、通知のNSIS登録/履歴click等の#44受入、アプリ公開は完了していない。
