@@ -40,9 +40,9 @@ Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけ�
 - `tests/fixture-integration.test.ts`：W08のmouse/key×3状態、実SQLite再open、両ページモデル、保存後通知adapter。
 - 通常/同梱smoke：人工v2をfixture helper→Main/Core→保存→Reactへ流し、mouse/key各1・重複除外・pause中非通知を確認する。
 
-人工イベントは自然入力の認識率を示さない。実OS照会による製品hoverの成立、標準caption/Chrome等で各入力20回以上・95%以上、
-負例20回以上で誤記録/誤通知0、同一最終buildのR02/J04と#47再受入は未確認。
-実入力の観測は本人の別途明示同意後に行う。#34はこれらを残してOpenを維持する。
+人工イベントは自然入力の認識率を示さない。自然入力は2026-10-24の本人指示により各ケース原則1回、予想外の結果だけ再試行する。
+標準caption/Chrome等の必要条件、負例で誤記録/誤通知0、同一最終buildのR02/J04と#47再受入は個別に確認する。
+実入力の観測は本人の明示同意後に行う。未確認の必要ケースが残る間は#34をOpenとする。
 
 2026-10-23のローカル検証：型検査・helper/Electron build、unit 240件、native 6件（本番C# policy 127ケース）、
 通常版と修正後同梱版の隔離smokeが成功。押下中の退出で再入場できない不具合は回帰assert失敗→修正後成功を確認した。
@@ -68,7 +68,8 @@ node scripts/w08-natural-acceptance.mjs --package-dir release/issue-34-natural -
 W08の日別集計の差分、通知要求数、取消/timeout・保存障害等による無効判定を保持する。キー列・入力時刻列・座標・窓名・他アプリ画像は保存しない。
 keyはmouse0/key1、mouseはmouse1/key0、負例は両0が正解。学習中・通知有効のmouseだけ通知要求1を期待し、
 習得済み/対象外/通知pauseでは0を期待する。通知要求をOS可視表示の合格へ読み替えない。
-キャンセル・timeoutは無効で精度の分母へ入れず、失敗した有効試行は除外しない。実施結果は別途記録する。
+キャンセル・timeoutは機能確認の合格に数えず、未完了として残す。予想外の結果も除外せず、実施結果を記録する。
+同じ正常条件を回数確保のために反復しない。1ケースの期待どおりの結果を確認したら、次の未確認条件へ進む。
 
 入口の検証：全unit 244件成功後、追加の仮想時計試験1件でも、ファイル読取中の期限到達・遅いFINISH・session終了retryを確認。
 型検査・helper/Electron build・panel compile・修正後同梱版fixture smokeが成功した。初回の全unitでは新FS importに未対応の起動mockを修正し、
