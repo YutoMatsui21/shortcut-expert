@@ -33,6 +33,8 @@ A＝希望する中核7、B＝補助4。優先度は検出容易性を意味し�
 | W10 | B | タスクビューを開く | Win+Tab：開く操作のみ。窓・仮想デスクトップ選択は別 |
 | W11 | B | ウィンドウを閉じる | Alt+F4：窓の×等。タブ・確認画面・独自動作は条件限定 |
 
+W12は2026-10-24に、タスクバーのアプリアイコンクリック／存在する番号のWin+数字の入力のみを計測する仕様へ変更した。個別窓の結果照合は不要で、W01への二重計上は不可。[W12の確定要件](ui-redesign-requirements.md#w12タスクバーのアプリを開く2026-10-24-仕様変更)と[#6技術検証](https://github.com/YutoMatsui21/shortcut-expert/issues/6)を優先する。従来W01行の「Win+数字」は過去の検討案であり現行W12の所属と混同しない。
+
 W08の2026-10-23改定・unknown時の非計上・API選択は[確定要件](ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)と[#83の実測](research-snap-invocation-validation.md)を優先する。自然入力受入の基準は維持する。
 
 キーの意味：[Microsoft](https://support.microsoft.com/ja-jp/accessibility/windows/keyboard-shortcuts-in-windows)、[Snap](https://support.microsoft.com/ja-jp/windows/experience/snap-your-windows)。W06・W08を2窓配置の入口として優先。レイアウトは画面サイズ等に依存。境界ドラッグによる連動リサイズは公式にあるが、任意比率の同等キーは今回未確認（不存在の断定ではない）。
