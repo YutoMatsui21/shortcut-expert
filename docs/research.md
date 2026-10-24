@@ -163,7 +163,8 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 | ID | 必要情報／API | 判定仮説・同等キーの条件 | 判断・残リスク |
 | --- | --- | --- | --- |
-| W01 切替 | UIA button・順位／対応target、実入力、foreground HWND | クリックしたbuttonと切替先が一致。Win+数字は同じtargetへ行く順位が明確な単独窓等。任意切替へAlt+Tabを一律案内しない | **UI待ち**。自作窓のmouse／Win+6取得済み。外部窓・groups・未pin・並べ替え・別画面の順位は未保証 |
+| W01 切替 | 切替入力と対象のforeground HWND、WinEvent等 | タスクバーアプリアイコンのクリック・Win+数字はW12に帰属する。W01はAlt+Tabなどの一般切替の対象・結果を照合 | **UI待ち**。一般切替の同等性は#7/#29で検証。旧TaskbarProbeのmouse／Win+6取得はW12の初期証拠でありW01のPASSではない |
+| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を操作時点で計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6の技術検証待ち**。自作窓slot6の初期試験あり。外部アプリ・並べ替え/overflow/複数タスクバー・非アプリ負例の成立は未証明 |
 | W02 画面移動 | monitor前後・配置、MOVESIZE開始終了、実入力 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等 | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能 |
 | W03 最大化 | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input | 同一対象の標準経路＋結果。Win+↑、独自全画面除外 | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認 |
 | W04 最小化 | placement・MINIMIZE系event、HTMINBUTTON等、input | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない |
@@ -322,7 +323,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 - mouse切替：taskbar-mouse、67ms、actualTargetMatched=true。
 - key切替：Win+6候補、46ms、同じtarget=true。
 - keyMappingValidated=falseは取得時点の未検証flag。後続実入力は初期証拠で、全アプリの保証ではない。
-- 自分の単独窓・現在配置だけ。外部窓・groups・別画面taskbar・並べ替えは未確認。原本コードはAppid／class／rectから順位候補を作る。固定UIA順序の公式保証とはしない。
+- 自分の単独窓・現在配置だけ。外部窓・groups・別画面taskbar・並べ替えは未確認。原本コードはAppid／class／rectから順位候補を作る。固定UIA順序の公式保証とはしない。**2026-10-24のW12新仕様では、これをボタン番号とWin+数字入力の取得に関する初期証拠として扱う。個別結果窓の一致は必須条件から外した（#6）。**
 
 #### ExternalWindowProbe：Chrome／Obsidian
 
