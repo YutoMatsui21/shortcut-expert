@@ -1,11 +1,14 @@
 import { join, basename } from 'node:path';
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync } from 'node:fs';
 import { app, dialog, Notification, type BrowserWindow } from 'electron';
 import { runCoach, showCoach } from './coach-app.ts';
 
 const osAcceptance = process.argv.includes('--os-notification-acceptance');
 if (osAcceptance && !app.isPackaged) { console.error('V01_REQUIRES_INSTALLED_NSIS'); app.exit(1); }
 const fixture = osAcceptance || process.argv.includes('--ui-acceptance') || process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
+const naturalAcceptance = process.argv.includes('--w08-natural-acceptance');
+if (naturalAcceptance && (fixture || !app.isPackaged || !process.env.COACH_TEST_DATA_DIR ||
+    readdirSync(process.env.COACH_TEST_DATA_DIR).length !== 0)) throw new Error('W08 requires packaged app and a new empty isolated directory');
 if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
 function fixtureData(): string {
   if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;
@@ -13,7 +16,7 @@ function fixtureData(): string {
   mkdirSync(directory, { recursive: true });
   return mkdtempSync(join(directory, 'coach-'));
 }
-const data = fixture ? fixtureData() : app.isPackaged ? app.getPath('userData') : join(app.getAppPath(), '.tools', 'coach-data');
+const data = fixture || naturalAcceptance ? fixtureData() : app.isPackaged ? app.getPath('userData') : join(app.getAppPath(), '.tools', 'coach-data');
 mkdirSync(data, { recursive: true });
 app.setPath('userData', data);
 

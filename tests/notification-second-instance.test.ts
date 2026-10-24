@@ -14,7 +14,7 @@ test('a process losing the instance lock never initializes COM, a window or a he
     constructor() { assert.fail('losing process cannot create a presenter'); }
     static handleActivation() { assert.fail('losing process cannot register activation'); }
   } } });
-  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture' } });
+  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture', readdirSync: () => [] } });
   mock.module('../src/main/coach-app.ts', { namedExports: {
     runCoach: () => assert.fail('losing process cannot start the app'),
     showCoach: () => assert.fail('losing process cannot show a window')

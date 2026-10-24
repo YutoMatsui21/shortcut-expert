@@ -17,7 +17,7 @@ test('activation initialization failure reports an error and exits without start
       static handleActivation() {}
     }
   } });
-  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture' } });
+  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture', readdirSync: () => [] } });
   mock.module('../src/main/coach-app.ts', { namedExports: {
     runCoach: () => assert.fail('failed initialization cannot start observation'), showCoach: () => {}
   } });
