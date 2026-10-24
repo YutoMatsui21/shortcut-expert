@@ -21,7 +21,7 @@ test('identity and global activation precede initialization; cold and second-ins
     static handleActivation(callback: () => void) { activate = callback; callback(); calls.push('activation'); }
   }
   mock.module('electron', { namedExports: { app, Notification, dialog: {} } });
-  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture' } });
+  mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture', readdirSync: () => [] } });
   mock.module('../src/main/coach-app.ts', { namedExports: {
     runCoach: async () => { calls.push('run'); assert.equal(displays, 1, 'early cold request reaches the shared display function'); started.resolve(); await initialized.promise; },
     showCoach: () => displays++

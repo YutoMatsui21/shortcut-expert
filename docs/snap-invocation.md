@@ -50,3 +50,28 @@ Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけ�
 全体再レビューと最後の差分に対する重点再レビューを実施した。最終重点レビューの追加指摘は0。
 全unitの初回は既存JSON保存試験1件が保存エラーとなったが、単独実行と全240件再実行は成功した。原因は未特定。
 同梱版全347ファイルのhashはGit対象外の`.tools/issue-34-build-hashes.json`に記録する。
+
+## 製品の自然入力受入入口
+
+2026-10-24に本人が自然入力試験へ同意。`--w08-natural-acceptance`は同梱版と新しい空の隔離userDataを必須とし、
+通常のObserver/DurableCoach/SQLite/OS通知adapterを使用する。人工候補は注入しない。起動時・試行間は観測停止。
+操作パネルのARMからFINISH/CANCELまでだけ観測し、1試行45秒、session20分で終了する。
+通常画面の開始操作からは観測を開始できない。パネルはhookや人工入力を持たず、別processに標準captionの対象窓を用意する。
+
+```powershell
+node scripts/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --compile-only
+# 本人同意後だけ。ARM後は本人が対象窓で1操作し、FINISHを押す。
+node scripts/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --observe-consented
+```
+
+生成先は`.tools/validation/w08-natural/session-*`。同梱全体hash、panelソースhash、本人が指定する試行の期待値と
+W08の日別集計の差分、通知要求数、取消/timeout・保存障害等による無効判定を保持する。キー列・入力時刻列・座標・窓名・他アプリ画像は保存しない。
+keyはmouse0/key1、mouseはmouse1/key0、負例は両0が正解。学習中・通知有効のmouseだけ通知要求1を期待し、
+習得済み/対象外/通知pauseでは0を期待する。通知要求をOS可視表示の合格へ読み替えない。
+キャンセル・timeoutは無効で精度の分母へ入れず、失敗した有効試行は除外しない。実施結果は別途記録する。
+
+入口の検証：全unit 244件成功後、追加の仮想時計試験1件でも、ファイル読取中の期限到達・遅いFINISH・session終了retryを確認。
+型検査・helper/Electron build・panel compile・修正後同梱版fixture smokeが成功した。初回の全unitでは新FS importに未対応の起動mockを修正し、
+既存JSON保存試験の保存エラー/timeoutも記録した。全244件の再実行は成功。自然入力結果をこれらの人工試験へ混ぜない。
+専用レビューで見つかったpause順序・途中中断の保持・他操作通知の分離・期限競合・session終了retry・panel異常終了の6件を修正し、
+全体再レビューと最後の終了処理に対する重点再レビューを実施した。最後の追加指摘は0。
