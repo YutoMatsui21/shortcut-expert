@@ -1,6 +1,6 @@
 # W12：タスクバーのアプリを開く（#28）
 
-W12はアプリアイコンの左クリック（同じ項目でdown/up）と、有効なWin+1〜9／Win+0の初回downを記録する。起動・前景化・グループの選択結果は待たない。[確定要件](ui-redesign-requirements.md#w12タスクバーのアプリを開く2026-10-24-仕様変更)と[#6の採用条件](research-taskbar-input-validation.md#28への採用条件と残る確認)を適用する。
+W12の**現行実装**は1〜10番のアプリアイコン左クリック（同じ項目でdown/up）と、有効なWin+1〜9／Win+0の初回downを記録する。起動・前景化・グループの選択結果は待たない。[確定要件](ui-redesign-requirements.md#ウィンドウ切替と案内キーの対応2026-10-25-方針変更)と[#6の採用条件](research-taskbar-input-validation.md#28への採用条件と残る確認)を適用する。**2026-10-25追加の起動状態別Alt+Tab候補・11番目以降のマウス検出・複数候補表示は[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)であり、本実装の対応済み範囲ではない。**
 
 ## 製品経路
 
