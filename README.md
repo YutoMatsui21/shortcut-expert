@@ -156,6 +156,8 @@ npm.cmd run probe:sqlite:packaged
 
 ### 修正中のテスト絞り込み
 
+CIと同じbuild後の通常smoke・同梱生成を重ねて実行する場合は`node scripts/ci-package-smoke.mjs`を使う。事前にhelperとoutをbuildし、実行中は更新しない。両処理のログは`.tools/test-results/smoke.log`・`package.log`へ保存し、どちらかが失敗した場合は終了コード1となる。通常の個別実行は従来のsmoke・packageコマンドを使う。
+
 `test:unit`の追加引数で`tests/`直下のファイル名を指定する。`--file=`は複数指定できる。module mockの有効化とsuiteごとのtimeoutは通常実行と同じ。未指定なら従来どおりsuite全体を実行する。
 
 ```powershell
