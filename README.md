@@ -60,6 +60,8 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 
 CIはMarkdown（`*.md`）だけの変更なら軽量確認へ切り替える。コード・テスト・設定・workflowの変更や手動実行では従来のWindowsフル検証を行う。両経路とも`windows-quality`の成功が必須。選択ルールは[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)を参照。
 
+フルCIでは型検査を`Types`、Helperの生成と検証を`Native policy and fixture process tests`で一度だけ実施し、後続の`Build`はElectronのbundleのみを実行する。単独の`npm.cmd run build`は従来どおりHelper生成・型検査も行う。
+
 ### 実行環境
 
 Windows x64、Node.js 24系・npm。作業フォルダーのPowerShellで実行する。
