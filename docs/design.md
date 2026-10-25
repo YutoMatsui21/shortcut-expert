@@ -34,7 +34,7 @@
 
 ### 依存方向と拡張
 
-- 起動時の引数は`startup-mode.ts`で一度判定し、`startup-data.ts`がsingle-instance lock取得前に通常／隔離userDataと自然入力受入の起動条件を設定する。`coach-app.ts`は本番の保存・通知・観測・IPC・終了処理を構成する。明示した検証モードだけ`validation-runtime.ts`を遅延読込し、fixture準備・モック通知・故障注入・smoke／acceptanceランナーを接続する。ランナーは本番のcommand・停止・終了処理を共用する。分割chunkの配置に依存しないよう、storage smokeの再openには本番側で解決したWorkerパスを渡す。旧Coach／JSON経路の型別分岐は#105、最終撤去は#42に残す。
+- 起動時の引数は`startup-mode.ts`で一度判定し、`startup-data.ts`がsingle-instance lock取得前に通常／隔離userDataと自然入力受入の起動条件を設定する。`coach-app.ts`は本番の保存・通知・観測・IPC・終了処理を構成する。明示した検証モードだけ`validation-runtime.ts`を遅延読込し、fixture準備・モック通知・故障注入・smoke／acceptanceランナーを接続する。ランナーは本番のcommand・停止・終了処理を共用する。分割chunkの配置に依存しないよう、storage smokeの再openには本番側で解決したWorkerパスを渡す。通常起動の構成はDurableCoach／SqliteRepositoryのみで、IPC・tick・終了も同じSQLite経路を使う。旧Coach／JSONが必要な隔離smokeはValidationRuntimeからだけ読み込む`legacy-fixture-runtime.ts`で構成し、互換read modelと日付更新を接続する。旧protocol・通知等の最終撤去は#42に残す。
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
 - Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証と`DeleteConfirmation`の短命・単回tokenを担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除実行・終了判断は`coach-app.ts`に残す。確認UIはRendererの`DeleteDialog`で、キャンセル初期focus・modal Tab拘束・Esc取消と二重click防止を持つ。

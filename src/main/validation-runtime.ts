@@ -21,6 +21,7 @@ import { runActivationSmoke } from './activation-smoke';
 import { runNotificationAcceptance } from './notification-acceptance';
 import { runUiAcceptance } from './ui-acceptance';
 import { runNaturalInputAcceptance } from './natural-input-acceptance';
+import { createLegacyRuntime } from './legacy-fixture-runtime.ts';
 
 type ValidationContext = {
   coach: Coach | DurableCoach; observer: ObserverClient; notice: NotificationWindow;
@@ -34,6 +35,9 @@ type ValidationContext = {
 
 // Loaded only for an explicit validation entry. It uses production commands and shutdown.
 export class ValidationRuntime {
+  createLegacyRuntime(...args: Parameters<typeof createLegacyRuntime>) {
+    return this.mode.legacyRepository ? createLegacyRuntime(...args) : undefined;
+  }
   naturalControl: ReturnType<typeof runNaturalInputAcceptance> | undefined;
   private naturalArming = false;
   quitResponse: number | null = null;

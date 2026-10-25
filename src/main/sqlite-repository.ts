@@ -7,18 +7,16 @@ import { tmpdir } from 'node:os';
 import { SerialQueue } from '../core/serial-queue.ts';
 import type { Settings } from '../shared/coach.ts';
 import type { DurableRepository, RecordMutation, RecordRange, StorageState } from '../shared/storage.ts';
-import { JsonRepository } from './repository.ts';
 
-async function exists(file: string): Promise<boolean> {
-  try { await access(file); return true; } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error; }
-}
-export async function selectRepository(root: string, workerPath: string): Promise<JsonRepository | SqliteRepository> {
-  // Existing authority wins even if DB is missing or broken; never import/fall back to old JSON.
-  const sqlite = await exists(join(root, 'records-v1'));
-  if (sqlite) return new SqliteRepository(root, workerPath);
+export async function selectRepository(root: string, workerPath: string): Promise<SqliteRepository> {
+  // Probe before initialization so inaccessible storage still offers retry/cancel.
+  // Only ENOENT means absent. Authority/migration validation remains in the Worker;
+  // existing authority must never import or fall back to obsolete JSON.
+  try { await access(join(root, 'records-v1')); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
   return new SqliteRepository(root, workerPath);
 }
-export async function selectRepositoryWithRetry(root: string, workerPath: string, recover: () => Promise<boolean>): Promise<JsonRepository | SqliteRepository> {
+export async function selectRepositoryWithRetry(root: string, workerPath: string, recover: () => Promise<boolean>): Promise<SqliteRepository> {
   for (;;) {
     try { return await selectRepository(root, workerPath); }
     catch { if (!await recover()) throw new Error('STORAGE_SELECTION_CANCELLED'); }
