@@ -6,6 +6,7 @@ import { learningOperations } from '../shared/learning';
 
 export async function waitForLearning(window: BrowserWindow, condition: string): Promise<void> {
   const passed = await window.webContents.executeJavaScript(`new Promise(resolve => {
+    if (${condition}) { resolve(true); return; }
     const end = Date.now() + 4000; const timer = setInterval(() => {
       if (${condition}) { clearInterval(timer); resolve(true); }
       else if (Date.now() > end) { clearInterval(timer); resolve(false); }

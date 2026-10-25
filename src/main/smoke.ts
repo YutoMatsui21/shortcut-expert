@@ -25,6 +25,7 @@ type SmokeContext = {
 
 async function waitRenderer(window: BrowserWindow, condition: string, stage: string): Promise<void> {
   const passed = await window.webContents.executeJavaScript(`new Promise((resolve) => {
+    if (${condition}) { resolve(true); return; }
     const deadline = Date.now() + 3000;
     const timer = setInterval(() => {
       if (${condition}) { clearInterval(timer); resolve(true); }

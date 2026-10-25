@@ -13,6 +13,7 @@ import { daysBefore } from '../shared/storage';
 
 export async function waitFor(window: BrowserWindow, condition: string, stage: string): Promise<void> {
   await window.webContents.executeJavaScript(`new Promise((resolve,reject)=> {
+    if (${condition}) { resolve(true); return; }
     const end=Date.now()+3000; const timer=setInterval(()=> {
       if(${condition}) { clearInterval(timer);resolve(true); }
       else if(Date.now()>end) { clearInterval(timer);reject(new Error(${JSON.stringify(stage)})); }
