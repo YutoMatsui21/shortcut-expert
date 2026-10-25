@@ -161,6 +161,8 @@ npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
 
 nativeだけを絞る場合はhelperをbuildした後、`node scripts/test.mjs native --file=native-policy.test.ts`を使う。`test:native`経由では従来どおり毎回helperをbuildする。全体ログが必要な時は`.tools/test-results`へ保存し、結果の要約と失敗箇所を読む。
 
+#6のW12入力probeは`node scripts/taskbar-input-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後は`--observe-consented`でpanelを開き、手動ARMからFINISHまでだけ観測する。技術検証は制約付きで実装着手可。主タスクバーの番号一致とWin+0、負例除外を確認し、別タスクバー・overflow等はunknown。製品の保存・通知・R02/J04は未検証。[原本・採用条件・試行手順](docs/research-taskbar-input-validation.md)。
+
 ## 公開準備
 
 `npm.cmd run package:installer`はbuild後にNSISインストーラーを作る入口。導入・再導入・削除、通常利用60分、採用操作ごとの精度確認は未完。正式名称・appId・OSSライセンス・公開先・署名を決める必要があり、UNLICENSEDは未選定を表す。
