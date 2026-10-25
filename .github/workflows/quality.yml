@@ -118,9 +118,11 @@ jobs:
         run: |
           npm.cmd run test:native 2>&1 | Tee-Object -FilePath .tools/test-results/native.log
           exit $LASTEXITCODE
+      # Previous steps already completed TypeScript validation and helper publish.
+      # Keep `npm run build` self-contained for local use; CI bundles the checked sources.
       - name: Build
         if: ${{ needs.change-scope.outputs.full == 'true' }}
-        run: npm.cmd run build
+        run: node scripts/dev-run.mjs electron-vite build
       - name: App UI and IPC smoke (synthetic input only)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
