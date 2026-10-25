@@ -1,6 +1,6 @@
 # 調査・検証根拠
 
-要件の正本は[mvp-requirements.md](mvp-requirements.md)、現行実装は[design.md](design.md#implementation)。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
+**2026-10-09〜11の調査・実測の記録**。現在の要件は[確定要件](ui-redesign-requirements.md)、設計は[現行アーキテクチャ](design.md#architecture)を正本とする。旧MVP要件は[アーカイブ](archive/mvp-requirements.md)へ移動した。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
 
 必要な節だけ読む： [採用理由](#value)・[判断修正](#review)・[KPX](#kpx)・[競合](#tools)・[環境別制約](#platforms)・[11操作の判断](#operations)・[API保証範囲](#apis)・[実測](#measurements)・[probe再現](#probes)。
 
@@ -10,7 +10,7 @@
 
 ## ステップ1：価値検証
 
-2026-10-09承認・完了。現行要件は[mvp-requirements.md](mvp-requirements.md)。検証・設計の現在地は同書の工程記録を参照。
+2026-10-09承認・完了。当時の要件は[旧MVP要件](archive/mvp-requirements.md)。現在の受入条件は[確定要件](ui-redesign-requirements.md)。
 
 ### 目的・採用理由
 
@@ -70,7 +70,7 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 - 事実・提供状況・公開コード：[競合調査](research.md#tools)。
 - IDE内部Action：[KPX参照](research.md#kpx)。コマンド履歴・Windows画面推定：[競合調査](research.md#tools)。API制約：[環境別調査](research.md#platforms)。
 
-ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現行契約は[mvp-requirements.md](mvp-requirements.md)。
+ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現在の仕様は[確定要件](ui-redesign-requirements.md)。
 
 <a id="kpx"></a>
 
@@ -89,7 +89,7 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 | 日別・graph | 保存項目に日時なし、確認codeに日別／推移graphなし | 日別保存は別に必要 |
 | 入力判定 | IDE ActionのMouseEvent／KeyEventを実行前に区別。[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java) | 成功数検証ではなく実行観測。Windows全体へ流用できない |
 
-今回の通知・停止・記録契約は[mvp-requirements.md](mvp-requirements.md)、APIの差は[技術調査](research.md#platforms)。
+今回の通知・停止・記録契約は[mvp-requirements.md](archive/mvp-requirements.md)、APIの差は[技術調査](research.md#platforms)。
 
 <a id="tools"></a>
 
@@ -155,7 +155,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 2026-10-11完了。11候補は維持し、資料＋既存実測から実装方針を選べる状態。全件の動作・公開品質の合格ではない。資料上の仮説を実装へ持ち越す新方針はユーザー承認済み。実装後に不成立なら条件限定・修正・後回しを相談する。
 
-要件・キー候補：[mvp-requirements.md](mvp-requirements.md)。実測：[技術検証記録](research.md#measurements)。API詳細：[API保証範囲](research.md#apis)。
+要件・キー候補：[mvp-requirements.md](archive/mvp-requirements.md)。実測：[技術検証記録](research.md#measurements)。API詳細：[API保証範囲](research.md#apis)。
 
 ### 操作×必要情報×判定仮説
 
@@ -262,7 +262,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 完了：2026-10-09 19:37:19→10-11 14:31:18 JST。必要情報とAPIから実装方針を判断した。製品実装・公開品質の合格ではない。次は別チャットで最小設計。
 
-要件：[mvp-requirements.md](mvp-requirements.md)。最新判断：[操作別の技術判断](research.md#operations)。API根拠：[API保証範囲](research.md#apis)。再現：[probe再現手順](research.md#probes)。
+要件：[mvp-requirements.md](archive/mvp-requirements.md)。最新判断：[操作別の技術判断](research.md#operations)。API根拠：[API保証範囲](research.md#apis)。再現：[probe再現手順](research.md#probes)。
 
 ### 判定と方針
 
@@ -359,7 +359,7 @@ ChatGPT・VS Code、配置系、UI識別、日別保存、通知・全画面抑�
 
 ### 作業記録（JST）
 
-終了・総経過・手戻りは[mvp-requirements.md](mvp-requirements.md#工程記録jst)。以下は記録できた区間（終端の応答／保存処理は一部未計測）。
+終了・総経過・手戻りは[mvp-requirements.md](archive/mvp-requirements.md#工程記録jst)。以下は記録できた区間（終端の応答／保存処理は一部未計測）。
 
 | 日付 | 作業区間 | 時間 | 内容 |
 | --- | --- | --- | --- |

@@ -25,9 +25,9 @@ cacheは`.tools/issues/<owner>--<repo>/<number>.json`。ATX（#形式）の該�
 
 ## PR監視
 
-PR前のローカルレビューとCI失敗後の再レビューは[追加レビュー規則](code-review.md)・[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)に従う。PR後はCIを必須として監視し、GitHubの`@codex review`を依頼した場合のみレビュー結果も待つ。以下はCI・必要時のレビュー状態を効率的に取得する手順。
+PR前のローカルレビューとCI失敗後の再レビューは[追加レビュー規則](code-review.md)・[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)に従う。PR後はCIを必須として監視する。GitHub上の`@codex review`は依頼しない。以下は最新headのCIを効率的に確認する手順。
 
-最新headの完全SHAを固定してCIのチェックを確認する。`pr-status`は1回のGraphQL取得からchecks・review/comment識別子・未解決thread数も要約できるが、GitHubレビューを未依頼ならレビューの完了はMerge条件にしない。
+最新headの完全SHAを固定してCIのチェックを確認する。`pr-status`は1回のGraphQL取得からchecks・review/comment識別子・未解決thread数も要約できるが、GitHub Codexレビューの完了はMerge条件にしない。
 
 ```powershell
 $prHead = git rev-parse HEAD
@@ -36,7 +36,7 @@ node scripts/github-workflow.mjs pr-status 64 --repo=YutoMatsui21/shortcut-exper
 
 同じheadで状態が変わらない場合は小さな要約だけを返し、過去コメントの省略警告も保持する。コメント本文の編集やthreadの変化も差分として検出する。30秒以上空け、状態不変なら60秒へ延ばす。必要な指摘本文と最終確認は`--details`で取得する。
 
-head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。GitHubレビューを依頼した場合は、最新headのCodex完了通知・指摘・未解決threadを人間可読の本文で確認する。未依頼の場合はレビュー結果の不存在をCI失敗として扱わない。この監視スクリプト自身はmergeやレビュー依頼を実行しない。
+head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。レビュー結果の不存在はCI失敗として扱わない。既存の重大なレビュー指摘やbranch protectionの追加条件は個別に確認する。この監視スクリプト自身はmergeやレビュー依頼を実行しない。
 
 `change-scope`で差分を分類し、Markdownのみなら軽量Linux、それ以外はWindowsフルCIを実行する。差分取得失敗・手動実行時はフルCIを選ぶ。必須`windows-quality`は必ず実行し、判定不明時は失敗する。軽量チェックの成功とジョブ自体のskipは区別する。
 

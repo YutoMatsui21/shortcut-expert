@@ -1,7 +1,7 @@
 # 開発方針
 
 ## 不変条件
-- 依頼と[要件書](docs/mvp-requirements.md)の受入条件を満たす最小変更とする。MVPの候補・条件を変える場合は事前相談する。
+- 依頼と[要件書](docs/ui-redesign-requirements.md)の受入条件を満たす最小変更とする。リリース対象・受入条件を変える場合は事前相談する。
 - 対象はWindows全体の窓管理操作。アプリ固有キーは明示要件がある場合のみ扱う。入力由来・操作結果・代替キーの同等性を推測で記録しない。ElectronのcontextIsolation・sandbox・限定preload APIを維持する。
 - 保存は[承認済み契約](https://github.com/YutoMatsui21/shortcut-expert/issues/15)・Spec §8.3/§9に従う。文字・キー生ログ・入力時刻列・活動履歴・URL・窓タイトル・ファイル名/パス・clipboard・画面画像は保存・外部送信しない。
 - 自動試験は隔離fixtureのみ。実入力の観測には本人の明示同意が必要。fixtureの成功を実入力精度の証拠にしない。
@@ -13,8 +13,11 @@
 - 並列調査は最大2件。対象・期待出力を限定し、結論・根拠（ファイル/箇所）・未確認事項だけ返す。重複調査や生ログの受け渡しを避ける。不要になった調査は終了する。
 - 同じファイルの編集、共有Windows環境・生成物・状態に依存する試験は並列化しない。速度のために必要な検証範囲を削らない。
 
+## 正本と参照順序
+- **現在の製品要件・受入条件**は[確定要件](docs/ui-redesign-requirements.md)。個別の設計・実測は詳細の根拠として使う。[過去の調査・旧MVP・工程記録](docs/archive/README.md)は現行要件より優先しない。
+
 ## 必要なときだけ参照
-- 目的・操作条件：[要件書](docs/mvp-requirements.md)、[技術判断](docs/research.md#operations)。責務変更・リファクタ：[設計](docs/design.md#architecture)。
+- 目的・操作条件：[要件書](docs/ui-redesign-requirements.md)、[技術判断](docs/research.md#operations)。責務変更・リファクタ：[設計](docs/design.md#architecture)。
 - 実行・完了手順：[README](README.md#development-workflow)、[開発ツール](docs/development-tools.md)、[package.json](package.json)・[global.json](global.json)。
 - 機能実装・振る舞い変更・バグ修正・リファクタ・テスト追加・CI変更：実装前に進め方と検証範囲を[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)で判断する。Issue・PR・merge・ラベル操作：[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)。
 - レビュー：[追加レビュー規則](docs/code-review.md)。専用レビュアーが参照先を自動で読んだと仮定せず、必要な観点を指示する。
