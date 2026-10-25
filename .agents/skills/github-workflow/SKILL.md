@@ -5,7 +5,7 @@ description: shortcut-expertのGitHub操作（Issue・PRの参照/更新、ロ�
 
 # GitHub操作
 
-GitHub操作はこのSkillに従う。[AGENTS.md](../../AGENTS.md)と対象Issueの受入条件を優先する。コマンドや監視方法の詳細は[開発手順](../../README.md#development-workflow)・[PR監視入口](../../docs/development-tools.md#pr監視)を参照する。
+GitHub操作はこのSkillに従う。[AGENTS.md](../../../AGENTS.md)と対象Issueの受入条件を優先する。コマンドや監視方法の詳細は[開発手順](../../../README.md#development-workflow)・[PR監視入口](../../../docs/development-tools.md#pr監視)を参照する。
 
 ## 1. GitHubの操作方法
 
@@ -33,7 +33,7 @@ GitHub操作はこのSkillに従う。[AGENTS.md](../../AGENTS.md)と対象Issue
 
 ### 2.2. PR前にローカルレビュー
 
-1. [追加レビュー規則](../../docs/code-review.md)に従い、Issue・仕様・受入条件と変更内容を照合する。
+1. [追加レビュー規則](../../../docs/code-review.md)に従い、Issue・仕様・受入条件と変更内容を照合する。
 2. 原則としてCodexの専用レビュアーにPRへ出す変更全体を確認させる。対話操作では`/review`、実装Agentがシェルから起動する場合は非対話の`codex review --base main`（未コミットの差分は`codex review --uncommitted`）を使う。必要に応じてコミット前後の対象を分け、意図したファイルを漏らさない。
 3. 専用レビュアーが追加規則ファイルを参照したことは自動的に保証されない。適用を確認できない場合は`/review`のCustom instructions、または`codex review 'レビュー対象はmainとの差分。docs/code-review.mdの4観点を確認すること'`のようなカスタム指示を使う。`codex review`の`--base`・`--commit`・`--uncommitted`とPROMPTは同時指定できないので、カスタム指示使用時はレビュー対象も明示して実際の対象を確認する。
 4. 指摘を関連コード・仕様と照合し、P0/P1は必ず対応、P2は重要度・緊急度を評価して必要なものに対応する。修正内容に応じて再テストし、重要なロジック変更があれば必要な範囲を再レビューする。
@@ -70,7 +70,7 @@ GitHub操作はこのSkillに従う。[AGENTS.md](../../AGENTS.md)と対象Issue
 
 ### 2.5. GitHubレビューを依頼した場合だけ結果を待つ
 
-1. [PR監視入口](../../docs/development-tools.md#pr監視)で最新headの状態を確認する。
+1. [PR監視入口](../../../docs/development-tools.md#pr監視)で最新headの状態を確認する。
 
    `node scripts/github-workflow.mjs pr-status <PR番号> --repo=YutoMatsui21/shortcut-expert --head=<最新headの完全SHA>`
 
@@ -85,7 +85,7 @@ GitHub操作はこのSkillに従う。[AGENTS.md](../../AGENTS.md)と対象Issue
 
 1. CI失敗なら原因を調査し修正する。GitHubレビューを依頼した場合はCIとレビューの両方が完了してから指摘に対応する。
 2. 修正内容に応じたローカルテストを実行する。
-3. [追加レビュー規則](../../docs/code-review.md#レビュー対象と再レビュー)に基づき、ローカル再レビューの要否を判断する。
+3. [追加レビュー規則](../../../docs/code-review.md#レビュー対象と再レビュー)に基づき、ローカル再レビューの要否を判断する。
    - CI環境・設定のみ：原則不要。
    - テストの期待値・検証条件：仕様との整合性を確認し、必要時に再レビュー。
    - 本番ロジック・重要な契約の変更：原則再レビュー。

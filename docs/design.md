@@ -79,7 +79,7 @@
 
 ### 指示の配置
 
-全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
+全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../.agents/skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
 根拠：[AGENTS.md公式資料](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Skills公式資料](https://learn.chatgpt.com/docs/build-skills)、[指示を簡潔に保つ方針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)。
 
 <a id="test-design"></a>

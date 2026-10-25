@@ -5,11 +5,11 @@ description: shortcut-expertの回帰テスト追加、判定・保存・IPC・�
 
 # テストを追加する
 
-正本は[テスト設計](../../docs/design.md#test-design)。実行方法は[README](../../README.md#開発確認)と[package.json](../../package.json)。成立条件を変える場合は[要件](../../docs/mvp-requirements.md)・[技術判断](../../docs/research.md#operations)も読む。
+正本は[テスト設計](../../../docs/design.md#test-design)。実行方法は[README](../../../README.md#開発確認)と[package.json](../../../package.json)。成立条件を変える場合は[要件](../../../docs/mvp-requirements.md)・[技術判断](../../../docs/research.md#operations)も読む。
 
 1. 壊れた場合の利用者への影響と、入力→期待する記録・通知・保存・停止状態を決める。UI/API変更では「変更する契約→unit/IPC mock→smokeのselector・待機・表示期待→配布試験」を短く対応づけ、変更後の正しい期待と旧fixtureの前提を区別する。過去の調査ノートや検出器の出力を正解にしない。
 2. 本番の処理を通す最小の層を選ぶ。Core、Mainの通信・保存・通知、本番C# policy、実helper、Electron UI、配布物は異なる証拠。fixtureで迂回した処理を検証済みとしない。
-3. 不具合は操作列を回帰ケースにし、修正前の期待assert失敗を確認する。既存の正しい挙動への追加試験は最初から成功してよい。保存・移行の変更は[故障境界の確認](../../docs/design.md#storage-review)から該当する操作列を選び、実装前の試験選定とPR前のレビューに使う。正常・負例・境界・故障のうち、そのリスクに必要な例だけを追加する。
+3. 不具合は操作列を回帰ケースにし、修正前の期待assert失敗を確認する。既存の正しい挙動への追加試験は最初から成功してよい。保存・移行の変更は[故障境界の確認](../../../docs/design.md#storage-review)から該当する操作列を選び、実装前の試験選定とPR前のレビューに使う。正常・負例・境界・故障のうち、そのリスクに必要な例だけを追加する。
 4. OS・Electron・ファイルI/Oを境界でfakeにし、内部の判定器やキューは本番コードを使う。期待値は要件から与える。非同期順序はdeferred、期限は仮想時計で制御する。fakeは試験ごとに片付ける。
 5. 新しいNode試験は`tests/*.test.ts`へ置く。helper/SDKが必要なら`native`で始める名前にする。本番C# policyのケースは`tests/native-policy`へ追加し、C#→TS契約も保つ。変更層に必要な検証をREADMEから選び、関連設計と結果を更新する。
 
