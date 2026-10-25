@@ -1,25 +1,11 @@
-import { join, basename } from 'node:path';
-import { mkdirSync, mkdtempSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { app, dialog, Notification, type BrowserWindow } from 'electron';
-import { naturalInputOperation } from './natural-input-mode.ts';
+import { startupMode } from './startup-mode.ts';
+import { configureStartupData } from './startup-data.ts';
 import { runCoach, showCoach } from './coach-app.ts';
 
-const osAcceptance = process.argv.includes('--os-notification-acceptance');
-if (osAcceptance && !app.isPackaged) { console.error('V01_REQUIRES_INSTALLED_NSIS'); app.exit(1); }
-const fixture = osAcceptance || process.argv.includes('--ui-acceptance') || process.argv.includes('--coach-smoke') || process.argv.includes('--storage-smoke') || process.argv.includes('--migration-smoke');
-const naturalAcceptance = naturalInputOperation(process.argv) !== null;
-if (naturalAcceptance && (fixture || !app.isPackaged || !process.env.COACH_TEST_DATA_DIR ||
-    readdirSync(process.env.COACH_TEST_DATA_DIR).length !== 0)) throw new Error('Natural acceptance requires packaged app and a new empty isolated directory');
-if (fixture) console.log('COACH_IDENTITY ' + JSON.stringify({ packaged: app.isPackaged, name: app.getName(), userDataDirectory: basename(app.getPath('userData')) }));
-function fixtureData(): string {
-  if (process.env.COACH_TEST_DATA_DIR) return process.env.COACH_TEST_DATA_DIR;
-  const directory = app.isPackaged ? join(app.getPath('temp'), 'window-shortcut-coach-tests') : join(app.getAppPath(), '.tools', 'tests');
-  mkdirSync(directory, { recursive: true });
-  return mkdtempSync(join(directory, 'coach-'));
-}
-const data = fixture || naturalAcceptance ? fixtureData() : app.isPackaged ? app.getPath('userData') : join(app.getAppPath(), '.tools', 'coach-data');
-mkdirSync(data, { recursive: true });
-app.setPath('userData', data);
+const mode = startupMode(process.argv);
+configureStartupData(mode);
 
 async function loadWindow(window: BrowserWindow, mode: string): Promise<void> {
   if (process.env.ELECTRON_RENDERER_URL && !app.isPackaged) await window.loadURL(process.env.ELECTRON_RENDERER_URL + '?mode=' + mode);
@@ -33,15 +19,15 @@ else {
   let activationPresenter: Electron.Notification | undefined;
   app.once('will-quit', () => { activationPresenter?.removeAllListeners(); activationPresenter = undefined; });
   app.whenReady().then(() => {
-    if (!fixture || osAcceptance) {
+    if (mode.systemNotifications) {
       app.setAppUserModelId('local.window-shortcut-coach');
-      Notification.handleActivation(() => { if (osAcceptance) console.log('V01_ACTIVATION global'); showCoach(); });
+      Notification.handleActivation(() => { if (mode.osAcceptance) console.log('V01_ACTIVATION global'); showCoach(); });
       activationPresenter = new Notification();
     }
-    if (fixture && process.argv.includes('--activation-smoke')) showCoach();
-    return runCoach(loadWindow, fixture);
+    if (mode.activation) showCoach();
+    return runCoach(loadWindow, mode);
   }).catch(() => {
-    if (!fixture) dialog.showErrorBox('起動できません', '安全に初期化できませんでした。アプリを終了します。保存先とWindowsの状態を確認して再起動してください。');
+    if (!mode.fixture) dialog.showErrorBox('起動できません', '安全に初期化できませんでした。アプリを終了します。保存先とWindowsの状態を確認して再起動してください。');
     console.error('COACH_START_FAILED'); app.exit(1);
   });
   app.on('second-instance', showCoach);
