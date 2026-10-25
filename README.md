@@ -6,11 +6,11 @@ W08「配置候補を呼び出す」はWin+Z／最大化ボタン500ms hoverか�
 
 W08の同意後の自然入力試験は`node scripts/w08-natural-acceptance.mjs --package-dir release/<build> --observe-consented`。専用flag対応の同梱版・新しい隔離保存先・手動ARMを使い、起動時と試行間は観測しない。[実施方法と証拠の範囲](docs/snap-invocation.md#製品の自然入力受入入口)。
 
-Windows 11の日常の窓操作に、既存ショートカットを案内するMVP。別画面へ移動・最大化・最小化・最大化から復元・閉じるを条件付きで検出し、日別のmouse/key回数を記録する。全11候補の横に参考ショートカットを表示する。実アプリの認識率と公開前条件は未合格。
+Windows 11の窓操作を検出し、ショートカットの学習通知と利用記録を提供するデスクトップアプリ。初回リリース対象は12操作で、全操作の自然入力受入は未完了。実装済みの機能と公開基準を混同しない。
 
 Navy Shellの「ショートカット一覧」「記録」へ切り替える構成。一覧は正式12操作を全て「準備中」と表示し、実際に取得した直近7日のキー率を示す。各行で学習中・習得済み・対象外を変更して保存できる。全状態で記録を続け、習得済み・対象外は通知を止める。記録画面は7/30暦日のKPI・率バー・正式12操作と前期間比を表示し、欠損があればinfoで説明する。保存後のWindows標準Toast発行を接続済み（OS受入は未確認）。[記録の契約・検証範囲](docs/records-ui.md)。[一覧・assets・検証範囲](docs/learning-ui.md)。
 
-**今後の製品要件の正本**：[UI刷新の確定要件](docs/ui-redesign-requirements.md)。本書は現行ビルドの使い方とロードマップ、[mvp-requirements.md](docs/mvp-requirements.md)は旧MVPの要件・工程記録、[design.md](docs/design.md)は設計・実装状況、[research.md](docs/research.md)は調査・実測原本。
+**今後の製品要件の正本**：[UI刷新の確定要件](docs/ui-redesign-requirements.md)。本書は現行ビルドの使い方とロードマップ、[旧MVP要件](docs/archive/mvp-requirements.md)は過去の工程記録、[design.md](docs/design.md)は設計・実装状況、[research.md](docs/research.md)は調査・実測原本。
 
 ## 開発ロードマップ（2026-10-18決定）
 
@@ -20,9 +20,9 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 - 条件付き実装済みの5操作は、自然入力の受入を完了していない。手動確認は各ケース原則1回とし、予想外の結果だけ再試行する（2026-10-24本人指示）。UI完成・人工テスト合格と検出器の受入は別。**12操作の必要ケースが受入基準を満たすまでリリースしない。**
 
 現行の実行・検出説明は既存ビルドの仕様。今後の要件は[UI刷新の確定要件](docs/ui-redesign-requirements.md)、工程は[親Issue：基盤](https://github.com/YutoMatsui21/shortcut-expert/issues/50)・[UI](https://github.com/YutoMatsui21/shortcut-expert/issues/51)・[検出器](https://github.com/YutoMatsui21/shortcut-expert/issues/52)を参照。
-品質保証の調査（2026-10-12）：[テスト設計・CI等のベストプラクティス](docs/quality-best-practices.md)、[現行リポジトリの不足・優先度・検証結果](docs/quality-gap-analysis.md)。改善案であり、製品の要件や公開基準は変更していない。
+品質保証の調査（2026-10-12）：[テスト・CIの背景調査](docs/archive/quality-best-practices.md)、[当時の不足分析（2026-10-12）](docs/archive/quality-gap-analysis.md)。調査時点の情報であり、現在のCIの不足一覧ではない。
 
-開発方針は[AGENTS.md](AGENTS.md)と[現行アーキテクチャ](docs/design.md#architecture)を参照。
+開発方針は[AGENTS.md](AGENTS.md)と[現行アーキテクチャ](docs/design.md#architecture)を参照。過去資料は[アーカイブ](docs/archive/README.md)にまとめる。
 
 ## 起動
 
@@ -55,7 +55,7 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 3. `npm.cmd run dev:check`でTEMP/cacheのwrite・renameと部品の有無を確認し、`package.json`・`global.json`に沿って不足分を準備する。実行入口が子プロセスごとに作業先のTEMP/cacheを設定する。[環境と失敗時の切り分け](docs/development-tools.md#実行環境)に従う。PowerShellで依存するnativeコマンドを続ける時は`if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }`を挟む。
 4. 実装前に[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)で変更内容・リスクに応じた実装順序とテスト範囲を決める。振る舞いの変更はテストファーストを原則とし、UI/API変更では影響するfixture・mock・selector・期待値を先に確認する。修正中は関連試験を絞り、変更がまとまったら変更層のsuite・build・smokeを確認する。成功済み検証はソース・依存・生成物・環境と対応づけ、変わった範囲を再検証する。必須条件と追加確認を分け、次Issueの案内前に依存を確認する。
 5. 実装・ローカル検証後、PR作成前にCodexの専用レビュアーで変更全体を確認する（対話時は`/review`、Agentがシェルから実行する場合は`codex review --base main`等）。[追加レビュー規則](docs/code-review.md)に従って指摘へ対応し、レビュー対象と追加指示の適用を確認する。
-6. commit・pushしてPRを作成し、最新headのCI（`windows-quality`）を確認する。GitHubの`@codex review`は高リスク変更または明示依頼がある場合だけ追加する。[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)に従い、必須条件を満たしたらmergeする。
+6. commit・pushしてPRを作成し、最新headのCI（`windows-quality`）を確認する。GitHub上の`@codex review`は依頼しない。PR前のローカルCodexレビューは継続する。[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)に従い、必須条件を満たしたらmergeする。
 7. CI失敗時は原因を修正し、変更した部分をローカルで再検証する。本番ロジック・重要な契約に影響する場合は前回レビュー以降の差分と影響範囲を再レビューし、再push後に最新headのCIを確認する。テスト期待値を変える場合も仕様との一致を確認する。
 
 CIはMarkdown（`*.md`）だけの変更なら軽量確認へ切り替える。コード・テスト・設定・workflowの変更や手動実行では従来のWindowsフル検証を行う。両経路とも`windows-quality`の成功が必須。選択ルールは[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)を参照。
