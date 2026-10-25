@@ -25,7 +25,7 @@ cacheは`.tools/issues/<owner>--<repo>/<number>.json`。ATX（#形式）の該�
 
 ## PR監視
 
-PR前のローカルレビューとCI失敗後の再レビューは[追加レビュー規則](code-review.md)・[GitHub操作Skill](../skills/github-workflow/SKILL.md)に従う。PR後はCIを必須として監視し、GitHubの`@codex review`を依頼した場合のみレビュー結果も待つ。以下はCI・必要時のレビュー状態を効率的に取得する手順。
+PR前のローカルレビューとCI失敗後の再レビューは[追加レビュー規則](code-review.md)・[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)に従う。PR後はCIを必須として監視し、GitHubの`@codex review`を依頼した場合のみレビュー結果も待つ。以下はCI・必要時のレビュー状態を効率的に取得する手順。
 
 最新headの完全SHAを固定してCIのチェックを確認する。`pr-status`は1回のGraphQL取得からchecks・review/comment識別子・未解決thread数も要約できるが、GitHubレビューを未依頼ならレビューの完了はMerge条件にしない。
 
