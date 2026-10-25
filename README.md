@@ -163,7 +163,7 @@ npm.cmd run test:unit -- --file=coach-ipc.test.ts
 npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
 ```
 
-`--test-reporter=spec|tap|dot`も指定できる。名前指定は一致しないケースを実行しないため、実行された件数と対象名を確認する。dotは詳細を省くので、失敗調査にはspecかtapを使う。絞り込み成功をsuite全体の合格として扱わない。
+`--test-reporter=spec|tap|dot`と`--test-concurrency=1|2|4|8`も指定できる。並列度は同時実行するファイル数の上限で、ファイルごとのprocess隔離とsuiteのtimeoutは維持する。未指定時はNodeの既定値を使い、CIではunit/nativeとも2を明示する。名前指定は一致しないケースを実行しないため、実行された件数と対象名を確認する。dotは詳細を省くので、失敗調査にはspecかtapを使う。絞り込み成功をsuite全体の合格として扱わない。
 
 nativeだけを絞る場合はhelperをbuildした後、`node scripts/test.mjs native --file=native-policy.test.ts`を使う。`test:native`経由では従来どおり毎回helperをbuildする。全体ログが必要な時は`.tools/test-results`へ保存し、結果の要約と失敗箇所を読む。
 

@@ -99,6 +99,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force .tools/test-results | Out-Null
           node --version
+          node -e "const os = require('node:os'); console.log(JSON.stringify({availableParallelism: os.availableParallelism(), logicalCpus: os.cpus().length}))"
           npm.cmd --version
           dotnet --version
           npm.cmd run dev:check -- --require=sdk
@@ -111,12 +112,12 @@ jobs:
       - name: Fast tests
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          npm.cmd run test:unit 2>&1 | Tee-Object -FilePath .tools/test-results/unit.log
+          npm.cmd run test:unit -- --test-concurrency=2 2>&1 | Tee-Object -FilePath .tools/test-results/unit.log
           exit $LASTEXITCODE
       - name: Native policy and fixture process tests
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          npm.cmd run test:native 2>&1 | Tee-Object -FilePath .tools/test-results/native.log
+          npm.cmd run test:native -- --test-concurrency=2 2>&1 | Tee-Object -FilePath .tools/test-results/native.log
           exit $LASTEXITCODE
       # Previous steps already completed TypeScript validation and helper publish.
       # Keep `npm run build` self-contained for local use; CI bundles the checked sources.

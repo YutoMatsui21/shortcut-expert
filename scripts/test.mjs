@@ -20,6 +20,8 @@ for (const option of options) {
     forwarded.push(option);
   } else if (/^--test-reporter=(spec|tap|dot)$/.test(option)) {
     forwarded.push(option);
+  } else if (/^--test-concurrency=(1|2|4|8)$/.test(option)) {
+    forwarded.push(option);
   } else throw new Error(`Unknown test option: ${option}`);
 }
 // Native suites have a native prefix; every other root *.test.ts joins the fast suite.
