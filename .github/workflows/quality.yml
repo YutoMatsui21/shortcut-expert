@@ -124,14 +124,11 @@ jobs:
       - name: Build
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: node scripts/dev-run.mjs electron-vite build
-      - name: App UI and IPC smoke (synthetic input only)
+      - name: Package and app UI and IPC smoke (synthetic input only)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          npm.cmd run smoke 2>&1 | Tee-Object -FilePath .tools/test-results/smoke.log
+          node scripts/ci-package-smoke.mjs
           exit $LASTEXITCODE
-      - name: Package the tested build
-        if: ${{ needs.change-scope.outputs.full == 'true' }}
-        run: npm.cmd run package:dir
       - name: Identify the tested foundation build
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |

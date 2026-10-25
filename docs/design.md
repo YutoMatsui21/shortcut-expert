@@ -160,7 +160,7 @@ Node試験は`tests/*.test.ts`。`native`接頭辞はSDK/helperが必要なsuite
 
 保存失敗後の設定は、後の正常保存を最新値とし古い保留を解消する。設定だけ復旧しても未保存記録とhelper故障を成功状態へ変えない。初回表示flagの保存失敗も保留設定として再試行できる。全停止中の通知flagは保持する。helper通信はrequestId・応答type・世代を照合し、旧プロセスの応答/exitを無視する。stdoutは改行前も上限を確認し、shutdownは応答後のexitを待ち、期限超過では強制終了する。
 
-CIは`.github/workflows/quality.yml`でPR・main・手動実行時に先に差分を分類する。Markdownのみなら軽量Linuxで本番試験を省略し、`windows-quality`の成功は維持する。それ以外や手動実行・判定不能時はWindowsで型検査→速い試験→native→build→smoke→同梱生成→同梱smokeを実施する。Windows x64 runner、採用Node/SDK、SHA固定Action、read権限、timeout、古い実行取消を使い、fixture診断だけ短期間保存する。branch protection等の外部設定・実機受入はこのworkflowの成功と別に確認する。
+CIは`.github/workflows/quality.yml`でPR・main・手動実行時に先に差分を分類する。Markdownのみなら軽量Linuxで本番試験を省略し、`windows-quality`の成功は維持する。それ以外や手動実行・判定不能時はWindowsで型検査→速い試験→native→buildを実施する。続く通常版smokeと同梱生成は`scripts/ci-package-smoke.mjs`で重ね、確定済みout/helperを変更せず、両方の終了と成功を確認してから全ファイルhash・同梱smokeへ進む。失敗時も両方のログを回収する。GUI smoke同士は並列化しない。Windows x64 runner、採用Node/SDK、SHA固定Action、read権限、timeout、古い実行取消を使い、fixture診断だけ短期間保存する。branch protection等の外部設定・実機受入はこのworkflowの成功と別に確認する。
 
 coverageはimportされたNode対象の未確認分岐を探す補助。未importのMain/Renderer・C#を含む製品全体の率とは呼ばない。mutation、長時間性能、OS/DPI matrix、実機アクセシビリティ、installerの自動化は必要性に応じて追加し、現在の受入条件を緩和しない。
 
