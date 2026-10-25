@@ -1,20 +1,16 @@
 import { app, type BrowserWindow, dialog, Menu, nativeImage, screen, Tray, powerMonitor } from 'electron';
 import { join } from 'node:path';
-import { Coach } from '../core/coach';
-import { DurableCoach } from '../core/durable-coach';
-import { selectRepositoryWithRetry, SqliteRepository } from './sqlite-repository';
-import { JsonRepository } from './repository';
-import { SerialQueue } from '../core/serial-queue';
-import { localDate } from '../core/dates';
-import type { Snapshot } from '../shared/coach';
-import { ObserverClient } from './observer';
-import { NotificationWindow } from './notification';
-import { StandardNotifications } from './standard-notification';
-import { CoachWindow } from './coach-window';
-import { registerCoachIpc } from './coach-ipc';
-import { coachTrayMenu } from './coach-tray';
-import { learningReadModel } from '../core/learning';
-import { recordsReadModel } from '../core/records';
+import { DurableCoach } from '../core/durable-coach.ts';
+import { selectRepositoryWithRetry } from './sqlite-repository.ts';
+import { SerialQueue } from '../core/serial-queue.ts';
+import { localDate } from '../core/dates.ts';
+import type { Snapshot } from '../shared/coach.ts';
+import { ObserverClient } from './observer.ts';
+import { NotificationWindow } from './notification.ts';
+import { StandardNotifications } from './standard-notification.ts';
+import { CoachWindow } from './coach-window.ts';
+import { registerCoachIpc } from './coach-ipc.ts';
+import { coachTrayMenu } from './coach-tray.ts';
 import type { StartupMode } from './startup-mode.ts';
 
 const coachWindow = new CoachWindow();
@@ -33,7 +29,6 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   let exitRequested = false;
   let deleteResume: boolean | null = null;
   const control = new SerialQueue();
-  let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
   const observer = new ObserverClient((candidate) => { validation?.naturalControl?.candidate(candidate); void coach.accept(candidate); }, () => {
     notice.dismiss(); coach.fault('Windowsの観測が停止しました。再開してください。');
@@ -55,22 +50,24 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   };
   await validation?.prepareData();
   const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
-  const repository = mode.legacyRepository ? new JsonRepository(app.getPath('userData')) : await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
-    const answer = await dialog.showMessageBox({ type: 'error', message: '保存先を確認できません。',
-      detail: '元のデータは変更していません。保存先へのアクセスを確認して再試行してください。',
-      buttons: ['再試行', '終了'], defaultId: 0, cancelId: 1 });
-    return answer.response === 0;
-  });
   const common = { date: localDate, now: () => performance.now(), changed: publish };
-  await validation?.prepareRepository(repository);
-  const coach = repository instanceof SqliteRepository
-    ? new DurableCoach({ ...common, repository, session: repository.session,
+  const createDurableRuntime = async () => {
+    const repository = await selectRepositoryWithRetry(app.getPath('userData'), workerPath, async () => {
+      const answer = await dialog.showMessageBox({ type: 'error', message: '保存先を確認できません。',
+        detail: '元のデータは変更していません。保存先へのアクセスを確認して再試行してください。',
+        buttons: ['再試行', '終了'], defaultId: 0, cancelId: 1 });
+      return answer.response === 0;
+    });
+    const coach = new DurableCoach({ ...common, repository, session: repository.session,
       notify: value => {
         validation?.naturalControl?.noticeRequested(value.operation, value.shortcut);
         return standardNotices.show(value);
       },
-      capabilities: () => validation?.capabilities() ?? [] })
-    : new Coach({ ...common, repository, notify: value => notice.show(value) });
+      capabilities: () => validation?.capabilities() ?? [] });
+    return { repository, coach, tick: () => { void coach.tick(); } };
+  };
+  const { repository, coach, tick } = validation?.createLegacyRuntime(common, notice) ?? await createDurableRuntime();
+  await validation?.prepareRepository(repository);
   const startObservation = async () => {
     if (validation && !validation.canStartObservation) return;
     if (exitRequested) return;
@@ -121,7 +118,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         detail: '終了すると未保存分は失われます。', buttons: ['戻る', '未保存のまま終了'], defaultId: 0, cancelId: 0 });
       if (answer.response !== 1) { exitRequested = false; coachWindow.resumeBounds(); showCoach(); return; }
     }
-    await coach.idle(); await observer.shutdown(); if (repository instanceof SqliteRepository) await repository.close();
+    await coach.idle(); await observer.shutdown(); await repository.close();
     clearInterval(ticker);
     quitting = true; tray?.destroy(); app.quit();
   };
@@ -148,9 +145,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       if (exitRequested) throw new Error('終了処理中です。');
       try {
         const today = localDate();
-        if (coach instanceof DurableCoach) return await coach.getRecordSummary(today, query);
-        const snapshot = coach.snapshot();
-        return recordsReadModel({ counts: snapshot.counts, coverage: {}, revision: 0 }, snapshot.settings, today, query);
+        return await coach.getRecordSummary(today, query);
       } catch {
         coach.storageFault('記録を読み込めません。元のデータは保持しています。');
         throw new Error('記録を読み込めません。');
@@ -160,19 +155,14 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       if (exitRequested) throw new Error('終了処理中です。');
       const today = localDate();
       try {
-        const snapshot = coach.snapshot();
-        if (coach instanceof DurableCoach) return await coach.getLearning(today);
-        const records = { counts: snapshot.counts, coverage: {}, revision: 0 };
-        return learningReadModel(records, snapshot.settings, today);
+        return await coach.getLearning(today);
       } catch { coach.storageFault('一覧の記録を読み込めません。元のデータは保持しています。'); throw new Error('一覧を読み込めません。'); }
     }),
     windowCommand: async (value) => { if (!exitRequested) coachWindow.command(value); },
     getRecords: async (from, to) => {
       if (exitRequested) throw new Error('終了処理中です。');
       try {
-        if (repository instanceof SqliteRepository) return await repository.query(from, to);
-        const loaded = await repository.load();
-        return { counts: Object.fromEntries(Object.entries(loaded.counts).filter(([day]) => day >= from && day <= to)), coverage: {}, revision: 0 };
+        return await repository.query(from, to);
       } catch { coach.storageFault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
     },
     getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
@@ -211,8 +201,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   publish(coach.snapshot());
   ticker = setInterval(() => {
     if (exitRequested) return;
-    if (repository instanceof SqliteRepository) void coach.tick();
-    else if (localDate() !== date) { date = localDate(); void coach.tick().then(() => publish(coach.snapshot())); }
+    tick();
     validation?.tick?.();
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
