@@ -48,7 +48,8 @@
 - #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。#21のRecordsPageはこの比較値をKPI/操作行へ表示し、MissingCoverageInfoが説明のhover/focus/クリックと画面内配置を担当する。[記録queryの契約](records-ui.md)。
 - C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
 - W08の入力・50ms照会は既存hookを共用するSnapInvocationObserver、純粋な滞在/キー/設定/幾何判定はSnapInvocationPolicyに置く。専用v2証拠をMainで検査しCoreでW08へ判定する。[契約・検証と未受入事項](snap-invocation.md)。
-- 同意後のW08製品受入は`w08-natural-acceptance.ts`が試行の開始/停止と集計差分だけを担当し、別processの手動panelから操作する。専用flag以外では接続せず、通常の検出・保存・通知処理を共用する。
+- W12はTaskbarInputObserverが既存hookを共用し、TaskbarQueryの独立processでUIAを照会する。TaskbarInputPolicyが番号の入力前後照合・期限・repeat/注入除外を担当する。専用v2証拠をMainで検査しCoreがW12/Win+数字へ変換する。[契約・unknownと受入](taskbar-input.md)。
+- 同意後のW08/W12製品受入は`natural-input-acceptance.ts`が試行の開始/停止と集計差分を担当し、別processの手動panelから操作する。専用flag以外では接続せず、通常の検出・保存・通知処理を共用する。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
 - 責務や依存方向を変更した場合は、この節を同じ変更内で更新する。

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { W08NaturalTrials } from '../src/main/w08-natural-acceptance.ts';
+import { NaturalInputTrials } from '../src/main/natural-input-acceptance.ts';
 import type { Snapshot } from '../src/shared/coach.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,7 +13,7 @@ function harness() {
   const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: false,
     notificationsPaused: false, error: null, pendingSave: false };
   let starts = 0, stops = 0, now = 0;
-  const trials = new W08NaturalTrials({ snapshot: () => snapshot, idle: async () => {},
+  const trials = new NaturalInputTrials({ snapshot: () => snapshot, idle: async () => {},
     now: () => now,
     start: async paused => { starts++; snapshot.observing = true; snapshot.notificationsPaused = paused; },
     stop: async () => { stops++; snapshot.observing = false; },
@@ -21,6 +21,21 @@ function harness() {
   return { snapshot, trials, starts: () => starts, stops: () => stops, time: (value: number) => { now = value; } };
 }
 const plan = { kind: 'mouse', application: 'standard', state: 'learning', paused: false };
+test('W12 trial requires a slot and reports wrong notification numbers and W01 deltas independently', async () => {
+  const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: false,
+    notificationsPaused: false, error: null, pendingSave: false };
+  const trials = new NaturalInputTrials({ snapshot: () => snapshot, idle: async () => {},
+    configure: async state => { snapshot.settings.states = { W12: state }; },
+    start: async () => { snapshot.observing = true; }, stop: async () => { snapshot.observing = false; } }, 'W12');
+  for (const slot of [undefined, 0, 11, 1.5]) await assert.rejects(trials.arm({ ...plan, slot }));
+  await trials.arm({ ...plan, slot: 10 });
+  snapshot.counts['2026-10-25'] = { W12: { mouse: 1, key: 0 }, W01: { mouse: 1, key: 0 } };
+  trials.noticeRequested('W12', 'Win + 9');
+  await trials.finish(true);
+  const result = trials.results[0] as { detectorPassed: boolean; notificationRequestPassed: boolean; wrongShortcut: boolean; w01Delta: number };
+  assert.equal(result.detectorPassed, true); assert.equal(result.notificationRequestPassed, false);
+  assert.equal(result.wrongShortcut, true); assert.equal(result.w01Delta, 1);
+});
 test('natural trial starts only on valid ARM, counts a single trial delta and stops before reporting', async () => {
   const h = harness(); assert.equal(h.starts(), 0);
   for (const invalid of [null, {}, { ...plan, kind: 'synthetic' }, { ...plan, paused: 1 }, { ...plan, state: 'invalid' }])
@@ -69,12 +84,12 @@ test('real DurableCoach/SQLite: apply pause after begin, ignore W03 requests and
   const root = await mkdtemp(join(tmpdir(), 'w08-natural-fixture-'));
   const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
   t.after(async () => { await repository.close(); await rm(root, { force: true, recursive: true }); });
-  let trials: W08NaturalTrials | undefined, generation = 0;
+  let trials: NaturalInputTrials | undefined, generation = 0;
   const coach = new DurableCoach({ repository, session: repository.session, date: () => '2026-10-21', now: () => 0,
     capabilities: () => [], changed: snapshot => trials?.observe(snapshot),
     notify: async notice => { trials?.noticeRequested(notice.operation); return true; } });
   await coach.initialize();
-  trials = new W08NaturalTrials({ snapshot: () => coach.snapshot(), configure: state => coach.setLearningState('W08', state),
+  trials = new NaturalInputTrials({ snapshot: () => coach.snapshot(), configure: state => coach.setLearningState('W08', state),
     start: async paused => { coach.begin(++generation); coach.pauseNotifications(paused); },
     stop: async () => { coach.stop(); }, idle: () => coach.idle() });
   for (const paused of [true, false]) {

@@ -57,6 +57,14 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'taskbar-input':
+      if (raw.profile !== 'taskbar-input-v1' || !(raw.slot === null || (protocolId(raw.slot) && raw.slot <= 10)) ||
+          typeof raw.mappingConfirmed !== 'boolean' ||
+          typeof raw.snapshotAgeMs !== 'number' || !Number.isFinite(raw.snapshotAgeMs) || raw.snapshotAgeMs < 0 ||
+          typeof raw.confirmationAgeMs !== 'number' || !Number.isFinite(raw.confirmationAgeMs) || raw.confirmationAgeMs < 0 ||
+          !(raw.monitor === null || bounds(raw.monitor))) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, slot: raw.slot, mappingConfirmed: raw.mappingConfirmed,
+        snapshotAgeMs: raw.snapshotAgeMs, confirmationAgeMs: raw.confirmationAgeMs, monitor: bounds(raw.monitor) }; break;
     case 'snap-invocation':
       if (raw.profile !== 'snap-invocation-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.eligible !== 'boolean' ||
           !nullableBoolean(raw.settingsEnabled) || ![null, 'title-rect', 'hit-fallback'].includes(raw.buttonSource as null | string) ||

@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import type { Candidate, OperationId } from '../src/shared/coach.ts';
-import { candidateFixture, v2Fixture, snapFixture } from './support/fixtures.ts';
+import { candidateFixture, v2Fixture, snapFixture, taskbarFixture } from './support/fixtures.ts';
 
 // Only Electron/OS boundaries are fake. Parse, classification, writer and models are real.
 mock.module('electron', { namedExports: { app: {}, Notification: class {} } });
@@ -16,6 +16,7 @@ const { StandardNotifications } = await import('../src/main/standard-notificatio
 const today = '2026-10-21';
 const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string }[] = [
   { id: 'W03', mouse: {}, key: 'win-up', shortcut: 'Win + ↑' },
+  { id: 'W12', mouse: {}, key: 'win-digit', shortcut: 'Win + 0' },
   { id: 'W08', mouse: {}, key: 'win-z', shortcut: 'Win + Z' },
   { id: 'W04', mouse: { operation: 'minimize', after: { state: 'minimized' }, route: 'min-button' }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W05', mouse: { operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false }, key: 'win-down', shortcut: 'Win + ↓' },
@@ -49,7 +50,7 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
     await coach.setLearningState(entry.id, state);
     for (const origin of ['mouse', 'key'] as const) {
       ++sequence;
-      const fixture = entry.id === 'W08' ? snapFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
+      const fixture = entry.id === 'W12' ? taskbarFixture(origin, sequence) : entry.id === 'W08' ? snapFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
         origin, ...(origin === 'key' ? { route: entry.key } : {}) }));
       // JSON round trip emulates the transport, without bypassing the Main schema.
       const parsed = candidateV2(JSON.parse(JSON.stringify(fixture)));

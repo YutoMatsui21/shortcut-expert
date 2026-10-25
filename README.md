@@ -1,5 +1,7 @@
 # Window Shortcut Coach（仮称）
 
+W12「タスクバーのアプリを開く」は主タスクバーのクリック／Win+数字を入力前後の番号照合から記録する。代表環境の自然入力17ケースを確認済み。別タスクバー・overflow・古い照会はunknownで計上しない。全12操作・通常環境全体の受入は#47に残る。[契約・試験結果と限界](docs/taskbar-input.md)。
+
 W08「配置候補を呼び出す」はWin+Z／最大化ボタン500ms hoverからの推定を製品経路へ接続した。設定unknown時は記録・通知しない。メニュー表示成功は計測せず、一覧は自然入力受入まで準備中。[契約と未確認事項](docs/snap-invocation.md)。
 
 W08の同意後の自然入力試験は`node scripts/w08-natural-acceptance.mjs --package-dir release/<build> --observe-consented`。専用flag対応の同梱版・新しい隔離保存先・手動ARMを使い、起動時と試行間は観測しない。[実施方法と証拠の範囲](docs/snap-invocation.md#製品の自然入力受入入口)。

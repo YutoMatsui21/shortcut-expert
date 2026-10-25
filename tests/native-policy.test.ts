@@ -37,4 +37,8 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
     assert.ok(observed); assert.equal(observed.shortcut, 'Win + Z');
     return [observed.id, observed.operation, observed.origin];
   }), [['1:t1', 'W08', 'mouse'], ['1:t2', 'W08', 'key']]);
+  assert.deepEqual(report.taskbarSamples.map((sample: unknown) => {
+    const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed); assert.ok(observed);
+    return [observed.operation, observed.origin, observed.shortcut];
+  }), [['W12', 'mouse', 'Win + 0'], ['W12', 'key', 'Win + 1']]);
 });

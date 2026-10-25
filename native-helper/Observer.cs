@@ -12,6 +12,7 @@ internal sealed class Observer : IDisposable
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
     private readonly SnapInvocationObserver snap;
+    private readonly TaskbarInputObserver taskbar;
     // Native側がcallbackを呼ぶ間、解除までdelegateをGCから保護する。
     private readonly InputHook mouseCallback, keyCallback;
     private readonly EventHook eventCallback;
@@ -23,6 +24,7 @@ internal sealed class Observer : IDisposable
     {
         protocol = new CandidateProtocol(emit); this.fixture = fixture;
         snap = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
+        taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
@@ -54,12 +56,13 @@ internal sealed class Observer : IDisposable
             if (hook != 0) eventHooks.Add(hook);
         }
         if (!Active) { Stop(); throw new InvalidOperationException("hook-init-failed"); }
-        if (!fixture && protocolVersion == 2) snap.Start(newGeneration);
+        if (!fixture && protocolVersion == 2) { snap.Start(newGeneration); taskbar.Start(newGeneration); }
     }
     internal void Stop()
     {
         protocol.Stop();
         snap.Stop();
+        taskbar.Stop();
         bool released = true;
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
@@ -105,6 +108,8 @@ internal sealed class Observer : IDisposable
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             snap.Mouse(message, Marshal.PtrToStructure<MouseData>(data).Flags);
+            var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
+            taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
@@ -135,6 +140,10 @@ internal sealed class Observer : IDisposable
             var key = Marshal.PtrToStructure<KeyData>(data);
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             snap.Key(key.Key, down, key.Flags);
+            taskbar.Key(key.Key, down, key.Flags);
+            // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
+            if (key.Key is >= 0x30 and <= 0x39 && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0))
+            { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
             if (!down) return CallNextHookEx(0, code, message, data);
             nint target = GetForegroundWindow();
             if (CandidateTracker.IsModifier(key.Key))
@@ -191,5 +200,5 @@ internal sealed class Observer : IDisposable
         }
         catch { tracker.ClearInput(); }
     }
-    public void Dispose() { Stop(); snap.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); snap.Dispose(); taskbar.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }
