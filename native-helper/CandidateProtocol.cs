@@ -6,7 +6,10 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(ActivationEvidence), "activation")]
 [JsonDerivedType(typeof(GlobalEvidence), "global")]
 [JsonDerivedType(typeof(SnapInvocationEvidence), "snap-invocation")]
+[JsonDerivedType(typeof(TaskbarInputEvidence), "taskbar-input")]
 internal abstract record Evidence(string profile);
+internal sealed record TaskbarInputEvidence(int? slot, bool mappingConfirmed, long snapshotAgeMs,
+    long confirmationAgeMs, MonitorBounds? monitor) : Evidence("taskbar-input-v1");
 internal sealed record SnapInvocationEvidence(bool targetMatched, bool eligible, bool? settingsEnabled,
     string? buttonSource, long dwellMs, long inputAgeMs, MonitorBounds? monitor) : Evidence("snap-invocation-v1");
 internal sealed record WindowResult(string app, string operation, CandidateState before, CandidateState after,
@@ -40,6 +43,15 @@ internal sealed class CandidateProtocol(Action<object> emit)
         lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
     }
     internal void Stop() { lock (gate) generation = 0; }
+    internal void Taskbar(int epoch, int transaction, string date, string origin, TaskbarInputEvidence evidence)
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation || version != 2) return;
+            emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction, date,
+                origin, origin == "mouse" ? "taskbar-click" : "win-digit", false, false, evidence));
+        }
+    }
     internal void Invocation(int epoch, int transaction, string origin, SnapInvocationEvidence evidence)
     {
         lock (gate)

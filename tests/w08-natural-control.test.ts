@@ -9,7 +9,7 @@ let lastStatus: { results: { valid: boolean }[] };
 mock.module('node:fs/promises', { namedExports: {
   readFile: () => readNext(), writeFile: async (_path: string, text: string) => { lastStatus = JSON.parse(text); }, rename: async () => {}
 } });
-const { runW08NaturalAcceptance } = await import('../src/main/w08-natural-acceptance.ts');
+const { runNaturalInputAcceptance } = await import('../src/main/natural-input-acceptance.ts');
 
 test('blocked file reads cannot allow late FINISH or cancel the session shutdown retry', async t => {
   for (const sessionExpiry of [false, true]) {
@@ -19,7 +19,7 @@ test('blocked file reads cannot allow late FINISH or cancel the session shutdown
       observing: false, notificationsPaused: false, error: null, pendingSave: false };
     readNext = async () => ++reads === 1 ? JSON.stringify({ sequence: 1, action: 'arm',
       plan: { kind: 'negative', application: 'standard', state: 'learning', paused: false } }) : heldRead.promise;
-    const controller = runW08NaturalAcceptance('isolated-fixture', {
+    const controller = runNaturalInputAcceptance('isolated-fixture', {
       snapshot: () => snapshot, configure: async () => {}, idle: async () => {},
       start: async () => { snapshot.observing = true; }, stop: async () => { snapshot.observing = false; }
     }, async () => { quit++; });

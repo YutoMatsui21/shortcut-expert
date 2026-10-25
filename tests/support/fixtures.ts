@@ -1,4 +1,10 @@
 import type { Candidate, CandidateV2 } from '../../src/shared/coach.ts';
+export function taskbarFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1, slot = 10): CandidateV2 {
+  return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
+    date: '2026-10-21', origin, route: origin === 'mouse' ? 'taskbar-click' : 'win-digit', injected: false, conflicted: false,
+    evidence: { kind: 'taskbar-input', profile: 'taskbar-input-v1', slot, mappingConfirmed: true,
+      snapshotAgeMs: 200, confirmationAgeMs: 250, monitor: { x: 0, y: 0, width: 1920, height: 1080 } } };
+}
 export function snapFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): CandidateV2 {
   return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
     date: '2026-10-21', origin, route: origin === 'mouse' ? 'max-button-hover' : 'win-z', injected: false, conflicted: false,

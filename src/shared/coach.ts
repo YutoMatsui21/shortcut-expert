@@ -23,6 +23,8 @@ export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
 export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
   Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
 export type Evidence =
+  | { kind: 'taskbar-input'; profile: 'taskbar-input-v1'; slot: number | null; mappingConfirmed: boolean;
+      snapshotAgeMs: number; confirmationAgeMs: number; monitor: Bounds | null }
   | { kind: 'snap-invocation'; profile: 'snap-invocation-v1'; targetMatched: boolean; eligible: boolean;
       settingsEnabled: boolean | null; buttonSource: 'title-rect' | 'hit-fallback' | null; dwellMs: number;
       inputAgeMs: number; monitor: Bounds | null }
@@ -77,5 +79,6 @@ export const operations: { id: OperationId; label: string; shortcut: string; con
   { id: 'W08', label: '配置候補を呼び出す', shortcut: 'Win + Z', implemented: true },
   { id: 'W09', label: 'デスクトップ表示', shortcut: 'Win + D', implemented: false },
   { id: 'W10', label: 'タスクビュー', shortcut: 'Win + Tab', implemented: false },
-  { id: 'W11', label: 'ウィンドウを閉じる', shortcut: 'Alt + F4', implemented: true }
+  { id: 'W11', label: 'ウィンドウを閉じる', shortcut: 'Alt + F4', implemented: true },
+  { id: 'W12', label: 'タスクバーのアプリを開く', shortcut: 'Win + 1–9 / 0', implemented: true }
 ];

@@ -25,7 +25,8 @@ import { learningReadModel } from '../core/learning';
 import { recordsReadModel } from '../core/records';
 import { runNotificationAcceptance } from './notification-acceptance';
 import { runUiAcceptance } from './ui-acceptance';
-import { runW08NaturalAcceptance } from './w08-natural-acceptance';
+import { naturalInputOperation } from './natural-input-mode.ts';
+import { runNaturalInputAcceptance } from './natural-input-acceptance';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -36,8 +37,9 @@ export function showCoach(): void {
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, fixture: boolean): Promise<void> {
   const osAcceptance = fixture && process.argv.includes('--os-notification-acceptance');
   const uiAcceptance = fixture && process.argv.includes('--ui-acceptance');
-  const naturalAcceptance = !fixture && process.argv.includes('--w08-natural-acceptance');
-  let naturalControl: ReturnType<typeof runW08NaturalAcceptance> | undefined;
+  const naturalOperation = naturalInputOperation(process.argv) ?? 'W08';
+  const naturalAcceptance = !fixture && naturalInputOperation(process.argv) !== null;
+  let naturalControl: ReturnType<typeof runNaturalInputAcceptance> | undefined;
   let naturalArming = false;
   let tray: Tray | null = null;
   let ticker: NodeJS.Timeout | undefined;
@@ -50,7 +52,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   const control = new SerialQueue();
   let date = localDate();
   const previews: { notification: BrowserWindow | null } = { notification: null };
-  const observer = new ObserverClient((candidate) => { void coach.accept(candidate); }, () => {
+  const observer = new ObserverClient((candidate) => { naturalControl?.candidate(candidate); void coach.accept(candidate); }, () => {
     notice.dismiss(); coach.fault('Windowsの観測が停止しました。再開してください。');
   }, fixture);
   const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
@@ -98,7 +100,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   const coach = repository instanceof SqliteRepository
     ? new DurableCoach({ ...common, repository, session: repository.session,
       notify: value => {
-        naturalControl?.noticeRequested(value.operation);
+        naturalControl?.noticeRequested(value.operation, value.shortcut);
         return standardNotices.show(value);
       },
       capabilities: () => fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : [] })
@@ -254,12 +256,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   screen.on('display-removed', displaysChanged);
   screen.on('display-metrics-changed', displaysChanged);
   if (naturalAcceptance) {
-    naturalControl = runW08NaturalAcceptance(app.getPath('userData'), {
+    naturalControl = runNaturalInputAcceptance(app.getPath('userData'), {
       snapshot: () => coach.snapshot(), start: paused => control.run(async () => {
         naturalArming = true; try { await startObservation(); coach.pauseNotifications(paused); } finally { naturalArming = false; }
       }), stop: () => control.run(stopObservation), idle: () => coach.idle(),
-      configure: state => coach.setLearningState('W08', state)
-    }, quit);
+      configure: state => coach.setLearningState(naturalOperation, state)
+    }, quit, naturalOperation);
     app.once('will-quit', () => naturalControl?.dispose());
     return;
   }

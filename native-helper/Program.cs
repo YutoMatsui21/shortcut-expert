@@ -7,6 +7,8 @@ internal static class Program
     private static int Main(string[] args)
     {
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+        if (args.Length == 2 && args[0] == "--taskbar-worker" && int.TryParse(args[1], out int parent)) return TaskbarQuery.RunWorker(parent);
+        if (args.Length == 2 && args[0] == "--taskbar-worker-fixture" && int.TryParse(args[1], out int fixtureParent)) return TaskbarQuery.RunWorker(fixtureParent, fixture: true);
         if (args.Length != 1) return 2;
         switch (args[0])
         {
@@ -14,6 +16,7 @@ internal static class Program
             case "--fixture": return ObserverHost.Run(fixture: true);
             case "--fixture-display": return ObserverHost.Run(fixture: true, realDisplay: true);
             case "--self-test": return ObserverHost.SelfTest();
+            case "--taskbar-query-self-test": return TaskbarQuery.SelfTest().GetAwaiter().GetResult();
             case "--display-policy-test":
                 Console.WriteLine(JsonSerializer.Serialize(DisplayPolicy.Check())); return 0;
             case "--display-check":
