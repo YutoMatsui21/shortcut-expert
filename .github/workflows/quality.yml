@@ -14,24 +14,88 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  change-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.detect.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Detect executable changes
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          changed="$RUNNER_TEMP/changed-files.z"
+          ready=false
+          full=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            # The merge commit's first parent is the target branch.
+            if git rev-parse 'HEAD^1' >/dev/null 2>&1 && git diff --no-renames --name-only -z 'HEAD^1' HEAD > "$changed"; then
+              ready=true
+            fi
+          elif [[ "$EVENT_NAME" == "push" && "$BASE_SHA" =~ ^[0-9a-f]{40}$ && ! "$BASE_SHA" =~ ^0+$ ]]; then
+            if git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null || git fetch --no-tags --depth=1 origin "$BASE_SHA"; then
+              if git merge-base --is-ancestor "$BASE_SHA" HEAD && git diff --no-renames --name-only -z "$BASE_SHA" HEAD > "$changed"; then
+                ready=true
+              fi
+            fi
+          fi
+          # Unknown events, unavailable/empty diffs and manual runs use full CI.
+          if [[ "$ready" == "true" && -s "$changed" ]]; then
+            full=false
+            while IFS= read -r -d '' path; do
+              case "$path" in
+                *.md) ;;
+                *) full=true; break ;;
+              esac
+            done < "$changed"
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "Full Windows CI: $full"
   windows-quality:
-    runs-on: windows-2025
+    needs: change-scope
+    if: ${{ always() }}
+    runs-on: ${{ needs.change-scope.outputs.full == 'true' && 'windows-2025' || 'ubuntu-24.04' }}
     timeout-minutes: 20
     defaults:
       run:
         shell: pwsh
     steps:
+      - name: Verify scope result
+        shell: bash
+        env:
+          SCOPE_RESULT: ${{ needs.change-scope.result }}
+          FULL: ${{ needs.change-scope.outputs.full }}
+        run: |
+          if [[ "$SCOPE_RESULT" != "success" || ( "$FULL" != "true" && "$FULL" != "false" ) ]]; then
+            echo "Missing successful scope decision" >&2
+            exit 1
+          fi
+          if [[ "$FULL" == "false" ]]; then
+            echo "Markdown-only: skip Windows application tests."
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         with:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         with:
           node-version: 24.11.1
           cache: npm
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         with:
           global-json-file: global.json
       - name: Toolchain
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           New-Item -ItemType Directory -Force .tools/test-results | Out-Null
           node --version
@@ -40,25 +104,33 @@ jobs:
           npm.cmd run dev:check -- --require=sdk
           exit $LASTEXITCODE
       - run: npm.cmd run dev:install
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
       - name: Types
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run typecheck
       - name: Fast tests
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           npm.cmd run test:unit 2>&1 | Tee-Object -FilePath .tools/test-results/unit.log
           exit $LASTEXITCODE
       - name: Native policy and fixture process tests
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           npm.cmd run test:native 2>&1 | Tee-Object -FilePath .tools/test-results/native.log
           exit $LASTEXITCODE
       - name: Build
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run build
       - name: App UI and IPC smoke (synthetic input only)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           npm.cmd run smoke 2>&1 | Tee-Object -FilePath .tools/test-results/smoke.log
           exit $LASTEXITCODE
       - name: Package the tested build
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run package:dir
       - name: Identify the tested foundation build
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           $roots = @('out', 'resources/native-helper', 'release/win-unpacked')
           $files = @($roots | ForEach-Object { Get-ChildItem -LiteralPath $_ -File -Recurse })
@@ -68,47 +140,55 @@ jobs:
           @{ commit = $env:GITHUB_SHA; run = $env:GITHUB_RUN_ID; attempt = $env:GITHUB_RUN_ATTEMPT; files = $hashes;
             fixtureOnly = $true; twelveOperationAcceptance = $false } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 .tools/test-results/build-hashes.json
       - name: Durable storage UI and IPC smoke (synthetic input only)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --storage 2>&1 | Tee-Object -FilePath .tools/test-results/storage-smoke.log
           exit $LASTEXITCODE
       - name: Packaged UI and IPC smoke
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           npm.cmd run smoke:packaged 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-smoke.log
           exit $LASTEXITCODE
       - name: Packaged durable storage UI and IPC smoke
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
           exit $LASTEXITCODE
       - name: V02 packaged storage fault acceptance (isolated synthetic disk fixtures)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           npm.cmd run acceptance:storage 2>&1 | Tee-Object -FilePath .tools/test-results/v02.log
           exit $LASTEXITCODE
       - name: Acquired-record comparison and coverage info (isolated SQLite)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/comparison-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-comparison-smoke.log
           exit $LASTEXITCODE
       - name: JSON migration and process restart smoke
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --migration 2>&1 | Tee-Object -FilePath .tools/test-results/migration-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --migration 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-migration-smoke.log
           exit $LASTEXITCODE
       - name: Settings panel and tray commands (isolated SQLite)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --settings 2>&1 | Tee-Object -FilePath .tools/test-results/settings-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --settings 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-settings-smoke.log
           exit $LASTEXITCODE
       - name: Notification activation and restart (isolated SQLite, fake OS callbacks)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
           node scripts/smoke.mjs --activation 2>&1 | Tee-Object -FilePath .tools/test-results/activation-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/smoke.mjs --packaged --activation 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-activation-smoke.log
           exit $LASTEXITCODE
       - name: Fixture diagnostics
-        if: always()
+        if: ${{ always() && needs.change-scope.outputs.full == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: fixture-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
