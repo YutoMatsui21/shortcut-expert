@@ -164,7 +164,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 | ID | 必要情報／API | 判定仮説・同等キーの条件 | 判断・残リスク |
 | --- | --- | --- | --- |
 | W01 切替 | mouse/key hook、直接クリックの候補HWND（WindowFromPoint/GetAncestor）、前後foreground HWND、EVENT_SYSTEM_FOREGROUND、Alt+Tabの補助EVENT_SYSTEM_SWITCHEND。追加案内用：target HWND→タスクバーapp identity・1〜10番 | 背後の別窓へ直接クリック／Alt+Tabの確定後、入力元と最終foregroundが一致したとき1件。マウス通知はAlt+Tabを基本とし、切替先アプリの1〜10番対応が確証できればWin+数字も候補に追加。タスクバーアプリアイコンのクリック・Win+数字はW12のみ | **#7技術検証待ち**。2/3窓・取消・入力因果・W12非重複に加え、アプリ/番号の対応と曖昧時fallbackを調査。Win+数字の追加対応が未成立でもW01基本ゲートは独立判定。二候補表示は#96 |
-| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6：制約付きで実装着手可**。主タスクバーの通常アプリと1/2/9/10番の一致、repeat/修飾/番号なし/非app/thumbnailを確認。別タスクバー・overflow・変動はunknown。採用前の番号再確認が必須。製品受入は未完。[原本・限界・採用条件](research-taskbar-input-validation.md) |
+| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6/#28：1〜10番の単一Win+数字案内は製品実装済み**。主タスクバーの1/2/9/10番と負例を代表環境で確認（全条件の保証ではない）。**#96で起動済み/未起動判定、起動済み11番目以降のAlt+Tab案内、2候補通知を別途実証・実装**。別タスクバー・overflow・変動はunknownを維持。[原本・限界・採用条件](research-taskbar-input-validation.md) |
 | W02 画面移動 | monitor前後・配置、MOVESIZE開始終了、実入力 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等 | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能 |
 | W03 最大化 | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input | 同一対象の標準経路＋結果。Win+↑、独自全画面除外 | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認 |
 | W04 最小化 | placement・MINIMIZE系event、HTMINBUTTON等、input | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない |
