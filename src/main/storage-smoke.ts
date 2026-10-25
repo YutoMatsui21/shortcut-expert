@@ -20,8 +20,9 @@ export async function waitFor(window: BrowserWindow, condition: string, stage: s
   })`);
 }
 
-export async function runStorageSmoke({ coach, observer, window, repository, verifyPendingExit, verifyNotifications }: {
+export async function runStorageSmoke({ coach, observer, window, repository, workerPath, verifyPendingExit, verifyNotifications }: {
   coach: Pick<Coach, keyof Coach>; observer: ObserverClient; window: BrowserWindow; repository: unknown;
+  workerPath: string;
   verifyPendingExit?: () => Promise<void>;
   verifyNotifications?: (sample: import('../shared/coach').Candidate) => Promise<void>;
 }) {
@@ -137,7 +138,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, ver
   await observer.stop();
   coach.stop(); powerMonitor.emit('suspend'); assert.equal(coach.snapshot().error, null, 'intentional stop stays stopped during sleep');
   await coach.idle(); await repository.close();
-  const reopened = new SqliteRepository(app.getPath('userData'), join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked'));
+  const reopened = new SqliteRepository(app.getPath('userData'), workerPath);
   try {
     const fresh = new DurableCoach({ repository: reopened, session: reopened.session, date: localDate, now: () => 0,
       capabilities: () => [], notify: async () => false, changed: () => {} });
