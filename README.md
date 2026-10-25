@@ -169,6 +169,8 @@ nativeだけを絞る場合はhelperをbuildした後、`node scripts/test.mjs n
 
 #6のW12入力probeは`node scripts/taskbar-input-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後は`--observe-consented`でpanelを開き、手動ARMからFINISHまでだけ観測する。技術検証は制約付きで実装着手可。主タスクバーの番号一致とWin+0、負例除外を確認し、別タスクバー・overflow等はunknown。製品の保存・通知・R02/J04は未検証。[原本・採用条件・試行手順](docs/research-taskbar-input-validation.md)。
 
+#7のW01切替probeは`node scripts/window-switch-probe.mjs --self-test`で実入力なしのcompile・29件の自己検査を行う。同意後の`--observe-consented`は自作A/B/C窓と手動ARMを使い、1試行20秒まで観測する。直接click・Alt+Tab確定と負例/W12入口の非採用を実測し、基本経路は制約付きで実装着手可。任意外部アプリ・Edgeタブ・owner窓への一般化、W12製品との統合、番号対応は未確認。番号不明ならAlt+Tabのみ。[12試行の原本・失敗例・#29/#96への条件](docs/research-window-switch-validation.md)。
+
 ## 公開準備
 
 `npm.cmd run package:installer`はbuild後にNSISインストーラーを作る入口。導入・再導入・削除、通常利用60分、採用操作ごとの精度確認は未完。正式名称・appId・OSSライセンス・公開先・署名を決める必要があり、UNLICENSEDは未選定を表す。
