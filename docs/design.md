@@ -86,7 +86,7 @@
 
 ## テスト設計
 
-テスト実行入口`scripts/test.mjs`はunit/nativeの分類、module mock有効化、timeout、coverage条件を共通化する。ファイル・名前・reporter指定の使い方は[README](../README.md#修正中のテスト絞り込み)に集約する。`tests/test-runner.test.ts`は隔離fixtureを別プロセスで実行し、選択したテストだけの実行、失敗終了コードの伝播、既定の全件実行、native分類、誤った引数の拒否を確認する。製品の検出・保存・通知経路の試験とは分ける。
+テスト実行入口`scripts/test.mjs`はunit/nativeの分類、module mock有効化、timeout、coverage条件を共通化し、ファイル並列度の明示指定も受け付ける。ファイル・名前・reporter・並列度指定の使い方は[README](../README.md#修正中のテスト絞り込み)に集約する。`tests/test-runner.test.ts`は隔離fixtureを別プロセスで実行し、選択したテストだけの実行、失敗終了コードの伝播、既定の全件実行、native分類、誤った引数の拒否、異なるファイルの同時実行とprocess隔離を確認する。製品の検出・保存・通知経路の試験とは分ける。
 
 開発用の`scripts/dev-environment.mjs`は子プロセスのTEMP/cache、`dev-run.mjs`はNode製toolの起動と準備確認を担当する。`github-workflow.mjs`は開発Issueのrevision/hash付きcacheとhead固定のPR状態要約を扱う。製品Core/Mainの保存や通信には接続しない。実行方法は[開発用ツール](development-tools.md)。smoke失敗のstackとプロセス診断は隔離fixture経路だけに出力する。
 
