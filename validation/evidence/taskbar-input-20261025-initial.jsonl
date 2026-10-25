@@ -1,0 +1,16 @@
+{"kind":"session","sourceSha256":"5ad1bf3d55d183b2fcf0c7f042fd12fc37d432c7423b8d5d9ee98e9e2a23de94","probeSha256":"c30590c354b55f76640b7e1f7ca2ecf60839ad5e1396295087320292c0e1a579","consentRequired":true,"trialLimitSeconds":30,"sessionLimitSeconds":1200,"productChanged":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":1,"scenario":"mouse-app","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":2,"scenario":"key-app","expectedSlot":1,"mouseCandidates":0,"keyCandidates":1,"mouseSlot":0,"keySlot":1,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":3,"scenario":"mouse-app","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":4,"scenario":"key-repeat","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"stale-snapshot-at-input","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":5,"scenario":"key-extra-modifier","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":6,"scenario":"key-absent","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":7,"scenario":"non-app","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"session-end","completedTrials":7,"unfinishedTrialDiscarded":false}

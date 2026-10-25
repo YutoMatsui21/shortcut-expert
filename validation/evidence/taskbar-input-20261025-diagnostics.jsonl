@@ -1,0 +1,12 @@
+{"kind":"session","sourceSha256":"0db615d9b38096bb5c3289579f90f6b5ce60bd84f139725835a1375a1c7de0f2","probeSha256":"8ccfbe0ce09a1c0c2fe73462f87008baafad6c938f48dc6504815f66734112d1","consentRequired":true,"trialLimitSeconds":30,"sessionLimitSeconds":1200,"productChanged":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":1,"scenario":"mouse-app","expectedSlot":1,"mouseCandidates":1,"keyCandidates":0,"mouseSlot":1,"keySlot":0,"unknown":"none","primaryApps":7,"secondaryPresent":true,"primaryMouseDowns":1,"withinPrimaryBoundsDowns":1,"appBoundsDowns":1,"secondaryMouseDowns":0,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":2,"scenario":"key-repeat","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"input-mapping-unknown","primaryApps":7,"secondaryPresent":true,"primaryMouseDowns":0,"withinPrimaryBoundsDowns":0,"appBoundsDowns":0,"secondaryMouseDowns":0,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":3,"scenario":"reorder","expectedSlot":1,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"input-mapping-unknown","primaryApps":7,"secondaryPresent":true,"primaryMouseDowns":1,"withinPrimaryBoundsDowns":1,"appBoundsDowns":1,"secondaryMouseDowns":0,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":4,"scenario":"mouse-app","expectedSlot":2,"mouseCandidates":0,"keyCandidates":0,"mouseSlot":0,"keySlot":0,"unknown":"input-mapping-unknown","primaryApps":7,"secondaryPresent":true,"primaryMouseDowns":1,"withinPrimaryBoundsDowns":1,"appBoundsDowns":1,"secondaryMouseDowns":0,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"arm-query","primaryApps":7,"secondaryPresent":true,"error":"none","queryFresh":true}
+{"kind":"trial","index":5,"scenario":"key-app","expectedSlot":2,"mouseCandidates":0,"keyCandidates":1,"mouseSlot":0,"keySlot":2,"unknown":"none","primaryApps":7,"secondaryPresent":true,"primaryMouseDowns":0,"withinPrimaryBoundsDowns":0,"appBoundsDowns":0,"secondaryMouseDowns":0,"eventTimeMappingProven":false,"productPass":false}
+{"kind":"session-end","completedTrials":5,"unfinishedTrialDiscarded":false}

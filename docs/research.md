@@ -164,7 +164,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 | ID | 必要情報／API | 判定仮説・同等キーの条件 | 判断・残リスク |
 | --- | --- | --- | --- |
 | W01 切替 | 切替入力と対象のforeground HWND、WinEvent等 | タスクバーアプリアイコンのクリック・Win+数字はW12に帰属する。W01はAlt+Tabなどの一般切替の対象・結果を照合 | **UI待ち**。一般切替の同等性は#7/#29で検証。旧TaskbarProbeのmouse／Win+6取得はW12の初期証拠でありW01のPASSではない |
-| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を操作時点で計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6の技術検証待ち**。自作窓slot6の初期試験あり。外部アプリ・並べ替え/overflow/複数タスクバー・非アプリ負例の成立は未証明 |
+| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6：制約付きで実装着手可**。主タスクバーの通常アプリと1/2/9/10番の一致、repeat/修飾/番号なし/非app/thumbnailを確認。別タスクバー・overflow・変動はunknown。採用前の番号再確認が必須。製品受入は未完。[原本・限界・採用条件](research-taskbar-input-validation.md) |
 | W02 画面移動 | monitor前後・配置、MOVESIZE開始終了、実入力 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等 | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能 |
 | W03 最大化 | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input | 同一対象の標準経路＋結果。Win+↑、独自全画面除外 | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認 |
 | W04 最小化 | placement・MINIMIZE系event、HTMINBUTTON等、input | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない |
