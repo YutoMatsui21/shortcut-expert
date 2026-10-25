@@ -58,6 +58,8 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 6. commit・pushしてPRを作成し、最新headのCI（`windows-quality`）を確認する。GitHubの`@codex review`は高リスク変更または明示依頼がある場合だけ追加する。[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)に従い、必須条件を満たしたらmergeする。
 7. CI失敗時は原因を修正し、変更した部分をローカルで再検証する。本番ロジック・重要な契約に影響する場合は前回レビュー以降の差分と影響範囲を再レビューし、再push後に最新headのCIを確認する。テスト期待値を変える場合も仕様との一致を確認する。
 
+CIはMarkdown（`*.md`）だけの変更なら軽量確認へ切り替える。コード・テスト・設定・workflowの変更や手動実行では従来のWindowsフル検証を行う。両経路とも`windows-quality`の成功が必須。選択ルールは[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)を参照。
+
 ### 実行環境
 
 Windows x64、Node.js 24系・npm。作業フォルダーのPowerShellで実行する。

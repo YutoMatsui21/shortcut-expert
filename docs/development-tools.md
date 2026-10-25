@@ -38,6 +38,8 @@ node scripts/github-workflow.mjs pr-status 64 --repo=YutoMatsui21/shortcut-exper
 
 head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。GitHubレビューを依頼した場合は、最新headのCodex完了通知・指摘・未解決threadを人間可読の本文で確認する。未依頼の場合はレビュー結果の不存在をCI失敗として扱わない。この監視スクリプト自身はmergeやレビュー依頼を実行しない。
 
+`change-scope`で差分を分類し、Markdownのみなら軽量Linux、それ以外はWindowsフルCIを実行する。差分取得失敗・手動実行時はフルCIを選ぶ。必須`windows-quality`は必ず実行し、判定不明時は失敗する。軽量チェックの成功とジョブ自体のskipは区別する。
+
 成功には本リポジトリのQuality job `windows-quality`の成功を必要とし、未開始・skip・無関係なbot checkだけでは合格にしない。job名を変更する時はworkflowと`github-workflow.mjs`のrequiredChecksを同時に更新する。branch protection等の追加条件は最終merge確認で照合する。
 
 GitHub APIが使える限り、待機中にrun/job/全コメントを別々に全面取得しない。取得失敗を成功扱いせず、対応する接続済みツールへ切り替える場合も最新headを維持する。
