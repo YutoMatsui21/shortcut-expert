@@ -67,6 +67,7 @@ internal static class NativeMethods
     [DllImport("user32.dll")] internal static extern bool EnumWindows(Enumerate callback, nint data);
     [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] internal static extern nint GetAncestor(nint window, uint flags);
+    [DllImport("user32.dll")] internal static extern nint GetWindow(nint window, uint command);
     [DllImport("user32.dll")] internal static extern nint WindowFromPoint(Point point);
     [DllImport("user32.dll")] internal static extern nint WindowFromPhysicalPoint(Point point);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint FindWindowW(string cls, string? name);

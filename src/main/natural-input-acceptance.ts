@@ -4,23 +4,27 @@ import type { Snapshot, LearningState, OperationId, ObserverCandidate } from '..
 import { classify } from '../core/detector.ts';
 import { learningState } from '../shared/learning.ts';
 
-type Plan = { kind: 'mouse' | 'key' | 'negative'; application: 'standard' | 'chrome'; state: LearningState; paused: boolean; slot?: number };
+type Plan = { kind: 'mouse' | 'key' | 'negative'; application: 'standard' | 'chrome'; state: LearningState; paused: boolean; slot?: number; scenario?: string };
+type NaturalOperation = 'W01' | 'W08' | 'W12';
+const switchScenarios = ['direct', 'alt-tab', 'multi-tab', 'escape', 'return', 'same-window', 'program', 'taskbar-click', 'win-digit', 'switcher-mouse', 'owner', 'edge-tab'];
 type Deps = { snapshot(): Snapshot; start(paused: boolean): Promise<void>; stop(): Promise<void>; idle(): Promise<void>;
   configure(state: LearningState): Promise<void>; now?(): number };
-const total = (snapshot: Snapshot, operation: 'W08' | 'W12') => Object.values(snapshot.counts).reduce((sum, day) =>
+const total = (snapshot: Snapshot, operation: NaturalOperation) => Object.values(snapshot.counts).reduce((sum, day) =>
   ({ mouse: sum.mouse + (day[operation]?.mouse ?? 0), key: sum.key + (day[operation]?.key ?? 0) }), { mouse: 0, key: 0 });
 export class NaturalInputTrials {
   private active: { plan: Plan; before: ReturnType<typeof total>; requests: number; wrongShortcut: boolean; wrongSlot: boolean; beforeW01: number; tracking: boolean;
+    beforeW12: ReturnType<typeof total>;
     interrupted: boolean; expired: boolean; expires: number } | null = null;
   readonly results: object[] = [];
   get armed() { return this.active !== null; }
   private deps: Deps;
-  private operation: 'W08' | 'W12';
-  constructor(deps: Deps, operation: 'W08' | 'W12' = 'W08') { this.deps = deps; this.operation = operation; }
+  private operation: NaturalOperation;
+  constructor(deps: Deps, operation: NaturalOperation = 'W08') { this.deps = deps; this.operation = operation; }
   noticeRequested(operation: OperationId, shortcut?: string) {
     if (operation === this.operation && this.active) {
       this.active.requests++;
       if (this.operation === 'W12' && shortcut !== `Win + ${this.active.plan.slot === 10 ? 0 : this.active.plan.slot}`) this.active.wrongShortcut = true;
+      if (this.operation === 'W01' && shortcut !== 'Alt + Tab') this.active.wrongShortcut = true;
     }
   }
   candidate(value: ObserverCandidate) {
@@ -39,11 +43,15 @@ export class NaturalInputTrials {
         typeof p.application !== 'string' || !['standard', 'chrome'].includes(p.application) ||
         typeof p.state !== 'string' || !['learning', 'mastered', 'excluded'].includes(p.state) || typeof p.paused !== 'boolean') throw new Error('invalid-plan');
     if (this.operation === 'W12' && (!Number.isInteger(p.slot) || (p.kind === 'negative' ? p.slot !== 0 : Number(p.slot) < 1 || Number(p.slot) > 10))) throw new Error('invalid-slot');
+    if (this.operation === 'W01' && (typeof p.scenario !== 'string' || !switchScenarios.includes(p.scenario) ||
+        (p.kind === 'mouse' ? p.scenario !== 'direct' : p.kind === 'key' ? !['alt-tab', 'multi-tab'].includes(p.scenario) : ['direct', 'alt-tab', 'multi-tab'].includes(p.scenario)))) throw new Error('invalid-scenario');
     await this.deps.stop(); await this.deps.idle();
     await this.deps.configure(p.state as LearningState);
     if (this.deps.snapshot().error || this.deps.snapshot().pendingSave) throw new Error('product-error');
     this.active = { plan: { kind: p.kind as Plan['kind'], application: p.application as Plan['application'],
-      state: p.state as LearningState, paused: p.paused, ...(this.operation === 'W12' ? { slot: Number(p.slot) } : {}) }, before: total(this.deps.snapshot(), this.operation), requests: 0,
+      state: p.state as LearningState, paused: p.paused, ...(this.operation === 'W12' ? { slot: Number(p.slot) } : {}),
+      ...(this.operation === 'W01' ? { scenario: p.scenario as string } : {}) }, before: total(this.deps.snapshot(), this.operation), requests: 0,
+      beforeW12: total(this.deps.snapshot(), 'W12'),
       wrongShortcut: false, wrongSlot: false, beforeW01: Object.values(this.deps.snapshot().counts).reduce((sum, day) => sum + (day.W01?.mouse ?? 0) + (day.W01?.key ?? 0), 0),
       tracking: false, interrupted: false, expired: false, expires: 0 };
     try {
@@ -65,16 +73,26 @@ export class NaturalInputTrials {
     const valid = completed && !trial.expired && !trial.interrupted && !snapshot.error && !snapshot.pendingSave && !snapshot.observing &&
       learningState(snapshot.settings, this.operation) === trial.plan.state && snapshot.notificationsPaused === trial.plan.paused;
     const detectorPassed = valid && counts.mouse === (trial.plan.kind === 'mouse' ? 1 : 0) && counts.key === (trial.plan.kind === 'key' ? 1 : 0);
+    const w12 = total(snapshot, 'W12');
+    const w12Counts = { mouse: w12.mouse - trial.beforeW12.mouse, key: w12.key - trial.beforeW12.key };
     this.results.push({ trial: this.results.length + 1, ...trial.plan, completed, valid, interrupted: trial.interrupted, expired: trial.expired, counts,
       notificationRequests: trial.requests, detectorPassed, notificationRequestPassed: valid && !trial.wrongShortcut && trial.requests === expectedRequests,
+      ...(this.operation === 'W01' ? { w12Counts, coexistencePassed: valid && w12Counts.mouse === (trial.plan.scenario === 'taskbar-click' ? 1 : 0) &&
+        w12Counts.key === (trial.plan.scenario === 'win-digit' ? 1 : 0) } : {}),
       ...(this.operation === 'W12' ? { wrongShortcut: trial.wrongShortcut, slotMatched: !trial.wrongSlot, w01Delta: Object.values(snapshot.counts).reduce((sum, day) => sum + (day.W01?.mouse ?? 0) + (day.W01?.key ?? 0), 0) - trial.beforeW01 } : {}) });
   }
 }
 
 // Opt-in operator control only. Normal execution never reads these files or collects trial results.
-export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: () => Promise<void>, operation: 'W08' | 'W12' = 'W08') {
-  const trials = new NaturalInputTrials(deps, operation);
+export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: () => Promise<void>, operation: NaturalOperation = 'W08') {
   let sequence = 0, busy = false, expired = false;
+  const trials = new NaturalInputTrials(operation === 'W01' ? { ...deps, start: async paused => {
+    // Source selection happens with hooks OFF. The tool-window panel itself is ineligible for W01.
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    const latest = JSON.parse(await readFile(join(directory, 'control.json'), 'utf8'));
+    if (expired || latest.sequence !== sequence || latest.action !== 'arm') throw new Error('arming-cancelled');
+    await deps.start(paused);
+  } } : deps, operation);
   let deadline: NodeJS.Timeout | undefined;
   let trialRetry: NodeJS.Timeout | undefined, shutdownRetry: NodeJS.Timeout | undefined;
   const status = async (error = false) => {

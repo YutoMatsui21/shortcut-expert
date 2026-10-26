@@ -57,6 +57,16 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'window-switch':
+      if (raw.profile !== 'window-switch-v1' ||
+          !['windowsDifferent', 'eligible', 'inputTargetMatched', 'foregroundMatched'].every(key => typeof raw[key] === 'boolean') ||
+          typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 ||
+          typeof raw.settleMs !== 'number' || !Number.isFinite(raw.settleMs) || raw.settleMs < 0 ||
+          !(raw.monitor === null || bounds(raw.monitor))) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, windowsDifferent: raw.windowsDifferent as boolean,
+        eligible: raw.eligible as boolean, inputTargetMatched: raw.inputTargetMatched as boolean,
+        foregroundMatched: raw.foregroundMatched as boolean, inputAgeMs: raw.inputAgeMs, settleMs: raw.settleMs,
+        monitor: bounds(raw.monitor) }; break;
     case 'taskbar-input':
       if (raw.profile !== 'taskbar-input-v1' || !(raw.slot === null || (protocolId(raw.slot) && raw.slot <= 10)) ||
           typeof raw.mappingConfirmed !== 'boolean' ||

@@ -7,7 +7,10 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(GlobalEvidence), "global")]
 [JsonDerivedType(typeof(SnapInvocationEvidence), "snap-invocation")]
 [JsonDerivedType(typeof(TaskbarInputEvidence), "taskbar-input")]
+[JsonDerivedType(typeof(WindowSwitchEvidence), "window-switch")]
 internal abstract record Evidence(string profile);
+internal sealed record WindowSwitchEvidence(bool windowsDifferent, bool eligible, bool inputTargetMatched,
+    bool foregroundMatched, long inputAgeMs, long settleMs, MonitorBounds? monitor) : Evidence("window-switch-v1");
 internal sealed record TaskbarInputEvidence(int? slot, bool mappingConfirmed, long snapshotAgeMs,
     long confirmationAgeMs, MonitorBounds? monitor) : Evidence("taskbar-input-v1");
 internal sealed record SnapInvocationEvidence(bool targetMatched, bool eligible, bool? settingsEnabled,
@@ -43,6 +46,15 @@ internal sealed class CandidateProtocol(Action<object> emit)
         lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
     }
     internal void Stop() { lock (gate) generation = 0; }
+    internal void Switch(int epoch, int transaction, string date, string origin, WindowSwitchEvidence evidence)
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation || version != 2) return;
+            emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction, date,
+                origin, origin == "mouse" ? "direct-click" : "alt-tab", false, false, evidence));
+        }
+    }
     internal void Taskbar(int epoch, int transaction, string date, string origin, TaskbarInputEvidence evidence)
     {
         lock (gate)
