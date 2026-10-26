@@ -13,6 +13,9 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     private string date = "";
     private uint inputTick;
     private Point? mouseDown;
+    // Query only defined key/button codes, not reserved virtual values with undefined state.
+    private static readonly int[] neutralKeys = Enum.GetValues<System.Windows.Forms.Keys>().Select(k => (int)k)
+        .Where(k => k is >= 1 and <= 254).Distinct().ToArray();
     internal void Start(int epoch)
     {
         Stop(); generation = epoch; Neutral(); timer.Tick += Tick; timer.Start();
@@ -20,7 +23,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     internal void Stop()
     { timer.Stop(); timer.Tick -= Tick; generation = 0; pendingTransaction = 0; policy = new(); mouseDown = null; }
     internal void Cancel() { policy.Cancel(); mouseDown = null; }
-    private void Neutral() => policy.Neutral(Enumerable.Range(1, 254).All(k => GetAsyncKeyState(k) >= 0));
+    private void Neutral() => policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
     private static SwitchWindow? Read(nint window)
     {
         if (window == 0 || window == GetDesktopWindow() || window == GetShellWindow() ||

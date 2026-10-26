@@ -17,6 +17,20 @@ internal static class WindowSwitchTests
         var mouse = Mouse(); Foreground(mouse, b); mouse.Mouse(0x202, b, null, false, false, 40);
         var result = mouse.Poll(b, 100); Check("direct click", result?.Origin == "mouse" && result.Target == b);
         Check("once", mouse.Poll(b, 150) is null);
+        int[] definedKeys = [1, 2, 4, 5, 6, 9, 13, 16, 17, 18, 27, 32, 0x41, 0x5b, 0x5c, 0xa4];
+        var virtualKey = new WindowSwitchPolicy();
+        virtualKey.Neutral(WindowSwitchPolicy.KeysReleased(definedKeys, k => k != 7));
+        virtualKey.Mouse(0x201, b, a, false, false, 0); Foreground(virtualKey, b);
+        virtualKey.Mouse(0x202, b, null, false, false, 40);
+        Check("non-key virtual values cannot prevent a confirmed click", virtualKey.Poll(b, 100)?.Target == b);
+        foreach (int pressed in definedKeys)
+        {
+            var held = new WindowSwitchPolicy();
+            held.Neutral(WindowSwitchPolicy.KeysReleased(definedKeys, k => k != pressed));
+            held.Mouse(0x201, b, a, false, false, 0); Foreground(held, b);
+            held.Mouse(0x202, b, null, false, false, 40);
+            Check("defined held key prevents adoption " + pressed, held.Poll(b, 100) is null);
+        }
         var coarseClock = new WindowSwitchPolicy(); coarseClock.Neutral(true);
         coarseClock.Mouse(0x201, b, a, false, false, 1000);
         coarseClock.NativeForeground(12, 12, b, 0, 0, 1005);

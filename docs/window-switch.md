@@ -32,10 +32,16 @@ panelはtool windowでW01対象外。ARM後4秒はhookを開始せず開始窓�
 
 必要ケースは直接click、Alt+Tab、複数Tab、Esc、元窓、同窓、program単独、W12 click/Win+数字、switcher mouse、owner/Edge条件、3状態・通知停止・全停止。各ケース原則1回で、予想外の場合だけ理由を残して再試行。自作窓だけで通常環境の受入合格にはしない。
 
-2026-10-26のローカル確認：型検査、unit全265件、native全7件（内部で本番C# policy 243項目）、helper/Electron build、通常/同梱fixture smoke、panel compileとlauncher構文検査が成功。専用CodexレビューのP2（Alt解放後の現在の不明窓への遷移を無視していた）を、修正前に失敗する回帰テストで確認して修正し、変更全体の再レビューは追加指摘なし。build/smokeのsandbox権限エラーは通常環境で再実行して成功。NuGetの脆弱性情報取得にNU1900警告があり、脆弱性情報の取得成功は主張しない。実入力観測・R02/J04・OS可視通知・NSIS・リリース受入はこの結果に含まない。
+2026-10-26のローカル確認：型検査、unit全265件、native全7件（内部で本番C# policy 260項目）、helper/Electron build、通常/同梱fixture smoke、panel compileとlauncher構文検査が成功。専用CodexレビューのP2（Alt解放後の現在の不明窓への遷移を無視していた）を、修正前に失敗する回帰テストで確認して修正し、変更全体の再レビューは追加指摘なし。build/smokeのsandbox権限エラーは通常環境で再実行して成功。NuGetの脆弱性情報取得にNU1900警告があり、脆弱性情報の取得成功は主張しない。実入力観測・R02/J04・OS可視通知・NSIS・リリース受入はこの結果に含まない。
 
 ## 最初の製品実入力試行と時刻比較の修正
 
 本人の明示同意・準備完了後、commit aeb478aの同梱版でmouse/direct/learningを実施した。初回と本人希望の再試行の計2回、本人はBへ切替したと申告、通知は見えなかったと申告。両方とも実行のvalidはtrueだが、W01 countsはmouse/keyとも0、通知要求0、detectorPassed/notificationRequestPassedはfalse。失敗を成功へ置き換えず、[初回build](../validation/evidence/w01-natural-20261026-initial-build.json)と[終了済み結果](../validation/evidence/w01-natural-20261026-initial-results.json)を保持する。観測は終了し、アプリはexit 0で終了した。
 
-実入力hookなしの自作窓で本番の通常窓Readは成功した。別途、Win32 tick差をStopwatchから引く時刻換算で入力後の有効foregroundが入力前へ変換される不具合を人工時系列で再現し、修正前のassert失敗を確認した。入力/foregroundのnative timestampを直接比較する方式へ修正し、同tick・古いevent・DWORD wrapの回帰を追加。本番C# policy 243項目が成功。この人工再現は初回2試行の具体的な棄却理由を実測したものではなく、実入力0件の原因確定・修正後合格は別途確認が必要。
+実入力hookなしの自作窓で本番の通常窓Readは成功した。別途、Win32 tick差をStopwatchから引く時刻換算で入力後の有効foregroundが入力前へ変換される不具合を人工時系列で再現し、修正前のassert失敗を確認した。入力/foregroundのnative timestampを直接比較する方式へ修正し、同tick・古いevent・DWORD wrapの回帰を追加。本番C# policy 260項目が成功。この人工再現は初回2試行の具体的な棄却理由を実測したものではなく、実入力0件の原因確定・修正後合格は別途確認が必要。
+
+## 初期解放判定の見送り原因と修正
+
+時刻比較修正後も直接clickは0件で、別の一時診断版を手動ARM/FINISHして確認した。固定理由別カウンターでneutralBlocked=98、notNeutral=4、入力候補生成0が判明した。さらに手動ARM/CANCELで、ボタン・修飾・既知キー・IME・定義外値のカテゴリだけを集計した。neutralBlockedReserved=196/196、通常のキー/修飾/IMEのblockは0、ボタンは4回だった。生キー値や押下時刻列は収集していない。この試行は本人が操作間違いを申告しCANCELしており、受入成功には使わない。[修正後の失敗・診断・終了結果](../validation/evidence/w01-natural-20261026-followup-results.json)。
+
+全整数1〜254をGetAsyncKeyStateへ渡す走査が、通常入力キーとして定義されない値の状態に妨げられていた。System.Windows.Forms.Keysの定義済みキー/ボタンを1〜254へ絞って重複除去し、解放判定へ渡す方式へ修正した。既知キー・ボタンの押下除外は維持する。非キー値の状態によって確定clickが除外される人工回帰を修正前の失敗から確認し、16種類の実キー/ボタンの押下除外も検査した。一時診断のtransport・counter・テスト補助は除去した。実入力修正版の受入は別途確認が必要。

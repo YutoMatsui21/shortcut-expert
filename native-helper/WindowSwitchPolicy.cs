@@ -9,6 +9,7 @@ internal sealed class WindowSwitchPolicy
     private SwitchWindow? before, target, confirmed;
     private long started, releasedAt;
     internal bool Pending => before is not null;
+    internal static bool KeysReleased(IEnumerable<int> definedKeys, Func<int, bool> released) => definedKeys.All(released);
     internal void Neutral(bool neutral) { if (neutral) { ready = true; held.Clear(); } }
     internal void Cancel() { before = target = confirmed = null; key = released = tab = false; ready = false; }
     private static bool Alt(uint k) => k is 0x12 or 0xa4 or 0xa5;
