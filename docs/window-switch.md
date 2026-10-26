@@ -1,6 +1,6 @@
 # W01：直接クリックとAlt+Tabによる切替（#29）
 
-基本検出器をNative→v2 protocol→Core→保存後通知・一覧/記録へ接続した。**実入力の製品受入は未実施、#29は未完了。** [#7の研究](research-window-switch-validation.md)で得た基本経路を採用し、通常Windows環境のR02/J04と同一最終buildの#47は別途確認する。番号対応はunknownで、案内はAlt+Tabのみ。追加候補は#96へ残す。
+基本検出器をNative→v2 protocol→Core→保存後通知・一覧/記録へ接続した。**実入力の製品受入は未完了、#29は未完了。** [#7の研究](research-window-switch-validation.md)で得た基本経路を採用し、通常Windows環境のR02/J04と同一最終buildの#47は別途確認する。番号対応はunknownで、案内はAlt+Tabのみ。追加候補は#96へ残す。
 
 ## 製品経路と除外
 
@@ -8,6 +8,7 @@
 - mouseは非注入の左down前のforegroundとhit rootが異なり、同じ対象でup、対象foregroundのイベントと最終pollが一致した場合に1件。drag閾値を越える移動・movesize開始は取消。downから1.5秒以内、upから50ms以上で確定する。
 - keyは入力解放後に開始したAlt保持→Tab→Alt解放を1件として扱う。複数Tab・repeatで候補を増やさず、解放から300ms以上経過したpollと裏付け済みforegroundを照合する。Alt開始から15秒、解放から2秒が上限。期限は暫定値であり、取りこぼし・遅延・通常利用での成立は実機確認が必要。
 - callback時のforegroundとイベントHWNDが違う後着イベント、入力より古いイベントは成功根拠にしない。SWITCHEND単独、foreground単独・同窓・元窓・Esc・追加key/修飾・Alt再押下・注入・混合mouse/key・競合・不明窓は非計上。検出不能なprogram同時前面化の因果まで証明する方式ではない。
+- 入力とforegroundの前後関係はhookのmessage timestampとWinEvent timestampをDWORDのwrapを考慮して直接比較する。WinEventのtick差をStopwatchへ換算して順序判定しない。期限だけStopwatchを使う。[WinEvent timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc)、[hook timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)、[GetMessageTimeの起点とwrap](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime)。
 - W12のtaskbar clickは通常窓hitに該当しない。Win+数字はW01候補を作らない。有効番号は独立したW12の前後snapshot照合で判断し、W01へfallbackしない。
 - 窓は可視・非最小化・非cloaked・ownerなし・captionありのrootで、通常権限の別processを検査する。desktop・taskbar・tool/noactivate・child・helper自身・不明窓は除外。特殊owner窓などの日常条件の対応完了を意味しない。
 - Edgeを含むAlt+Tabは、タブと個別窓の同等性をHWNDで証明できないため非計上。Edgeへの直接clickは通常窓検査を通る場合だけ候補になるが、実機未確認。これは製品要件の縮小やJ04合格ではなく、残る障害として扱う。
@@ -31,4 +32,10 @@ panelはtool windowでW01対象外。ARM後4秒はhookを開始せず開始窓�
 
 必要ケースは直接click、Alt+Tab、複数Tab、Esc、元窓、同窓、program単独、W12 click/Win+数字、switcher mouse、owner/Edge条件、3状態・通知停止・全停止。各ケース原則1回で、予想外の場合だけ理由を残して再試行。自作窓だけで通常環境の受入合格にはしない。
 
-2026-10-26のローカル確認：型検査、unit全265件、native全7件（内部で本番C# policy 240項目）、helper/Electron build、通常/同梱fixture smoke、panel compileとlauncher構文検査が成功。専用CodexレビューのP2（Alt解放後の現在の不明窓への遷移を無視していた）を、修正前に失敗する回帰テストで確認して修正し、変更全体の再レビューは追加指摘なし。build/smokeのsandbox権限エラーは通常環境で再実行して成功。NuGetの脆弱性情報取得にNU1900警告があり、脆弱性情報の取得成功は主張しない。実入力観測・R02/J04・OS可視通知・NSIS・リリース受入はこの結果に含まない。
+2026-10-26のローカル確認：型検査、unit全265件、native全7件（内部で本番C# policy 243項目）、helper/Electron build、通常/同梱fixture smoke、panel compileとlauncher構文検査が成功。専用CodexレビューのP2（Alt解放後の現在の不明窓への遷移を無視していた）を、修正前に失敗する回帰テストで確認して修正し、変更全体の再レビューは追加指摘なし。build/smokeのsandbox権限エラーは通常環境で再実行して成功。NuGetの脆弱性情報取得にNU1900警告があり、脆弱性情報の取得成功は主張しない。実入力観測・R02/J04・OS可視通知・NSIS・リリース受入はこの結果に含まない。
+
+## 最初の製品実入力試行と時刻比較の修正
+
+本人の明示同意・準備完了後、commit aeb478aの同梱版でmouse/direct/learningを実施した。初回と本人希望の再試行の計2回、本人はBへ切替したと申告、通知は見えなかったと申告。両方とも実行のvalidはtrueだが、W01 countsはmouse/keyとも0、通知要求0、detectorPassed/notificationRequestPassedはfalse。失敗を成功へ置き換えず、[初回build](../validation/evidence/w01-natural-20261026-initial-build.json)と[終了済み結果](../validation/evidence/w01-natural-20261026-initial-results.json)を保持する。観測は終了し、アプリはexit 0で終了した。
+
+実入力hookなしの自作窓で本番の通常窓Readは成功した。別途、Win32 tick差をStopwatchから引く時刻換算で入力後の有効foregroundが入力前へ変換される不具合を人工時系列で再現し、修正前のassert失敗を確認した。入力/foregroundのnative timestampを直接比較する方式へ修正し、同tick・古いevent・DWORD wrapの回帰を追加。本番C# policy 243項目が成功。この人工再現は初回2試行の具体的な棄却理由を実測したものではなく、実入力0件の原因確定・修正後合格は別途確認が必要。

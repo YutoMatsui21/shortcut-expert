@@ -113,7 +113,7 @@ internal sealed class Observer : IDisposable
             snap.Mouse(message, Marshal.PtrToStructure<MouseData>(data).Flags);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
-            switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
+            switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
@@ -145,7 +145,7 @@ internal sealed class Observer : IDisposable
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             snap.Key(key.Key, down, key.Flags);
             taskbar.Key(key.Key, down, key.Flags);
-            switching.Key(key.Key, down, key.Flags);
+            switching.Key(key.Key, down, key.Flags, key.Time);
             // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
             if (key.Key is >= 0x30 and <= 0x39 && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0))
             { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }

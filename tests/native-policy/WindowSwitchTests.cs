@@ -17,6 +17,17 @@ internal static class WindowSwitchTests
         var mouse = Mouse(); Foreground(mouse, b); mouse.Mouse(0x202, b, null, false, false, 40);
         var result = mouse.Poll(b, 100); Check("direct click", result?.Origin == "mouse" && result.Target == b);
         Check("once", mouse.Poll(b, 150) is null);
+        var coarseClock = new WindowSwitchPolicy(); coarseClock.Neutral(true);
+        coarseClock.Mouse(0x201, b, a, false, false, 1000);
+        coarseClock.NativeForeground(12, 12, b, 0, 0, 1005);
+        coarseClock.Mouse(0x202, b, null, false, false, 1010);
+        Check("coarse native tick must not become a pre-input Stopwatch time", coarseClock.Poll(b, 1060)?.Target == b);
+        foreach (var (inputTick, eventTick, accepted) in new[] { (100u, 99u, false), (0xfffffff0u, 5u, true) })
+        {
+            var p = Mouse(); p.NativeForeground(12, 12, b, inputTick, eventTick, 30);
+            p.Mouse(0x202, b, null, false, false, 40);
+            Check("native stamp stale/wrap " + accepted, (p.Poll(b, 100) is not null) == accepted);
+        }
         foreach (string fault in new[] { "no-neutral", "no-event", "stale-event", "old-event", "different-final", "reused-pid", "different-up", "late", "no-up", "injected", "modifier", "right", "xbutton", "wheel", "key", "competing", "stop" })
         {
             var p = Mouse(fault != "no-neutral");

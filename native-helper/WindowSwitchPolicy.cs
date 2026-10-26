@@ -55,6 +55,14 @@ internal sealed class WindowSwitchPolicy
             confirmed = current;
         }
     }
+    internal void NativeForeground(nint eventWindow, nint currentWindow, SwitchWindow? current,
+        uint inputTick, uint eventTick, long at)
+    {
+        // Compare native message stamps directly, including DWORD wrap. Never subtract their
+        // coarse tick lag from a high-resolution Stopwatch timestamp to infer input ordering.
+        if (unchecked((int)(eventTick - inputTick)) < 0) return;
+        Foreground(eventWindow, currentWindow, current, at, at);
+    }
     internal SwitchCompletion? Poll(SwitchWindow? current, long at)
     {
         if (!Pending) return null;

@@ -11,6 +11,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     private WindowSwitchPolicy policy = new();
     private int generation, pendingTransaction;
     private string date = "";
+    private uint inputTick;
     private Point? mouseDown;
     internal void Start(int epoch)
     {
@@ -40,19 +41,19 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         }
         catch { return null; }
     }
-    private void Capture(bool wasPending)
+    private void Capture(bool wasPending, uint tick)
     {
-        if (!wasPending && policy.Pending) { pendingTransaction = transaction(); date = DateTime.Now.ToString("yyyy-MM-dd"); }
+        if (!wasPending && policy.Pending) { pendingTransaction = transaction(); inputTick = tick; date = DateTime.Now.ToString("yyyy-MM-dd"); }
     }
-    internal void Key(uint key, bool down, uint flags)
+    internal void Key(uint key, bool down, uint flags, uint tick)
     {
         if (generation == 0) return;
         bool pending = policy.Pending;
         policy.Key(key, down, (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
             key is 0x12 or 0xa4 or 0xa5 ? Read(GetForegroundWindow()) : null, now());
-        Capture(pending);
+        Capture(pending, tick);
     }
-    internal void Mouse(nint message, Point point, uint flags)
+    internal void Mouse(nint message, Point point, uint flags, uint tick)
     {
         if (generation == 0) return;
         if (message == 0x200 && flags == 0)
@@ -67,7 +68,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
             message == 0x201 ? Read(GetForegroundWindow()) : null,
             (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
             new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k => GetAsyncKeyState(k) < 0), now());
-        Capture(pending);
+        Capture(pending, tick);
         if (message == 0x201) mouseDown = policy.Pending ? point : null;
         else if (message == 0x202) mouseDown = null;
     }
@@ -76,8 +77,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         if (generation == 0 || !policy.Pending) return;
         nint current = GetForegroundWindow();
         long at = now();
-        long lag = unchecked((uint)Environment.TickCount64 - eventTime);
-        policy.Foreground(window, current, window == current ? Read(current) : null, at - lag, at);
+        policy.NativeForeground(window, current, window == current ? Read(current) : null, inputTick, eventTime, at);
     }
     private void Tick(object? sender, EventArgs args)
     {
