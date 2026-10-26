@@ -1,6 +1,6 @@
 # W01：直接クリックとAlt+Tabによる切替（#29）
 
-基本検出器をNative→v2 protocol→Core→保存後通知・一覧/記録へ接続した。**実入力の製品受入は未完了、#29は未完了。** [#7の研究](research-window-switch-validation.md)で得た基本経路を採用し、通常Windows環境のR02/J04と同一最終buildの#47は別途確認する。番号対応はunknownで、案内はAlt+Tabのみ。追加候補は#96へ残す。
+基本検出器をNative→v2 protocol→Core→保存後通知・一覧/記録へ接続した。本人が認めたEdgeタブ対象外の範囲で、隔離実入力によるW01の局所確認結果を以下に記録する。[#7の研究](research-window-switch-validation.md)で得た基本経路を採用し、全12操作のR02/J04と同一最終buildの#47は別途確認する。番号対応はunknownで、案内はAlt+Tabのみ。追加候補は#96へ残す。
 
 ## 製品経路と除外
 
@@ -12,7 +12,7 @@
 - 入力とforegroundの前後関係はhookのmessage timestampとWinEvent timestampをDWORDのwrapを考慮して直接比較する。WinEventのtick差をStopwatchへ換算して順序判定しない。期限だけStopwatchを使う。[WinEvent timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc)、[hook timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)、[GetMessageTimeの起点とwrap](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime)。
 - W12のtaskbar clickは通常窓hitに該当しない。Win+数字はW01候補を作らない。有効番号は独立したW12の前後snapshot照合で判断し、W01へfallbackしない。
 - 窓は可視・非最小化・非cloaked・ownerなし・captionありのrootで、通常権限の別processを検査する。desktop・taskbar・tool/noactivate・child・helper自身・不明窓は除外。特殊owner窓などの日常条件の対応完了を意味しない。
-- Edgeを含むAlt+Tabは、タブと個別窓の同等性をHWNDで証明できないため非計上。Edgeへの直接clickは通常窓検査を通る場合だけ候補になるが、実機未確認。これは製品要件の縮小やJ04合格ではなく、残る障害として扱う。
+- Edgeのタブ操作は本人判断でW01の対象外。通常のEdge窓へのAlt+TabはW01の対象だが、現実装はタブと個別窓の同等性をHWNDで証明できず、Edge宛てのkey経路を一律非計上にする。通常のEdge窓を区別して計上する条件は#29の未達として残す。Edge窓への直接clickは他アプリと同じ通常窓検査を通る場合だけ候補になるが、実機未確認。この制約を全12操作のJ04合格とは扱わない。
 
 `window-switch/window-switch-v1`は前後が異なること、通常窓・入力対象・foregroundの一致、入力経過と解放後の待機、通知用monitorだけを渡す。HWND/PID・process名・窓名・URL・キー生ログ・入力時刻列・座標履歴は送信/保存しない。Mainは必須fieldを厳格検査し、Coreはmouse/direct-click、key/alt-tabと期限を検査する。v1には出力しない。既存transaction重複抑止・SQLiteの日別集計・3状態・pause/stop・保存後通知・再送抑止を利用し、保存形式とPreload APIは変更しない。
 
@@ -57,4 +57,4 @@ panelはtool windowでW01対象外。ARM後4秒はhookを開始せず開始窓�
 
 診断除去後の全体レビューで、Alt保持中の不明窓通過後に候補が復活する問題を指摘された。修正前の人工操作列の失敗を確認し、不明foregroundで取消にした。手動panelはARM直後から条件選択を無効にし、試験中にシナリオが変わらないよう修正した。この版の製品実入力では本人がBへの切替を確認したがW01は0件だった。固定カテゴリだけの再診断で、Alt保持中に同じShell processの不可視switcher UIが現れ、候補が取消されたことを確認。診断側の許可リスト漏れによる無効試行も残した。この既知class・同一Shell process・不可視の組み合わせだけを中間状態として追加し、入力由来や最終切替先の確証には使わない。分類の修正前失敗と修正後成功、異なるPID・可視UIの非該当を本番C# policyで確認した。
 
-診断除去後の最終製品buildでは、本人が自作Bと代表外部アプリChromeへのAlt+Tab切替を各1回確認し、どちらもW01 key 1件・W12 0件、通知要求0件だった。隔離buildのhashと失敗・診断・最終結果を同じ[証拠ファイル](../validation/evidence/w01-natural-20261026-key-and-negative-results.json)に保持する。型検査、unit 265件、native 7件（本番C# policy 291項目）、通常/同梱fixture smokeが成功。診断除去後の全体レビューで指摘された2点と、不可視Shell UIの追加は再レビュー済みで追加指摘なし。Edgeのタブ条件や最終#47の同一build受入、NSIS配布は未実証であり、#29の完了扱いにはしない。
+診断除去後の最終製品buildでは、本人が自作Bと代表外部アプリChromeへのAlt+Tab切替を各1回確認し、どちらもW01 key 1件・W12 0件、通知要求0件だった。隔離buildのhashと失敗・診断・最終結果を同じ[証拠ファイル](../validation/evidence/w01-natural-20261026-key-and-negative-results.json)に保持する。型検査、unit 265件、native 7件（本番C# policy 291項目）、通常/同梱fixture smokeが成功。診断除去後の全体レビューで指摘された2点と、不可視Shell UIの追加は再レビュー済みで追加指摘なし。Edgeタブは対象外だが、通常Edge窓へのAlt+Tabは未対応で#29に残る。#47の同一最終build受入とNSIS配布は別途未実証とする。
