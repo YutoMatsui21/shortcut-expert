@@ -153,6 +153,19 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   if (taskbarSaved.counts[localDate()].W12?.mouse !== 1 || taskbarSaved.counts[localDate()].W12?.key !== 1 ||
       taskbarSaved.counts[localDate()].W01 || notice.current()) throw new Error('taskbar-input-save-pause-replay ' + JSON.stringify({
         saved: taskbarSaved.counts[localDate()].W12, error: coach.snapshot().error, pending: coach.snapshot().pendingSave }));
+  for (const origin of ['mouse', 'key'] as const) {
+    const sequence = ++addedSequence;
+    const input: CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: value.generation, sequence,
+      transaction: sequence, date: localDate(), origin, route: origin === 'mouse' ? 'direct-click' : 'alt-tab', injected: false, conflicted: false,
+      evidence: { kind: 'window-switch', profile: 'window-switch-v1', windowsDifferent: true, eligible: true,
+        inputTargetMatched: true, foregroundMatched: true, inputAgeMs: 500, settleMs: 300, monitor: physical } };
+    await observer.inject(input); await observer.inject(input); await coach.idle();
+  }
+  await waitRenderer(window, `document.querySelector('[data-operation="W01"] [data-kind="mouse"]')?.textContent === '1' &&
+    document.querySelector('[data-operation="W01"] [data-kind="key"]')?.textContent === '1'`, 'window-switch-renderer');
+  const switchSaved = await new JsonRepository(directory).load();
+  if (switchSaved.counts[localDate()].W01?.mouse !== 1 || switchSaved.counts[localDate()].W01?.key !== 1 ||
+      switchSaved.counts[localDate()].W12?.mouse !== 1 || notice.current()) throw new Error('window-switch-save-pause-replay');
   await window.webContents.executeJavaScript(`document.querySelector('.settings-switch[aria-label="計測"]').click()`);
   await waitRenderer(window, `document.querySelector('.settings-switch[aria-label="計測"]')?.getAttribute('aria-checked') === 'false' && !document.querySelector('.settings-switch[aria-label="計測"]').disabled`, 'ui-stop');
   await observer.inject({ ...value, sequence: ++addedSequence }); await coach.idle();

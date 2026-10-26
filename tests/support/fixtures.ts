@@ -39,3 +39,12 @@ export function deferred<T>() {
   const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
   return { promise, resolve, reject };
 }
+export function switchFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): import('../../src/shared/coach.ts').CandidateV2 & {
+  evidence: Extract<import('../../src/shared/coach.ts').Evidence, { kind: 'window-switch' }>
+} {
+  return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
+    date: '2026-10-21', origin, route: origin === 'mouse' ? 'direct-click' : 'alt-tab', injected: false, conflicted: false,
+    evidence: { kind: 'window-switch', profile: 'window-switch-v1', windowsDifferent: true, eligible: true,
+      inputTargetMatched: true, foregroundMatched: true, inputAgeMs: 500, settleMs: 300,
+      monitor: { x: 0, y: 0, width: 1920, height: 1080 } } };
+}

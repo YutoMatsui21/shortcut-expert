@@ -35,3 +35,23 @@ test('blocked file reads cannot allow late FINISH or cancel the session shutdown
     controller.dispose(); t.mock.timers.reset();
   }
 });
+
+test('W01 source-selection countdown never starts hooks after END or session expiry', async t => {
+  for (const reason of ['end', 'expiry']) {
+    t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+    let start = 0;
+    const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true, states: { W01: 'learning' } },
+      observing: false, notificationsPaused: false, error: null, pendingSave: false };
+    const arm = { sequence: 1, action: 'arm', plan: { kind: 'mouse', scenario: 'direct', application: 'standard', state: 'learning', paused: false } };
+    let command: object = arm;
+    readNext = async () => JSON.stringify(command);
+    const controller = runNaturalInputAcceptance('isolated-fixture', { snapshot: () => snapshot, configure: async () => {}, idle: async () => {},
+      start: async () => { start++; snapshot.observing = true; }, stop: async () => { snapshot.observing = false; } }, async () => {}, 'W01');
+    await setImmediate(); t.mock.timers.tick(150); await setImmediate();
+    assert.equal(start, 0);
+    if (reason === 'end') command = { sequence: 2, action: 'end' };
+    t.mock.timers.tick(reason === 'end' ? 4000 : 20 * 60_000); await setImmediate();
+    assert.equal(start, 0, reason); assert.equal(snapshot.observing, false);
+    controller.dispose(); t.mock.timers.reset();
+  }
+});

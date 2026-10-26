@@ -1,0 +1,1451 @@
+{
+  "scope": "Isolated consented manual ARM/FINISH observations. Diagnostic fixed counters contain no raw keys, HWND/PID, titles, URLs, coordinates or input timestamp sequences. API requests do not prove visible notification delivery. This is not final-build release acceptance.",
+  "sessions": [
+    {
+      "session": "session-0LkjjC",
+      "variant": "defined-key-fix",
+      "manifestSha256": "c67eacabb85fd9b513461cf8e6be162c9e901978c191aa7af3a62f9860b69dc9",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "09cd70d9ef779bd2a6ad047b8b58fd5b0859c51185f962cc56cd55da79fb92d5"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "b45c2453699baa91d75306efbaf84eebc72be515c8c5e8ae9494624ed5315273"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "mouse",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "direct",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 2,
+            "key": 0
+          },
+          "notificationRequests": 2,
+          "detectorPassed": false,
+          "notificationRequestPassed": false,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "mouse",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "direct",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 1,
+            "key": 0
+          },
+          "notificationRequests": 1,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 3,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Exclude from single-operation acceptance: operator returned to ChatGPT before FINISH; two actual window switches.",
+        "2": "Operator confirmed visible notification after one direct click.",
+        "3": "Operator confirmed Tab-only selection and B foreground; real detection failure."
+      }
+    },
+    {
+      "session": "session-e4tKt2",
+      "variant": "key-diagnostics",
+      "manifestSha256": "5a5d6472a0f7f06a7761edc95a0526ac7f32ad5eaad3ba1915ee5842fe989fb9",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "d500a9f724c60956ec6851a8f4146ec0e0264281cd35153607def20b8fda41b3"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 182,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 83,
+            "tabDown": 3,
+            "tabAccepted": 3,
+            "foregroundReceived": 3,
+            "readOther": 5,
+            "foregroundUnknownHeld": 2,
+            "readShell": 43,
+            "tabUp": 3,
+            "altUp": 1,
+            "altReleased": 1,
+            "foregroundRejected": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {}
+    },
+    {
+      "session": "session-6vPuoW",
+      "variant": "switcher-handles",
+      "manifestSha256": "400d6eadc50cc9ae409640eaef42617d272b4b0362bd03f04b706172a5669a8c",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "a1ec0eec09326d04ddbcead2fe9cb307dbfc58444a856e1b4c9ccad484f30206"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 208,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 59,
+            "tabDown": 2,
+            "tabAccepted": 2,
+            "foregroundReceived": 3,
+            "readOther": 5,
+            "foregroundUnknownHeld": 1,
+            "switcherObservedHeld": 1,
+            "tabUp": 2,
+            "readShell": 38,
+            "altUp": 1,
+            "altReleased": 1,
+            "foregroundRejected": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {}
+    },
+    {
+      "session": "session-Jxo4QF",
+      "variant": "rejected-desktop-hypothesis",
+      "manifestSha256": "6e8d76468b4f64f599d7f0315eb2f28d737f9065876556328994452f77f195d0",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "27e7b670e005494637aa0b0aa0503ac3205b5ed854fba306d3d5ceeff3380681"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 155,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 56,
+            "tabDown": 3,
+            "tabAccepted": 3,
+            "readInvisible": 5,
+            "foregroundReceived": 3,
+            "foregroundUnknownHeld": 1,
+            "switcherObservedHeld": 1,
+            "readShell": 47,
+            "tabUp": 3,
+            "altUp": 1,
+            "altReleased": 1,
+            "foregroundRejected": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {}
+    },
+    {
+      "session": "session-IdJn0K",
+      "variant": "staging-with-display-dependency",
+      "manifestSha256": "4b52811e25406a0fad4a66250abf41f06c2ca04106e075b2447dca70502ae281",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "0a99bd525c40cf1c46919eb4e80a5fc1e5b1d5e62caedab7b6b9cba10efa57e1"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 138,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 35,
+            "tabDown": 3,
+            "tabAccepted": 3,
+            "foregroundReceived": 3,
+            "readInvisible": 4,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "readShell": 29,
+            "tabUp": 3,
+            "altUp": 1,
+            "altReleased": 1,
+            "foregroundRejected": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {}
+    },
+    {
+      "session": "session-0sUQrl",
+      "variant": "staging-with-handle-identity",
+      "manifestSha256": "84b998cafae3a4cb67da23520adb9c2b736c4d20e930692c32ca891fab11a95c",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "1fa0d9d1dde130632f77492079afaee58e284b882e5c6fdc305cee874e99a8d2"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 104,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 47,
+            "tabDown": 4,
+            "tabAccepted": 4,
+            "foregroundReceived": 3,
+            "readInvisible": 5,
+            "stagingShellMatch": 2,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "tabUp": 4,
+            "readShell": 39,
+            "altUp": 1,
+            "altReleased": 1,
+            "stagingUnseenAfterRelease": 1,
+            "foregroundRejected": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {}
+    },
+    {
+      "session": "session-XtvzpT",
+      "variant": "shell-process-identity-and-locked-target",
+      "manifestSha256": "5e85290348283a0d026fdb8b39eac75e663a07634a6071a6a366bc567c3b5d6d",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "89ab59fb279dfc95a4105f8b7756deb5099b6111a3b2c5b849970e8353d6eb3d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 1
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 105,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 48,
+            "tabDown": 4,
+            "tabAccepted": 4,
+            "foregroundReceived": 5,
+            "readInvisible": 5,
+            "stagingShellMatch": 2,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "readShell": 43,
+            "tabUp": 4,
+            "altUp": 1,
+            "altReleased": 1,
+            "stagingTransientAfterRelease": 1,
+            "foregroundMatchedReleased": 1,
+            "foregroundStale": 1,
+            "accepted": 1,
+            "emitted": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "escape",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 136,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 59,
+            "tabDown": 1,
+            "tabAccepted": 1,
+            "foregroundReceived": 2,
+            "readInvisible": 4,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "tabUp": 1,
+            "readShell": 24,
+            "keyEscape": 1,
+            "notNeutral": 2,
+            "altUp": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 3,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "same-window",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 141,
+            "readOwner": 2,
+            "cancelled": 1,
+            "neutralBlocked": 2,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 4,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "same-window",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 66,
+            "cancelled": 2,
+            "neutralBlocked": 4,
+            "mouseRejected": 2,
+            "readOwner": 2
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 5,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "program",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 92,
+            "readOwner": 2,
+            "cancelled": 1,
+            "neutralBlocked": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 6,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "return",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 123,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 51,
+            "tabDown": 11,
+            "tabAccepted": 11,
+            "foregroundReceived": 4,
+            "readInvisible": 4,
+            "stagingShellMatch": 2,
+            "stagingObservedHeld": 1,
+            "tabUp": 11,
+            "readShell": 45,
+            "altUp": 1,
+            "altReleased": 1,
+            "stagingTransientAfterRelease": 1,
+            "foregroundMatchedReleased": 1,
+            "foregroundStale": 1,
+            "finalRejected": 1,
+            "readOwner": 2,
+            "cancelled": 2
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground after Alt+Tab. Four Tab downs observed, one key record, zero notification requests.",
+        "2": "Operator confirmed A restored with Escape and no visible notification.",
+        "3": "Exclude: operator reported incorrect operation.",
+        "4": "Corrected same-window case: operator reported no visible notification.",
+        "5": "Operator confirmed automatic B foreground without input and no visible notification.",
+        "6": "Operator confirmed A selected again using Tab and no visible notification."
+      }
+    },
+    {
+      "session": "session-KlIjvy",
+      "variant": "mixed-input-operator-errors",
+      "manifestSha256": "5e85290348283a0d026fdb8b39eac75e663a07634a6071a6a366bc567c3b5d6d",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "89ab59fb279dfc95a4105f8b7756deb5099b6111a3b2c5b849970e8353d6eb3d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "switcher-mouse",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 290,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 215,
+            "tabDown": 1,
+            "tabAccepted": 1,
+            "foregroundReceived": 2,
+            "readInvisible": 7,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "tabUp": 1,
+            "readShell": 89,
+            "mouseRejected": 3,
+            "altUp": 1,
+            "notNeutral": 1,
+            "readOwner": 2,
+            "cancelled": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "switcher-mouse",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 70,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 83,
+            "tabDown": 15,
+            "tabAccepted": 15,
+            "foregroundReceived": 2,
+            "readInvisible": 4,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "readShell": 36,
+            "tabUp": 1,
+            "mouseRejected": 3,
+            "altUp": 1,
+            "notNeutral": 1,
+            "readOwner": 2,
+            "cancelled": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Exclude: operator reported incorrect operation.",
+        "2": "Not thumbnail acceptance: operator clicked the ordinary B window after multiple Tab presses. Mixed-input negative only; no visible notification."
+      }
+    },
+    {
+      "session": "session-o55YrP",
+      "variant": "colored-panel",
+      "manifestSha256": "5e85290348283a0d026fdb8b39eac75e663a07634a6071a6a366bc567c3b5d6d",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "89ab59fb279dfc95a4105f8b7756deb5099b6111a3b2c5b849970e8353d6eb3d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "8cdedac92caff4d274bb21af21416ad30f00cb0ebbf413ae793a2f0fc55b9067",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "switcher-mouse",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 340,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 65,
+            "tabDown": 1,
+            "tabAccepted": 1,
+            "foregroundReceived": 1,
+            "readInvisible": 3,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "tabUp": 1,
+            "readShell": 40,
+            "mouseRejected": 3,
+            "altUp": 1,
+            "notNeutral": 1,
+            "readOwner": 2,
+            "cancelled": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "owner",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 545,
+            "readOwner": 2,
+            "cancelled": 1,
+            "neutralBlocked": 2,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed clicking an actual switcher thumbnail and no visible notification.",
+        "2": "Exclude: operator could not see the owned popup; automated zero counts alone do not establish execution."
+      }
+    },
+    {
+      "session": "session-bKe24i",
+      "variant": "owner-and-external-coexistence",
+      "manifestSha256": "5e85290348283a0d026fdb8b39eac75e663a07634a6071a6a366bc567c3b5d6d",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "89ab59fb279dfc95a4105f8b7756deb5099b6111a3b2c5b849970e8353d6eb3d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "53435fae6cb2d3f4a16da04bf1c26a2eaa2eb5f845d1ae133a1661d2cab5b8f9",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "owner",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 126,
+            "readOwner": 5,
+            "cancelled": 3,
+            "neutralBlocked": 3,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "taskbar-click",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 399,
+            "readShell": 2,
+            "cancelled": 2,
+            "neutralBlocked": 3,
+            "mouseRejected": 2,
+            "readOwner": 2
+          },
+          "w12Counts": {
+            "mouse": 1,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 3,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "taskbar-click",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 213,
+            "readShell": 2,
+            "cancelled": 2,
+            "neutralBlocked": 3,
+            "mouseRejected": 2,
+            "readOwner": 2
+          },
+          "w12Counts": {
+            "mouse": 1,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 4,
+          "kind": "negative",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "win-digit",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 190,
+            "keyNoSession": 1,
+            "neutralBlocked": 11,
+            "notNeutral": 3,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 1
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 5,
+          "kind": "mouse",
+          "application": "chrome",
+          "state": "learning",
+          "paused": false,
+          "scenario": "direct",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 1,
+            "key": 0
+          },
+          "notificationRequests": 1,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 193,
+            "foregroundReceived": 1,
+            "neutralBlocked": 4,
+            "accepted": 1,
+            "emitted": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed red owned popup foreground and no visible notification.",
+        "2": "W12 counted once and Win+number notice visible, but operator did not observe target activation. Do not use as successful app-switch proof.",
+        "3": "Retry of anomalous activation: operator confirmed Chrome foreground after clicking icon, hover preview only, and corresponding Win+number notice.",
+        "4": "Operator confirmed Chrome foreground via Win+number and no visible notification.",
+        "5": "Operator confirmed Chrome foreground by direct titlebar click and visible Alt+Tab notice."
+      }
+    },
+    {
+      "session": "session-dHfSzR",
+      "variant": "production-before-hidden-ui-fix",
+      "manifestSha256": "af40a3443dc167abb98496fb9f8b61455f02fe0cdb5ff603300f543b073f02ee",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "09cd70d9ef779bd2a6ad047b8b58fd5b0859c51185f962cc56cd55da79fb92d5"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "819378e5ffac510d224c6e7acf54841a1b369e29d7e9c22c73d1adcace6a2cc4",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground without notification, but W01 key remained zero. Preserve as product failure."
+      }
+    },
+    {
+      "session": "session-20wOoo",
+      "variant": "held-unknown-first-diagnostic",
+      "manifestSha256": "921107730c98fa5e3634c5a8a297cb218873111e620151b0feea3c3ec80c5567",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "89ab59fb279dfc95a4105f8b7756deb5099b6111a3b2c5b849970e8353d6eb3d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "819378e5ffac510d224c6e7acf54841a1b369e29d7e9c22c73d1adcace6a2cc4",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": false,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": false,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": false
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground. Diagnostic result invalid because newly added fixed reason was missing from its allowlist; no acceptance claim."
+      }
+    },
+    {
+      "session": "session-vsbW7l",
+      "variant": "held-unknown-diagnostic",
+      "manifestSha256": "6dcae8727a30f23273d34a16c75fe7621ec0fa0ede57f23c75b5239390545436",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "b57526e0ac9740e921d01fd76b5492f7eb9cc0575685b405c724a25ce72d6b12"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "819378e5ffac510d224c6e7acf54841a1b369e29d7e9c22c73d1adcace6a2cc4",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 103,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 28,
+            "tabDown": 3,
+            "tabAccepted": 1,
+            "foregroundReceived": 2,
+            "readInvisible": 4,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "foregroundUnknownHeld": 1,
+            "unknownHeldCancelled": 1,
+            "tabUp": 3,
+            "notNeutral": 6,
+            "readShell": 1,
+            "altUp": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground; fixed counts show cancellation after unknown foreground during Alt hold."
+      }
+    },
+    {
+      "session": "session-I5eJ3G",
+      "variant": "hidden-shell-ui-diagnostic",
+      "manifestSha256": "fe9cfad1504d0997afa71bdb95279e748bf489e0691903375a3e49c3cf0e10b8",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "2f9403afc4f21ff2aa737844986e1f0fee4d88283a2d72d6f96a7c117ab9b45d"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "819378e5ffac510d224c6e7acf54841a1b369e29d7e9c22c73d1adcace6a2cc4",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "notificationRequests": 0,
+          "detectorPassed": false,
+          "notificationRequestPassed": true,
+          "diagnostics": {
+            "neutralReady": 88,
+            "altDown": 1,
+            "keyEntered": 1,
+            "neutralBlocked": 27,
+            "tabDown": 3,
+            "tabAccepted": 1,
+            "foregroundReceived": 2,
+            "readInvisible": 3,
+            "stagingShellMatch": 1,
+            "stagingObservedHeld": 1,
+            "unknownShellUiInvisible": 1,
+            "foregroundUnknownHeld": 1,
+            "unknownHeldCancelled": 1,
+            "tabUp": 3,
+            "notNeutral": 6,
+            "readShell": 1,
+            "altUp": 1,
+            "readOwner": 2,
+            "cancelled": 1,
+            "mouseRejected": 1
+          },
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground; fixed category identified Shell PID-matched invisible switcher UI during Alt hold. Zero W01 preserved as failure."
+      }
+    },
+    {
+      "session": "session-hSrthS",
+      "variant": "production-after-hidden-ui-fix",
+      "manifestSha256": "539b33d837a68a1a26bbb54796689c1511ddb5fdefe126c8750e00c1dc3a0419",
+      "productFiles": [
+        {
+          "path": "resources/app.asar",
+          "sha256": "09cd70d9ef779bd2a6ad047b8b58fd5b0859c51185f962cc56cd55da79fb92d5"
+        },
+        {
+          "path": "resources/native-helper/WindowObserver.exe",
+          "sha256": "077eb73259f0aa7a839111b4e4422bd662c804dc89d6cc8ee10bead8177c90b6"
+        }
+      ],
+      "panelSourceSha256": "819378e5ffac510d224c6e7acf54841a1b369e29d7e9c22c73d1adcace6a2cc4",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalState": "CLOSED",
+      "error": false,
+      "results": [
+        {
+          "trial": 1,
+          "kind": "key",
+          "application": "standard",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 1
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        },
+        {
+          "trial": 2,
+          "kind": "key",
+          "application": "chrome",
+          "state": "learning",
+          "paused": false,
+          "scenario": "alt-tab",
+          "completed": true,
+          "valid": true,
+          "interrupted": false,
+          "expired": false,
+          "counts": {
+            "mouse": 0,
+            "key": 1
+          },
+          "notificationRequests": 0,
+          "detectorPassed": true,
+          "notificationRequestPassed": true,
+          "w12Counts": {
+            "mouse": 0,
+            "key": 0
+          },
+          "coexistencePassed": true
+        }
+      ],
+      "operatorAnnotations": {
+        "1": "Operator confirmed B foreground; one W01 key, zero W12. No notification expected for key route.",
+        "2": "Operator confirmed Chrome foreground; one W01 key, zero W12. No notification expected for key route."
+      }
+    }
+  ]
+}

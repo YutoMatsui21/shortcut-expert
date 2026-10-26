@@ -34,7 +34,7 @@ test('bootstrap preserves normal storage and requires isolated packaged natural 
     configureStartupData(startupMode(['--storage-smoke']));
     configureStartupData(startupMode(['--storage-smoke']));
     assert.deepEqual(selected.slice(-2), ['isolated-1', 'isolated-2']);
-    for (const flag of ['--w08-natural-acceptance', '--w12-natural-acceptance']) {
+    for (const flag of ['--w01-natural-acceptance', '--w08-natural-acceptance', '--w12-natural-acceptance']) {
       const mode = startupMode([flag]);
       assert.throws(() => configureStartupData(mode), /requires packaged app/);
       app.isPackaged = true;

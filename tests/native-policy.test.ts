@@ -41,4 +41,9 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
     const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed); assert.ok(observed);
     return [observed.operation, observed.origin, observed.shortcut];
   }), [['W12', 'mouse', 'Win + 0'], ['W12', 'key', 'Win + 1']]);
+  assert.deepEqual(report.switchSamples.map((sample: unknown) => {
+    const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed); assert.ok(observed);
+    assert.equal(JSON.stringify(parsed).includes('Handle'), false);
+    return [observed.operation, observed.origin, observed.shortcut];
+  }), [['W01', 'mouse', 'Alt + Tab'], ['W01', 'key', 'Alt + Tab']]);
 });

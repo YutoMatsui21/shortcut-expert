@@ -29,7 +29,7 @@ test('fixture entry points retain storage, notification and tray policies', () =
     assert.equal(mode.systemNotifications, flag === '--os-notification-acceptance');
     assert.equal(mode.showTray, flag.endsWith('-acceptance'));
   }
-  for (const operation of ['w08', 'w12']) {
+  for (const operation of ['w01', 'w08', 'w12']) {
     const mode = startupMode([`--${operation}-natural-acceptance`]);
     assert.equal(mode.validation, true);
     assert.equal(mode.fixture, false, 'natural acceptance must use the real observer');

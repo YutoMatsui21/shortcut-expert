@@ -1,0 +1,155 @@
+[
+  {
+    "variant": "native-clock-fix",
+    "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+    "manifestSha256": "c5e7e178886718e053199e4c4bdb206ee07121d35f0bfb5a830745a59cc77172",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "results": [
+      {
+        "trial": 1,
+        "kind": "mouse",
+        "application": "standard",
+        "state": "learning",
+        "paused": false,
+        "scenario": "direct",
+        "completed": true,
+        "valid": true,
+        "interrupted": false,
+        "expired": false,
+        "counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "notificationRequests": 0,
+        "detectorPassed": false,
+        "notificationRequestPassed": false,
+        "w12Counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "coexistencePassed": true
+      }
+    ],
+    "files": [
+      {
+        "path": "resources/app.asar",
+        "sha256": "09cd70d9ef779bd2a6ad047b8b58fd5b0859c51185f962cc56cd55da79fb92d5"
+      },
+      {
+        "path": "resources/native-helper/WindowObserver.exe",
+        "sha256": "bba5b6d85f221c4d0804c544710588daf6b38a37c6ec72ebf018f6d665b78bad"
+      }
+    ]
+  },
+  {
+    "variant": "temporary-rejection-counters",
+    "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+    "manifestSha256": "4907663e7a567d98c605548276f3efcc181070c44701b08538caf37b0d8fffea",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "results": [
+      {
+        "trial": 1,
+        "kind": "mouse",
+        "application": "standard",
+        "state": "learning",
+        "paused": false,
+        "scenario": "direct",
+        "completed": true,
+        "valid": true,
+        "interrupted": false,
+        "expired": false,
+        "counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "notificationRequests": 0,
+        "detectorPassed": false,
+        "notificationRequestPassed": false,
+        "diagnostics": {
+          "neutralBlocked": 98,
+          "mouseDown": 2,
+          "notNeutral": 4,
+          "mouseUp": 2,
+          "windowOwner": 2
+        },
+        "w12Counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "coexistencePassed": true
+      }
+    ],
+    "files": [
+      {
+        "path": "resources/app.asar",
+        "sha256": "272787d34cb3e1c37139d243fdfb143d49222fc7f1c273d879072d43811744f3"
+      },
+      {
+        "path": "resources/native-helper/WindowObserver.exe",
+        "sha256": "b45c2453699baa91d75306efbaf84eebc72be515c8c5e8ae9494624ed5315273"
+      }
+    ]
+  },
+  {
+    "manifestSha256": "95c2b45b1e0314f73e4349fdfd24aacae28f8a0de1702aec66d06759f2a2f90e",
+    "variant": "temporary-neutral-categories",
+    "results": [
+      {
+        "trial": 1,
+        "kind": "mouse",
+        "application": "standard",
+        "state": "learning",
+        "paused": false,
+        "scenario": "direct",
+        "completed": false,
+        "valid": false,
+        "interrupted": false,
+        "expired": false,
+        "counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "notificationRequests": 0,
+        "detectorPassed": false,
+        "notificationRequestPassed": false,
+        "diagnostics": {
+          "neutralBlockedReserved": 196,
+          "neutralBlocked": 196,
+          "mouseDown": 2,
+          "notNeutral": 4,
+          "neutralBlockedButton": 4,
+          "mouseUp": 2,
+          "windowOwner": 2
+        },
+        "w12Counts": {
+          "mouse": 0,
+          "key": 0
+        },
+        "coexistencePassed": false
+      }
+    ],
+    "panelSourceSha256": "288cf9aa10546b74d9b6ecf5987d331abed0fccccde273d3f5a7414fd272dedc",
+    "rawKeyCodesCollected": false,
+    "operatorReportedIncorrectOperation": true,
+    "files": [
+      {
+        "path": "resources/app.asar",
+        "sha256": "3a43b5c38f9039c760254a0a0509a90a08564d7f3b5e9f48f02ef092e3453256"
+      },
+      {
+        "path": "resources/native-helper/WindowObserver.exe",
+        "sha256": "b45c2453699baa91d75306efbaf84eebc72be515c8c5e8ae9494624ed5315273"
+      }
+    ],
+    "exit": {
+      "code": 0,
+      "signal": null
+    }
+  }
+]
