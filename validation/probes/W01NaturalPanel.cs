@@ -27,7 +27,9 @@ class W01NaturalPanel {
     }
     static Form Target(string alias,int x,int y) {
         var f=new Form {Text="W01 target "+alias,Width=450,Height=320,StartPosition=FormStartPosition.Manual,Location=new Point(x,y)};
-        f.Controls.Add(new Label {Dock=DockStyle.Fill,Text=alias+"\n\nDirect click: visible client of a different window.\nAlt+Tab: select a different window, release Alt.\nAfter input, wait 3s then FINISH.",Font=new Font("Segoe UI",13),Padding=new Padding(20)});
+        f.BackColor=alias=="A"?Color.LightSkyBlue:alias=="B"?Color.LightGreen:alias=="C"?Color.Khaki:Color.LightCoral;
+        f.Controls.Add(new Label {Dock=DockStyle.Fill,Text=alias,TextAlign=ContentAlignment.MiddleCenter,
+            Font=new Font("Segoe UI",alias.Length==1?72:24,FontStyle.Bold),Padding=new Padding(20)});
         f.FormClosing+=(s,e)=>{if(e.CloseReason==CloseReason.UserClosing){e.Cancel=true;f.Hide();}};return f;
     }
     [STAThread] static int Main(string[] args) {
@@ -45,7 +47,8 @@ class W01NaturalPanel {
         finish=new Button {Text="FINISH (performed)",Left=335,Top=155,Width=170,Enabled=false};
         cancel=new Button {Text="CANCEL",Left=515,Top=155,Width=120,Enabled=false};
         form.Controls.AddRange(new Control[]{arm,finish,cancel});
-        arm.Click+=(s,e)=>{arm.Enabled=false;status.Text="COUNTDOWN: choose source within 4s; hooks OFF";Send("arm");};
+        Action<bool> enablePlan=enabled=>{foreach(Control control in new Control[]{kind,application,state,scenario,paused})control.Enabled=enabled;};
+        arm.Click+=(s,e)=>{arm.Enabled=false;enablePlan(false);status.Text="COUNTDOWN: choose source within 4s; hooks OFF";Send("arm");};
         finish.Click+=(s,e)=>{finish.Enabled=cancel.Enabled=false;Send("finish");};
         cancel.Click+=(s,e)=>{finish.Enabled=cancel.Enabled=false;Send("cancel");};
         status=new Label {Left=15,Top=200,Width=630,Height=45,Text="Waiting for product READY"};form.Controls.Add(status);
@@ -54,7 +57,19 @@ class W01NaturalPanel {
         var show=new Button {Text="Show A/B/C (idle only)",Left=15,Top=540,Width=200};
         show.Click+=(s,e)=>{a.Show();b.Show();c.Show();};form.Controls.Add(show);
         var owner=new Button {Text="Show owned popup (idle)",Left=240,Top=540,Width=200};
-        var popup=Target("owned popup",900,100);owner.Click+=(s,e)=>popup.Show(a);form.Controls.Add(owner);
+        var popup=Target("owned popup",900,100);
+        Action showOwned=()=>{
+            if(!a.Visible)a.Show();if(a.WindowState==FormWindowState.Minimized)a.WindowState=FormWindowState.Normal;
+            var work=Screen.FromControl(form).WorkingArea;
+            int width=Math.Min(450,Math.Max(200,work.Right-form.Right-20));
+            int height=Math.Min(260,Math.Max(160,work.Height/2-30));
+            popup.Bounds=new Rectangle(Math.Max(work.Left+10,work.Right-width-10),work.Top+30,width,height);
+            if(!popup.Visible)popup.Show(a);popup.BringToFront();popup.Activate();
+        };
+        owner.Click+=(s,e)=>showOwned();form.Controls.Add(owner);
+        scenario.SelectedIndexChanged+=(s,e)=>{if(arm.Enabled&&(string)scenario.SelectedItem=="owner")showOwned();};
+        var pin=new CheckBox {Text="Keep panel on top",Left=460,Top=542,Width=180};
+        pin.CheckedChanged+=(s,e)=>form.TopMost=pin.Checked;form.Controls.Add(pin);
         var program=new Timer {Interval=2000};program.Tick+=(s,e)=>{program.Stop();b.Activate();};
         var timer=new Timer {Interval=250};timer.Tick+=(s,e)=>{
             try {
@@ -64,6 +79,7 @@ class W01NaturalPanel {
                 if(ack>=sequence){
                     status.Text=current+(error?" - ERROR: stop and report":"")+" | trials: "+((System.Collections.ICollection)value["results"]).Count;
                     arm.Enabled=current=="IDLE"&&!error;finish.Enabled=cancel.Enabled=current=="ARMED";
+                    enablePlan(arm.Enabled);
                     show.Enabled=owner.Enabled=current=="IDLE";
                     if(current=="ARMED"&&!programPending&&(string)scenario.SelectedItem=="program"){programPending=true;program.Start();}
                     if(current!="ARMED"){programPending=false;program.Stop();}

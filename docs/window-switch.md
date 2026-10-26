@@ -7,6 +7,7 @@
 - `WindowSwitchObserver`は既存のmouse/key hookとforeground WinEventを共用する。message threadの`WindowSwitchPolicy`が1件の有界な仮候補を管理し、stop/startで破棄する。fixtureでは観測経路を開始しない。
 - mouseは非注入の左down前のforegroundとhit rootが異なり、同じ対象でup、対象foregroundのイベントと最終pollが一致した場合に1件。drag閾値を越える移動・movesize開始は取消。downから1.5秒以内、upから50ms以上で確定する。
 - keyは入力解放後に開始したAlt保持→Tab→Alt解放を1件として扱う。複数Tab・repeatで候補を増やさず、解放から300ms以上経過したpollと裏付け済みforegroundを照合する。Alt開始から15秒、解放から2秒が上限。期限は暫定値であり、取りこぼし・遅延・通常利用での成立は実機確認が必要。
+- Alt+Tab中のShell中間窓は、入力開始時と現在のShell processが同じ場合だけ限定的に扱う。可視のswitcher UI、不可視の`ForegroundStaging`、同じShellの不可視switcher UIを区別する。不可視窓のHWNDの同一性やUI表示イベントの受信は成功条件にしない。中間窓は成功根拠にならず、通過後は対象の新しいforeground通知と最終pollの一致が必要。確定先は保持し、別の通常窓への変更や検証不能な窓は取消にする。
 - callback時のforegroundとイベントHWNDが違う後着イベント、入力より古いイベントは成功根拠にしない。SWITCHEND単独、foreground単独・同窓・元窓・Esc・追加key/修飾・Alt再押下・注入・混合mouse/key・競合・不明窓は非計上。検出不能なprogram同時前面化の因果まで証明する方式ではない。
 - 入力とforegroundの前後関係はhookのmessage timestampとWinEvent timestampをDWORDのwrapを考慮して直接比較する。WinEventのtick差をStopwatchへ換算して順序判定しない。期限だけStopwatchを使う。[WinEvent timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc)、[hook timestamp](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)、[GetMessageTimeの起点とwrap](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagetime)。
 - W12のtaskbar clickは通常窓hitに該当しない。Win+数字はW01候補を作らない。有効番号は独立したW12の前後snapshot照合で判断し、W01へfallbackしない。
@@ -45,3 +46,15 @@ panelはtool windowでW01対象外。ARM後4秒はhookを開始せず開始窓�
 時刻比較修正後も直接clickは0件で、別の一時診断版を手動ARM/FINISHして確認した。固定理由別カウンターでneutralBlocked=98、notNeutral=4、入力候補生成0が判明した。さらに手動ARM/CANCELで、ボタン・修飾・既知キー・IME・定義外値のカテゴリだけを集計した。neutralBlockedReserved=196/196、通常のキー/修飾/IMEのblockは0、ボタンは4回だった。生キー値や押下時刻列は収集していない。この試行は本人が操作間違いを申告しCANCELしており、受入成功には使わない。[修正後の失敗・診断・終了結果](../validation/evidence/w01-natural-20261026-followup-results.json)。
 
 全整数1〜254をGetAsyncKeyStateへ渡す走査が、通常入力キーとして定義されない値の状態に妨げられていた。System.Windows.Forms.Keysの定義済みキー/ボタンを1〜254へ絞って重複除去し、解放判定へ渡す方式へ修正した。既知キー・ボタンの押下除外は維持する。非キー値の状態によって確定clickが除外される人工回帰を修正前の失敗から確認し、16種類の実キー/ボタンの押下除外も検査した。一時診断のtransport・counter・テスト補助は除去した。実入力修正版の受入は別途確認が必要。
+
+## Shell中間窓の修正と後続の実入力確認
+
+定義済みキーへの修正後、直接clickはmouse 1件・通知要求1件となり、本人も通知表示を確認した。一方、Alt+Tabは本人が切替を確認しても0件だった。固定理由別診断を段階的に行い、Shellの不可視中間窓が解放前後で異なるHWNDとなるケースを確認した。中間窓の同一HWNDと可視switcherイベントの受信を必須にする仮定を除去し、Shell process照合、確定先の保持、中間窓通過後の新しいforeground照合を維持した。後着イベント、不可視の偽switcher、別process、Shell交代、B→中間窓→Cの誤採用を人工回帰で検査した。
+
+[終了済みの診断版セッション](../validation/evidence/w01-natural-20261026-key-and-negative-results.json)では、Tabを4回押した1操作がkey 1件・通知要求0件となり、本人もBへの切替を確認した。Esc、元窓への復帰、同窓、program単独、実際のswitcherサムネイルのmouse選択はW01 0件・通知要求0件で、本人も通知なしを確認した。操作間違い、FINISH前のChatGPTへの追加切替、サムネイルを選ばなかったケース、owned popupが見えず実行できなかったケースは別注記し、対応する受入成功には使わない。これらはビルドhashを付けた診断版での限定観測であり、診断除去後の最終build・代表外部アプリ・W12帰属・R02/J04全体の完了を意味しない。
+
+後続セッションではowned popupを表示してからC→popupを実施し、本人が切替・通知なしを確認、W01は0件だった。Chromeへのtaskbar clickはW12 mouse 1件のみ、Win+数字はW12 key 1件のみ、W01はいずれも0件だった。本人もChromeへの切替と、click時のWin+数字通知・key時の通知なしを確認した。最初のtaskbar clickはW12 1件でも本人が切替を確認できなかったため、成功扱いせず再試行と分けた。Chromeのタイトルバーへの直接clickはW01 mouse 1件・通知要求1件・W12 0件で、本人もChromeへの切替とAlt+Tab通知を確認した。これらも同じ診断製品buildでの限定観測として記録する。
+
+診断除去後の全体レビューで、Alt保持中の不明窓通過後に候補が復活する問題を指摘された。修正前の人工操作列の失敗を確認し、不明foregroundで取消にした。手動panelはARM直後から条件選択を無効にし、試験中にシナリオが変わらないよう修正した。この版の製品実入力では本人がBへの切替を確認したがW01は0件だった。固定カテゴリだけの再診断で、Alt保持中に同じShell processの不可視switcher UIが現れ、候補が取消されたことを確認。診断側の許可リスト漏れによる無効試行も残した。この既知class・同一Shell process・不可視の組み合わせだけを中間状態として追加し、入力由来や最終切替先の確証には使わない。分類の修正前失敗と修正後成功、異なるPID・可視UIの非該当を本番C# policyで確認した。
+
+診断除去後の最終製品buildでは、本人が自作Bと代表外部アプリChromeへのAlt+Tab切替を各1回確認し、どちらもW01 key 1件・W12 0件、通知要求0件だった。隔離buildのhashと失敗・診断・最終結果を同じ[証拠ファイル](../validation/evidence/w01-natural-20261026-key-and-negative-results.json)に保持する。型検査、unit 265件、native 7件（本番C# policy 291項目）、通常/同梱fixture smokeが成功。診断除去後の全体レビューで指摘された2点と、不可視Shell UIの追加は再レビュー済みで追加指摘なし。Edgeのタブ条件や最終#47の同一build受入、NSIS配布は未実証であり、#29の完了扱いにはしない。

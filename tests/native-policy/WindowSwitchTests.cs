@@ -86,6 +86,88 @@ internal static class WindowSwitchTests
         unknownCompetition.Key(0xa4, false, false, b, 40);
         Foreground(unknownCompetition, null, 45); Foreground(unknownCompetition, b, 50);
         Check("post-release unknown window cannot return and revive B", unknownCompetition.Poll(b, 340) is null);
+        foreach (bool previouslyConfirmed in new[] { false, true })
+        {
+            var p = Key(); if (previouslyConfirmed) Foreground(p, b, 25);
+            Foreground(p, null, 30); Foreground(p, b, 35);
+            p.Key(0xa4, false, false, b, 40);
+            Check("unverified foreground while Alt held cannot revive B " + previouslyConfirmed, p.Poll(b, 340) is null);
+        }
+        var switcher = Key(); switcher.Foreground(99, 99, null, 30, 30, knownSwitcher: true);
+        switcher.Key(0xa4, false, false, null, 40);
+        switcher.Foreground(99, 99, null, 45, 45, knownSwitcher: true);
+        Foreground(switcher, b, 50);
+        Check("same verified Shell switcher can close after Alt release before final B", switcher.Poll(b, 340)?.Target == b);
+        foreach (var (cls, pid, shell, expected) in new[] { ("XamlExplorerHostIslandWindow", 7u, 7u, true),
+            ("MultitaskingViewFrame", 7u, 7u, true), ("XamlExplorerHostIslandWindow", 8u, 7u, false),
+            ("other", 7u, 7u, false), ("XamlExplorerHostIslandWindow", 0u, 0u, false) })
+            Check("verified Shell identity " + cls + pid, WindowSwitchPolicy.KnownSwitcherType(cls, pid, shell, true) == expected);
+        foreach (var (handle, verified) in new[] { ((nint)99, false), ((nint)100, true) })
+        {
+            var p = Key(); p.Foreground(99, 99, null, 30, 30, true);
+            p.Key(0xa4, false, false, null, 40); p.Foreground(handle, handle, null, 45, 45, verified);
+            Foreground(p, b, 50);
+            Check("unknown or different switcher cannot revive B " + handle, p.Poll(b, 340) is null);
+        }
+        var noFinal = Key(); noFinal.Foreground(99, 99, null, 30, 30, true);
+        noFinal.Key(0xa4, false, false, null, 40); noFinal.Foreground(99, 99, null, 45, 45, true);
+        Check("switcher alone cannot prove a final window", noFinal.Poll(b, 340) is null);
+        var returnedUi = Key(); returnedUi.Foreground(99, 99, null, 30, 30, true);
+        returnedUi.Key(0xa4, false, false, null, 40); Foreground(returnedUi, b, 45);
+        returnedUi.Foreground(99, 99, null, 50, 50, true);
+        Check("returning switcher invalidates old B confirmation", returnedUi.Poll(b, 340) is null);
+        Foreground(returnedUi, b, 350);
+        Check("fresh B callback after transient can settle", returnedUi.Poll(b, 400)?.Target == b);
+        var staging = Key(); staging.Foreground(98, 98, null, 25, 25, knownStaging: true);
+        staging.Foreground(99, 99, null, 30, 30, knownSwitcher: true);
+        staging.Key(0xa4, false, false, null, 40);
+        staging.Foreground(98, 98, null, 45, 45, knownStaging: true); Foreground(staging, b, 50);
+        Check("observed staging can bridge a verified switcher close", staging.Poll(b, 340)?.Target == b);
+        foreach (bool verified in new[] { false, true })
+        {
+            var p = Key(); p.Foreground(98, 98, null, 25, 25, knownStaging: verified);
+            p.Key(0xa4, false, false, null, 40); p.Foreground(100, 100, null, 45, 45, knownStaging: verified); Foreground(p, b, 50);
+            Check("only verified Shell staging can bridge release " + verified, (p.Poll(b, 340) is not null) == verified);
+        }
+        var oldB = Key(); oldB.Foreground(98, 98, null, 25, 25, knownStaging: true);
+        oldB.Foreground(99, 99, null, 30, 30, knownSwitcher: true); oldB.Key(0xa4, false, false, null, 40);
+        Foreground(oldB, b, 45); oldB.Foreground(98, 98, null, 50, 50, knownStaging: true);
+        Check("staging transient clears previous B", oldB.Poll(b, 340) is null);
+        Foreground(oldB, b, 350); Check("staging requires fresh final B callback", oldB.Poll(b, 400)?.Target == b);
+        var manySurfaces = Key(); for (int i = 0; i < 5; i++) manySurfaces.Foreground(90 + i, 90 + i, null, 25 + i, 25 + i, true);
+        Check("Shell surface set is bounded", !manySurfaces.Pending);
+        Check("Shell staging identity", WindowSwitchPolicy.KnownStagingType("ForegroundStaging", 7, 7));
+        Check("no fake staging identity", !WindowSwitchPolicy.KnownStagingType("other", 7, 7) &&
+            !WindowSwitchPolicy.KnownStagingType("ForegroundStaging", 8, 7) && !WindowSwitchPolicy.KnownStagingType("ForegroundStaging", 0, 0));
+        foreach (string cls in new[] { "XamlExplorerHostIslandWindow", "MultitaskingViewFrame" })
+        {
+            Check("invisible UI cannot prove switcher presence " + cls, !WindowSwitchPolicy.KnownSwitcherType(cls, 7, 7, false));
+            Check("verified hidden Shell UI can bridge but cannot prove a switch " + cls,
+                WindowSwitchPolicy.KnownHiddenSwitcherType(cls, 7, 7, false) &&
+                !WindowSwitchPolicy.KnownHiddenSwitcherType(cls, 7, 7, true) &&
+                !WindowSwitchPolicy.KnownHiddenSwitcherType(cls, 8, 7, false));
+        }
+        foreach (bool stagingSurface in new[] { false, true })
+        {
+            var p = Key(); p.Foreground(98, 98, null, 25, 25, knownStaging: true);
+            p.Foreground(99, 99, null, 30, 30, knownSwitcher: true); p.Key(0xa4, false, false, null, 40);
+            Foreground(p, b, 45);
+            nint surface = stagingSurface ? 98 : 99;
+            p.Foreground(surface, surface, null, 50, 50, !stagingSurface, stagingSurface);
+            Foreground(p, c, 55);
+            Check("Shell transient cannot replace committed B with C " + stagingSurface, p.Poll(c, 340) is null);
+        }
+        var stagingOnly = Key(); stagingOnly.Foreground(98, 98, null, 25, 25, knownStaging: true);
+        stagingOnly.Key(0xa4, false, false, null, 40); stagingOnly.Foreground(98, 98, null, 45, 45, knownStaging: true);
+        Check("staging alone is not a result", stagingOnly.Poll(b, 340) is null);
+        Foreground(stagingOnly, b, 350);
+        Check("AltTab plus matched final window does not require UI display evidence", stagingOnly.Poll(b, 400)?.Target == b);
+        var recreated = Key(); recreated.Foreground(98, 98, null, 25, 25, knownStaging: true);
+        recreated.Key(0xa4, false, false, null, 40);
+        recreated.Foreground(100, 100, null, 45, 45, knownStaging: true); Foreground(recreated, b, 50);
+        Check("Shell staging HWND recreation does not replace final-window identity", recreated.Poll(b, 340)?.Target == b);
+        Check("Shell process must not change within transaction", WindowSwitchPolicy.ShellHostUnchanged(7, 7) &&
+            !WindowSwitchPolicy.ShellHostUnchanged(7, 8) && !WindowSwitchPolicy.ShellHostUnchanged(0, 0));
         var program = new WindowSwitchPolicy(); program.Neutral(true); Foreground(program, b);
         Check("program foreground alone", program.Poll(b, 340) is null);
         var taskbar = new WindowSwitchPolicy(); taskbar.Neutral(true); taskbar.Key(0x5b, true, false, a, 0);

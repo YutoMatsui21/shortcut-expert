@@ -1,3 +1,4 @@
+
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,6 +13,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     private int generation, pendingTransaction;
     private string date = "";
     private uint inputTick;
+    private uint shellProcess;
     private Point? mouseDown;
     // Query only defined key/button codes, not reserved virtual values with undefined state.
     private static readonly int[] neutralKeys = Enum.GetValues<System.Windows.Forms.Keys>().Select(k => (int)k)
@@ -21,7 +23,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         Stop(); generation = epoch; Neutral(); timer.Tick += Tick; timer.Start();
     }
     internal void Stop()
-    { timer.Stop(); timer.Tick -= Tick; generation = 0; pendingTransaction = 0; policy = new(); mouseDown = null; }
+    { timer.Stop(); timer.Tick -= Tick; generation = 0; pendingTransaction = 0; shellProcess = 0; policy = new(); mouseDown = null; }
     internal void Cancel() { policy.Cancel(); mouseDown = null; }
     private void Neutral() => policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
     private static SwitchWindow? Read(nint window)
@@ -46,7 +48,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     }
     private void Capture(bool wasPending, uint tick)
     {
-        if (!wasPending && policy.Pending) { pendingTransaction = transaction(); inputTick = tick; date = DateTime.Now.ToString("yyyy-MM-dd"); }
+        if (!wasPending && policy.Pending) { pendingTransaction = transaction(); inputTick = tick; GetWindowThreadProcessId(GetShellWindow(), out shellProcess); date = DateTime.Now.ToString("yyyy-MM-dd"); }
     }
     internal void Key(uint key, bool down, uint flags, uint tick)
     {
@@ -78,9 +80,23 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
     internal void Foreground(nint window, uint eventTime)
     {
         if (generation == 0 || !policy.Pending) return;
+
         nint current = GetForegroundWindow();
         long at = now();
-        policy.NativeForeground(window, current, window == current ? Read(current) : null, inputTick, eventTime, at);
+        policy.NativeForeground(window, current, window == current ? Read(current) : null, inputTick, eventTime, at,
+            window == current && KnownSwitcher(current), window == current && KnownSwitcher(current, staging: true));
+    }
+    private bool KnownSwitcher(nint window, bool staging = false)
+    {
+        if (window == 0 || GetAncestor(window, GA_ROOT) != window) return false;
+        var cls = new StringBuilder(256);
+        if (GetClassNameW(window, cls, cls.Capacity) == 0) return false;
+        GetWindowThreadProcessId(window, out uint pid);
+        GetWindowThreadProcessId(GetShellWindow(), out uint shellPid);
+        if (!WindowSwitchPolicy.ShellHostUnchanged(shellProcess, shellPid)) { return false; }
+        return staging ? WindowSwitchPolicy.KnownStagingType(cls.ToString(), pid, shellPid) ||
+            WindowSwitchPolicy.KnownHiddenSwitcherType(cls.ToString(), pid, shellPid, IsWindowVisible(window)) :
+            WindowSwitchPolicy.KnownSwitcherType(cls.ToString(), pid, shellPid, IsWindowVisible(window));
     }
     private void Tick(object? sender, EventArgs args)
     {
@@ -90,8 +106,11 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
             Neutral();
             var completed = policy.Poll(policy.Pending ? Read(GetForegroundWindow()) : null, now());
             if (completed is not null && Read(GetForegroundWindow()) == completed.Target)
+            {
+
                 protocol.Switch(generation, pendingTransaction, date, completed.Origin,
                     new(true, true, true, true, completed.InputAgeMs, completed.SettleMs, DisplayContext.Monitor(completed.Target.Handle)));
+            }
         }
         catch { policy.Cancel(); }
     }
