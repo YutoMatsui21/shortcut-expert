@@ -88,7 +88,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
           </tr>;
         })}</tbody>
       </table>
-      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目と率の分母が0の比較は「—」です。前期間比は直前の{query.period}日間との差です。欠測の0埋めや時間補正は行いません。12操作とも検出精度は未検証です。</p>
+      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目と率の分母が0の比較は「—」です。前期間比は直前の{query.period}日間との差です。欠測の0埋めや時間補正は行いません。11操作とも検出精度は未検証です。</p>
     </main>
   </div>;
 }
