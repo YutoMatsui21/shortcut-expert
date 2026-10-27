@@ -7,7 +7,7 @@ const settings = { muted: [], opened: true };
 test('7 local calendar days: weighted KPI, eleven rows, legacy values, no synthetic zeros', () => {
   const records: RecordRange = { counts: {
     '2024-02-28': { W03: { mouse: 100, key: 100 } },
-    '2024-02-29': { W03: { mouse: 3, key: 1 }, W01: { mouse: 0, key: 6 }, W09: { mouse: 100, key: 100 } },
+    '2024-02-29': { W03: { mouse: 3, key: 1 }, W01: { mouse: 0, key: 6 }, W09: { mouse: 100, key: 100 }, W13: { mouse: 50, key: 50 } },
     '2024-03-06': { W03: { mouse: 1, key: 0 } },
     '2024-03-07': { W03: { mouse: 100, key: 100 } }
   }, coverage: { '2024-03-06': {
