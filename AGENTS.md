@@ -20,7 +20,7 @@
 
 ## 必要なときだけ参照
 - 目的・操作条件：[要件書](docs/ui-redesign-requirements.md)、[技術判断](docs/research.md#operations)。責務変更・リファクタ：[設計](docs/design.md#architecture)。
-- 実行・完了手順：[README](README.md#development-workflow)、[開発ツール](docs/development-tools.md)、[package.json](package.json)・[global.json](global.json)。
+- 実行・完了手順：[開発ガイド](docs/development.md#development-workflow)、[開発ツール](docs/development-tools.md)、[package.json](package.json)・[global.json](global.json)。
 - 機能実装・振る舞い変更・バグ修正・リファクタ・テスト追加・CI変更：実装前に進め方と検証範囲を[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)で判断する。Issue・PR・merge・ラベル操作：[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)。
 - レビュー：[追加レビュー規則](docs/code-review.md)。専用レビュアーが参照先を自動で読んだと仮定せず、必要な観点を指示する。
 - 仕様・依存・動作を変えたら関連する正本とテストを更新する。完了時は変更・検証・未確認事項を簡潔に報告する。
