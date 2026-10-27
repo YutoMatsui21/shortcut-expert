@@ -1,5 +1,5 @@
 import type { Counts, OperationId, Settings } from './coach.ts';
-export const recordOperations: OperationId[] = ['W01', 'W02', 'W03', 'W04', 'W05', 'W06', 'W07', 'W08', 'W10', 'W11', 'W12', 'W13'];
+export const recordOperations: OperationId[] = ['W12', 'W01', 'W03', 'W04', 'W06', 'W07', 'W02', 'W11'];
 
 export type Coverage = { knowledge: 'observed' | 'not-observed' | 'legacy-unknown'; activeMs: number; gap: boolean; capabilityRevision: string };
 export type CoverageDays = Record<string, Partial<Record<OperationId, Coverage>>>;

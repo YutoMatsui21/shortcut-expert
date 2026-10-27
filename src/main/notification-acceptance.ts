@@ -12,7 +12,7 @@ export async function runNotificationAcceptance(coach: DurableCoach,
   const generation = await observer.start(); coach.begin(generation);
   coach.pauseNotifications(false);
   await coach.setLearningState('W03', 'learning');
-  await coach.setLearningState('W05', 'learning');
+  await coach.setLearningState('W04', 'learning');
   const today = localDate();
   const before = coach.snapshot().counts[today];
   const sample: Candidate = { type: 'candidate', protocolVersion: 1, generation, sequence: 1,
@@ -28,6 +28,6 @@ export async function runNotificationAcceptance(coach: DurableCoach,
   }
   const after = coach.snapshot().counts[today];
   if ((after?.W03?.mouse ?? 0) - (before?.W03?.mouse ?? 0) !== 2 ||
-      (after?.W05?.mouse ?? 0) - (before?.W05?.mouse ?? 0) !== 1) throw new Error('V01 fixture counts mismatch');
-  console.log('V01_FIXTURE_COMMITTED ' + JSON.stringify({ W03: 2, W05: 1, osDisplay: 'manual-verification-required' }));
+      (after?.W04?.mouse ?? 0) - (before?.W04?.mouse ?? 0) !== 1) throw new Error('V01 fixture counts mismatch');
+  console.log('V01_FIXTURE_COMMITTED ' + JSON.stringify({ W03: 2, W04: 1, osDisplay: 'manual-verification-required' }));
 }

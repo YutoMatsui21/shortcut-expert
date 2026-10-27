@@ -18,9 +18,8 @@ const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut
   { id: 'W01', mouse: {}, key: 'alt-tab', shortcut: 'Alt + Tab' },
   { id: 'W03', mouse: {}, key: 'win-up', shortcut: 'Win + ↑' },
   { id: 'W12', mouse: {}, key: 'win-digit', shortcut: 'Win + 0' },
-  { id: 'W08', mouse: {}, key: 'win-z', shortcut: 'Win + Z' },
   { id: 'W04', mouse: { operation: 'minimize', after: { state: 'minimized' }, route: 'min-button' }, key: 'win-down', shortcut: 'Win + ↓' },
-  { id: 'W05', mouse: { operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false }, key: 'win-down', shortcut: 'Win + ↓' },
+  { id: 'W04', mouse: { operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W11', mouse: { operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4', shortcut: 'Alt + F4' },
   { id: 'W02', mouse: { operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag',
     fromMonitor: { x: 0, y: 0, width: 1920, height: 1080 }, toMonitor: { x: 1920, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' }, key: 'win-shift-right', shortcut: 'Win + Shift + →' }
@@ -51,7 +50,7 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
     await coach.setLearningState(entry.id, state);
     for (const origin of ['mouse', 'key'] as const) {
       ++sequence;
-      const fixture = entry.id === 'W01' ? switchFixture(origin, sequence) : entry.id === 'W12' ? taskbarFixture(origin, sequence) : entry.id === 'W08' ? snapFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
+      const fixture = entry.id === 'W01' ? switchFixture(origin, sequence) : entry.id === 'W12' ? taskbarFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
         origin, ...(origin === 'key' ? { route: entry.key } : {}) }));
       // JSON round trip emulates the transport, without bypassing the Main schema.
       const parsed = candidateV2(JSON.parse(JSON.stringify(fixture)));

@@ -4,13 +4,13 @@ import { learningReadModel } from '../src/core/learning.ts';
 import { learningOperations } from '../src/shared/learning.ts';
 import type { RecordRange } from '../src/shared/storage.ts';
 
-test('正式11操作は旧IDを保持し、3/3/4/1で準備中。旧mutedは独立した対象外表示', () => {
-  assert.deepEqual(learningOperations.map(op => op.id), ['W12', 'W01', 'W10', 'W03', 'W05', 'W04', 'W08', 'W06', 'W07', 'W02', 'W11']);
-  assert.deepEqual([0, 1, 2, 3].map(group => learningOperations.filter(op => op.group === group).length), [3, 3, 4, 1]);
+test('正式8操作は旧IDの対応を保ち、2/2/3/1で準備中。旧mutedは独立した対象外表示', () => {
+  assert.deepEqual(learningOperations.map(op => op.id), ['W12', 'W01', 'W03', 'W04', 'W06', 'W07', 'W02', 'W11']);
+  assert.deepEqual([0, 1, 2, 3].map(group => learningOperations.filter(op => op.group === group).length), [2, 2, 3, 1]);
   assert.ok(learningOperations.every(op => op.availability === 'preparing'));
   const model = learningReadModel({ counts: {}, coverage: {}, revision: 4 }, { muted: ['W03', 'W09'], opened: true }, '2026-10-19');
   assert.equal(model.rows.find(row => row.id === 'W03')?.state, 'excluded');
-  assert.equal(model.rows.filter(row => row.state === 'learning').length, 10);
+  assert.equal(model.rows.filter(row => row.state === 'learning').length, 7);
   assert.equal(model.rows.filter(row => row.state === 'mastered').length, 0);
 });
 

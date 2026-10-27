@@ -6,13 +6,13 @@
 
 W13の上下halfは一般的な横向き画面で標準マウス入口を確認できなかったため初回リリースの対象外（[#3](https://github.com/YutoMatsui21/shortcut-expert/issues/3)）。B02/A09/G-W13は将来検証とし、既存ID・履歴は保全する。
 
-現行5操作の条件付き検出は残すが、自然入力精度が未検証のため「検出対応済み」とは扱わない。初回リリース対象は11操作（W09・W14・W13を除外）。
+現行5操作の条件付き検出は残すが、自然入力精度が未検証のため「検出対応済み」とは扱わない。初回リリース対象は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合し、W08/W10/W09/W14/W13を除外。旧データ削除は承認済みで、履歴移行・学習状態統合は要求しない。
 
 1. **契約と基盤**：Native候補→Main厳格検証→Core採用の境界を保ち、人工イベントで保存・集計・学習状態・通知・画面を実装する。イベントID・操作ID・由来・日時・検出確証・同等キーの整合を守る。検出器実装を基盤の着手条件としない。
-2. **UI**：11操作を「準備中」と表示する。学習状態3種とは別軸。記録なし/観測欠損/既存履歴を混同しない。
+2. **UI**：8操作を「準備中」と表示する。学習状態3種とは別軸。記録なし/観測欠損/既存履歴を混同しない。
 3. **隔離統合**：fixtureを実記録と混ぜず、基盤版で回帰を通す（#43）。この合格は自然入力精度や最終版の証明ではない。
-4. **検出器**：7操作 W03/W05/W04/W06/W07/W02/W11、残る4操作 W12/W01/W10/W08。各操作の技術前提と既存安全契約を検証する。
-5. **最終受入**：同一製品buildで回帰試験とR02の自然入力確認を行う。手動は各ケース原則1回、予想外の結果だけ再試行する（2026-10-24本人指示）。11操作と必要条件の確認が揃うまで公開しない。単発結果から精度率を実証したとは扱わない。
+4. **検出器**：6操作 W03/W04/W06/W07/W02/W11、残る2操作 W12/W01。各操作の技術前提と既存安全契約を検証する。
+5. **最終受入**：同一製品buildで回帰試験とR02の自然入力確認を行う。手動は各ケース原則1回、予想外の結果だけ再試行する（2026-10-24本人指示）。8操作と必要条件の確認が揃うまで公開しない。単発結果から精度率を実証したとは扱わない。
 
 既存の工程記録・旧MVP要件・除外前Specの実施順より、この現行方針を優先する。Issue [#14](https://github.com/YutoMatsui21/shortcut-expert/issues/14)は検出器側の技術審査であり、UI/保存の着手ゲートではない。
 <a id="architecture"></a>
@@ -50,7 +50,7 @@ W13の上下halfは一般的な横向き画面で標準マウス入口を確認�
 - #25のDurableCoachはSnapshotへerrorKindを渡し、両画面の共通SaveErrorBannerが固定header直下に表示する。記録/設定保存、保存先読込、時計、observerを区別し、retryは同一checkpointの保留差分だけを再送する。保存復旧はobserver/時計故障を解除せず、通知tokenを復元せず、観測も自動再開しない。[保存・障害契約](durable-storage.md)。
 - #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。#21のRecordsPageはこの比較値をKPI/操作行へ表示し、MissingCoverageInfoが説明のhover/focus/クリックと画面内配置を担当する。[記録queryの契約](records-ui.md)。
 - C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
-- W08の入力・50ms照会は既存hookを共用するSnapInvocationObserver、純粋な滞在/キー/設定/幾何判定はSnapInvocationPolicyに置く。専用v2証拠をMainで検査しCoreでW08へ判定する。[契約・検証と未受入事項](snap-invocation.md)。
+- **過去のW08実装（初回対象外）**：8操作版はSnapInvocationObserverを通常観測へ接続せず、CoreでもW08候補を採用しない。旧証拠型・純粋policy試験・実測資料は保持する。旧W08の入力・50ms照会は既存hookを共用するSnapInvocationObserver、純粋な滞在/キー/設定/幾何判定はSnapInvocationPolicyに置く。専用v2証拠をMainで検査しCoreでW08へ判定する。[契約・検証と未受入事項](snap-invocation.md)。
 - W12はTaskbarInputObserverが既存hookを共用し、TaskbarQueryの独立processでUIAを照会する。TaskbarInputPolicyが番号の入力前後照合・期限・repeat/注入除外を担当する。専用v2証拠をMainで検査しCoreがW12/Win+数字へ変換する。[契約・unknownと受入](taskbar-input.md)。**W12 11番目以降・起動状態でのAlt+Tab候補と、W01切替先のtaskbar番号照合は#96で追加予定。既存の1〜10番の実測をそのまま拡張の成立証拠としない。**
 - 同意後のW08/W12製品受入は`natural-input-acceptance.ts`が試行の開始/停止と集計差分を担当し、別processの手動panelから操作する。専用flag以外では接続せず、通常の検出・保存・通知処理を共用する。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
@@ -84,6 +84,12 @@ W13の上下halfは一般的な横向き画面で標準マウス入口を確認�
 
 全体に適用する短い参照指示は[AGENTS.md](../AGENTS.md)、責務と判断理由は本節に置く。テスト追加の反復作業は[リポジトリSkill](../.agents/skills/test-shortcut-coach/SKILL.md)から下記のテスト設計へ案内する。
 根拠：[AGENTS.md公式資料](https://learn.chatgpt.com/docs/agent-configuration/agents-md)、[Skills公式資料](https://learn.chatgpt.com/docs/build-skills)、[指示を簡潔に保つ方針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)。
+
+### 8操作版の連続入力と表示
+
+UIと記録集計はlearningOperationsの8件、coverage生成はrecordOperationsの8件を使う。保存parserは過去の操作IDを解釈できるが、W05をW04へ合算しない。新しいrestoreはW04に記録する。最大化中の最小化ボタンにはWin+↓を必要に応じて繰り返す案内を出し、arranged状態不明では同等性を推定しない。
+
+CandidateTrackerは同じHWND/processに対する、前回の成立入力から1000ms以内の物理的なWin+↓再押下を1操作にまとめる。最初の確定結果を即時に記録し、続く確定結果は重複送信しない。他入力・別窓・期限切れ・停止/世代変更で切る。押しっぱなしのrepeatで有効期限を延長しない。この1000msは実装で固定した境界であり実測値ではない。W07のWin保持列とW03上端ドラッグの実検出は#9/#31/#35/#37の成立・実機受入を別に確認する。
 
 <a id="test-design"></a>
 

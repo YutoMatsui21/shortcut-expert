@@ -15,7 +15,7 @@ const base: Candidate = {
 };
 export const addedCases: { id: OperationId; candidate: Candidate; key: string; shortcut: string }[] = [
   { id: 'W04', candidate: base, key: 'win-down', shortcut: 'Win + ↓' },
-  { id: 'W05', candidate: { ...base, operation: 'restore', before: { state: 'maximized', arranged: false },
+  { id: 'W04', candidate: { ...base, operation: 'restore', before: { state: 'maximized', arranged: false },
     after: { state: 'normal' }, afterArranged: false, route: 'max-button' }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W11', candidate: { ...base, operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4', shortcut: 'Alt + F4' },
   { id: 'W02', candidate: { ...base, operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag',
@@ -39,14 +39,14 @@ for (const entry of addedCases) {
 
 test('元状態に合わない最小化・復元と元画面への往復を除外する', () => {
   const minimize = addedCases[0].candidate, restore = addedCases[1].candidate, move = addedCases[3].candidate;
-  for (const before of [{ state: 'maximized', arranged: false }, { state: 'normal', arranged: true }, { state: 'normal', arranged: null }]) {
+  for (const before of [{ state: 'normal', arranged: true }, { state: 'normal', arranged: null }]) {
     assert.equal(classify({ ...minimize, before })?.shortcut, null);
     assert.equal(classify({ ...minimize, before, origin: 'key', route: 'win-down' }), null);
   }
   assert.equal(classify({ ...restore, before: { state: 'normal', arranged: true } }), null);
   assert.equal(classify({ ...restore, afterArranged: true }), null);
   assert.equal(classify({ ...restore, afterArranged: undefined }), null);
-  assert.equal(classify({ ...restore, route: 'caption-double-click' })?.operation, 'W05');
+  assert.equal(classify({ ...restore, route: 'caption-double-click' })?.operation, 'W04');
   assert.equal(classify({ ...move, toMonitor: move.fromMonitor }), null);
   assert.equal(classify({ ...move, fromMonitor: null }), null);
   assert.equal(classify({ ...move, moveDirection: null })?.shortcut, null);
@@ -78,6 +78,9 @@ test('追加4操作は通知・重複排除・操作別mute・停止・保存再
   }
   coach.stop(); await coach.accept({ ...base, sequence: ++sequence });
   const loaded = await repository.load();
-  for (const entry of addedCases) assert.deepEqual(loaded.counts[base.date][entry.id], { mouse: 2, key: 1 });
-  assert.deepEqual(loaded.settings.muted, addedCases.map((entry) => entry.id));
+  for (const id of new Set(addedCases.map(entry => entry.id))) {
+    const multiplicity = addedCases.filter(entry => entry.id === id).length;
+    assert.deepEqual(loaded.counts[base.date][id], { mouse: 2 * multiplicity, key: multiplicity });
+  }
+  assert.deepEqual(loaded.settings.muted, [...new Set(addedCases.map((entry) => entry.id))]);
 });

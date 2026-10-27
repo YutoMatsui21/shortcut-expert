@@ -17,24 +17,32 @@ internal sealed class CandidateTracker
     private readonly HashSet<nint> moving = new();
     private readonly Dictionary<nint, Input> drags = new();
     private Input? input;
+    private Input? completedWinDown;
+    private bool winDownHeld;
     private nint lastCaption;
     private uint lastCaptionProcess;
     private long lastCaptionAt = NoCaptionClickAt;
     private Point lastCaptionPoint;
     private int generation, sequence, transaction;
     internal int NextTransaction() => checked(++transaction);
+    internal void KeyReleased(uint key) { if (key == VK_DOWN) winDownHeld = false; }
+    internal void ForegroundChanged(nint window) {
+        if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
+    }
 
     internal void Reset(int newGeneration)
     {
         generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null;
+        completedWinDown = null; winDownHeld = false;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
-    internal void ClearInput() { input = null; drags.Clear(); }
+    internal void ClearInput() { input = null; drags.Clear(); completedWinDown = null; }
     internal void Forget(nint window)
     {
         moving.Remove(window);
         drags.Remove(window);
         if (input?.Window == window) input = null;
+        if (completedWinDown?.Window == window) completedWinDown = null;
         if (lastCaption == window) { lastCaption = 0; lastCaptionAt = NoCaptionClickAt; }
     }
     internal void MoveStart(nint window, long now = 0)
@@ -52,6 +60,7 @@ internal sealed class CandidateTracker
         uint doubleClickTime, uint flags, bool modifiers, bool foreground)
     {
         drags.Clear();
+        completedWinDown = null;
         string route = hit switch { HTMAXBUTTON => "max-button", HTMINBUTTON => "min-button", HTCLOSE => "close-button", HTCAPTION => "caption-press", _ => "unknown" };
         if (hit == HTCAPTION && lastCaption == window && lastCaptionProcess == before.Process && now - lastCaptionAt <= doubleClickTime &&
             Math.Abs(point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx &&
@@ -67,8 +76,16 @@ internal sealed class CandidateTracker
     {
         drags.Clear();
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
-        if (IsModifier(key)) { if (input is not null) input = input with { Conflicted = true }; return; }
+        if (IsModifier(key)) {
+            if (key is not (VK_LWIN or VK_RWIN)) completedWinDown = null;
+            if (input is not null) input = input with { Conflicted = true }; return;
+        }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
+        if (route != "win-down" || completedWinDown?.Window != window) completedWinDown = null;
+        if (key == VK_DOWN) {
+            if (winDownHeld) return;
+            winDownHeld = true;
+        }
         if (route is null || before is null) { input = null; return; }
         input = new Input(window, before, "key", route, now,
             (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, conflict, true, checked(++transaction));
@@ -126,6 +143,19 @@ internal sealed class CandidateTracker
         object result = Build(operation, before, after, candidate, age,
             operation == "minimize" || foreground == window, moving.Contains(window), date, monitor);
         if (input?.Window == window) input = null;
+        // The first confirmed reduction counts immediately. A second physical Win+Down
+        // on the same window within one second is the continuation of that operation.
+        if (result is WindowCandidate { origin: "key", route: "win-down", injected: false,
+            conflicted: false, targetMatched: true, moving: false } && candidate is not null &&
+            operation is "restore" or "minimize" && before.Arranged == false && recent)
+        {
+            bool continuation = completedWinDown is not null && completedWinDown.Window == window &&
+                completedWinDown.Before.Process == before.Process && now >= completedWinDown.At &&
+                candidate.At - completedWinDown.At is >= 0 and <= InputMatchWindowMs;
+            completedWinDown = candidate;
+            if (continuation) return null;
+        }
+        else completedWinDown = null;
         return result;
     }
     private object Build(string operation, WindowState before, WindowState after, Input? candidate, long age,

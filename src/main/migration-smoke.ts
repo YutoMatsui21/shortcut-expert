@@ -15,7 +15,7 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   assert.equal(state.settings.opened, true); assert.equal(state.settings.states?.W03, 'excluded');
   assert.equal(state.settings.states?.W12, 'learning');
   const learning = await window.webContents.executeJavaScript('window.coach.getLearning()');
-  assert.equal(learning.rows.length, 12);
+  assert.equal(learning.rows.length, 8);
   assert.equal(learning.rows.find((row: { id: string }) => row.id === 'W03').state, 'excluded');
   assert.equal(learning.rows.some((row: { id: string }) => row.id === 'W09' || row.id === 'W14'), false);
   assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['7','learning-mastered','rate']);
@@ -26,7 +26,7 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   assert.equal(rows.counts[old].W09?.mouse, 100); assert.equal(rows.coverage[old].W03?.knowledge, 'legacy-unknown');
   const summary = await window.webContents.executeJavaScript('window.coach.getRecordSummary()');
   assert.equal(summary.summary.total, null);
-  assert.equal(summary.rows.length, 11);
+  assert.equal(summary.rows.length, 7);
   assert.equal(summary.rows.some((row: {id:string}) => row.id === 'W03'),false);
   await window.webContents.executeJavaScript(`(() => {
     const select = document.querySelector('.records-page select[aria-label="集計対象"]');

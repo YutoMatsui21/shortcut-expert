@@ -7,7 +7,7 @@ import { selectPage, waitForLearning } from './learning-smoke';
 // Isolated fixture entry only. Keep nominal dimensions separate from corrected
 // CSS viewports: a corrected screenshot cannot prove the product's initial size.
 export async function runUiAcceptance(window: BrowserWindow): Promise<void> {
-  await waitForLearning(window, `document.querySelectorAll('.learning-row').length === 12`);
+  await waitForLearning(window, `document.querySelectorAll('.learning-row').length === 8`);
   const measure = async () => ({ bounds: window.getBounds(), content: window.getContentBounds(),
     viewport: await window.webContents.executeJavaScript('({width:innerWidth,height:innerHeight,dpr:devicePixelRatio})'),
     scaleFactor: screen.getDisplayMatching(window.getBounds()).scaleFactor });
@@ -16,8 +16,8 @@ export async function runUiAcceptance(window: BrowserWindow): Promise<void> {
   for (const page of ['ショートカット一覧', '記録'] as const) {
     await selectPage(window, page);
     await waitForLearning(window, page === '記録'
-      ? `document.querySelector('.records-scroll')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 12`
-      : `document.querySelectorAll('.learning-row').length === 12`);
+      ? `document.querySelector('.records-scroll')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 8`
+      : `document.querySelectorAll('.learning-row').length === 8`);
     for (const [width, height] of [[800,600],[800,700],[919,700],[920,700],[1119,700],[1120,700],[1359,700],[1360,700]]) {
       window.setContentSize(width, height);
       await waitForLearning(window, `Math.abs(innerWidth - ${width}) <= 1 && Math.abs(innerHeight - ${height}) <= 1`);
@@ -41,7 +41,7 @@ export async function runUiAcceptance(window: BrowserWindow): Promise<void> {
         initial, displays:screen.getAllDisplays().map(d => ({bounds:d.bounds,workArea:d.workArea,scaleFactor:d.scaleFactor})), samples},null,2));
       assert.equal(geometry.horizontalOverflow, false);
       assert.equal(geometry.bodyOverflow, false);
-      assert.equal(geometry.rows, 12);
+      assert.equal(geometry.rows, 8);
       assert.equal(Math.round(geometry.width), Math.min(width - 248, 872));
       assert.equal(Math.round(geometry.x), Math.round(width <= 1120 ? 148 : (width - 872 + 48) / 2));
       assert.equal(Math.round(geometry.y), page === '記録' ? width < 1120 ? 202 : 132 : width < 1120 ? 191 : 146);

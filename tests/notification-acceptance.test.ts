@@ -32,9 +32,9 @@ test('V01 artificial candidates commit twice for maximize and once for restore b
     }, async () => {});
     await coach.idle();
     await Promise.all(deliveries);
-    assert.deepEqual(notices.map(value => value.operation), ['W03', 'W03', 'W05']);
+    assert.deepEqual(notices.map(value => value.operation), ['W03', 'W03', 'W04']);
     const saved = await repository.query(localDate(), localDate());
     assert.deepEqual(saved.counts[localDate()].W03, { mouse: 2, key: 0 });
-    assert.deepEqual(saved.counts[localDate()].W05, { mouse: 1, key: 0 });
+    assert.deepEqual(saved.counts[localDate()].W04, { mouse: 1, key: 0 });
   } finally { coach.stop(); await coach.idle(); await repository.close(); await rm(directory, { recursive: true, force: true }); }
 });

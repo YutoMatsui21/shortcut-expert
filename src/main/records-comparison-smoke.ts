@@ -21,13 +21,13 @@ export async function seedComparisonCoverage(repository: SqliteRepository) {
   for (let offset = 0; offset < 60; offset++) {
     const day = daysBefore(today, offset), next = daysBefore(day, -1);
     const activeMs = new Date(next + 'T00:00:00').getTime() - new Date(day + 'T00:00:00').getTime();
-    const coverage: RecordMutation['coverage'] = (['W03', 'W13'] as const).map(operation => ({day, operation,
+    const coverage: RecordMutation['coverage'] = (['W03', 'W12'] as const).map(operation => ({day, operation,
       value:{knowledge:'observed',activeMs,gap:false,capabilityRevision:'comparison-fixture'}}));
-    if (offset === 7) coverage.push({day,operation:'W05',value:{knowledge:'observed',activeMs:1000,gap:true,capabilityRevision:'comparison-fixture'}});
+    if (offset === 7) coverage.push({day,operation:'W02',value:{knowledge:'observed',activeMs:1000,gap:true,capabilityRevision:'comparison-fixture'}});
     if (offset === 0) coverage.push({day,operation:'W04',value:{knowledge:'observed',activeMs:1000,gap:true,capabilityRevision:'comparison-fixture'}});
     await repository.commit({epoch:state.epoch,writeSession:repository.session,sequence:++sequence,today,coverage});
   }
-  await repository.saveSettings({opened:true,muted:[],states:Object.fromEntries(learningOperations.map(op => [op.id, op.id === 'W03' ? 'learning' : op.id === 'W13' ? 'mastered' : 'excluded']))});
+  await repository.saveSettings({opened:true,muted:[],states:Object.fromEntries(learningOperations.map(op => [op.id, op.id === 'W03' ? 'learning' : op.id === 'W12' ? 'mastered' : 'excluded']))});
 }
 
 export async function runRecordsComparisonSmoke(window: BrowserWindow) {
@@ -61,18 +61,18 @@ export async function runRecordsComparisonSmoke(window: BrowserWindow) {
   const row = (id: string) => view.rows.find((r: {id:string}) => r.id === id)!;
   assert.equal(row('W03').improvement,'+50.0pt'); assert.equal(row('W03').missing,false);
   assert.equal(row('W11').improvement,'+25.0pt'); assert.equal(row('W11').missing,true); // legacy positive counts
-  assert.equal(row('W05').improvement,'—'); assert.equal(row('W05').key,'2'); // prior known zero
+  assert.equal(row('W02').improvement,'—'); assert.equal(row('W02').key,'2'); // prior known zero
   assert.equal(row('W04').improvement,'—'); assert.equal(row('W04').key,'0'); assert.ok(row('W04').rate.includes('記録なし'));
   assert.equal(row('W06').improvement,'—'); assert.equal(row('W06').key,'0'); assert.ok(row('W06').rate.includes('0.0%'));
   assert.equal(row('W07').improvement,'—'); assert.equal(row('W07').key,'—');
-  assert.equal(row('W13').improvement,'—'); assert.equal(row('W13').missing,false);
-  assert.equal(view.info,13); // 3 summary comparisons + 10 incomplete rows
+  assert.equal(row('W12').improvement,'—'); assert.equal(row('W12').missing,false);
+  assert.equal(view.info,9); // 3 summary comparisons + 6 incomplete rows
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.record-table-heading [aria-label="キー率の計算方法"]')?.querySelector('img').classList.contains('imgHelpIconHover')`),true);
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.coverage-info').getAttribute('aria-label').includes('記録の欠損について')`),true);
 
   // Count differences for observed zero / unknown must also arrive intact over the real IPC.
   const model = await window.webContents.executeJavaScript(`window.coach.getRecordSummary({period:7,filter:'all',sort:'rate'})`);
-  assert.equal(model.rows.find((r: {id:string}) => r.id === 'W05').comparison.key,2);
+  assert.equal(model.rows.find((r: {id:string}) => r.id === 'W02').comparison.key,2);
   assert.equal(model.rows.find((r: {id:string}) => r.id === 'W04').comparison.mouse,-2);
   assert.equal(model.rows.find((r: {id:string}) => r.id === 'W06').comparison.total,null);
   assert.equal(model.rows.find((r: {id:string}) => r.id === 'W07').comparison.total,null);
@@ -140,7 +140,7 @@ export async function runRecordsComparisonSmoke(window: BrowserWindow) {
   // Isolate each decision-table row as a KPI as well, so count differences are visibly asserted.
   const decisions = [];
   for (const [id,expected] of [
-    ['W05',{rate:'100.0%',key:'2回',mouse:'0回',keyDifference:'+2',mouseDifference:'0',improvement:'—'}],
+    ['W02',{rate:'100.0%',key:'2回',mouse:'0回',keyDifference:'+2',mouseDifference:'0',improvement:'—'}],
     ['W04',{rate:'記録なし',key:'0回',mouse:'0回',keyDifference:'0',mouseDifference:'-2',improvement:'—'}],
     ['W06',{rate:'0.0%',key:'0回',mouse:'1回',keyDifference:'—',mouseDifference:'—',improvement:'—'}],
     ['W07',{rate:'—',key:'—',mouse:'—',keyDifference:'—',mouseDifference:'—',improvement:'—'}],

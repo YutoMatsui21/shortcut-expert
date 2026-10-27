@@ -17,7 +17,7 @@ test('7 local calendar days: weighted KPI, eleven rows, legacy values, no synthe
   const original = structuredClone(records);
   const value = recordsReadModel(records, settings, '2024-03-06');
   assert.equal(value.from, '2024-02-29'); assert.equal(value.to, '2024-03-06'); assert.equal(value.revision, 19);
-  assert.equal(value.rows.length, 11);
+  assert.equal(value.rows.length, 8);
   assert.deepEqual(value.summary, { mouse: 4, key: 7, total: 11, rate: 63.6, barRate: 7 / 11 * 100 });
   assert.equal(value.rows.find(row => row.id === 'W03')?.rate, 20);
   assert.equal(value.rows.find(row => row.id === 'W02')?.total, 0);
@@ -67,21 +67,21 @@ test('three filters apply current states to both periods, rows/KPIs/coverage wit
   const records = empty();
   for (let day = '2026-10-04'; day <= '2026-10-17'; day = daysBefore(day, -1)) records.coverage[day] = {
     W03:{knowledge:'observed',activeMs:86400000,gap:false,capabilityRevision:'fixture'},
-    W05:{knowledge:'observed',activeMs:86400000,gap:false,capabilityRevision:'fixture'}
+    W06:{knowledge:'observed',activeMs:86400000,gap:false,capabilityRevision:'fixture'}
   };
-  records.counts['2026-10-10'] = {W03:{mouse:3,key:1},W05:{mouse:4,key:0},W11:{mouse:100,key:0}};
-  records.counts['2026-10-17'] = {W03:{mouse:1,key:3},W05:{mouse:0,key:4},W11:{mouse:200,key:0}};
+  records.counts['2026-10-10'] = {W03:{mouse:3,key:1},W06:{mouse:4,key:0},W11:{mouse:100,key:0}};
+  records.counts['2026-10-17'] = {W03:{mouse:1,key:3},W06:{mouse:0,key:4},W11:{mouse:200,key:0}};
   const original = structuredClone(records);
   const states: Settings = {muted:[],opened:true,states:Object.fromEntries(learningOperations.map(op => [op.id, 'excluded']))};
-  states.states!.W03 = 'learning'; states.states!.W05 = 'mastered';
+  states.states!.W03 = 'learning'; states.states!.W06 = 'mastered';
   const combined = recordsReadModel(records, states, '2026-10-17');
-  assert.deepEqual(new Set(combined.rows.map(row=>row.id)), new Set(['W03','W05']));
+  assert.deepEqual(new Set(combined.rows.map(row=>row.id)), new Set(['W03','W06']));
   assert.equal(combined.summary.rate,87.5);assert.equal(combined.previous.rate,12.5);
   assert.equal(combined.comparison.improvement,75);assert.equal(combined.comparison.hasMissingCoverage,false);
   const learning = recordsReadModel(records, states, '2026-10-17',query({filter:'learning'}));
   assert.deepEqual(learning.rows.map(row=>row.id),['W03']); assert.equal(learning.comparison.improvement,50);
   const all = recordsReadModel(records, states, '2026-10-17',query({filter:'all'}));
-  assert.equal(all.rows.length,11);assert.equal(all.summary.mouse,201);assert.equal(all.previous.mouse,107);
+  assert.equal(all.rows.length,8);assert.equal(all.summary.mouse,201);assert.equal(all.previous.mouse,107);
   assert.equal(all.comparison.hasMissingCoverage,true);
   states.states!.W03='excluded';
   const none = recordsReadModel(records,states,'2026-10-17',query({filter:'learning'}));
@@ -110,14 +110,14 @@ test('J01: legacy/gaps compare acquired values; missing evidence and observed ze
 
 test('five sorts put null last, preserve exact ties in registry order, and use unrounded rational values', () => {
   const records=empty();
-  records.counts['2026-10-17']={W12:{mouse:2,key:2},W01:{mouse:2,key:2},W03:{mouse:3,key:1},W05:{mouse:0,key:4}};
-  records.counts['2026-10-10']={W12:{mouse:3,key:1},W01:{mouse:3,key:1},W03:{mouse:0,key:4},W05:{mouse:1,key:3}};
+  records.counts['2026-10-17']={W12:{mouse:2,key:2},W01:{mouse:2,key:2},W03:{mouse:3,key:1},W06:{mouse:0,key:4}};
+  records.counts['2026-10-10']={W12:{mouse:3,key:1},W01:{mouse:3,key:1},W03:{mouse:0,key:4},W06:{mouse:1,key:3}};
   const order=(sort:RecordsQuery['sort'])=>recordsReadModel(records,settings,'2026-10-17',query({sort})).rows.slice(0,4).map(r=>r.id);
-  assert.deepEqual(order('rate'),['W03','W12','W01','W05']);
-  assert.deepEqual(order('mouse'),['W03','W12','W01','W05']);
-  assert.deepEqual(order('key'),['W05','W12','W01','W03']);
-  assert.deepEqual(order('total'),['W12','W01','W03','W05']);
-  assert.deepEqual(order('improvement'),['W12','W01','W05','W03']);
+  assert.deepEqual(order('rate'),['W03','W12','W01','W06']);
+  assert.deepEqual(order('mouse'),['W03','W12','W01','W06']);
+  assert.deepEqual(order('key'),['W06','W12','W01','W03']);
+  assert.deepEqual(order('total'),['W12','W01','W03','W06']);
+  assert.deepEqual(order('improvement'),['W12','W01','W06','W03']);
   records.counts['2026-10-17']={W12:{mouse:999,key:1001},W01:{mouse:1997,key:2003}};
   records.counts['2026-10-10']={W12:{mouse:1,key:1},W01:{mouse:1,key:1}};
   const improved=recordsReadModel(records,settings,'2026-10-17',query({sort:'improvement'}));
@@ -134,11 +134,11 @@ test('five sorts put null last, preserve exact ties in registry order, and use u
 
 test('pt rounding is symmetric at halfway values and normalizes negative zero', () => {
   const records=empty();
-  records.counts['2026-10-17']={W03:{mouse:1999,key:1},W05:{mouse:1,key:0},W04:{mouse:1,key:0}};
-  records.counts['2026-10-10']={W03:{mouse:1,key:0},W05:{mouse:1999,key:1},W04:{mouse:3999,key:1}};
+  records.counts['2026-10-17']={W03:{mouse:1999,key:1},W06:{mouse:1,key:0},W04:{mouse:1,key:0}};
+  records.counts['2026-10-10']={W03:{mouse:1,key:0},W06:{mouse:1999,key:1},W04:{mouse:3999,key:1}};
   const value=recordsReadModel(records,settings,'2026-10-17');
   assert.equal(value.rows.find(r=>r.id==='W03')?.comparison.improvement,0.1);
-  assert.equal(value.rows.find(r=>r.id==='W05')?.comparison.improvement,-0.1);
+  assert.equal(value.rows.find(r=>r.id==='W06')?.comparison.improvement,-0.1);
   assert.equal(value.rows.find(r=>r.id==='W04')?.comparison.improvement,0);
   assert.equal(Object.is(value.rows.find(r=>r.id==='W04')?.comparison.improvement,-0),false);
 });

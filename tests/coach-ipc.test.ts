@@ -37,7 +37,7 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   for (const channel of handlers.keys()) {
     if (channel === 'coach:delete' || channel === 'coach:cancel-delete') continue;
     const sender = channel === 'coach:get-notice' ? noticeEvent : event;
-    const args = channel === 'coach:set-learning-state' ? ['W13', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
+    const args = channel === 'coach:set-learning-state' ? ['W04', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
     assert.throws(() => invoke(channel, { ...sender, senderFrame: {} } as Electron.IpcMainInvokeEvent, ...args), /Unknown sender/);
     assert.throws(() => invoke(channel, channel === 'coach:get-notice' ? event : noticeEvent, ...args), /Unknown sender/);
     await invoke(channel, sender, ...args);
@@ -78,7 +78,7 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   for (const args of [['W09', 'learning'], ['W14', 'excluded'], ['W99', 'learning'], ['W03', 'automatic'], ['W03', {}], [null, 'learning']]) {
     assert.throws(() => invoke('coach:set-learning-state', event, ...args), /Invalid learning state/);
   }
-  assert.deepEqual(requests.setLearningState.mock.calls[0].arguments, ['W13', 'mastered']);
+  assert.deepEqual(requests.setLearningState.mock.calls[0].arguments, ['W04', 'mastered']);
   assert.equal(requests.setLearningState.mock.callCount(), 1);
   assert.equal(requests.setMuted.mock.callCount(), 1);
   assert.deepEqual(requests.command.mock.calls[0].arguments, ['stop']);

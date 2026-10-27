@@ -102,16 +102,19 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
       toMonitor: { ...physical, x: physical.x + physical.width }, moveDirection: 'right' }, key: 'win-shift-right' }
   ];
   let addedSequence = 4;
+  const addedCounts = new Map<string, number>();
   for (const entry of additions) {
     await observer.inject({ ...entry.candidate, sequence: ++addedSequence });
     await observer.inject({ ...entry.candidate, sequence: ++addedSequence, origin: 'key', route: entry.key });
     await coach.idle();
     const result = classify(entry.candidate);
     if (!result?.shortcut || notice.current()) throw new Error('added-classification');
-    await waitRenderer(window, `document.querySelector('[data-operation="${result.operation}"] [data-kind="mouse"]')?.textContent === '1' &&
-      document.querySelector('[data-operation="${result.operation}"] [data-kind="key"]')?.textContent === '1'`, 'added-renderer');
+    const expected = (addedCounts.get(result.operation) ?? 0) + 1;
+    addedCounts.set(result.operation, expected);
+    await waitRenderer(window, `document.querySelector('[data-operation="${result.operation}"] [data-kind="mouse"]')?.textContent === '${expected}' &&
+      document.querySelector('[data-operation="${result.operation}"] [data-kind="key"]')?.textContent === '${expected}'`, 'added-renderer');
     const saved = await new JsonRepository(directory).load();
-    if (saved.counts[localDate()][result.operation]?.key !== 1) throw new Error('added-save');
+    if (saved.counts[localDate()][result.operation]?.key !== expected) throw new Error('added-save');
     // Fixture notices separately exercise the real display path while the product's cooldown remains intact.
     const label = operations.find((op) => op.id === result.operation)!.label;
     const focus = await observer.focusToken();
@@ -133,11 +136,9 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
         inputAgeMs: 0, monitor: physical } };
     await observer.inject(invocation); await observer.inject(invocation); await coach.idle();
   }
-  await waitRenderer(window, `document.querySelector('[data-operation="W08"] [data-kind="mouse"]')?.textContent === '1' &&
-    document.querySelector('[data-operation="W08"] [data-kind="key"]')?.textContent === '1'`, 'snap-invocation-renderer');
+  await waitRenderer(window, `document.querySelector('[data-operation="W08"]') === null`, 'snap-excluded-renderer');
   const snapSaved = await new JsonRepository(directory).load();
-  if (snapSaved.counts[localDate()].W08?.mouse !== 1 || snapSaved.counts[localDate()].W08?.key !== 1 || notice.current())
-    throw new Error('snap-invocation-save-pause-replay');
+  if (snapSaved.counts[localDate()].W08 || notice.current()) throw new Error('snap-excluded-save-notice');
   for (const origin of ['mouse', 'key'] as const) {
     const sequence = ++addedSequence;
     const input: CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: value.generation, sequence,
@@ -246,7 +247,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await verifyWindowExit();
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
-    uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true, snapInvocationFixture: true,
+    uiControls: true, operationShortcuts: 8, addedOperations: 3, addedNoticeWindows: true, snapInvocationExcluded: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     windowHiddenAndRestored: true, rendererResubscribed: true, captionCommands: true,
     pendingExitCancelledAndRecovered: true, failedExitTickerResumed: true, windowEvidence,

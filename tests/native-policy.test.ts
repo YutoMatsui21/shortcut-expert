@@ -25,7 +25,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.equal(observations[1]?.origin, 'key');
   assert.deepEqual(observations.slice(2, 4), [null, null], 'Injected input is not a counted operation');
   assert.deepEqual(observations.slice(4).map((value: ReturnType<typeof classify>) => [value?.operation, value?.origin]),
-    ['mouse', 'key'].flatMap((origin) => ['W04', 'W05', 'W11', 'W02'].map((id) => [id, origin])));
+    ['mouse', 'key'].flatMap((origin) => ['W04', 'W04', 'W11', 'W02'].map((id) => [id, origin])));
   const v2 = report.v2Samples.map((sample: unknown) => {
     const parsed = candidateV2(sample); assert.ok(parsed, 'C# v2 output must satisfy strict TS protocol'); return classify(parsed);
   });
@@ -33,10 +33,9 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
     observations.map((value: ReturnType<typeof classify>) => value && { ...value, id: 'comparison' }));
   assert.deepEqual(v2.slice(observations.length), [null, null, null]);
   assert.deepEqual(report.snapSamples.map((sample: unknown) => {
-    const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed);
-    assert.ok(observed); assert.equal(observed.shortcut, 'Win + Z');
-    return [observed.id, observed.operation, observed.origin];
-  }), [['1:t1', 'W08', 'mouse'], ['1:t2', 'W08', 'key']]);
+    const parsed = candidateV2(sample); assert.ok(parsed, 'historical C# evidence still parses');
+    return classify(parsed);
+  }), [null, null], 'W08 is excluded from the eight-operation release');
   assert.deepEqual(report.taskbarSamples.map((sample: unknown) => {
     const parsed = candidateV2(sample); assert.ok(parsed); const observed = classify(parsed); assert.ok(observed);
     return [observed.operation, observed.origin, observed.shortcut];

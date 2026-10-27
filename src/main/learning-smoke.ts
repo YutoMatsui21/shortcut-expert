@@ -21,7 +21,7 @@ export async function runLearningSmoke(window: BrowserWindow) {
   await selectPage(window, 'ショートカット一覧');
   await waitForLearning(window, `document.querySelector('[data-learning-operation="W03"] .key-rate')?.textContent.includes('50.0%')`);
   const read = await window.webContents.executeJavaScript('window.coach.getLearning()');
-  assert.equal(read.rows.length, 12);
+  assert.equal(read.rows.length, 8);
   assert.deepEqual(read.rows.map((row: { id: string }) => row.id), learningOperations.map(op => op.id));
   assert.equal(read.rows.find((row: { id: string }) => row.id === 'W03').total, 2);
   const initialCounts = await window.webContents.executeJavaScript('window.coach.getSnapshot().then(value => value.counts)');
@@ -34,7 +34,7 @@ export async function runLearningSmoke(window: BrowserWindow) {
     await waitForLearning(window, `document.querySelector('[data-learning-operation="W03"] select').value === '${state}' && !document.querySelector('[data-learning-operation="W03"] select').disabled`);
     const value = await window.webContents.executeJavaScript('window.coach.getLearning()');
     assert.equal(value.rows.find((row: { id: string }) => row.id === 'W03').state, state);
-    await waitForLearning(window, `document.querySelector('.learning-summary .${state} > span').textContent === '${state === 'learning' ? 12 : 1}'`);
+    await waitForLearning(window, `document.querySelector('.learning-summary .${state} > span').textContent === '${state === 'learning' ? 8 : 1}'`);
     await selectPage(window, '記録'); await selectPage(window, 'ショートカット一覧');
     assert.equal(await window.webContents.executeJavaScript(`document.querySelector('[data-learning-operation="W03"] select').value`), state);
   }
@@ -67,7 +67,7 @@ export async function runLearningSmoke(window: BrowserWindow) {
         background: getComputedStyle(document.querySelector('.learning-row')).backgroundColor };
     })()`);
     assert.equal(geometry.title.height, 32); assert.equal(geometry.nav.width, 48);
-    assert.deepEqual(geometry.groups, [3, 3, 5, 1]); assert.equal(geometry.ready, 12);
+    assert.deepEqual(geometry.groups, [2, 2, 3, 1]); assert.equal(geometry.ready, 8);
     assert.deepEqual(geometry.assets, []); assert.ok(geometry.fonts.noto && geometry.fonts.inter, JSON.stringify(geometry.fonts)); assert.equal(geometry.overflow, false);
     assert.equal(Math.round(geometry.content.width), Math.min(width - 248, 872));
     assert.equal(Math.round(geometry.content.x), width < 1360 ? 148 : 268);
@@ -76,6 +76,11 @@ export async function runLearningSmoke(window: BrowserWindow) {
     sizes.push({ requested: width, nominal, bounds: window.getBounds(), windowContent: window.getContentBounds(), ...geometry });
     await writeFile(join(app.getPath('userData'), `learning-${width}.png`), (await window.webContents.capturePage()).toPNG());
   }
+  window.setContentSize(800, 700);
+  await waitForLearning(window, `Math.abs(innerWidth - 800) <= 1`);
+  const scrollWidth = await window.webContents.executeJavaScript('innerWidth');
+  if (scrollWidth !== 800) window.setSize(window.getSize()[0] + 800 - scrollWidth, window.getSize()[1]);
+  await waitForLearning(window, `innerWidth === 800`);
   await window.webContents.executeJavaScript(`document.querySelector('.group-header').click(); document.querySelector('.page-scroll').scrollTop = 120`);
   await waitForLearning(window, `document.querySelector('.group-header').getAttribute('aria-expanded') === 'false'`);
   await selectPage(window, '記録'); await selectPage(window, 'ショートカット一覧');
