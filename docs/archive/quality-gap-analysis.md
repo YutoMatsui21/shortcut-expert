@@ -1,4 +1,4 @@
-> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-redesign-requirements.md)・[設計](../design.md)・[README](../../README.md)を優先してください。
+> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-redesign-requirements.md)・[設計](../design.md)・[開発・検証ガイド](../development.md)を優先してください。
 
 # 現行リポジトリの品質保証・テスト・CIの不足
 
