@@ -1,6 +1,6 @@
 # 設計・実装状況
 
-現行の受入条件は[確定要件](ui-redesign-requirements.md)、実行手順は[README.md](../README.md)、根拠・原本は[research.md](research.md)。
+現行の受入条件は[確定要件](ui-redesign-requirements.md)、実行手順は[開発・検証ガイド](development.md)、根拠・原本は[research.md](research.md)。
 
 ## 現行の開発順序（2026-10-18決定）
 
