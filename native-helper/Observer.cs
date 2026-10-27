@@ -170,7 +170,7 @@ internal sealed class Observer : IDisposable
         if (fixture || !Active || window == 0) return;
         try
         {
-            if (kind == EVENT_SYSTEM_FOREGROUND) switching.Foreground(window, time);
+            if (kind == EVENT_SYSTEM_FOREGROUND) { tracker.ForegroundChanged(window); switching.Foreground(window, time); }
             if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
             {
                 states.TryGetValue(window, out WindowState? closed);

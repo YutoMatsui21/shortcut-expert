@@ -100,7 +100,7 @@ internal static class Program
     }
     private static void CheckWinDownGrouping()
     {
-        foreach (string boundary in new[] { "continuous", "expired", "other-key", "other-window", "mouse", "reset" })
+        foreach (string boundary in new[] { "continuous", "expired", "other-key", "other-window", "mouse", "reset", "foreground-return", "other-target-no-result" })
             Check($"Win+Down grouping: {boundary}", () => {
                 var tracker = Tracker();
                 tracker.Key(11, maximized, VK_DOWN, true, false, 0, 0);
@@ -112,6 +112,11 @@ internal static class Program
                 if (boundary == "other-key") tracker.Key(11, normal, 0x41, false, false, 150, 0);
                 if (boundary == "mouse") tracker.Mouse(11, normal, HTCAPTION, default, 150, 500, 0, false, true);
                 if (boundary == "reset") tracker.Reset(2);
+                if (boundary == "foreground-return") { tracker.ForegroundChanged(12); tracker.ForegroundChanged(11); }
+                if (boundary == "other-target-no-result") {
+                    tracker.Key(12, normal, VK_DOWN, true, false, 150, 0);
+                    tracker.KeyReleased(VK_DOWN);
+                }
                 tracker.Key(target, normal, VK_DOWN, true, false, at, 0);
                 var second = tracker.Complete(target, normal, normal with { Show = SW_SHOWMINIMIZED }, at + 100, 12, "2026-10-27", null);
                 Equal(boundary != "continuous", second is WindowCandidate);

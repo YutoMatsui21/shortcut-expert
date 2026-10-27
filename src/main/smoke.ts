@@ -247,7 +247,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
   await verifyWindowExit();
   return { mouse: 1, key: 1, duplicateExcluded: true, unknownExcluded: true,
     focusUnchanged: true, autoDismissed: true, fixtureOnly: true,
-    uiControls: true, operationShortcuts: 12, addedOperations: 4, addedNoticeWindows: true, snapInvocationFixture: true,
+    uiControls: true, operationShortcuts: 8, addedOperations: 3, addedNoticeWindows: true, snapInvocationExcluded: true,
     deleteCancelledAndConfirmed: true, settingsReloaded: true, ipcRejected: true, isolatedRenderer: true,
     windowHiddenAndRestored: true, rendererResubscribed: true, captionCommands: true,
     pendingExitCancelledAndRecovered: true, failedExitTickerResumed: true, windowEvidence,

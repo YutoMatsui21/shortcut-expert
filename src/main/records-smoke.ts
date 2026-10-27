@@ -24,9 +24,9 @@ export async function runRecordsSmoke(window: BrowserWindow) {
   assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s => s.options.length)`), [2,3,5]);
   await choose('期間', '30');
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','excluded')`);
-  await waitForLearning(window, `document.querySelector('.records-scroll').getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 11`);
+  await waitForLearning(window, `document.querySelector('.records-scroll').getAttribute('aria-busy') === 'false' && document.querySelectorAll('.record-table tbody tr').length === 7`);
   await choose('集計対象','all');
-  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 12`);
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 8`);
   for (const sort of ['mouse','improvement','key','total','rate']) {
     await choose('並び替え', sort);
     const expected = await window.webContents.executeJavaScript(`window.coach.getRecordSummary({period:30,filter:'all',sort:'${sort}'}).then(m => m.rows.map(r=>r.id))`);
@@ -36,10 +36,10 @@ export async function runRecordsSmoke(window: BrowserWindow) {
   await selectPage(window,'ショートカット一覧'); await selectPage(window,'記録');
   assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['30','all','total']);
   await choose('集計対象','learning');
-  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '—' && document.querySelectorAll('.record-table tbody tr').length === 11`);
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '—' && document.querySelectorAll('.record-table tbody tr').length === 7`);
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','mastered')`);
   await choose('集計対象','learning-mastered');
-  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 12`);
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 8`);
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','learning')`);
   const loaded = new Promise<void>(resolve => window.webContents.once('did-finish-load', () => resolve()));
   window.webContents.reload(); await loaded;
@@ -62,11 +62,11 @@ export async function runRecordsSmoke(window: BrowserWindow) {
         overflow: document.querySelector('.records-scroll').scrollWidth > document.querySelector('.records-scroll').clientWidth,
         rows: document.querySelectorAll('.record-table tbody tr').length,
         preparing: document.querySelectorAll('.record-table .availability').length,
-        unknown: document.querySelector('[data-operation="W13"] .record-rate').textContent.includes('—'),
+        unknown: document.querySelector('[data-operation="W07"] .record-rate').textContent.includes('—'),
         assets: [...document.querySelectorAll('.records-page img')].every(img => img.complete && img.naturalWidth > 0)
       };
     })()`);
-    assert.equal(geometry.rows, 12); assert.equal(geometry.preparing, 12);
+    assert.equal(geometry.rows, 8); assert.equal(geometry.preparing, 8);
     assert.equal(geometry.unknown, true); assert.equal(geometry.assets, true); assert.equal(geometry.overflow, false);
     assert.equal(Math.round(geometry.content.width), Math.min(width - 248, 872));
     assert.equal(Math.round(geometry.content.x), width === 1360 ? 268 : 148);
@@ -76,6 +76,11 @@ export async function runRecordsSmoke(window: BrowserWindow) {
     sizes.push({width, ...geometry});
     await writeFile(join(app.getPath('userData'), `records-${width}.png`), (await window.webContents.capturePage()).toPNG());
   }
+  window.setContentSize(800, 700);
+  await waitForLearning(window, `Math.abs(innerWidth - 800) <= 1`);
+  const scrollWidth = await window.webContents.executeJavaScript('innerWidth');
+  if (scrollWidth !== 800) window.setSize(window.getSize()[0] + 800 - scrollWidth, window.getSize()[1]);
+  await waitForLearning(window, `innerWidth === 800`);
   await window.webContents.executeJavaScript(`document.querySelector('.records-scroll').scrollTop = 100`);
   await selectPage(window, 'ショートカット一覧'); await selectPage(window, '記録');
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.records-scroll').scrollTop`), 100);

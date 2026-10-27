@@ -26,6 +26,9 @@ internal sealed class CandidateTracker
     private int generation, sequence, transaction;
     internal int NextTransaction() => checked(++transaction);
     internal void KeyReleased(uint key) { if (key == VK_DOWN) winDownHeld = false; }
+    internal void ForegroundChanged(nint window) {
+        if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
+    }
 
     internal void Reset(int newGeneration)
     {
@@ -78,7 +81,7 @@ internal sealed class CandidateTracker
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
-        if (route != "win-down") completedWinDown = null;
+        if (route != "win-down" || completedWinDown?.Window != window) completedWinDown = null;
         if (key == VK_DOWN) {
             if (winDownHeld) return;
             winDownHeld = true;

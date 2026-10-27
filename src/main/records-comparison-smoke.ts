@@ -21,13 +21,13 @@ export async function seedComparisonCoverage(repository: SqliteRepository) {
   for (let offset = 0; offset < 60; offset++) {
     const day = daysBefore(today, offset), next = daysBefore(day, -1);
     const activeMs = new Date(next + 'T00:00:00').getTime() - new Date(day + 'T00:00:00').getTime();
-    const coverage: RecordMutation['coverage'] = (['W03', 'W13'] as const).map(operation => ({day, operation,
+    const coverage: RecordMutation['coverage'] = (['W03', 'W12'] as const).map(operation => ({day, operation,
       value:{knowledge:'observed',activeMs,gap:false,capabilityRevision:'comparison-fixture'}}));
     if (offset === 7) coverage.push({day,operation:'W02',value:{knowledge:'observed',activeMs:1000,gap:true,capabilityRevision:'comparison-fixture'}});
     if (offset === 0) coverage.push({day,operation:'W04',value:{knowledge:'observed',activeMs:1000,gap:true,capabilityRevision:'comparison-fixture'}});
     await repository.commit({epoch:state.epoch,writeSession:repository.session,sequence:++sequence,today,coverage});
   }
-  await repository.saveSettings({opened:true,muted:[],states:Object.fromEntries(learningOperations.map(op => [op.id, op.id === 'W03' ? 'learning' : op.id === 'W13' ? 'mastered' : 'excluded']))});
+  await repository.saveSettings({opened:true,muted:[],states:Object.fromEntries(learningOperations.map(op => [op.id, op.id === 'W03' ? 'learning' : op.id === 'W12' ? 'mastered' : 'excluded']))});
 }
 
 export async function runRecordsComparisonSmoke(window: BrowserWindow) {
@@ -65,7 +65,7 @@ export async function runRecordsComparisonSmoke(window: BrowserWindow) {
   assert.equal(row('W04').improvement,'—'); assert.equal(row('W04').key,'0'); assert.ok(row('W04').rate.includes('記録なし'));
   assert.equal(row('W06').improvement,'—'); assert.equal(row('W06').key,'0'); assert.ok(row('W06').rate.includes('0.0%'));
   assert.equal(row('W07').improvement,'—'); assert.equal(row('W07').key,'—');
-  assert.equal(row('W13').improvement,'—'); assert.equal(row('W13').missing,false);
+  assert.equal(row('W12').improvement,'—'); assert.equal(row('W12').missing,false);
   assert.equal(view.info,13); // 3 summary comparisons + 10 incomplete rows
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.record-table-heading [aria-label="キー率の計算方法"]')?.querySelector('img').classList.contains('imgHelpIconHover')`),true);
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.coverage-info').getAttribute('aria-label').includes('記録の欠損について')`),true);
