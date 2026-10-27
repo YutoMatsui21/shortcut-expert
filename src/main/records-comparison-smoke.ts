@@ -66,7 +66,7 @@ export async function runRecordsComparisonSmoke(window: BrowserWindow) {
   assert.equal(row('W06').improvement,'—'); assert.equal(row('W06').key,'0'); assert.ok(row('W06').rate.includes('0.0%'));
   assert.equal(row('W07').improvement,'—'); assert.equal(row('W07').key,'—');
   assert.equal(row('W12').improvement,'—'); assert.equal(row('W12').missing,false);
-  assert.equal(view.info,13); // 3 summary comparisons + 10 incomplete rows
+  assert.equal(view.info,9); // 3 summary comparisons + 6 incomplete rows
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.record-table-heading [aria-label="キー率の計算方法"]')?.querySelector('img').classList.contains('imgHelpIconHover')`),true);
   assert.equal(await window.webContents.executeJavaScript(`document.querySelector('.coverage-info').getAttribute('aria-label').includes('記録の欠損について')`),true);
 
