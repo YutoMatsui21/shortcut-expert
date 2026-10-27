@@ -5,7 +5,7 @@ description: shortcut-expertのGitHub操作（Issue・PRの参照/更新、ロ�
 
 # GitHub操作
 
-GitHub操作はこのSkillに従う。[AGENTS.md](../../../AGENTS.md)と対象Issueの受入条件を優先する。コマンドや監視方法の詳細は[開発手順](../../../README.md#development-workflow)・[PR監視入口](../../../docs/development-tools.md#pr監視)を参照する。
+GitHub操作はこのSkillに従う。[AGENTS.md](../../../AGENTS.md)と対象Issueの受入条件を優先する。コマンドや監視方法の詳細は[開発手順](../../../docs/development.md#development-workflow)・[PR監視入口](../../../docs/development-tools.md#pr監視)を参照する。
 
 ## 1. GitHubの操作方法
 
