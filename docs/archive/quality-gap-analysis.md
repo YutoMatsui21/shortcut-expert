@@ -4,7 +4,7 @@
 
 調査日：2026-10-12。対象：調査開始時の`2a83b76d2fe30cc979dff0f017d9c5e0b98977ea`と作業ツリー。開始時に未コミット変更なし。一般原則と一次資料は[品質保証のベストプラクティス調査](quality-best-practices.md)、要件の正本は[MVP要件](mvp-requirements.md)、責務配置の正本は[現行アーキテクチャ](../design.md#architecture)。本書は調査・提案であり、新しい公開条件や実装方針の承認を意味しない。
 
-後続の依頼で自動試験・回帰修正・CI定義を追加した。以下は調査時点の記録であり、最新の層・責務・確認範囲は[テスト設計](../design.md#test-design)、実行方法はREADMEを参照する。
+後続の依頼で自動試験・回帰修正・CI定義を追加した。以下は調査時点の記録であり、最新の層・責務・確認範囲は[テスト設計](../design.md#test-design)、実行方法は[開発・検証ガイド](../development.md)を参照する。
 
 ## 1. 結論
 
@@ -61,7 +61,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 | SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
 | 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../src/main/index.ts)、[Observer](../../native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
 | Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../src/main/coach-app.ts)、[notification.ts](../../src/main/notification.ts)、[preload](../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
-| 人工入力・技術probe・実入力の区別 | [README](../../README.md)、[research](../research.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
+| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../development.md)、[research](../research.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
 | lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../package.json)、[build-helper](../../scripts/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
 
 ## 3. 再現できた不具合：設定の再試行が最新操作を取り消す
