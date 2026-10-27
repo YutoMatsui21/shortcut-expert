@@ -26,7 +26,7 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   assert.equal(rows.counts[old].W09?.mouse, 100); assert.equal(rows.coverage[old].W03?.knowledge, 'legacy-unknown');
   const summary = await window.webContents.executeJavaScript('window.coach.getRecordSummary()');
   assert.equal(summary.summary.total, null);
-  assert.equal(summary.rows.length, 11);
+  assert.equal(summary.rows.length, 8);
   assert.equal(summary.rows.some((row: {id:string}) => row.id === 'W03'),false);
   await window.webContents.executeJavaScript(`(() => {
     const select = document.querySelector('.records-page select[aria-label="集計対象"]');

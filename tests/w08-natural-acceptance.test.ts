@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { snapFixture, candidateFixture, v2Fixture } from './support/fixtures.ts';
+import { taskbarFixture, snapFixture, candidateFixture, v2Fixture } from './support/fixtures.ts';
 
 function harness() {
   const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: false,
@@ -87,24 +87,24 @@ test('real DurableCoach/SQLite: apply pause after begin, ignore W03 requests and
   let trials: NaturalInputTrials | undefined, generation = 0;
   const coach = new DurableCoach({ repository, session: repository.session, date: () => '2026-10-21', now: () => 0,
     capabilities: () => [], changed: snapshot => trials?.observe(snapshot),
-    notify: async notice => { trials?.noticeRequested(notice.operation); return true; } });
+    notify: async notice => { trials?.noticeRequested(notice.operation, notice.shortcut); return true; } });
   await coach.initialize();
-  trials = new NaturalInputTrials({ snapshot: () => coach.snapshot(), configure: state => coach.setLearningState('W08', state),
+  trials = new NaturalInputTrials({ snapshot: () => coach.snapshot(), configure: state => coach.setLearningState('W12', state),
     start: async paused => { coach.begin(++generation); coach.pauseNotifications(paused); },
-    stop: async () => { coach.stop(); }, idle: () => coach.idle() });
+    stop: async () => { coach.stop(); }, idle: () => coach.idle() }, 'W12');
   for (const paused of [true, false]) {
-    await trials.arm({ ...plan, paused });
+    await trials.arm({ ...plan, paused, slot: 10 });
     assert.equal(coach.snapshot().notificationsPaused, paused);
-    await coach.accept({ ...snapFixture(), generation });
+    await coach.accept({ ...taskbarFixture(), generation });
     await trials.finish(true);
     assert.equal((trials.results.at(-1) as { valid: boolean }).valid, true);
     assert.equal((trials.results.at(-1) as { notificationRequestPassed: boolean }).notificationRequestPassed, true);
   }
-  await trials.arm({ ...plan, kind: 'negative' });
+  await trials.arm({ ...plan, kind: 'negative', slot: 0 });
   await coach.accept({ ...v2Fixture(candidateFixture({ date: '2026-10-21' })), generation });
   await trials.finish(true);
   assert.equal((trials.results.at(-1) as { notificationRequestPassed: boolean }).notificationRequestPassed, true);
-  await trials.arm({ ...plan, kind: 'negative' });
+  await trials.arm({ ...plan, kind: 'negative', slot: 0 });
   coach.stop(); // actual production publish during a manually interrupted trial
   await trials.finish(true);
   assert.equal((trials.results.at(-1) as { valid: boolean }).valid, false);

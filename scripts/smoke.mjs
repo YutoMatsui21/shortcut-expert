@@ -38,7 +38,7 @@ if (comparison) {
   const today = new Date();
   const day = offset => { const date = new Date(today); date.setDate(date.getDate() - offset); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; };
   writeFileSync(join(environment.COACH_TEST_DATA_DIR, 'counts.json'), JSON.stringify({schemaVersion:1,days:{
-    [day(0)]:{W05:{mouse:0,key:2},W06:{mouse:1,key:0},W11:{mouse:1,key:3}},
+    [day(0)]:{W02:{mouse:0,key:2},W06:{mouse:1,key:0},W11:{mouse:1,key:3}},
     [day(7)]:{W04:{mouse:2,key:0},W07:{mouse:1,key:0},W11:{mouse:1,key:1}}
   }}));
 }

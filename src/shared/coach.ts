@@ -70,15 +70,16 @@ export type CoachBridge = {
   subscribe(listener: (snapshot: Snapshot) => void): () => void;
 };
 
+// Historical IDs remain valid for storage parsing; release UI uses learningOperations.
 export const operations: { id: OperationId; label: string; shortcut: string; condition?: string; implemented: boolean }[] = [
   { id: 'W01', label: 'ウィンドウの切替', shortcut: 'Alt + Tab', condition: '通常窓の直接クリック／Alt+Tab確定。実機受入は別途', implemented: true },
   { id: 'W02', label: '別画面へ移動', shortcut: 'Win + Shift + ← / →', implemented: true },
   { id: 'W03', label: '最大化', shortcut: 'Win + ↑', implemented: true },
-  { id: 'W04', label: '最小化', shortcut: 'Win + ↓', condition: '通常窓。最大化中は復元してから', implemented: true },
-  { id: 'W05', label: '復元', shortcut: 'Win + ↓', condition: '最大化から', implemented: true },
+  { id: 'W04', label: '最大化解除・最小化', shortcut: 'Win + ↓', condition: '同じ窓で必要に応じて繰り返す', implemented: true },
+  { id: 'W05', label: '復元（W04へ統合）', shortcut: 'Win + ↓', implemented: false },
   { id: 'W06', label: '左右半分に配置', shortcut: 'Win + ← / →', implemented: false },
   { id: 'W07', label: '四隅に配置', shortcut: 'Win + ← / →、続けて ↑ / ↓', condition: 'Winを押したまま', implemented: false },
-  { id: 'W08', label: '配置候補を呼び出す', shortcut: 'Win + Z', implemented: true },
+  { id: 'W08', label: '配置候補を呼び出す', shortcut: 'Win + Z', implemented: false },
   { id: 'W09', label: 'デスクトップ表示', shortcut: 'Win + D', implemented: false },
   { id: 'W10', label: 'タスクビュー', shortcut: 'Win + Tab', implemented: false },
   { id: 'W11', label: 'ウィンドウを閉じる', shortcut: 'Alt + F4', implemented: true },

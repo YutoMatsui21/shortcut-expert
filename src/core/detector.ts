@@ -24,18 +24,9 @@ export function classify(value: ObserverCandidate): Observation | null {
     return { id: `${value.generation}:t${value.transaction}`, operation: 'W12', origin: value.origin,
       date: value.date, shortcut: `Win + ${e.slot === 10 ? 0 : e.slot}`, monitor: e.monitor };
   }
-  if (value.evidence.kind === 'snap-invocation') {
-    const e = value.evidence;
-    if (value.origin !== 'mouse' && value.origin !== 'key') return null;
-    if (e.profile !== 'snap-invocation-v1' || !validDate(value.date) || value.injected || value.conflicted ||
-        !e.targetMatched || !e.eligible || e.settingsEnabled !== true || e.inputAgeMs < 0 || e.inputAgeMs > 200 ||
-        !Number.isFinite(e.inputAgeMs) || !Number.isFinite(e.dwellMs)) return null;
-    if (value.origin === 'key' ? value.route !== 'win-z' || e.dwellMs !== 0 || e.buttonSource !== null :
-        value.origin !== 'mouse' || value.route !== 'max-button-hover' || e.dwellMs < 500 ||
-        !['title-rect', 'hit-fallback'].includes(e.buttonSource ?? '')) return null;
-    return { id: `${value.generation}:t${value.transaction}`, operation: 'W08', origin: value.origin,
-      date: value.date, shortcut: 'Win + Z', monitor: e.monitor };
-  }
+  // Historical Snap evidence remains parseable; it is outside the first release.
+  // Historical Snap evidence remains parseable; it is outside the first release.
+  if (value.evidence.kind === 'snap-invocation') return null;
   if (value.evidence.kind !== 'window' || value.evidence.profile !== 'legacy-window-v1') return null;
   const observation = classifyWindow({ ...value.evidence.result, type: 'candidate', protocolVersion: 1,
     generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
@@ -61,13 +52,14 @@ function classifyWindow(candidate: Candidate): Observation | null {
     case 'minimize':
       if (!['normal', 'maximized'].includes(candidate.before.state) || candidate.after.state !== 'minimized' ||
           !route(['min-button'], ['win-down'])) return null;
-      shortcut = candidate.before.state === 'normal' && candidate.before.arranged === false ? 'Win + ↓' : null;
+      shortcut = candidate.before.arranged === false
+        ? candidate.before.state === 'maximized' ? 'Win + ↓（必要に応じて繰り返す）' : 'Win + ↓' : null;
       if (candidate.origin === 'key' && shortcut === null) return null;
       operation = 'W04'; break;
     case 'restore':
       if (candidate.before.state !== 'maximized' || candidate.after.state !== 'normal' || candidate.afterArranged !== false ||
           !route(['max-button', 'caption-double-click'], ['win-down'])) return null;
-      operation = 'W05'; shortcut = 'Win + ↓'; break;
+      operation = 'W04'; shortcut = 'Win + ↓'; break;
     case 'close':
       if (!['normal', 'maximized'].includes(candidate.before.state) || candidate.after.state !== 'closed' ||
           !route(['close-button'], ['alt-f4'])) return null;

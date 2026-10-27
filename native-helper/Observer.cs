@@ -11,7 +11,6 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
-    private readonly SnapInvocationObserver snap;
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
     // Native側がcallbackを呼ぶ間、解除までdelegateをGCから保護する。
@@ -24,7 +23,6 @@ internal sealed class Observer : IDisposable
     internal Observer(Action<object> emit, bool fixture = false)
     {
         protocol = new CandidateProtocol(emit); this.fixture = fixture;
-        snap = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
@@ -58,12 +56,11 @@ internal sealed class Observer : IDisposable
             if (hook != 0) eventHooks.Add(hook);
         }
         if (!Active) { Stop(); throw new InvalidOperationException("hook-init-failed"); }
-        if (!fixture && protocolVersion == 2) { snap.Start(newGeneration); taskbar.Start(newGeneration); switching.Start(newGeneration); }
+        if (!fixture && protocolVersion == 2) { taskbar.Start(newGeneration); switching.Start(newGeneration); }
     }
     internal void Stop()
     {
         protocol.Stop();
-        snap.Stop();
         taskbar.Stop();
         switching.Stop();
         bool released = true;
@@ -110,7 +107,6 @@ internal sealed class Observer : IDisposable
         try
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
-            snap.Mouse(message, Marshal.PtrToStructure<MouseData>(data).Flags);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
@@ -143,13 +139,12 @@ internal sealed class Observer : IDisposable
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var key = Marshal.PtrToStructure<KeyData>(data);
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            snap.Key(key.Key, down, key.Flags);
             taskbar.Key(key.Key, down, key.Flags);
             switching.Key(key.Key, down, key.Flags, key.Time);
             // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
             if (key.Key is >= 0x30 and <= 0x39 && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0))
             { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
-            if (!down) return CallNextHookEx(0, code, message, data);
+            if (!down) { tracker.KeyReleased(key.Key); return CallNextHookEx(0, code, message, data); }
             nint target = GetForegroundWindow();
             if (CandidateTracker.IsModifier(key.Key))
             {
@@ -206,5 +201,5 @@ internal sealed class Observer : IDisposable
         }
         catch { tracker.ClearInput(); switching.Cancel(); }
     }
-    public void Dispose() { Stop(); snap.Dispose(); taskbar.Dispose(); switching.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); taskbar.Dispose(); switching.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }
