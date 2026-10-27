@@ -4,7 +4,7 @@
 
 調査日：2026-10-12。対象：Electron＋React＋TypeScriptと、C#／.NET／Win32の補助プロセスを持つ個人開発MVP。
 
-本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。製品の要件は[mvp-requirements.md](mvp-requirements.md)、責務は[現行アーキテクチャ](../design.md#architecture)、実行手順は[README](../../README.md#開発確認)を正本とし、本書はそれらを変更しない。
+本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。製品の要件は[mvp-requirements.md](mvp-requirements.md)、責務は[現行アーキテクチャ](../design.md#architecture)、実行手順は[開発・検証ガイド](../development.md#development-workflow)を正本とし、本書はそれらを変更しない。
 
 各節の「一次資料」は資料が述べる事実・原則、「適用案」はその原則を本製品へ当てはめた調査者の判断である。「先に必要」は現在のリスクに対応する推奨であり、新しい公開受け入れ条件の承認を意味しない。操作候補11件、Windows 11・1〜2画面、4アプリの成立範囲、人工試験と実入力精度の区別を維持する。
 
@@ -256,7 +256,7 @@ NISTの組合せテスト研究は、少数の入力因子の相互作用に着�
 
 配布前の優先確認は、開発ツールを入れていないWindows 11通常ユーザーでの導入、初回／2回目起動、helper解決と同梱DLL、トレイ、単一起動、終了、再導入、削除、既存の記録・設定の扱いである。日本語・空白を含む場所、起動時cwdが違う場合、別出力先、起動中exeのlockも対象にする。installer生成成功と導入成功は別の確認とする。
 
-配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../../README.md#公開準備)に従って別途決める。
+配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../development.md#開発者向け公開準備)に従って別途決める。
 
 | 場所 | 優先する組合せ | 位置付け |
 | --- | --- | --- |
