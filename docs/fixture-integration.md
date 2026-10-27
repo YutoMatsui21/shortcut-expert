@@ -1,7 +1,7 @@
 # #43 先行fixture統合の検証範囲
 
-#43の12操作全経路受入は**未完了**。現行Coreは既存W02/W03/W04/W05/W11とW08呼び出しを採用する。
-W01/W06/W07/W10/W12/W13はCoreの採用契約が未実装であり、DBへの直接投入や判定器のfakeで通過扱いにしない。
+#43の11操作全経路受入は**未完了**。現行Coreは既存W02/W03/W04/W05/W11とW08呼び出しを採用する。
+W01/W06/W07/W10/W12はCoreの採用契約が未実装であり、DBへの直接投入や判定器のfakeで通過扱いにしない。W13は将来保留で、この11操作の受入対象には含めない（旧保存ID・履歴は維持）。
 W08は[専用v2証拠からの製品経路](snap-invocation.md)を人工fixtureで確認し、自然入力受入は未完了。
 検出器Issueの完了を着手条件に追加するものではなく、現行実装と#43の受入条件の差を示す。
 
@@ -10,7 +10,7 @@ W08は[専用v2証拠からの製品経路](snap-invocation.md)を人工fixture�
 | 契約 | 試験入口 | 通る経路・限界 |
 | --- | --- | --- |
 | 既存5操作とW08×mouse/key×3状態 | `tests/fixture-integration.test.ts` | 人工v2 JSON→Main厳格parse→DurableCoach判定→実SQLite Worker→再open。両ページ用モデルと3filter、学習中だけ通知adapter発行、重送非採用を確認。React/Preload/helperはこの試験の対象外 |
-| 12行・2ページ・限定IPC・停止/再開・終了 | 通常smoke、`--storage` | 本番Electron/Preload/Reactとfixture helper。通常smokeは旧JSON/独自通知、storageはSQLite/標準通知adapter。12行表示を12操作採用の証拠にしない |
+| 11行・2ページ・限定IPC・停止/再開・終了 | 通常smoke、`--storage` | 本番Electron/Preload/Reactとfixture helper。通常smokeは旧JSON/独自通知、storageはSQLite/標準通知adapter。11行表示を11操作採用の証拠にしない |
 | J01比較・警告 | `--comparison`、`tests/records-query.test.ts` | 隔離した取得済み記録/coverageによる比較と警告。投入したcountsはparse/Core採用の証拠ではない |
 | J02保存後発行・障害後非再送 | 上記結合試験、`tests/durable-storage.test.ts`、`tests/standard-notification.test.ts`、storage smoke | 実Worker保存後のadapter、保存/ACK障害の再試行と再起動、OSイベントfake。物理disk故障の合格ではない |
 | J03人工activation | `--activation`、`tests/notification-*.test.ts` | cold/稼働中/初期化失敗の人工callback。実COM/OS通知clickではない |
