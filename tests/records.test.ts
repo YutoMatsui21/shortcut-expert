@@ -4,7 +4,7 @@ import { recordsReadModel } from '../src/core/records.ts';
 import type { RecordRange } from '../src/shared/storage.ts';
 
 const settings = { muted: [], opened: true };
-test('7 local calendar days: weighted KPI, twelve rows, legacy values, no synthetic zeros', () => {
+test('7 local calendar days: weighted KPI, eleven rows, legacy values, no synthetic zeros', () => {
   const records: RecordRange = { counts: {
     '2024-02-28': { W03: { mouse: 100, key: 100 } },
     '2024-02-29': { W03: { mouse: 3, key: 1 }, W01: { mouse: 0, key: 6 }, W09: { mouse: 100, key: 100 } },
@@ -17,12 +17,12 @@ test('7 local calendar days: weighted KPI, twelve rows, legacy values, no synthe
   const original = structuredClone(records);
   const value = recordsReadModel(records, settings, '2024-03-06');
   assert.equal(value.from, '2024-02-29'); assert.equal(value.to, '2024-03-06'); assert.equal(value.revision, 19);
-  assert.equal(value.rows.length, 12);
+  assert.equal(value.rows.length, 11);
   assert.deepEqual(value.summary, { mouse: 4, key: 7, total: 11, rate: 63.6, barRate: 7 / 11 * 100 });
   assert.equal(value.rows.find(row => row.id === 'W03')?.rate, 20);
   assert.equal(value.rows.find(row => row.id === 'W02')?.total, 0);
   assert.equal(value.rows.find(row => row.id === 'W02')?.rate, null);
-  assert.equal(value.rows.find(row => row.id === 'W13')?.total, null);
+  assert.equal(value.rows.some(row => row.id === 'W13'), false);
   assert.deepEqual(records, original);
 });
 test('empty, observed zero and valid zero percent remain distinct', () => {
@@ -81,7 +81,7 @@ test('three filters apply current states to both periods, rows/KPIs/coverage wit
   const learning = recordsReadModel(records, states, '2026-10-17',query({filter:'learning'}));
   assert.deepEqual(learning.rows.map(row=>row.id),['W03']); assert.equal(learning.comparison.improvement,50);
   const all = recordsReadModel(records, states, '2026-10-17',query({filter:'all'}));
-  assert.equal(all.rows.length,12);assert.equal(all.summary.mouse,201);assert.equal(all.previous.mouse,107);
+  assert.equal(all.rows.length,11);assert.equal(all.summary.mouse,201);assert.equal(all.previous.mouse,107);
   assert.equal(all.comparison.hasMissingCoverage,true);
   states.states!.W03='excluded';
   const none = recordsReadModel(records,states,'2026-10-17',query({filter:'learning'}));
