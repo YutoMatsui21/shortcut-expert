@@ -4,13 +4,13 @@ import { learningReadModel } from '../src/core/learning.ts';
 import { learningOperations } from '../src/shared/learning.ts';
 import type { RecordRange } from '../src/shared/storage.ts';
 
-test('正式12操作は旧IDを保持し、3/3/5/1で準備中。旧mutedは独立した対象外表示', () => {
-  assert.deepEqual(learningOperations.map(op => op.id), ['W12', 'W01', 'W10', 'W03', 'W05', 'W04', 'W08', 'W06', 'W13', 'W07', 'W02', 'W11']);
-  assert.deepEqual([0, 1, 2, 3].map(group => learningOperations.filter(op => op.group === group).length), [3, 3, 5, 1]);
+test('正式11操作は旧IDを保持し、3/3/4/1で準備中。旧mutedは独立した対象外表示', () => {
+  assert.deepEqual(learningOperations.map(op => op.id), ['W12', 'W01', 'W10', 'W03', 'W05', 'W04', 'W08', 'W06', 'W07', 'W02', 'W11']);
+  assert.deepEqual([0, 1, 2, 3].map(group => learningOperations.filter(op => op.group === group).length), [3, 3, 4, 1]);
   assert.ok(learningOperations.every(op => op.availability === 'preparing'));
   const model = learningReadModel({ counts: {}, coverage: {}, revision: 4 }, { muted: ['W03', 'W09'], opened: true }, '2026-10-19');
   assert.equal(model.rows.find(row => row.id === 'W03')?.state, 'excluded');
-  assert.equal(model.rows.filter(row => row.state === 'learning').length, 11);
+  assert.equal(model.rows.filter(row => row.state === 'learning').length, 10);
   assert.equal(model.rows.filter(row => row.state === 'mastered').length, 0);
 });
 
@@ -31,7 +31,7 @@ test('一覧は今日を含む7暦日のみ集計し、0%・既知0・未観測�
   assert.equal(row('W03').rate, 50); assert.equal(row('W03').total, 4);
   assert.equal(row('W01').rate, 0); assert.equal(row('W01').total, 5);
   assert.equal(row('W02').rate, null); assert.equal(row('W02').total, 0);
-  assert.equal(row('W12').total, null); assert.equal(row('W13').key, null);
+  assert.equal(row('W12').total, null); assert.equal(result.rows.some(row => row.id === 'W13'), false);
   assert.deepEqual(records, before);
   assert.equal(learningReadModel(records, { muted: [], opened: true }, '2026-10-26').rows.find(row => row.id === 'W01')?.total, null);
 });
