@@ -17,7 +17,7 @@ W08は[専用v2証拠からの製品経路](snap-invocation.md)を人工fixture�
 | 削除/再試行・不正IPC・世代・時計 | `--settings`、`tests/delete-*.test.ts`、`tests/coach-ipc.test.ts`、`tests/observer.test.ts`、`tests/protocol-v2.test.ts`、`tests/durable-storage.test.ts` | 取消/確定、保存障害、世代/transaction/版混在、時計後退。各試験が隔離する境界は個別ソースに記載 |
 | Native既存5操作とW08 | `npm.cmd run test:native` | 本番C# policy/通信→TS契約、fixture helperの開始/停止。残る6操作のNative結合は未通過 |
 
-全件のunit/native、build、各smokeの実行方法は[README](../README.md#開発確認)。CIの`windows-quality`は通常版と同梱版でstorage/comparison/settings/activation/migrationを含む既存smokeを実行する。
+全件のunit/native、build、各smokeの実行方法は[開発・検証ガイド](development.md#development-workflow)。CIの`windows-quality`は通常版と同梱版でstorage/comparison/settings/activation/migrationを含む既存smokeを実行する。
 
 ## 証拠と再実行
 
