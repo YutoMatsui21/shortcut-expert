@@ -155,7 +155,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 > **2026-10-28 後続の仕様改訂（調査原本・当時の判断は変更しない）**：上記の「画面跨ぎ上端dragはW03のみ」の排他的ルールを撤回。drag終了時に別monitorへ移動が確定し、同じdragで最大化も確定したら**W02＋W03各1件**、四隅quarterも確定したら**W02＋W07各1件**を記録する。中間monitor変化のみ・派生復元・中間halfは記録しない。操作別記録2件・同一gestureの通知最大1件の契約は[現行要件](ui-redesign-requirements.md)と[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。下記の2026-10-28実測や評価は**当時の証拠と評価**として残し、新方針の技術成立を実証したことにはしない。
 
-> [2026-10-28の8操作調査結果（#9）](research-eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、W12/W01/W04/W06/W11は制約付き着手可、W03/W07/W02は現行必須範囲で未成立。下表の初期仮説を現在のゲート合格へ読み替えない。
+> [2026-10-28の8操作調査結果（#9）](research-eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、当時はW12/W01/W04/W06/W11が制約付き着手可、W03/W07/W02は未成立。その後の新仕様と16追加試行による[#14の再審査](research-compound-drag-validation.md)で、全8ゲートを制約付き着手PASSとした。製品完全対応・リリース合格ではない。下表の初期仮説や過去の結論は最新ゲートの代用にしない。
 
 
 ## Windows操作の技術判断（ステップ3結論）

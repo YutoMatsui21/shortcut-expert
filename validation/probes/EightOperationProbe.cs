@@ -1,4 +1,4 @@
-// Issue #9 research only. Owned windows; bounded manual ARM/FINISH; no product detector.
+// Issues #9/#14 research only. Owned windows; bounded manual ARM/FINISH; no product detector.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -48,7 +48,8 @@ class EightOperationProbe {
         public string state="unknown",shape="unknown"; public bool? arranged; public bool visible;
         // Monitor identity and coordinates are memory-only, never serialized.
         public IntPtr monitor; public Rect rect;
-        public object Safe() { return new { state,shape,arranged,visible }; }
+        public string monitorRole="unknown"; // Fixed role only; no device identifier or coordinates.
+        public object Safe() { return new { state,shape,arranged,visible,monitorRole }; }
     }
     public static string Shape(int l,int t,int r,int b,int x,int y,int width,int height) {
         const int tolerance=3;
@@ -68,18 +69,26 @@ class EightOperationProbe {
     static readonly List<IntPtr> eventHooks=new List<IntPtr>();
     static readonly HashSet<uint> held=new HashSet<uint>();
     static Arranged arrangedApi; static Form panel,target,other; static IntPtr targetHandle,otherHandle;
-    static Label status,instruction; static ComboBox cases; static Button arm,finish,reset;
+    static Label status,instruction; static ComboBox cases,startScreen; static Button arm,finish,reset;
     static TextBox output; static string file,scenario,route,releaseZone; static IntPtr mouseHook,keyHook;
     static bool armed,pending,destroyed,captionPressed,drag,hookFault;
     static int unhookFailures;
     static long armAt,startAt,lastCaptionAt,lastDownAt; static Point lastCaptionPoint;
     static Snapshot before,last; static string previousShape;
+    static Snapshot dragBefore,dragEnd;
+    static int monitorTransitions,escapePresses,leftPresses,rightPresses,upPresses,shiftLeftPresses,shiftRightPresses;
     static int index,mouseInputs,keyPresses,repeats,winReleases,competing,injected,moveStarts,moveEnds,
         maximizeTransitions,restoreTransitions,minimizeTransitions,halfTransitions,quarterTransitions,
         destroyEvents,otherDestroyEvents,foregroundChanges,externalClicks,downPresses,shortDownGaps,longDownGaps,outsideTargetKeys;
     static int hitCaptionCount,hitMinCount,rectMinCount,rectMaxCount,rectCloseCount,rectHitDisagreements,titleInfoFailures,
         winKeyDowns,winChordArrows,arrowsWithoutWin,arrowsWithExtraModifier,asyncWinDisagreements;
     static readonly string[] caseNames={
+        "G03 same-monitor top drag", "G03 key maximize",
+        "G02 key left", "G02 key right", "G02 cross and return", "G02 cross and cancel",
+        "G07 destination key top left", "G07 destination key top right",
+        "G07 cross corner left", "G07 cross corner right",
+        "Compound key move then maximize", "Compound key move then quarter",
+        "Negative program maximize (F6)", "Negative other maximize (F6)",
         "W03 caption double click", "W03 direct top drag", "W03 Snap Layout negative",
         "W04 restore button", "W04 restore double click", "W04 normal minimize button",
         "W04 maximized minimize button", "W04 key restore", "W04 key minimize",
@@ -92,6 +101,11 @@ class EightOperationProbe {
         "W11 mouse close", "W11 Alt+F4", "W11 cancel close", "W11 hide close", "W11 other destroyed"
     };
     static bool Down(int key) { return GetAsyncKeyState(key)<0; }
+    static string MonitorRole(Screen screen) {
+        if(screen.Primary)return "primary";
+        int i=0;foreach(Screen s in Screen.AllScreens)if(!s.Primary){i++;if(s.DeviceName==screen.DeviceName)return "secondary-"+i;}
+        return "unknown";
+    }
     static bool Neutral() { foreach(int k in new[]{1,2,4,0x10,0x11,0x12,0x25,0x26,0x27,0x28,0x5b,0x5c,0x73})if(Down(k))return false; return true; }
     static Snapshot Read() {
         if(destroyed)return new Snapshot {state="closed",shape="none",visible=false};
@@ -99,6 +113,7 @@ class EightOperationProbe {
         if(!GetWindowPlacement(targetHandle,ref p))return s;
         s.state=p.Show==3?"maximized":(p.Show==2||p.Show==6||p.Show==7)?"minimized":p.Show==1?"normal":"other";
         s.visible=IsWindowVisible(targetHandle); s.monitor=MonitorFromWindow(targetHandle,0);
+        s.monitorRole=MonitorRole(Screen.FromHandle(targetHandle));
         if(arrangedApi!=null)s.arranged=arrangedApi(targetHandle)!=0;
         Rect r; if(DwmGetWindowAttribute(targetHandle,9,out r,Marshal.SizeOf(typeof(Rect)))==0) {
             s.rect=r; Rectangle w=Screen.FromHandle(targetHandle).WorkingArea;
@@ -109,6 +124,7 @@ class EightOperationProbe {
     static void Sample() {
         Snapshot next=Read();
         if(last!=null) {
+            if(last.monitor!=IntPtr.Zero&&next.monitor!=IntPtr.Zero&&last.monitor!=next.monitor)monitorTransitions++;
             if(next.state!=last.state) {
                 if(next.state=="maximized")maximizeTransitions++;
                 if(next.state=="minimized")minimizeTransitions++;
@@ -188,6 +204,13 @@ class EightOperationProbe {
             bool down=kind==0x100||kind==0x104;
             // Manual stop control works even when maximize/minimize/close hides the panel.
             if(down&&k.Key==0x77&&(k.Flags&0x12)==0){Finish("manual-f8");return CallNextHookEx(keyHook,code,message,data);}
+            // Deliberate program-origin negative, never treated as a mouse/key maximize route.
+            if(down&&k.Key==0x75&&(k.Flags&0x12)==0&&GetForegroundWindow()==targetHandle&&
+                (scenario=="Negative program maximize (F6)"||scenario=="Negative other maximize (F6)")) {
+                competing++;SetRoute("program-control");
+                panel.BeginInvoke((Action)(()=>{if(armed){if(scenario=="Negative program maximize (F6)")target.WindowState=FormWindowState.Maximized;else other.WindowState=FormWindowState.Maximized;}}));
+                return CallNextHookEx(keyHook,code,message,data);
+            }
             if(!down) {
                 held.Remove(k.Key); if(k.Key==0x5b||k.Key==0x5c)winReleases++;
             } else if(held.Contains(k.Key)) {
@@ -206,6 +229,12 @@ class EightOperationProbe {
                 }
                 if(k.Key==0x5b||k.Key==0x5c||k.Key==0x10||k.Key==0xa0||k.Key==0xa1||k.Key==0x12||k.Key==0xa4||k.Key==0xa5)return CallNextHookEx(keyHook,code,message,data);
                 keyPresses++;
+                if(k.Key==0x1b)escapePresses++;
+                if(win&&!ctrl&&!alt){
+                    if(k.Key==0x25){if(shift)shiftLeftPresses++;else leftPresses++;}
+                    if(k.Key==0x27){if(shift)shiftRightPresses++;else rightPresses++;}
+                    if(k.Key==0x26&&!shift)upPresses++;
+                }
                 if(k.Key==0x28&&win&&!shift&&!alt&&!ctrl) {
                     if(downPresses>0){if(clock.ElapsedMilliseconds-lastDownAt<=1000)shortDownGaps++;else longDownGaps++;}
                     downPresses++;lastDownAt=clock.ElapsedMilliseconds;
@@ -231,8 +260,8 @@ class EightOperationProbe {
                 return;
             }
             if(window!=targetHandle)return;
-            if(kind==0xa){moveStarts++;drag=true;if(captionPressed)SetRoute("caption-drag");}
-            if(kind==0xb){moveEnds++;drag=false;}
+            if(kind==0xa){moveStarts++;drag=true;dragBefore=Read();if(captionPressed)SetRoute("caption-drag");}
+            if(kind==0xb){moveEnds++;drag=false;dragEnd=Read();}
             if(kind==0xa||kind==0xb||kind==0x16||kind==0x17||(obj==0&&child==0))Sample();
         } catch {hookFault=true;}
     }
@@ -251,6 +280,8 @@ class EightOperationProbe {
         }
         before=Read();last=before;previousShape=before.shape;destroyed=captionPressed=drag=hookFault=false;
         route="none";releaseZone="none";lastCaptionAt=-100000;
+        dragBefore=dragEnd=null;
+        monitorTransitions=escapePresses=leftPresses=rightPresses=upPresses=shiftLeftPresses=shiftRightPresses=0;
         mouseInputs=keyPresses=repeats=winReleases=competing=injected=moveStarts=moveEnds=maximizeTransitions=restoreTransitions=
             minimizeTransitions=halfTransitions=quarterTransitions=destroyEvents=otherDestroyEvents=foregroundChanges=externalClicks=
             downPresses=shortDownGaps=longDownGaps=outsideTargetKeys=0;
@@ -275,6 +306,8 @@ class EightOperationProbe {
             maximizeTransitions,restoreTransitions,minimizeTransitions,halfTransitions,quarterTransitions,destroyEvents,
             otherDestroyEvents,foregroundChanges,externalClicks,downPresses,shortDownGaps,longDownGaps,outsideTargetKeys,
             monitorChanged=moved,movingAtStop=drag,hookFault,unhookFailures,
+            dragBefore=dragBefore==null?null:dragBefore.Safe(),dragEnd=dragEnd==null?null:dragEnd.Safe(),
+            monitorTransitions,escapePresses,leftPresses,rightPresses,upPresses,shiftLeftPresses,shiftRightPresses,
             hitCaptionCount,hitMinCount,rectMinCount,rectMaxCount,rectCloseCount,rectHitDisagreements,titleInfoFailures,
             winKeyDowns,winChordArrows,arrowsWithoutWin,arrowsWithExtraModifier,asyncWinDisagreements,
             researchOnly=true,causalAttributionProven=false,productPass=false});
@@ -302,6 +335,10 @@ class EightOperationProbe {
         other=new Form {Text="Issue 9 - Other B",StartPosition=FormStartPosition.Manual,Bounds=new Rectangle(820,500,280,180)};
         other.Show();otherHandle=other.Handle;target.Activate();
         string c=(string)cases.SelectedItem;
+        if(startScreen!=null&&startScreen.SelectedIndex>=0) {
+            Screen selected=Screen.AllScreens[startScreen.SelectedIndex];Rectangle w=selected.WorkingArea;
+            target.Location=new System.Drawing.Point(w.Left+100,w.Top+150);
+        }
         if(c=="W04 restore button"||c=="W04 restore double click"||c=="W04 maximized minimize button"||c=="W04 key restore"||c=="W04 two physical Win+Down"||c=="W04 other input boundary"||c=="W02 maximized drag other monitor")target.WindowState=FormWindowState.Maximized;
         status.Text="Prepared. ARM then focus Target A within 5 seconds; release keys/buttons; wait for ARMED.";
     }
@@ -318,7 +355,7 @@ class EightOperationProbe {
         check(Shape(0,40,960,1080,0,40,1920,1040)=="half-left");
         check(Shape(4,0,960,1080,0,0,1920,1080)=="other");
         check(Shape(0,0,700,1080,0,0,1920,1080)=="other");
-        string safe=json.Serialize(new Snapshot().Safe());check(!safe.Contains("monitor")&&!safe.Contains("rect"));
+        string safe=json.Serialize(new Snapshot().Safe());check(!safe.Contains("\"monitor\":")&&!safe.Contains("rect")&&safe.Contains("monitorRole"));
         var rects=new Rect[6];var states=new uint[6];
         rects[2]=new Rect {L=0,T=0,R=20,B=20};rects[3]=new Rect {L=20,T=0,R=40,B=20};rects[5]=new Rect {L=40,T=0,R=60,B=20};
         check(ButtonHit(rects,states,new Point {X=10,Y=10})==8);
@@ -347,6 +384,8 @@ class EightOperationProbe {
         panel=new Form {Text="Issue 9 - manual feasibility probe",Width=860,Height=510,StartPosition=FormStartPosition.CenterScreen};
         cases=new ComboBox {Left=12,Top=12,Width=810,DropDownStyle=ComboBoxStyle.DropDownList};cases.Items.AddRange(caseNames);cases.SelectedIndex=0;
         reset=new Button {Text="1 Prepare / reset",Left=12,Top=50,Width=170};reset.Click+=(s,e)=>Prepare();
+        startScreen=new ComboBox {Left=570,Top=50,Width=250,DropDownStyle=ComboBoxStyle.DropDownList};
+        foreach(Screen screen in Screen.AllScreens)startScreen.Items.Add(MonitorRole(screen));startScreen.SelectedIndex=0;
         arm=new Button {Text="2 ARM (5s delay)",Left=195,Top=50,Width=180};arm.Click+=(s,e)=>{
             scenario=(string)cases.SelectedItem;pending=true;armAt=clock.ElapsedMilliseconds;
             arm.Enabled=reset.Enabled=cases.Enabled=false;status.Text="Focus Target A; release input; observation starts after 5 seconds.";
@@ -355,12 +394,12 @@ class EightOperationProbe {
         instruction=new Label {Left=12,Top=94,Width=810,Height=58,Text="Select case, PREPARE, ARM, focus Target A, wait 6s, perform ONE operation, press F8 to FINISH.\nF8 also stops when panel is hidden. Only owned-window state/input categories are saved."};
         status=new Label {Left=12,Top=155,Width=810,Height=65};
         output=new TextBox {Left=12,Top=225,Width=810,Height=230,Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical};
-        panel.Controls.AddRange(new Control[]{cases,reset,arm,finish,instruction,status,output});
+        panel.Controls.AddRange(new Control[]{cases,startScreen,reset,arm,finish,instruction,status,output});
         OSVersion os=new OSVersion();os.Size=(uint)Marshal.SizeOf(os);RtlGetVersion(ref os);
         var displays=new List<object>();foreach(Screen screen in Screen.AllScreens) {
             // No device name or raw monitor coordinates. Topology remains in memory.
             Rectangle b=screen.Bounds;Rectangle w=screen.WorkingArea;
-            displays.Add(new {primary=screen.Primary,width=b.Width,height=b.Height,workWidth=w.Width,workHeight=w.Height});
+            displays.Add(new {role=MonitorRole(screen),primary=screen.Primary,width=b.Width,height=b.Height,workWidth=w.Width,workHeight=w.Height});
         }
         Save(new {kind="environment",windowsBuild=os.Major+"."+os.Minor+"."+os.Build,dpiAware=dpi,arrangedAvailable=arrangedApi!=null,
             displays,scope="owned-windows-only",trialLimitSeconds=45,sessionLimitSeconds=1200});

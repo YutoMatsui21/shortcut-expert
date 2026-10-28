@@ -2,3 +2,4 @@
 validation/evidence/task-view-sources/*.cs.txt -text
 validation/evidence/snap-layout-sources/*.cs.txt -text whitespace=trailing-space,space-before-tab,cr-at-eol
 validation/evidence/eight-operation-sources/*.cs.txt -text
+validation/evidence/compound-drag-20261028-session1.jsonl -text
