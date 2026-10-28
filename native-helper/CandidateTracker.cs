@@ -87,7 +87,7 @@ internal sealed class CandidateTracker
         release = null;
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
         if (IsModifier(key)) {
-            if (key is not (VK_LWIN or VK_RWIN) || flags != 0) completedWinDown = null;
+            if (key is not (VK_LWIN or VK_RWIN) || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) completedWinDown = null;
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);

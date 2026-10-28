@@ -80,6 +80,19 @@ internal static partial class Program
                 Equal(at > 1000, second is WindowCandidate);
                 if (second is WindowCandidate c) Sample(c, "W04");
             });
+        foreach (uint flag in new uint[] { 0, 1, LLKHF_INJECTED, LLKHF_LOWER_IL_INJECTED })
+            Check($"W04 full Win release/repress sequence, modifier flags {flag}", () => {
+                var tracker = Tracker();
+                tracker.Key(11, null, VK_LWIN, false, false, 0, 1);
+                tracker.Key(11, max, VK_DOWN, true, false, 10, 0);
+                tracker.Complete(11, max, start, 50, 11, "2026-10-28", screen);
+                tracker.KeyReleased(VK_DOWN); tracker.KeyReleased(VK_LWIN);
+                tracker.Key(11, null, VK_LWIN, false, false, 200, flag);
+                tracker.Key(11, start, VK_DOWN, true, false, 210, 0);
+                var second = tracker.Complete(11, start, min, 250, 12, "2026-10-28", screen);
+                bool injected = (flag & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+                Equal(injected, second is WindowCandidate);
+            });
         Check("W04 independent maximize then reduction is not swallowed by grouping", () => {
             var tracker = Tracker(); tracker.Key(11, max, VK_DOWN, true, false, 0, 0);
             tracker.Complete(11, max, start, 50, 11, "2026-10-28", screen);

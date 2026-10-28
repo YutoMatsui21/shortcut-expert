@@ -40,4 +40,4 @@
 
 これらは隔離人工fixture。本番Windowsイベント配送、独自caption、全アプリ、混在DPI、任意画面構成、実OS通知、NSIS、通常60分、同一最終build R02/J04は未確認。#47へ残し、人工試験の成功で代替しない。検証コマンドの結果・レビュー対象revision・最新head CIはPRに記録する。
 
-ローカル検証：unit 275件、native 7件（内部C# policy 329ケース）、helper/Electron build・型検査、通常隔離smokeが成功。smokeは制限環境内のElectron ACLエラー後、同じfixtureを制限の外で実行し成功。ACLや製品sandbox設定は変更していない。helper buildではNuGet脆弱性情報の取得失敗警告があり、既存依存でコンパイル・publishが完了した。
+ローカル検証：unit 275件、native 7件（内部C# policy 333ケース）、helper/Electron build・型検査、通常隔離smokeが成功。専用レビューで物理Winキーのextended flagによる連続関係の誤解除を指摘され、Winキー解放/再押下を含むRedを確認して注入bitのmask判定へ修正した。smokeは制限環境内のElectron ACLエラー後、同じfixtureを制限の外で実行し成功。ACLや製品sandbox設定は変更していない。helper buildではNuGet脆弱性情報の取得失敗警告があり、既存依存でコンパイル・publishが完了した。
