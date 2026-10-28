@@ -55,6 +55,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report['tools']['suspected_failures'], 1)
         self.assertEqual(report['tools']['possible_truncations'], 1)
         self.assertEqual(report['candidates']['repeated'][0]['ids'], [1,2])
+        self.assertEqual(report['candidates']['repeated'][0]['summary'], 'first')
         self.assertEqual(report['candidates']['longest_calls'][0]['id'], 2)
         self.assertTrue(all('signature' not in x for x in report['candidates']['largest_outputs']))
 
