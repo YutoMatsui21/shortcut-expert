@@ -1,7 +1,7 @@
 using System.Text.Json;
 using static NativeMethods;
 
-internal static class Program
+internal static partial class Program
 {
     private static readonly WindowState normal = new(7, "chrome", SW_SHOWNORMAL, false);
     private static readonly WindowState maximized = normal with { Show = SW_SHOWMAXIMIZED };
@@ -89,11 +89,12 @@ internal static class Program
             });
             CheckAdditionalOperations();
             CheckWinDownGrouping();
+            var windowStateSamples = CheckWindowStates();
             CheckProtocol();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
-            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, globalInputCollected = false }));
+            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, globalInputCollected = false }));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine($"Native policy failed after {passed.Count} cases: {error.Message}"); return 1; }

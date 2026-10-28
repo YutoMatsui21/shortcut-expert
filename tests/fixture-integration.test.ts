@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import type { Candidate, OperationId } from '../src/shared/coach.ts';
-import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture } from './support/fixtures.ts';
+import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, deferred } from './support/fixtures.ts';
 
 // Only Electron/OS boundaries are fake. Parse, classification, writer and models are real.
 mock.module('electron', { namedExports: { app: {}, Notification: class {} } });
@@ -17,8 +17,12 @@ const today = '2026-10-21';
 const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string }[] = [
   { id: 'W01', mouse: {}, key: 'alt-tab', shortcut: 'Alt + Tab' },
   { id: 'W03', mouse: {}, key: 'win-up', shortcut: 'Win + ↑' },
+  { id: 'W03', mouse: { route: 'caption-top-drag', fromMonitor: { x: 0, y: 0, width: 1920, height: 1080 },
+    toMonitor: { x: 0, y: 0, width: 1920, height: 1080 } }, key: 'win-up', shortcut: 'Win + ↑' },
   { id: 'W12', mouse: {}, key: 'win-digit', shortcut: 'Win + 0' },
   { id: 'W04', mouse: { operation: 'minimize', after: { state: 'minimized' }, route: 'min-button' }, key: 'win-down', shortcut: 'Win + ↓' },
+  { id: 'W04', mouse: { operation: 'minimize', before: { state: 'maximized', arranged: false }, after: { state: 'minimized' },
+    route: 'min-button' }, key: 'win-down', shortcut: 'Win + ↓（必要に応じて繰り返す）' },
   { id: 'W04', mouse: { operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W11', mouse: { operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4', shortcut: 'Alt + F4' },
   { id: 'W02', mouse: { operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag',
@@ -81,3 +85,39 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
     assert.equal(saved.settings.states?.[entry.id], 'excluded');
   } finally { await reopened.close(); }
 });
+
+for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
+  test(`W04: delayed SQLite commit / ${boundary} cancels notice; retry does not duplicate`, async t => {
+    const root = await mkdtemp(join(tmpdir(), 'coach-w04-boundary-'));
+    const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
+    t.after(async () => { await repository.close(); await rm(root, { recursive: true, force: true }); });
+    let notices = 0;
+    const coach = new DurableCoach({ repository, session: repository.session, date: () => today, now: () => 0,
+      capabilities: () => [], changed: () => {}, notify: async () => { notices++; return true; } });
+    await coach.initialize(); coach.begin(1);
+    const commit = repository.commit.bind(repository), entered = deferred<void>(), released = deferred<void>();
+    repository.commit = async mutation => {
+      if (mutation.count) {
+        entered.resolve(); await released.promise;
+        if (boundary === 'failure') throw new Error('fixture disk failure');
+      }
+      await commit(mutation);
+      if (mutation.count && boundary === 'ack-loss') throw new Error('fixture lost ACK');
+    };
+    const input = candidateV2(v2Fixture(candidateFixture({ date: today, operation: 'minimize', route: 'min-button',
+      before: { state: 'maximized', arranged: false }, after: { state: 'minimized' } })))!;
+    const writing = coach.accept(input); await entered.promise;
+    assert.equal(notices, 0);
+    if (boundary === 'pause') coach.pauseNotifications(true);
+    if (boundary === 'stop') coach.stop();
+    released.resolve(); await writing;
+    assert.equal(notices, 0);
+    if (boundary === 'failure' || boundary === 'ack-loss') {
+      assert.equal(coach.snapshot().pendingSave, true); assert.equal(coach.snapshot().observing, false);
+      repository.commit = commit; await coach.retrySave(); await coach.retrySave();
+      assert.equal(coach.snapshot().pendingSave, false); assert.equal(notices, 0);
+    }
+    assert.deepEqual((await repository.query(today, today)).counts[today].W04, { mouse: 1, key: 0 });
+    await coach.accept(input);
+    assert.equal(notices, 0, 'replay/stop/paused recovery must not resurrect the old notice');
+  });

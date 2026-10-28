@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { dotnet, dotnetEnvironment } from '../scripts/dotnet.mjs';
 import { classify } from '../src/core/detector.ts';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { DurableCoach } from '../src/core/durable-coach.ts';
+import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 
 mock.module('electron', { namedExports: { app: {} } });
 const { candidate, candidateV2 } = await import('../src/main/observer.ts');
@@ -45,4 +50,37 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
     assert.equal(JSON.stringify(parsed).includes('Handle'), false);
     return [observed.operation, observed.origin, observed.shortcut];
   }), [['W01', 'mouse', 'Alt + Tab'], ['W01', 'key', 'Alt + Tab']]);
+
+  const root = await mkdtemp(join(tmpdir(), 'coach-native-state-'));
+  const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
+  t.after(async () => { await repository.close(); await rm(root, { recursive: true, force: true }); });
+  const totals: Record<string, { mouse: number; key: number }> = {};
+  const deliveries: Promise<void>[] = [];
+  let notices = 0, expectedNotices = 0;
+  const coach = new DurableCoach({ repository, session: repository.session, date: () => '2026-10-28', now: () => 0,
+    capabilities: () => [], changed: () => {}, notify: notice => {
+      const expected = { ...totals[notice.operation] };
+      const delivery = repository.query('2026-10-28', '2026-10-28').then(saved => {
+        assert.deepEqual(saved.counts['2026-10-28'][notice.operation], expected, 'SQLite commits before notification');
+        notices++;
+      });
+      deliveries.push(delivery); return delivery.then(() => true);
+    } });
+  await coach.initialize(); coach.begin(1);
+  for (const entry of report.windowStateSamples) {
+    const parsed = candidateV2(entry.candidate); assert.ok(parsed, 'new C# state evidence satisfies strict v2 parse');
+    const observation = classify(parsed);
+    assert.equal(observation?.operation ?? null, entry.expected);
+    if (observation) {
+      const counts = totals[observation.operation] ??= { mouse: 0, key: 0 };
+      counts[observation.origin]++;
+      if (observation.origin === 'mouse' && observation.shortcut) expectedNotices++;
+    }
+    await coach.accept(parsed); await coach.accept(parsed);
+    await Promise.all(deliveries);
+  }
+  assert.deepEqual((await repository.query('2026-10-28', '2026-10-28')).counts['2026-10-28'], totals);
+  assert.equal(notices, expectedNotices);
+  assert.equal(totals.W03.mouse, 2); assert.ok(totals.W04.key > 0); assert.ok(totals.W04.mouse > 0);
+  assert.equal(totals.W05, undefined);
 });

@@ -99,7 +99,7 @@ internal sealed class SnapInvocationObserver(CandidateProtocol protocol, Func<in
             if (GetPhysicalCursorPos(out Point point))
             {
                 nint window = GetAncestor(WindowFromPoint(point), GA_ROOT);
-                if (Eligible(window, out uint pid) && GetWindowRect(window, out Rect before) && ReadTitle(window, out TitleInfo title))
+                if (Eligible(window, out uint pid) && GetWindowRect(window, out Rect before) && WindowCaption.Read(window, out TitleInfo title))
                 {
                     source = SnapGeometry.Source(title.Bounds[2], title.Bounds[3], title.Bounds[5], before);
                     bool? hit = source == "title-rect" ?
@@ -141,18 +141,6 @@ internal sealed class SnapInvocationObserver(CandidateProtocol protocol, Func<in
         // A stable different root proves exit even if that window has no maximize button.
         return window != dwell.Resident && IsWindowVisible(window) && GetWindowThreadProcessId(window, out uint pid) != 0 && pid != 0 &&
             GetPhysicalCursorPos(out Point point) && GetAncestor(WindowFromPoint(point), GA_ROOT) == window;
-    }
-    private static bool ReadTitle(nint window, out TitleInfo info)
-    {
-        info = new() { Size = (uint)Marshal.SizeOf<TitleInfo>(), State = new uint[6], Bounds = new Rect[6] };
-        nint buffer = Marshal.AllocHGlobal((int)info.Size);
-        try
-        {
-            Marshal.StructureToPtr(info, buffer, false);
-            if (SendMessageTimeoutW(window, 0x33f, 0, buffer, SMTO_ABORTIFHUNG, 30, out _) == 0) return false;
-            info = Marshal.PtrToStructure<TitleInfo>(buffer); return true;
-        }
-        finally { Marshal.FreeHGlobal(buffer); }
     }
     public void Dispose() { Stop(); timer.Dispose(); }
 }

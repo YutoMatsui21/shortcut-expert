@@ -12,7 +12,7 @@ internal static class NativeMethods
         EVENT_SYSTEM_MOVESIZEEND = 0xB, EVENT_SYSTEM_FOREGROUND = 3, EVENT_OBJECT_DESTROY = 0x8001,
         EVENT_SYSTEM_MINIMIZESTART = 0x16, EVENT_SYSTEM_MINIMIZEEND = 0x17;
     internal const int OBJID_WINDOW = 0, CHILDID_SELF = 0;
-    internal const int WM_LBUTTONDOWN = 0x201, WM_RBUTTONDOWN = 0x204, WM_MBUTTONDOWN = 0x207,
+    internal const int WM_LBUTTONDOWN = 0x201, WM_LBUTTONUP = 0x202, WM_RBUTTONDOWN = 0x204, WM_MBUTTONDOWN = 0x207,
         WM_MOUSEWHEEL = 0x20A, WM_KEYDOWN = 0x100, WM_SYSKEYDOWN = 0x104;
     internal const uint WM_NCHITTEST = 0x84, SMTO_ABORTIFHUNG = 2;
     internal const int HTMAXBUTTON = 9, HTCAPTION = 2, HTMINBUTTON = 8, HTCLOSE = 20;
@@ -86,6 +86,7 @@ internal static class NativeMethods
     [DllImport("advapi32.dll")] internal static extern bool OpenProcessToken(nint process, uint access, out nint token);
     [DllImport("advapi32.dll")] internal static extern bool GetTokenInformation(nint token, int kind, out int value, uint length, out uint returned);
     [DllImport("user32.dll")] internal static extern nint MonitorFromWindow(nint window, uint flags);
+    [DllImport("user32.dll")] internal static extern nint MonitorFromPoint(Point point, uint flags);
     [DllImport("user32.dll")] internal static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfo info);
     [DllImport("user32.dll")] internal static extern nint SendMessageTimeoutW(nint window, uint message, nint wp, nint lp, uint flags, uint timeout, out nuint result);
     [DllImport("dwmapi.dll")] internal static extern int DwmGetWindowAttribute(nint window, uint attribute, out Rect rect, uint size);

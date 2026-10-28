@@ -112,6 +112,14 @@ internal sealed class Observer : IDisposable
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             if (message != WM_LBUTTONDOWN)
             {
+                if (message == WM_LBUTTONUP)
+                {
+                    var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+                    bool known = GetMonitorInfoW(MonitorFromPoint(taskbarMouse.Point, MONITOR_DEFAULTTONULL), ref info);
+                    static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+                    tracker.MouseReleased(taskbarMouse.Point, known ? Bounds(info.Monitor) : null,
+                        known ? Bounds(info.Work) : null, taskbarMouse.Flags);
+                }
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
                 return CallNextHookEx(0, code, message, data);
             }
@@ -124,6 +132,8 @@ internal sealed class Observer : IDisposable
             long packed = (uint)((mouse.Point.Y & 0xffff) << 16) | (uint)(mouse.Point.X & 0xffff);
             int hit = -1;
             if (SendMessageTimeoutW(target, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint result) != 0) hit = unchecked((int)result);
+            if (GetWindowRect(target, out Rect rect) && WindowCaption.Read(target, out TitleInfo title))
+                hit = WindowCaption.Hit(title, rect, mouse.Point, hit);
             tracker.Mouse(target, before, hit, mouse.Point, clock.ElapsedMilliseconds, GetDoubleClickTime(), mouse.Flags,
                 GetAsyncKeyState(VK_SHIFT) < 0 || GetAsyncKeyState(VK_CONTROL) < 0 ||
                 GetAsyncKeyState(VK_MENU) < 0 || GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0,
