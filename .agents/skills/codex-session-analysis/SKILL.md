@@ -18,10 +18,14 @@ description: Codexの実行履歴（Rollout JSONL）からトークン消費、�
 3. **候補の必要性を調べる。** 前後の経緯を確認する必要があるツールIDだけ、次のコマンドで取得する。
    `python -B .agents/skills/codex-session-analysis/scripts/analyze_session.py detail --file "<JSONLのパス>" --id 7 --around 2 --max-chars 2000 --max-total-chars 6000`
    周辺の会話が不要なら`--around 0`とする。同じIDを再取得するのは追加情報が必要な場合だけとし、多数の詳細結果を一度にまとめて返さない。
-4. **情報が不足した場合に限り一覧を取得する。** 先頭8件の出力量や負荷が高い区間の特定を目的に、全件の`calls`を取得し直さない。区間はツール呼び出し順を8件ずつ区切ったものであり、開発工程の意味的な区分ではない。工程ごとの判断にはターン情報と必要な根拠を使う。
-   `python -B .agents/skills/codex-session-analysis/scripts/analyze_session.py calls --file "<JSONLのパス>" --limit 50`
-   必要なら`--sort-by output`、`--sort-by duration`、`--min-output-chars`を使う。最初から全件を取得しない。一覧のIDと行番号は並べ替え後も元ログ上のものを指す。
-5. **原因と改善策を判断する。** 処理が必要だった理由、回帰防止への寄与、手戻り、改善の影響を検討し、ログの行番号・ツールIDで根拠を示す。
+4. **レビュー指摘・承認などの文章は指定行から取得する。** JSONLの行番号が分かっている場合、独自PythonでJSONLを直接解析する前に次を使う。
+   `python -B .agents/skills/codex-session-analysis/scripts/analyze_session.py message --file "<JSONLのパス>" --line 255 --max-chars 1500`
+   `message`は指定行のユーザー・アシスタントのテキストのみを返す。ツール出力や別の種類の記録は取得できない。長文が省略された場合のみ必要な範囲を再取得する。
+5. **一覧が必要なら元のIDで絞り込む。** まず必要なIDを指定する。
+   `python -B .agents/skills/codex-session-analysis/scripts/analyze_session.py calls --file "<JSONLのパス>" --ids 1,23,34`
+   連続する範囲は`--from-id 1 --to-id 8`を使う。出力順は原則元の実行順。該当IDが未特定のときだけ`--sort-by output`、`--sort-by duration`、`--min-output-chars`を使って探索する。
+   先頭8件の出力量や負荷の高い区間の集計だけを目的に全件の`calls`を取得しない。8件区間は工程別の意味的な区分ではない。
+6. **原因と改善策を判断する。** 処理が必要だった理由、回帰防止への寄与、手戻り、改善の影響を検討し、ログの行番号・ツールIDで根拠を示す。
 
 ## 集計値の扱い
 
@@ -31,6 +35,7 @@ description: Codexの実行履歴（Rollout JSONL）からトークン消費、�
 - 入力トークン、キャッシュ済み入力、非キャッシュ入力、出力トークンを区別する。ツール出力の文字数はトークン数ではない。
 - ツール所要時間は呼び出しから結果までの概算であり、API内部の処理時間ではない。
 - 候補の`summary`は操作名を知るための省略表示であり、コマンド全文や実行証拠の代わりにはならない。必要な箇所だけ`detail`で確認する。
+- 指定行の確認には`message`を優先し、毎回独自Pythonコードを生成しない。対応しない記録形式や行番号が不明な場合のみ、必要な範囲を別途調査する。
 - 失敗、重複、待機、出力切り詰めは調査候補であり、不要な処理と同義ではない。終了コード不明の処理を正常終了と断定しない。
 - セッションをまたいで合計する際は、対象範囲とサブエージェントの有無を明示し、重複する応答IDを確認する。
 

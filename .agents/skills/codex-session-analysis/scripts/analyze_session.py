@@ -194,9 +194,64 @@ def detail(path, call_id, around, max_chars):
 
 
 
-def select_calls(tools, min_output_chars=0, min_elapsed_s=0, sort_by="sequence"):
+
+def message_at_line(path, line, max_chars):
+    """Retrieve only text from a message at an exact JSONL line."""
+    try:
+        rec = fetch_lines(path, {line}).get(line)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON at line {line}") from exc
+    if rec is None:
+        raise SystemExit(f"Line {line} not found")
+    data = rec.get("payload") or {}
+    role = None
+    text = None
+    if rec.get("type") == "event_msg":
+        if data.get("type") == "agent_message":
+            role = "assistant"
+        elif data.get("type") == "user_message":
+            role = "user"
+        if role:
+            text = data.get("message")
+    elif rec.get("type") == "response_item" and data.get("type") == "message":
+        if data.get("role") in ("assistant", "user"):
+            role = data["role"]
+            content = data.get("content") or []
+            if isinstance(content, str):
+                text = content
+            elif isinstance(content, list):
+                texts = [part["text"] for part in content if isinstance(part, dict)
+                         and part.get("type") in ("output_text", "input_text", "text")
+                         and isinstance(part.get("text"), str)]
+                text = "\n".join(texts)
+    if role is None or not isinstance(text, str) or not text:
+        raise SystemExit(f"Line {line} is not a text message")
+    return {"line": line, "timestamp": rec.get("timestamp"), "role": role,
+            "text": compact(text, max_chars, True),
+            "original_chars": len(text), "truncated": len(text) > max_chars}
+
+
+def positive_int(text):
+    value = nonnegative_int(text)
+    if value == 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return value
+
+
+def call_ids(text):
+    parts = [part.strip() for part in text.split(",")]
+    if not parts or any(not part.isdecimal() or int(part) < 1 for part in parts):
+        raise argparse.ArgumentTypeError("use comma-separated positive IDs, e.g. 1,3,7")
+    return set(map(int, parts))
+
+
+def select_calls(tools, min_output_chars=0, min_elapsed_s=0, sort_by="sequence",
+                 ids=None, from_id=None, to_id=None):
     selected = [t for t in tools
-                if (t["output_chars"] or 0) >= min_output_chars
+                if (ids is None or t["id"] in ids)
+                and (from_id is None or t["id"] >= from_id)
+                and (to_id is None or t["id"] <= to_id)
+                and (t["output_chars"] or 0) >= min_output_chars
                 and (t["elapsed_s"] or 0) >= min_elapsed_s]
     if sort_by == "output":
         selected.sort(key=lambda t: t["output_chars"] or 0, reverse=True)
@@ -280,6 +335,13 @@ def main():
     p.add_argument("--sort-by", choices=("sequence", "output", "duration"), default="sequence")
     p.add_argument("--min-output-chars", type=nonnegative_int, default=0)
     p.add_argument("--min-elapsed-s", type=nonnegative_float, default=0)
+    p.add_argument("--ids", type=call_ids, help="Comma-separated original call IDs, e.g. 1,3,7")
+    p.add_argument("--from-id", type=positive_int, help="First original call ID (inclusive)")
+    p.add_argument("--to-id", type=positive_int, help="Last original call ID (inclusive)")
+    p = sub.add_parser("message", help="Retrieve text of a message at an exact JSONL line")
+    p.add_argument("--file", required=True, type=Path)
+    p.add_argument("--line", type=positive_int, required=True)
+    p.add_argument("--max-chars", type=positive_int, default=1500)
     p = sub.add_parser("detail", help="Fetch one call and its surrounding conversation")
     p.add_argument("--file", required=True, type=Path)
     p.add_argument("--id", type=int, required=True)
@@ -299,14 +361,19 @@ def main():
             parser.error("--top must be between 1 and 20")
         print(render_report(build_report(args.file, args.top), args.max_total_chars))
     elif args.action == "calls":
+        if args.from_id is not None and args.to_id is not None and args.from_id > args.to_id:
+            parser.error("--from-id must not exceed --to-id")
         _, tools, _ = read_rollout(args.file)
-        selected = select_calls(tools, args.min_output_chars, args.min_elapsed_s, args.sort_by)
+        selected = select_calls(tools, args.min_output_chars, args.min_elapsed_s,
+                                args.sort_by, args.ids, args.from_id, args.to_id)
         page = selected[args.offset: args.offset + args.limit]
         for t in page:
             print(json.dumps(short_tool(t), ensure_ascii=False))
         print(json.dumps({"total_calls": len(tools), "matched_calls": len(selected),
                           "shown": len(page),
                           "next_offset": args.offset + args.limit if args.offset + args.limit < len(selected) else None}))
+    elif args.action == "message":
+        print(json.dumps(message_at_line(args.file, args.line, args.max_chars), ensure_ascii=False))
     else:
         print(render_detail(detail(args.file, args.id, args.around, args.max_chars),
                             args.max_total_chars))
