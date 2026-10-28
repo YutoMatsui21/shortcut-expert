@@ -23,6 +23,8 @@ export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
 export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
   Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
 export type Evidence =
+  | { kind: 'placement'; profile: 'placement-v1'; shape: 'left-half' | 'right-half' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
+      targetMatched: boolean; inputAgeMs: number; monitorChanged: boolean; monitor: Bounds }
   | { kind: 'window-switch'; profile: 'window-switch-v1'; windowsDifferent: boolean; eligible: boolean;
       inputTargetMatched: boolean; foregroundMatched: boolean; inputAgeMs: number; settleMs: number; monitor: Bounds | null }
   | { kind: 'taskbar-input'; profile: 'taskbar-input-v1'; slot: number | null; mappingConfirmed: boolean;
@@ -77,8 +79,8 @@ export const operations: { id: OperationId; label: string; shortcut: string; con
   { id: 'W03', label: '最大化', shortcut: 'Win + ↑', implemented: true },
   { id: 'W04', label: '最大化解除・最小化', shortcut: 'Win + ↓', condition: '同じ窓で必要に応じて繰り返す', implemented: true },
   { id: 'W05', label: '復元（W04へ統合）', shortcut: 'Win + ↓', implemented: false },
-  { id: 'W06', label: '左右半分に配置', shortcut: 'Win + ← / →', implemented: false },
-  { id: 'W07', label: '四隅に配置', shortcut: 'Win + ← / →、続けて ↑ / ↓', condition: 'Winを押したまま', implemented: false },
+  { id: 'W06', label: '左右半分に配置', shortcut: 'Win + ← / →', implemented: true },
+  { id: 'W07', label: '四隅に配置', shortcut: 'Win + ← / →、続けて ↑ / ↓', condition: 'Winを押したまま', implemented: true },
   { id: 'W08', label: '配置候補を呼び出す', shortcut: 'Win + Z', implemented: false },
   { id: 'W09', label: 'デスクトップ表示', shortcut: 'Win + D', implemented: false },
   { id: 'W10', label: 'タスクビュー', shortcut: 'Win + Tab', implemented: false },

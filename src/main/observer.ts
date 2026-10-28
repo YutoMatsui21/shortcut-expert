@@ -57,6 +57,14 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'placement': {
+      const monitor = bounds(raw.monitor);
+      if (raw.profile !== 'placement-v1' || !['left-half', 'right-half', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(raw.shape as string) ||
+          typeof raw.targetMatched !== 'boolean' || typeof raw.monitorChanged !== 'boolean' ||
+          typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 || !monitor) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, shape: raw.shape as Extract<Evidence, { kind: 'placement' }>['shape'],
+        targetMatched: raw.targetMatched, monitorChanged: raw.monitorChanged, inputAgeMs: raw.inputAgeMs, monitor }; break;
+    }
     case 'window-switch':
       if (raw.profile !== 'window-switch-v1' ||
           !['windowsDifferent', 'eligible', 'inputTargetMatched', 'foregroundMatched'].every(key => typeof raw[key] === 'boolean') ||

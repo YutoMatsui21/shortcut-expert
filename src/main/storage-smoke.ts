@@ -105,6 +105,27 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
   const older = await window.webContents.executeJavaScript(`window.coach.getRecords('${oldDay}','${oldDay}')`);
   assert.equal(older.counts[oldDay].W03.key, 1);
   await runRecordsSmoke(window);
+  // Isolated placement transport -> strict Main parse -> SQLite -> actual renderer/IPC.
+  await observer.stop(); coach.stop();
+  const placementGeneration = await observer.start(); coach.begin(placementGeneration);
+  for (const [offset, operation, shape] of [[0, 'W06', 'left-half'], [2, 'W07', 'right-bottom']] as const) {
+    for (const [index, origin] of ['mouse', 'key'].entries()) {
+      const id = 1000 + offset + index;
+      const value: import('../shared/coach').CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: placementGeneration,
+        sequence: id, transaction: id, date: today, origin: origin as 'mouse' | 'key',
+        route: origin === 'mouse' ? 'caption-edge-drag' : 'win-held-arrows', injected: false, conflicted: false,
+        evidence: { kind: 'placement', profile: 'placement-v1', shape, targetMatched: true, inputAgeMs: 100,
+          monitorChanged: false, monitor: sample.monitor } };
+      await observer.inject(value); await observer.inject(value); await coach.idle();
+    }
+    const saved = await repository.query(today, today);
+    assert.deepEqual(saved.counts[today][operation], { mouse: 1, key: 1 });
+    await waitFor(window, `document.querySelector('[data-operation="${operation}"] [data-kind="mouse"]')?.textContent === '1' &&
+      document.querySelector('[data-operation="${operation}"] [data-kind="key"]')?.textContent === '1'`, 'placement-records');
+    await selectPage(window, 'ショートカット一覧');
+    await waitForLearning(window, `document.querySelector('[data-learning-operation="${operation}"] select')?.value === 'learning'`);
+    await selectPage(window, '記録');
+  }
   const query = repository.query.bind(repository);
   let failQuery = true;
   repository.query = async (from, to) => {
@@ -147,7 +168,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
   } finally { await reopened.close(); }
   return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: verifyNotifications ? 4 : 1, key: 1, sevenDayRenderer: true, retained120Days: true,
     standardToastRequests: verifyNotifications ? 3 : 0, osToastDisplayVerified: false,
-    reopened: true, boundedIpc: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
+    reopened: true, boundedIpc: true, placementRecords: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
     saveErrorWidths: [800, 920, 1120, 1360], pendingStartBlocked: true, pendingExitRecovered: !!verifyPendingExit,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };
 }

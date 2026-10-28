@@ -18,6 +18,7 @@ internal sealed class Observer : IDisposable
     private readonly EventHook eventCallback;
     private readonly List<nint> eventHooks = new();
     private nint mouseHook, keyHook;
+    private int epoch;
     private static readonly Arranged? isArranged = LoadArranged();
 
     internal Observer(Action<object> emit, bool fixture = false)
@@ -39,6 +40,7 @@ internal sealed class Observer : IDisposable
     internal void Start(int newGeneration, int protocolVersion = 1)
     {
         Stop(); tracker.Reset(newGeneration);
+        epoch = newGeneration;
         protocol.Start(newGeneration, protocolVersion);
         if (!fixture && GetSystemMetrics(SM_REMOTESESSION) != 0) throw new InvalidOperationException("remote-session-unsupported");
         if (!fixture) EnumWindows((window, _) => { Remember(window); return true; }, 0);
@@ -85,8 +87,14 @@ internal sealed class Observer : IDisposable
         }
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
+        var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        bool workKnown = GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONULL), ref info);
+        bool frameKnown = DwmGetWindowAttribute(window, DWMWA_EXTENDED_FRAME_BOUNDS, out Rect frame,
+            (uint)Marshal.SizeOf<Rect>()) == 0;
+        static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
         return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0,
-            DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout());
+            DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
+            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window));
     }
     internal static bool OrdinaryProcess(uint pid)
     {
@@ -154,7 +162,19 @@ internal sealed class Observer : IDisposable
             // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
             if (key.Key is >= 0x30 and <= 0x39 && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0))
             { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
-            if (!down) { tracker.KeyReleased(key.Key); return CallNextHookEx(0, code, message, data); }
+            if (!down) {
+                if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) tracker.ClearInput();
+                tracker.KeyReleased(key.Key);
+                if (key.Key is VK_LWIN or VK_RWIN) {
+                    nint releasedTarget = GetForegroundWindow();
+                    states.TryGetValue(releasedTarget, out WindowState? releasedCached);
+                    var result = tracker.FinishKey(releasedTarget, Read(releasedTarget, releasedCached), clock.ElapsedMilliseconds,
+                        (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, DateTime.Now.ToString("yyyy-MM-dd"));
+                    if (result is PlacementResult placed) protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placed);
+                    if (result is WindowCandidate maximized) protocol.Complete(maximized);
+                }
+                return CallNextHookEx(0, code, message, data);
+            }
             nint target = GetForegroundWindow();
             if (CandidateTracker.IsModifier(key.Key))
             {
@@ -197,6 +217,7 @@ internal sealed class Observer : IDisposable
                 object? result = tracker.FinishMove(window, end, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
                 if (end is not null) states[window] = end;
                 if (result is WindowCandidate evidence) protocol.Complete(evidence);
+                if (result is PlacementResult placement) protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placement);
                 return;
             }
             if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&

@@ -8,7 +8,10 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(SnapInvocationEvidence), "snap-invocation")]
 [JsonDerivedType(typeof(TaskbarInputEvidence), "taskbar-input")]
 [JsonDerivedType(typeof(WindowSwitchEvidence), "window-switch")]
+[JsonDerivedType(typeof(PlacementEvidence), "placement")]
 internal abstract record Evidence(string profile);
+internal sealed record PlacementEvidence(string shape, bool targetMatched, long inputAgeMs,
+    bool monitorChanged, MonitorBounds? monitor) : Evidence("placement-v1");
 internal sealed record WindowSwitchEvidence(bool windowsDifferent, bool eligible, bool inputTargetMatched,
     bool foregroundMatched, long inputAgeMs, long settleMs, MonitorBounds? monitor) : Evidence("window-switch-v1");
 internal sealed record TaskbarInputEvidence(int? slot, bool mappingConfirmed, long snapshotAgeMs,
@@ -46,6 +49,17 @@ internal sealed class CandidateProtocol(Action<object> emit)
         lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
     }
     internal void Stop() { lock (gate) generation = 0; }
+    internal void Placement(int epoch, string date, PlacementResult result)
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation || version != 2) return;
+            // Compound results await #113's atomic multi-operation transport/writer.
+            if (result.Evidence.monitorChanged) return;
+            emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), result.Transaction, date,
+                result.Origin, result.Origin == "mouse" ? "caption-edge-drag" : "win-held-arrows", false, false, result.Evidence));
+        }
+    }
     internal void Switch(int epoch, int transaction, string date, string origin, WindowSwitchEvidence evidence)
     {
         lock (gate)

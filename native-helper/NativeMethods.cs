@@ -39,6 +39,7 @@ internal static class NativeMethods
     [DllImport("user32.dll")] internal static extern nint GetShellWindow();
     [DllImport("user32.dll")] internal static extern bool GetPhysicalCursorPos(out Point point);
     [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint window, out Rect rect);
+    [DllImport("user32.dll")] internal static extern uint GetDpiForWindow(nint window);
     [DllImport("user32.dll")] internal static extern nint SetThreadDpiAwarenessContext(nint context);
     [DllImport("user32.dll")] internal static extern bool SystemParametersInfoW(uint action, uint param, out int value, uint flags);
     [StructLayout(LayoutKind.Sequential)] internal struct Placement
