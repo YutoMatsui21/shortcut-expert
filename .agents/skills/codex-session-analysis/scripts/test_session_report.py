@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 import tempfile
 import unittest
-from session_report import build_report, render_report
+from session_report import build_report, render_report, _command_summary
 
 
 class ReportTests(unittest.TestCase):
@@ -57,6 +57,46 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report['candidates']['repeated'][0]['ids'], [1,2])
         self.assertEqual(report['candidates']['longest_calls'][0]['id'], 2)
         self.assertTrue(all('signature' not in x for x in report['candidates']['largest_outputs']))
+
+    def test_early_output_and_turn_attribution(self):
+        self.fixture()
+        report = build_report(self.path)
+        outputs = [10000, len('Traceback (most recent call last):\nboom\noutput truncated')]
+        self.assertEqual(report['tools']['output_chars_total'], sum(outputs))
+        self.assertEqual(report['output_timeline']['initial_window']['output_chars'], sum(outputs))
+        self.assertEqual(report['output_timeline']['initial_window']['share_percent'], 100.0)
+        self.assertEqual([t['tool_output_chars'] for t in report['turns']], outputs)
+        self.assertEqual(report['output_timeline']['unattributed_chars'], 0)
+
+    def test_output_windows_cover_calls_without_double_counting(self):
+        self.add('session_meta', {'id': 'windows'}, 0)
+        for i in range(10):
+            self.add('response_item', {'type': 'function_call', 'name': 'exec',
+                                       'call_id': str(i), 'arguments': '{"cmd":"x"}'}, 1)
+            self.add('response_item', {'type': 'function_call_output',
+                                       'call_id': str(i), 'output': 'a' * (3 if i < 8 else 10)}, 2)
+        self.save()
+        report = build_report(self.path)
+        timeline = report['output_timeline']
+        self.assertEqual(timeline['window_size_calls'], 8)
+        self.assertEqual(timeline['window_count'], 2)
+        self.assertEqual(timeline['initial_window']['from_id'], 1)
+        self.assertEqual(timeline['initial_window']['to_id'], 8)
+        self.assertEqual(timeline['initial_window']['output_chars'], 24)
+        self.assertEqual(timeline['largest_windows'][1]['output_chars'], 20)
+        self.assertEqual(report['tools']['output_chars_total'], 44)
+        self.assertEqual(timeline['unattributed_chars'], 44)
+
+    def test_short_summaries_extract_wrapped_commands(self):
+        wrapped = 'const r = await tools.exec_command({cmd:"Get-Content src/main/observer.ts; rg -n foo ."});'
+        self.assertIn('Get-Content src/main/observer.ts', _command_summary('exec', wrapped))
+        self.assertNotIn('const r', _command_summary('exec', wrapped))
+        self.assertEqual(_command_summary('exec', 'tools.write_stdin({session_id:42})'),
+                         '実行中プロセスの待機・出力取得')
+        self.assertNotIn('sk-secret123', _command_summary('exec', '{"cmd":"echo sk-secret123"}'))
+        self.fixture()
+        report = build_report(self.path)
+        self.assertEqual(report['candidates']['largest_outputs'][0]['summary'], 'first')
 
     def test_bounded_json_and_omissions(self):
         self.fixture()
