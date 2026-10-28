@@ -23,7 +23,7 @@ description: Codexの実行履歴（Rollout JSONL）からトークン消費、�
 
 2. **1回の`report`から分析の重点を決める。**
    `python -B .agents/skills/codex-session-analysis/scripts/analyze_session.py report --file "<JSONLのパス>" --top 5 --max-total-chars 6000`
-   トークンの内訳・応答ごとの入力規模・ターン別集計・先頭8件と出力量の多い区間・長時間処理・失敗・重複・切り詰め候補を確認する。候補の`summary`とIDを使って、原因の判断に必要な疑問を絞る。`report`で十分な数値を`overview`や`calls`から再取得しない。
+   トークンの内訳・応答ごとの入力規模・ターン別集計・先頭8件と出力量の多い区間・長時間処理・失敗・重複・切り詰め候補を確認する。候補の`summary`とIDを使って、原因の判断に必要な疑問を絞る。`truncated`と`omitted`を確認し、省略された候補を問題なしとみなさない。`report`で十分な数値を`overview`や`calls`から再取得しない。
 
 3. **必要な証拠だけを適切な方法で取得する。**
    - ツールの引数・結果・前後の経緯：`detail --file "<JSONLのパス>" --id 7 --around 0 --max-chars 1200 --max-total-chars 2500`
