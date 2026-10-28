@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 
 
 def compact(value, limit=180, preserve_lines=False):
@@ -88,7 +89,7 @@ def read_rollout(path):
                             "name": data.get("name"), "call_id": data.get("call_id"),
                             "arguments": arguments, "description": to_text(description or arguments),
                             "output_line": None, "output_chars": None, "elapsed_s": None,
-                            "exit_code": None}
+                            "exit_code": None, "error_signal": None}
                     tools.append(item)
                     if item["call_id"]:
                         by_call_id[item["call_id"]] = item
@@ -101,6 +102,8 @@ def read_rollout(path):
                         code = re.search(r"(?:Process exited with code|Exit code:)\s*(-?\d+)", result, re.I)
                         if code:
                             item["exit_code"] = int(code.group(1))
+                        if re.search(r"(?m)^\s*Traceback \(most recent call last\):", result):
+                            item["error_signal"] = "python_traceback"
                         a, b = timestamp_seconds(item["time"]), timestamp_seconds(at)
                         if a is not None and b is not None:
                             item["elapsed_s"] = round(max(0, b - a), 3)
@@ -124,7 +127,8 @@ def read_rollout(path):
 def short_tool(t):
     return {"id": t["id"], "line": t["line"], "name": t["name"],
             "command": compact(t["description"], 160), "output_chars": t["output_chars"],
-            "elapsed_s_approx": t["elapsed_s"], "exit_code": t["exit_code"]}
+            "elapsed_s_approx": t["elapsed_s"], "exit_code": t["exit_code"],
+            "error_signal": t["error_signal"]}
 
 
 def latest_files(n, project=None):
@@ -153,6 +157,7 @@ def overview(path):
     repeats = Counter((t["name"], t["description"]) for t in tools)
     return {**session, "tool_calls": len(tools), "tool_by_name": dict(Counter(t["name"] for t in tools)),
             "nonzero_exits": sum(t["exit_code"] != 0 for t in tools if t["exit_code"] is not None),
+            "suspected_failures": sum(t["error_signal"] is not None for t in tools),
             "largest_outputs": [short_tool(t) for t in sorted(tools, key=lambda t: t["output_chars"] or 0, reverse=True)[:5]],
             "repeated_calls": [{"name": name, "command": compact(command, 120), "count": count}
                                for (name, command), count in repeats.most_common(8) if count > 1]}
@@ -174,7 +179,7 @@ def detail(path, call_id, around, max_chars):
     tool = next((t for t in tools if t["id"] == call_id), None)
     if tool is None:
         raise SystemExit(f"Tool ID {call_id} not found (1-{len(tools)})")
-    surrounding = [m for m in messages if m["line"] < tool["line"]][-around:]
+    surrounding = [m for m in messages if m["line"] < tool["line"]][-around:] if around else []
     later = [m for m in messages if m["line"] > tool["line"]][:around]
     rows = fetch_lines(path, {tool["line"], tool["output_line"]} - {None})
     result = rows.get(tool["output_line"], {}).get("payload", {}).get("output", "")
@@ -186,7 +191,76 @@ def detail(path, call_id, around, max_chars):
             "truncated": len(to_text(result)) > max_chars}
 
 
+
+def select_calls(tools, min_output_chars=0, min_elapsed_s=0, sort_by="sequence"):
+    selected = [t for t in tools
+                if (t["output_chars"] or 0) >= min_output_chars
+                and (t["elapsed_s"] or 0) >= min_elapsed_s]
+    if sort_by == "output":
+        selected.sort(key=lambda t: t["output_chars"] or 0, reverse=True)
+    elif sort_by == "duration":
+        selected.sort(key=lambda t: t["elapsed_s"] or 0, reverse=True)
+    return selected
+
+
+def nonnegative_int(text):
+    try:
+        value = int(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+    if value < 0:
+        raise argparse.ArgumentTypeError("must be nonnegative")
+    return value
+
+
+def nonnegative_float(text):
+    try:
+        value = float(text)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number") from exc
+    if not (0 <= value < float("inf")):
+        raise argparse.ArgumentTypeError("must be finite and nonnegative")
+    return value
+
+
+def min_total_chars(text):
+    value = nonnegative_int(text)
+    if value < 800:
+        raise argparse.ArgumentTypeError("must be at least 800")
+    return value
+
+
+def render_detail(data, max_total_chars):
+    """Return valid JSON within the requested character budget, showing omissions."""
+    def encode():
+        return json.dumps(data, ensure_ascii=False, indent=2)
+
+    if len(encode()) <= max_total_chars:
+        return encode()
+    data["truncated"] = True
+    data["omitted_fields"] = []
+    # Preserve call identity and command/output evidence before surrounding context.
+    for field in ("context_after", "context_before", "nearby_calls"):
+        if len(encode()) <= max_total_chars:
+            break
+        if data[field]:
+            data[field] = []
+            data["omitted_fields"].append(field)
+    for field in ("output", "arguments"):
+        while len(encode()) > max_total_chars and len(data[field]) > 128:
+            data[field] = compact(data[field], max(128, len(data[field]) // 2), True)
+            if field not in data["omitted_fields"]:
+                data["omitted_fields"].append(field)
+    if len(encode()) > max_total_chars:
+        # Even with no context, a very small budget may not fit all metadata.
+        data = {"tool": {"id": data["tool"]["id"], "line": data["tool"]["line"],
+                         "name": data["tool"]["name"]},
+                "truncated": True, "omitted_fields": ["all_except_tool"]}
+    return encode()
+
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
     p = sub.add_parser("overview", help="Compact overview of the latest sessions or one file")
@@ -195,13 +269,18 @@ def main():
     p.add_argument("--file", type=Path)
     p = sub.add_parser("calls", help="List tool calls without tool output bodies")
     p.add_argument("--file", required=True, type=Path)
-    p.add_argument("--offset", type=int, default=0)
-    p.add_argument("--limit", type=int, default=50)
+    p.add_argument("--offset", type=nonnegative_int, default=0)
+    p.add_argument("--limit", type=nonnegative_int, default=50)
+    p.add_argument("--sort-by", choices=("sequence", "output", "duration"), default="sequence")
+    p.add_argument("--min-output-chars", type=nonnegative_int, default=0)
+    p.add_argument("--min-elapsed-s", type=nonnegative_float, default=0)
     p = sub.add_parser("detail", help="Fetch one call and its surrounding conversation")
     p.add_argument("--file", required=True, type=Path)
     p.add_argument("--id", type=int, required=True)
-    p.add_argument("--around", type=int, default=3)
-    p.add_argument("--max-chars", type=int, default=2000)
+    p.add_argument("--around", type=nonnegative_int, default=3)
+    p.add_argument("--max-chars", type=nonnegative_int, default=2000)
+    p.add_argument("--max-total-chars", type=min_total_chars, default=6000,
+                   help="Maximum total characters of detail JSON (default: 6000)")
     args = parser.parse_args()
     if args.action == "overview":
         paths = [args.file] if args.file else latest_files(args.last, args.project)
@@ -211,12 +290,16 @@ def main():
             print(json.dumps(overview(path), ensure_ascii=False))
     elif args.action == "calls":
         _, tools, _ = read_rollout(args.file)
-        for t in tools[args.offset: args.offset + args.limit]:
+        selected = select_calls(tools, args.min_output_chars, args.min_elapsed_s, args.sort_by)
+        page = selected[args.offset: args.offset + args.limit]
+        for t in page:
             print(json.dumps(short_tool(t), ensure_ascii=False))
-        print(json.dumps({"total_calls": len(tools), "shown": min(args.limit, max(0, len(tools)-args.offset)),
-                          "next_offset": args.offset + args.limit if args.offset + args.limit < len(tools) else None}))
+        print(json.dumps({"total_calls": len(tools), "matched_calls": len(selected),
+                          "shown": len(page),
+                          "next_offset": args.offset + args.limit if args.offset + args.limit < len(selected) else None}))
     else:
-        print(json.dumps(detail(args.file, args.id, args.around, args.max_chars), ensure_ascii=False, indent=2))
+        print(render_detail(detail(args.file, args.id, args.around, args.max_chars),
+                            args.max_total_chars))
 
 
 if __name__ == "__main__":
