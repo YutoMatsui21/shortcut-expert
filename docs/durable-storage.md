@@ -14,6 +14,8 @@
 
 全日分をdiskへ保持し、自動削除しない。Core/Snapshotは今日を含む最大60日だけを読む。過去日の表示は限定bridgeの`getRecords(from,to)`から最大60暦日の範囲でqueryし、indexedな日付keyで取得する。全履歴をMain/Core/Rendererへ転送して上書きしない。UIは任意の過去日を選択できる。
 
+**複合gesture拡張（2026-10-28決定・#113で実装）**：同じ確定ドラッグがW02＋W03/W07を満たす場合、操作IDごとにmouse +1（2行・合計+2）とし、**両行は同じ書込transactionで原子的に確定**する。別操作IDを重複として誤削除しない一方、同一gesture・同一操作IDは一度しか加算しない。ACK喪失のretryもtransaction全体を冪等にする。gesture識別子はプロセス内の相関用に限定し、操作時刻列・窓名・生入力・座標履歴を永続化しない。通知適格性は保存後に各操作を独立判定して1Toastに束ねる。現行の単一観測候補実装がこの仕様を満たすという意味ではない。
+
 1回のrecord transactionに、count差分・日別×操作のknowledge/activeMs/gap/capabilityRevision・最後の正常localDate・revision・writeSession/sequence/hashを含める。前日完了の遅延候補も元の日付へ保存し、その日のcoverageはunknownを保つ。保存するのは集計だけで、操作時刻列・入力列・イベントログを作らない。
 
 checkpointはmetaの1行のみ。正常commitの応答だけが失われた場合、Workerを開き直して同じsession/sequence/payloadを送ると加算せず成功する。同じ識別子の異なる内容・飛んだsequence・旧session・旧epochは拒否する。Nativeのgenerationが再利用されてもMainのsessionとは別になる。新Mainは排他取得後に新sessionをclaimする。
