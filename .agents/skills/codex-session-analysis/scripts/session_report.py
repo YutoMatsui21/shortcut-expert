@@ -235,7 +235,8 @@ def build_report(path, top=5):
     duplicate_groups = defaultdict(list)
     for t in tools:
         duplicate_groups[t["signature"]].append(t["id"])
-    repeated = [{"ids": ids[:10], "count": len(ids)} for ids in duplicate_groups.values() if len(ids) > 1]
+    repeated = [{"ids": ids[:10], "count": len(ids), "summary": tools[ids[0] - 1]["summary"]}
+                for ids in duplicate_groups.values() if len(ids) > 1]
     repeated.sort(key=lambda x: x["count"], reverse=True)
     largest = sorted([t for t in tools if t["output_chars"] is not None],
                      key=lambda t: t["output_chars"], reverse=True)
