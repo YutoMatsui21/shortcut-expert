@@ -1,4 +1,10 @@
 import type { Candidate, CandidateV2 } from '../../src/shared/coach.ts';
+export function placementFixture(origin: 'mouse' | 'key', sequence: number, quarter = false): CandidateV2 {
+  return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
+    date: '2026-10-21', origin, route: origin === 'mouse' ? 'caption-edge-drag' : 'win-held-arrows', injected: false, conflicted: false,
+    evidence: { kind: 'placement', profile: 'placement-v1', shape: quarter ? 'left-top' : 'left-half',
+      targetMatched: true, inputAgeMs: 100, monitorChanged: false, monitor: { x: 0, y: 0, width: 1920, height: 1080 } } };
+}
 export function taskbarFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1, slot = 10): CandidateV2 {
   return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
     date: '2026-10-21', origin, route: origin === 'mouse' ? 'taskbar-click' : 'win-digit', injected: false, conflicted: false,

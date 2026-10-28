@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import type { Candidate, OperationId } from '../src/shared/coach.ts';
-import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, deferred } from './support/fixtures.ts';
+import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, placementFixture, deferred } from './support/fixtures.ts';
 
 // Only Electron/OS boundaries are fake. Parse, classification, writer and models are real.
 mock.module('electron', { namedExports: { app: {}, Notification: class {} } });
@@ -16,6 +16,8 @@ const { StandardNotifications } = await import('../src/main/standard-notificatio
 const today = '2026-10-21';
 const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string }[] = [
   { id: 'W01', mouse: {}, key: 'alt-tab', shortcut: 'Alt + Tab' },
+  { id: 'W06', mouse: {}, key: 'win-held-arrows', shortcut: 'Win + ←' },
+  { id: 'W07', mouse: {}, key: 'win-held-arrows', shortcut: 'Winを押したまま ←、続けて ↑' },
   { id: 'W03', mouse: {}, key: 'win-up', shortcut: 'Win + ↑' },
   { id: 'W03', mouse: { route: 'caption-top-drag', fromMonitor: { x: 0, y: 0, width: 1920, height: 1080 },
     toMonitor: { x: 0, y: 0, width: 1920, height: 1080 } }, key: 'win-up', shortcut: 'Win + ↑' },
@@ -54,7 +56,8 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
     await coach.setLearningState(entry.id, state);
     for (const origin of ['mouse', 'key'] as const) {
       ++sequence;
-      const fixture = entry.id === 'W01' ? switchFixture(origin, sequence) : entry.id === 'W12' ? taskbarFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
+      const fixture = entry.id === 'W06' || entry.id === 'W07' ? placementFixture(origin, sequence, entry.id === 'W07') :
+        entry.id === 'W01' ? switchFixture(origin, sequence) : entry.id === 'W12' ? taskbarFixture(origin, sequence) : v2Fixture(candidateFixture({ ...entry.mouse, date: today, sequence,
         origin, ...(origin === 'key' ? { route: entry.key } : {}) }));
       // JSON round trip emulates the transport, without bypassing the Main schema.
       const parsed = candidateV2(JSON.parse(JSON.stringify(fixture)));
@@ -86,8 +89,8 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
   } finally { await reopened.close(); }
 });
 
-for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
-  test(`W04: delayed SQLite commit / ${boundary} cancels notice; retry does not duplicate`, async t => {
+for (const operation of ['W04', 'W06', 'W07'] as const) for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
+  test(`${operation}: delayed SQLite commit / ${boundary} cancels notice; retry does not duplicate`, async t => {
     const root = await mkdtemp(join(tmpdir(), 'coach-w04-boundary-'));
     const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
     t.after(async () => { await repository.close(); await rm(root, { recursive: true, force: true }); });
@@ -104,8 +107,8 @@ for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
       await commit(mutation);
       if (mutation.count && boundary === 'ack-loss') throw new Error('fixture lost ACK');
     };
-    const input = candidateV2(v2Fixture(candidateFixture({ date: today, operation: 'minimize', route: 'min-button',
-      before: { state: 'maximized', arranged: false }, after: { state: 'minimized' } })))!;
+    const input = candidateV2(operation === 'W04' ? v2Fixture(candidateFixture({ date: today, operation: 'minimize', route: 'min-button',
+      before: { state: 'maximized', arranged: false }, after: { state: 'minimized' } })) : placementFixture('mouse', 1, operation === 'W07'))!;
     const writing = coach.accept(input); await entered.promise;
     assert.equal(notices, 0);
     if (boundary === 'pause') coach.pauseNotifications(true);
@@ -117,7 +120,7 @@ for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
       repository.commit = commit; await coach.retrySave(); await coach.retrySave();
       assert.equal(coach.snapshot().pendingSave, false); assert.equal(notices, 0);
     }
-    assert.deepEqual((await repository.query(today, today)).counts[today].W04, { mouse: 1, key: 0 });
+    assert.deepEqual((await repository.query(today, today)).counts[today][operation], { mouse: 1, key: 0 });
     await coach.accept(input);
     assert.equal(notices, 0, 'replay/stop/paused recovery must not resurrect the old notice');
   });

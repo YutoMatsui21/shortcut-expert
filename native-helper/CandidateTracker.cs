@@ -3,7 +3,8 @@ using Point = NativeMethods.Point;
 
 internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
-    MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null);
+    MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
+    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0);
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
@@ -25,9 +26,20 @@ internal sealed class CandidateTracker
     private long lastCaptionAt = NoCaptionClickAt;
     private Point lastCaptionPoint;
     private int generation, sequence, transaction;
+    internal PlacementPolicy Placement { get; } = new();
     internal int NextTransaction() => checked(++transaction);
-    internal void KeyReleased(uint key) { if (key == VK_DOWN) winDownHeld = false; }
+    internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
+    {
+        if (Placement.WinHeld) return null;
+        var maximize = Placement.Maximize(window, after, now, injected);
+        var placed = Placement.Finish(window, after, now, injected);
+        if (maximize is not { } m || after is null) return placed;
+        var source = new Input(window, m.Before, "key", "win-up", now - m.Age, false, false, true, m.Transaction);
+        return Build("maximize", m.Before, after, source, m.Age, true, false, date, after.Monitor);
+    }
+    internal void KeyReleased(uint key) { Placement.Released(key); if (key == VK_DOWN) winDownHeld = false; }
     internal void ForegroundChanged(nint window) {
+        Placement.Foreground(window);
         if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
     }
 
@@ -36,10 +48,12 @@ internal sealed class CandidateTracker
         generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null;
         completedWinDown = null; winDownHeld = false; release = null;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
+        Placement.Reset();
     }
-    internal void ClearInput() { input = null; drags.Clear(); completedWinDown = null; release = null; }
+    internal void ClearInput() { Placement.Cancel(); input = null; drags.Clear(); completedWinDown = null; release = null; }
     internal void Forget(nint window)
     {
+        Placement.Forget(window);
         moving.Remove(window);
         drags.Remove(window);
         if (input?.Window == window) input = null;
@@ -67,6 +81,7 @@ internal sealed class CandidateTracker
     internal void Mouse(nint window, WindowState before, int hit, Point point, long now,
         uint doubleClickTime, uint flags, bool modifiers, bool foreground)
     {
+        Placement.Cancel();
         drags.Clear();
         release = null;
         completedWinDown = null;
@@ -87,10 +102,15 @@ internal sealed class CandidateTracker
         release = null;
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
         if (IsModifier(key)) {
+            Placement.Key(window, before, key, winDown, modifiers, now, flags, NextTransaction);
             if (key is not (VK_LWIN or VK_RWIN) || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) completedWinDown = null;
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
+        bool placementKey = winDown && !modifiers && !shiftDown && !altDown && key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
+        if (!placementKey) Placement.Cancel();
+        if (placementKey && Placement.Key(window, before, key, winDown, conflict, now, flags, NextTransaction))
+        { input = null; completedWinDown = null; return; }
         if (route != "win-down" || completedWinDown?.Window != window) completedWinDown = null;
         if (key == VK_DOWN) {
             if (winDownHeld) return;
@@ -103,6 +123,7 @@ internal sealed class CandidateTracker
     internal static string? KeyRoute(uint key, bool win, bool shift, bool alt, bool other) => other ? null :
         (key, win, shift, alt) switch {
             (VK_UP, true, false, false) => "win-up", (VK_DOWN, true, false, false) => "win-down",
+            (VK_LEFT, true, false, false) => "win-left", (VK_RIGHT, true, false, false) => "win-right",
             (VK_LEFT, true, true, false) => "win-shift-left", (VK_RIGHT, true, true, false) => "win-shift-right",
             (VK_F4, false, false, true) => "alt-f4", _ => null };
     internal static string State(uint show) => show switch {
@@ -116,6 +137,13 @@ internal sealed class CandidateTracker
         Forget(window);
         if (drag is null || after is null || drag.Before.Process != after.Process ||
             drag.Before.DisplayLayout != after.DisplayLayout || drag.Before.Monitor is null || after.Monitor is null) return null;
+        if (after.Arranged == true)
+        {
+            // Preserve cross-monitor quarter evidence for #113, without partially committing the gesture.
+            var placement = released is { } r ? PlacementGeometry.Drag(drag.Before, after, r.Point, r.Monitor, r.Work,
+                drag.At, foreground == window && drag.Matched && !drag.Injected && !drag.Conflicted) : null;
+            return placement is null ? null : new PlacementResult(drag.Transaction, "mouse", placement);
+        }
         if (State(after.Show) == "maximized")
         {
             // Cross-monitor compound commits/notifications belong to #113. Do not emit
@@ -147,6 +175,7 @@ internal sealed class CandidateTracker
     {
         if (previous is null) return null;
         if (previous.Process != after.Process) { Forget(window); return null; }
+        if (Placement.Owns(window)) return null;
         // A drag owns this transaction until its terminal result; derived transitions cannot consume it.
         if (drags.ContainsKey(window)) return null;
         string? operation = (State(previous.Show), State(after.Show)) switch {

@@ -3,6 +3,19 @@ import { validDate } from './dates.ts';
 
 export function classify(value: ObserverCandidate): Observation | null {
   if (value.protocolVersion === 1) return classifyWindow(value);
+  if (value.evidence.kind === 'placement') {
+    const e = value.evidence;
+    if (!validDate(value.date) || value.injected || value.conflicted || !e.targetMatched || e.monitorChanged ||
+        e.profile !== 'placement-v1' || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0 ||
+        (value.origin === 'mouse' ? value.route !== 'caption-edge-drag' || e.inputAgeMs > 1000 :
+          value.origin !== 'key' || value.route !== 'win-held-arrows' || e.inputAgeMs > 15000) ||
+        !['left-half', 'right-half', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(e.shape)) return null;
+    const [side, vertical] = e.shape.split('-');
+    const horizontal = side === 'left' ? '←' : '→';
+    return { id: `${value.generation}:t${value.transaction}`, operation: vertical === 'half' ? 'W06' : 'W07',
+      origin: value.origin === 'mouse' ? 'mouse' : 'key', date: value.date, monitor: e.monitor,
+      shortcut: vertical === 'half' ? `Win + ${horizontal}` : `Winを押したまま ${horizontal}、続けて ${vertical === 'top' ? '↑' : '↓'}` };
+  }
   if (value.evidence.kind === 'window-switch') {
     const e = value.evidence;
     if ((value.origin !== 'mouse' && value.origin !== 'key') || !validDate(value.date) || value.injected || value.conflicted ||

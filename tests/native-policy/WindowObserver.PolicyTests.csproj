@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../native-helper/PlacementPolicy.cs" Link="PlacementPolicy.cs" />
     <Compile Include="../../native-helper/NativeMethods.cs" Link="NativeMethods.cs" />
     <Compile Include="../../native-helper/CandidateTracker.cs" Link="CandidateTracker.cs" />
     <Compile Include="../../native-helper/WindowCaption.cs" Link="WindowCaption.cs" />
