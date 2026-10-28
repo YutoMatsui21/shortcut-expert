@@ -4,6 +4,8 @@
 
 発行直前にgeneration、通知pause、現在の学習状態を再検査する。保存中のpause→resumeやmastered/excludedへの変更でも、取消した通知は復活しない。状態変更の取消しはwriter queue投入前に行う。保存失敗は観測を停止し、保留記録を再試行しても通知tokenを復元しない。新世代の新しい適格操作から通常発行へ戻る。通知のPromiseをwriterは待たず、API結果不明でも記録を続ける。
 
+**2026-10-28 複合gestureの追加契約（#113、未実装）：** 同じドラッグの終端でW02＋W03またはW02＋W07が独立成立したら、保存は操作ID別に各1件を同一transactionでcommitする。通知は**gesture単位に最大1要求**。学習中・同等キーが確証された操作のみを独立判定し、2件適格なら1Toast内に操作名＋キーを2行、1件適格なら1行、0件なら発行なし。キーを同時押しと見せず、複合操作全体のキー再現を無検証で主張しない。state・pause/stopを発行前に再確認し、保存失敗後の過去Toastは再送しない。既存の単一操作の独立gestureは毎回通知する。**1操作の代替キー候補を複数並べる#96とは別**。以下の単一`shortcut`契約は実装済みの説明で、複合通知が実装済みという意味ではない。
+
 MainのStandardNotificationsは各要求で新しいNotificationとUUIDを作る。**現行実装**のtitleは証明した単一キー、bodyは正式操作名、silent=true、timeoutType=default。旧通知窓の間隔、全画面/context照会、同時1窓、4秒消去を通常経路へ接続しない。旧経路はJSONの隔離回帰fixtureにだけ残し、物理撤去は#42。**#96の新仕様ではW01/W12で起動状態・番号に応じて最大2つの候補を提示するが、同じ操作の通知を2つには分けず、1通知内に明確に区切って表示する。単一`shortcut`型の互換と保存成功後の1回発行・失敗後の非再送は後続実装・試験で保証する。**
 
 runtime結果はrequested、api-returned、show-event、failed、unknownを区別する。APIから戻ってもOSの可視バナー成功とは扱わない。failed/unknownはMainのruntime診断へ返し、自動再送しない。通常実行で通知履歴・操作履歴を保存しない。OS通知OFFやDNDをアプリ側で間引き・再送する理由にしない。
