@@ -1,5 +1,7 @@
 """Contract tests for compact session reporting using synthetic rollouts."""
 import json
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -77,6 +79,19 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(report['tokens']['usage']['input_tokens'], 123)
         self.assertEqual(report['tokens']['source'], 'token_count.total_token_usage')
         self.assertEqual(report['tokens']['responses'], 0)
+
+    def test_cli_report_returns_bounded_json(self):
+        self.fixture()
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name('analyze_session.py')),
+             'report', '--file', str(self.path), '--top', '2',
+             '--max-total-chars', '1200'],
+            capture_output=True, text=True, encoding='utf-8', check=True,
+        )
+        self.assertLessEqual(len(proc.stdout.strip()), 1200)
+        result = json.loads(proc.stdout)
+        self.assertEqual(result.get('session', {}).get('id', result.get('session_id')), 'sample')
+        self.assertTrue(result['truncated'])
 
     def test_oversized_row_is_not_echoed(self):
         self.fixture()
