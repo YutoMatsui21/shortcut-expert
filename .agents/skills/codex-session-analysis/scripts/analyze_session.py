@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 import sys
 
+from session_report import build_report, render_report
+
 
 def compact(value, limit=180, preserve_lines=False):
     text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
@@ -267,6 +269,10 @@ def main():
     p.add_argument("--last", type=int, default=1)
     p.add_argument("--project", help="Limit to sessions whose recorded cwd matches this path")
     p.add_argument("--file", type=Path)
+    p = sub.add_parser("report", help="Bounded one-pass session statistics and investigation candidates")
+    p.add_argument("--file", required=True, type=Path)
+    p.add_argument("--top", type=int, default=5, help="Maximum candidates in each category (1-20)")
+    p.add_argument("--max-total-chars", type=min_total_chars, default=6000)
     p = sub.add_parser("calls", help="List tool calls without tool output bodies")
     p.add_argument("--file", required=True, type=Path)
     p.add_argument("--offset", type=nonnegative_int, default=0)
@@ -288,6 +294,10 @@ def main():
             raise SystemExit("No matching rollout JSONL files found")
         for path in paths:
             print(json.dumps(overview(path), ensure_ascii=False))
+    elif args.action == "report":
+        if not 1 <= args.top <= 20:
+            parser.error("--top must be between 1 and 20")
+        print(render_report(build_report(args.file, args.top), args.max_total_chars))
     elif args.action == "calls":
         _, tools, _ = read_rollout(args.file)
         selected = select_calls(tools, args.min_output_chars, args.min_elapsed_s, args.sort_by)
