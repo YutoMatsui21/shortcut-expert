@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="../../native-helper/NativeMethods.cs" Link="NativeMethods.cs" />
     <Compile Include="../../native-helper/CandidateTracker.cs" Link="CandidateTracker.cs" />
+    <Compile Include="../../native-helper/WindowCaption.cs" Link="WindowCaption.cs" />
     <Compile Include="../../native-helper/CandidateProtocol.cs" Link="CandidateProtocol.cs" />
     <Compile Include="../../native-helper/DisplayPolicy.cs" Link="DisplayPolicy.cs" />
     <Compile Include="../../native-helper/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />

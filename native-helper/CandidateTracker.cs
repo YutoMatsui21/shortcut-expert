@@ -16,6 +16,7 @@ internal sealed class CandidateTracker
         long At, bool Injected, bool Conflicted, bool Matched, int Transaction);
     private readonly HashSet<nint> moving = new();
     private readonly Dictionary<nint, Input> drags = new();
+    private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
     private Input? input;
     private Input? completedWinDown;
     private bool winDownHeld;
@@ -33,10 +34,10 @@ internal sealed class CandidateTracker
     internal void Reset(int newGeneration)
     {
         generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null;
-        completedWinDown = null; winDownHeld = false;
+        completedWinDown = null; winDownHeld = false; release = null;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
-    internal void ClearInput() { input = null; drags.Clear(); completedWinDown = null; }
+    internal void ClearInput() { input = null; drags.Clear(); completedWinDown = null; release = null; }
     internal void Forget(nint window)
     {
         moving.Remove(window);
@@ -47,12 +48,19 @@ internal sealed class CandidateTracker
     }
     internal void MoveStart(nint window, long now = 0)
     {
+        release = null;
         moving.Add(window);
         if (input is { Route: "caption-press" } && input.Window == window && now - input.At is >= 0 and <= InputMatchWindowMs)
             drags[window] = input with { Origin = "mouse", Route = "caption-drag", At = now - input.At };
         if (input?.Window == window) input = input with { Conflicted = true };
+        lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
     internal void MoveEnd(nint window) => Forget(window);
+    internal void MouseReleased(Point point, MonitorBounds? monitor, MonitorBounds? work, uint flags)
+    {
+        if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0) { ClearInput(); return; }
+        release = drags.Count == 1 && monitor is not null && work is not null ? (monitor, work, point) : null;
+    }
     internal static bool IsModifier(uint key) => key is VK_LWIN or VK_RWIN or VK_SHIFT or VK_CONTROL or VK_MENU or
         VK_LSHIFT or VK_RSHIFT or VK_LCONTROL or VK_RCONTROL or VK_LMENU or VK_RMENU;
 
@@ -60,6 +68,7 @@ internal sealed class CandidateTracker
         uint doubleClickTime, uint flags, bool modifiers, bool foreground)
     {
         drags.Clear();
+        release = null;
         completedWinDown = null;
         string route = hit switch { HTMAXBUTTON => "max-button", HTMINBUTTON => "min-button", HTCLOSE => "close-button", HTCAPTION => "caption-press", _ => "unknown" };
         if (hit == HTCAPTION && lastCaption == window && lastCaptionProcess == before.Process && now - lastCaptionAt <= doubleClickTime &&
@@ -75,9 +84,10 @@ internal sealed class CandidateTracker
         bool shiftDown = false, bool altDown = false)
     {
         drags.Clear();
+        release = null;
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
         if (IsModifier(key)) {
-            if (key is not (VK_LWIN or VK_RWIN)) completedWinDown = null;
+            if (key is not (VK_LWIN or VK_RWIN) || flags != 0) completedWinDown = null;
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
@@ -102,9 +112,24 @@ internal sealed class CandidateTracker
     internal object? FinishMove(nint window, WindowState? after, long now, nint foreground, string date)
     {
         drags.TryGetValue(window, out Input? drag);
+        var released = release; release = null;
         Forget(window);
         if (drag is null || after is null || drag.Before.Process != after.Process ||
-            drag.Before.DisplayLayout != after.DisplayLayout || drag.Before.Monitor is null || after.Monitor is null || drag.Before.Monitor == after.Monitor) return null;
+            drag.Before.DisplayLayout != after.DisplayLayout || drag.Before.Monitor is null || after.Monitor is null) return null;
+        if (State(after.Show) == "maximized")
+        {
+            // Cross-monitor compound commits/notifications belong to #113. Do not emit
+            // half a compound gesture through the current single-operation writer.
+            if (drag.Before.Monitor != after.Monitor || released is null || released.Value.Monitor != after.Monitor ||
+                State(drag.Before.Show) != "normal" || drag.Before.Arranged != false || foreground != window) return null;
+            var r = released.Value;
+            // A narrow edge check is a conservative implementation boundary, not a claim
+            // about Windows' Snap hit regions. Interior layout selections are excluded.
+            if (r.Point.X < r.Work.x || (long)r.Point.X >= (long)r.Work.x + r.Work.width ||
+                r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
+            return Build("maximize", drag.Before, after, drag with { Route = "caption-top-drag" }, drag.At, true, false, date, after.Monitor);
+        }
+        if (drag.Before.Monitor == after.Monitor) return null;
         // Drag lifetime is bounded by MOVESIZEEND; age is the input-to-start interval, not its duration.
         return Build("monitor-move", drag.Before, after, drag, drag.At, foreground == window, false, date, after.Monitor);
     }
@@ -151,8 +176,9 @@ internal sealed class CandidateTracker
         {
             bool continuation = completedWinDown is not null && completedWinDown.Window == window &&
                 completedWinDown.Before.Process == before.Process && now >= completedWinDown.At &&
-                candidate.At - completedWinDown.At is >= 0 and <= InputMatchWindowMs;
-            completedWinDown = candidate;
+                State(completedWinDown.Before.Show) == "maximized" && State(before.Show) == "normal" &&
+                operation == "minimize" && candidate.At - completedWinDown.At is >= 0 and <= InputMatchWindowMs;
+            completedWinDown = operation == "restore" && after.Arranged == false ? candidate : null;
             if (continuation) return null;
         }
         else completedWinDown = null;

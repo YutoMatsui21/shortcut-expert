@@ -47,7 +47,9 @@ function classifyWindow(candidate: Candidate): Observation | null {
   switch (candidate.operation) {
     case 'maximize':
       if (candidate.before.state !== 'normal' || candidate.before.arranged === null || candidate.after.state !== 'maximized' ||
-          !route(['max-button', 'caption-double-click'], ['win-up'])) return null;
+          !route(['max-button', 'caption-double-click', 'caption-top-drag'], ['win-up'])) return null;
+      if (candidate.route === 'caption-top-drag' && (candidate.before.arranged !== false ||
+          !candidate.fromMonitor || !candidate.toMonitor || !sameMonitor(candidate.fromMonitor, candidate.toMonitor))) return null;
       operation = 'W03'; shortcut = candidate.before.arranged ? null : 'Win + ↑'; break;
     case 'minimize':
       if (!['normal', 'maximized'].includes(candidate.before.state) || candidate.after.state !== 'minimized' ||

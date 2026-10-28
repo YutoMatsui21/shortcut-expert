@@ -2,6 +2,8 @@
 
 現行の受入条件は[確定要件](ui-redesign-requirements.md)、実行手順は[開発・検証ガイド](development.md)、根拠・原本は[research.md](research.md)。
 
+W03/W04の局所実装・共通処理・#113との未解消依存は[検出器と受入条件](window-state-implementation.md)を参照。複合記録・通知の未達を単独操作の試験成功で代替しない。
+
 ## 現行の開発順序（2026-10-27更新）
 
 W13の上下halfは一般的な横向き画面で標準マウス入口を確認できなかったため初回リリースの対象外（[#3](https://github.com/YutoMatsui21/shortcut-expert/issues/3)）。B02/A09/G-W13は将来検証とし、既存ID・履歴は保全する。
