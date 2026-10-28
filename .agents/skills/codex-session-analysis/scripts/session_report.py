@@ -216,7 +216,8 @@ def render_report(data, max_total_chars=6000):
         if size == 0:
             break
         if key == "turns":
-            data["turns"].pop()
+            # Preserve both ends of the timeline whenever possible.
+            data["turns"].pop(len(data["turns"]) // 2 if len(data["turns"]) > 2 else 0)
         else:
             data["candidates"][key].pop()
         data["omitted"][key] = data["omitted"].get(key, 0) + 1
