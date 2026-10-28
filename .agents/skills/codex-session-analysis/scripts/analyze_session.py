@@ -223,7 +223,7 @@ def message_at_line(path, line, max_chars):
                 texts = [part["text"] for part in content if isinstance(part, dict)
                          and part.get("type") in ("output_text", "input_text", "text")
                          and isinstance(part.get("text"), str)]
-                text = "\\n".join(texts)
+                text = "\n".join(texts)
     if role is None or not isinstance(text, str) or not text:
         raise SystemExit(f"Line {line} is not a text message")
     return {"line": line, "timestamp": rec.get("timestamp"), "role": role,
