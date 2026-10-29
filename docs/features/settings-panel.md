@@ -1,25 +1,29 @@
-# 設定パネル（#23）
+# 設定パネル・計測制御
 
-共通title barのgearから、幅330・高さ262pxのSettingsPopoverを開く。正式Figma `349:2456` / `354:2001` を2026-10-20に再取得し、通知・計測の2スイッチ、説明、区切り、削除入口を接続した。On画像は `354:1997` の38×22px SVGをlocal assetへ保存した。Offは同じ寸法の状態表示。gearの右端へ合わせ、上端39px、本文のスクロールから独立する。
+**責務**：通知の一時停止、計測の停止・再開、全記録削除への入口を提供し、トレイと画面の状態を矛盾なく同期する。表示要件は[製品要件](../ui-requirements.md)、[Figmaの設定パネル](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=349-2456)を参照。
 
-通知の希望値はsession内で保持する。計測停止中は通知スイッチをdisabledにし、表示値を残す。実効通知は計測中かつ通知pauseなしの場合だけ。再開で希望値を戻し、再起動は従来どおり計測開始・通知pause解除とする。保存エラー・時計異常・helper故障の安全停止は維持する。
+## 1. UIと操作
 
-Rendererは既存の限定Preload commandを呼ぶ。トレイも同じMain commandとSerialQueueを利用し、snapshotからmenuを再生成する。保存保留中の再開は両入口で無効。Core/observerの世代検査と通知adapterのepoch無効化を維持し、停止後の新候補と再開後の旧世代候補を採用しない。停止前に保存を開始した記録は保全し、遅延保存の完了から旧通知を出さない。保存中の再開は拒否する。
+- 共通タイトルバーの歯車から`SettingsPopover`（330×262px）を開く。通知・計測の2スイッチと削除入口を配置し、本文スクロールと独立させる。
+- Enter／Spaceで操作可能。開いたときは**最初の有効な設定スイッチ**へfocusし、すべて無効なら歯車に留める。削除ボタンへ自動focusしない。
+- Esc・外側クリック・歯車再クリック・画面切替・窓非表示／blurで閉じ、必要な場合はfocusを歯車へ戻す。一度設定したfocusを後続snapshotで奪わない。
+- 削除入口はパネルを閉じて確認ダイアログへ引き継ぐ。実際の削除・単回確認tokenはMainの[保存・削除契約](../storage/history-deletion.md)で扱う。
 
-MainのCoachWindowは非永続のstateVersionを配信・IPC応答へ付ける。RendererのuseCoachは古いversionの初期取得・command応答を無視する。トレイの新状態を遅い応答で戻さず、bounds/記録の保存revisionとは分離する。
+## 2. 状態と保存・競合
 
-Enter/Spaceでgearとswitchを操作し、開いた時は最初の有効switchへfocusする。Esc・外click・gear再clickで閉じてgearへfocusを戻す。ページ切替・窓非表示・blurでも閉じる。削除入口はpanelを閉じ、既存のMain確認dialogへ渡す。正式な削除dialogと確認tokenは#24の範囲。
+| 操作 | 期待する状態 |
+| --- | --- |
+| 通知一時停止 | 計測・保存は継続、通知だけ停止 |
+| 計測全停止 | 観測・保存対象の新規採用・通知を停止。通知希望値は保持 |
+| 計測再開 | 保留保存・エラーがない場合だけ新しい観測世代で再開 |
+| 再起動 | 通知pauseを解除して通常の計測開始状態へ戻す（永続の学習状態は維持） |
 
-初期snapshot待ち・command処理中に開いて全buttonが無効な場合は、最初に操作が有効になった時にfocusを移す。一度focusを割り当てた後はsnapshot配信で利用者のfocusを奪わない。隔離smokeは実settings保存をdeferredで保留し、この操作列の修正前失敗と修正後成功を確認する。
+- Rendererとトレイは**同じMain command／SerialQueue**を利用する。通知の実効状態は「計測中かつ通知pauseなし」。全停止中は通知スイッチをdisabledにするが希望値を破棄しない。
+- 保存失敗・時計異常・helper故障による安全停止をUI操作で勝手に解除しない。停止前に受理した記録の保存は保全し、保存待ちや失敗時の再開は拒否する。旧世代候補と遅延した通知を採用しない。
+- `CoachWindow`が非永続の`stateVersion`を配信し、`useCoach`は古いsnapshot／IPC応答を無視する。**画面のstateVersionと保存のrevisionは別**であり、遅い応答からトレイ状態を巻き戻さない。
 
-初期focusの対象は有効な設定switchだけとし、保存保留で両switchが無効ならgearに留める。削除buttonへ自動でfocusしない。閉じているpanelへのclose要求はfocusを変えず、通常のnav・最大化/復元のキーボード操作を維持する。保存失敗後の展開とnav/最大化のfocus保持も修正前失敗・修正後成功の回帰に含める。
+## 3. 検証と限界
 
-## 検証
-
-`tests/settings-state.test.ts` は遅いsnapshot応答とトレイcommandを確認する。`learning-state.test.ts` は実SQLite Workerの保存遅延・停止・再開禁止・新世代再開・旧世代拒否・新世代通知を確認する。
-
-`node scripts/smoke.mjs --settings` / `--packaged --settings` は隔離SQLiteを使い、4幅（800/920/1120/1360）×2ページ、600px高で寸法とasset geometry、Enter/Space/Esc、外click・gear再click・ページ切替・hide/blur、停止中の通知disabledと希望値保持、実トレイmenu callback→共通command→IPC配信→React同期を確認する。画像は自アプリのfixture画面だけ。
-
-OSトレイへの実クリック配送、実入力精度、混在DPI・文字拡大、標準Toastはこのfixtureの証拠に含めない。標準Toast統合は#26、cold起動は#27。公開は行わない。
-
-2026-10-20 Windows上でNode 24.11.1 / .NET SDK 10.0.401 / Electron 44.7.0を使用。unit 206件、native 6件（本番C# policy 63ケース）、typecheck/build、開発版と同梱版の通常smoke・SQLite smoke・設定smokeが成功。4幅×2ページの寸法・asset・自アプリ画像を確認した。同梱検証物は `release/issue-23/win-unpacked/Window Shortcut Coach.exe`。
+- `tests/settings-state.test.ts`：古いIPC応答・トレイcommandとの競合。`tests/learning-state.test.ts`：保存保留・停止／再開・世代と通知。
+- 隔離`node scripts/smoke.mjs --settings`（配布版は`--packaged --settings`）：2ページ×4幅、focusと閉じ方、スイッチ状態、保存中の禁止操作、トレイcallbackとの同期を確認する。
+- **実機で別途必要**：OSトレイのクリック配送、DPI／文字拡大、実入力認識と標準通知。fixture結果はそれらの合格証拠ではない。

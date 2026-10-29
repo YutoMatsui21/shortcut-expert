@@ -1,31 +1,44 @@
-# 窓の保持と終了（#22）
+# アプリウィンドウのライフサイクル
 
-## 契約
+**責務**：1つのElectronウィンドウの生成・表示／非表示、位置の保存・復元と、観測・保存を壊さない終了処理を定める。通常のWindows操作検出器の仕様ではなく、**Shortcut Expert自身の画面とプロセス**の設計。
 
-MainのCoachWindowが単一窓と通常boundsを所有する。1120×700 DIPで初期化し、最小800×600を維持する。32px captionはdrag、歯車と窓ボタンはno-drag。最小化はtaskbar、最大化ボタンはmaximize/unmaximize、×はhideだけを実行する。最大化状態はMainから既存の限定snapshotで配信し、復元アイコンと操作名へ反映する。任意boundsをRendererから受け付けない。
+## 1. 画面の所有と表示
 
-settingsのoptional `normalBounds: { x, y, width, height }`に整数DIPだけを保存する。旧settingsにfieldがなくても読め、旧JSON移行の厳格なv1契約は変更しない。現行SQLiteのsettings JSONへ追加し、単一writer Worker・既存Coreキューで学習設定やopenedと直列に更新する。通常記録の削除では保持する。旧ビルドは未知fieldを拒否し、安全停止するため、この設定保存後の旧版へのdowngradeは保証しない。
+- Mainの`CoachWindow`が**単一の窓**を所有し、任意boundsをRendererから受け付けない。初期1120×700 DIP、最小800×600 DIP、32px独自caption。ドラッグ領域と歯車・窓ボタンの`no-drag`領域を分ける。
+- 最小化はタスクバー、最大化ボタンは最大化／復元、`×`は**hideのみ**でバックグラウンド計測を継続する。最大化状態は非永続のsnapshotで表示へ通知する。
+- トレイ／通知／`second-instance`は共通`showCoach`で**同じ窓**を復元→位置補正→表示→前面化する。初期化中の表示要求は窓の準備完了後に反映する。
 
-move/resizeでgetNormalBoundsを取得し、最大化・最小化中のイベントは採用しない。250ms以内の変更を最後の通常値へまとめ、連続drag中も書込みを無期限に延期しない。終了前に残りをflushする。保存失敗は既存のpendingSaveと再試行へつなぐ。窓位置の正常保存だけでは記録画面を更新せず、サイズ変更で行とスクロールを破棄しない。
+## 2. 位置・サイズの永続化
 
-boundsだけの保存は記録ReadModelを変えないためmeta.revisionを進めない。学習状態など他のsettings変更は従来どおりrevisionを進める。実Worker試験でこの差と再open後のbounds保持を確認する。
+| 状況 | 設計上の約束 |
+| --- | --- |
+| move／resize | 通常状態の`normalBounds`（整数DIP）だけを取得。最大化・最小化中の値で上書きしない |
+| 連続変更 | 約250msで最後の通常boundsをまとめ、終了時に未保存分をflushする |
+| 画面変更 | 再表示・起動・ディスプレイ着脱／設定変更時にwork areaへ補正 |
+| 複数画面 | 有効な負座標は保持。caption全体がどの画面にも収まらなければ最も重なる画面へ移す |
+| 保存失敗 | pending saveとしてエラー・再試行へ接続。保存失敗を正常終了扱いにしない |
 
-起動・再表示・display追加/除去/metrics変更時に現在のwork areaと照合する。有効な負座標は保持し、caption全体（窓controlsを含む）が1画面内に残らなければ、最も重なるwork areaへ補正する。補正が必要な場合は画面に収まる大きさへ制限するが最小寸法を下げない。800×600 DIP未満のwork areaでは全体収容を保証できない。最大化中の補正は通常位置を直してから最大化へ戻す。最大化状態自体は永続化しない。
+- boundsはSQLite settingsの`normalBounds`へ、学習状態などと同じwriter／Coreキューで保存する。**boundsだけの保存では記録ReadModelのrevisionを進めない**。記録全削除では通常boundsを維持する。
+- 旧settingsにboundsがなくても起動できるが、追加fieldを拒否する旧版への**downgrade互換は保証しない**。最大化状態そのものは永続化しない。
+- 作業領域が800×600 DIP未満の場合はcaption全体の画面内収容を保証できない。最大化中も通常boundsを補正してから最大化へ戻す。詳細な復元制約は`src/main/window-bounds.ts`。
 
-トレイの表示/double-clickとsecond-instanceはshowCoachを共用し、最小化からrestore→位置補正→show→focusする。初期化中の表示要求も初期化後に反映する。通常の再起動表示はopenedに従い、通知cold起動は#27に残す。
+## 3. 安全な終了
 
-終了要求は同じPromiseにまとめる。新たなstart・設定変更・削除を止め、先行UI制御を待ち、計測停止とhelperのstop、通常bounds flush、Core保存待機を終えてから未保存確認を出す。「戻る」は停止を維持して既存窓を表示し、再試行できる。終了確定後はhelper shutdown/EOF/exitとSQLite Worker closeを待ち、トレイを破棄してapp.quitする。終了中の表示変更では新しいbounds保存を追加しない。終了失敗は成功扱いせず、停止・画面エラーへ戻す。
+終了要求は**同一Promiseへ集約**し、次の順序を守る。
 
-通信失敗で切り離したhelperもexit待機対象に保持する。shutdownは2.5秒でkillを要求し、5秒までにexitを確認できなければ失敗してアプリを残す。kill要求だけで完全終了と扱わない。bounds保存Promiseがrejectした場合は呼出し元へ失敗を返し、同じ値の再試行を保持して保存キューの末尾を回復する。この2件は修正前の回帰失敗と修正後の成功を確認した。
+1. 新規開始・設定変更・削除を止め、進行中のUI制御を完了させる。
+2. 計測を停止し、helperのstop、boundsのflush、Core／SQLiteの保存完了を確認する。
+3. 未保存があれば確認し、**「戻る」なら停止状態のまま画面を戻し再試行可能**にする。
+4. 終了確定後、helperのshutdown／EOF／exit、SQLite Workerのcloseを待ち、トレイを破棄して`app.quit`する。
 
-定期集計tickerはhelper/Workerの終了確認後に止める。終了失敗で画面へ戻った後にも計測を再開でき、tickerが再び実行されることを隔離smokeで確認する。終了要求中はtickerの処理を抑止する。
+- helperのshutdownは**2.5秒でkill要求、5秒までにexit未確認なら失敗**。kill要求だけで完全終了扱いにしない。通信故障で切り離したhelperもexit待機の対象にする。
+- 保存Promiseが失敗してもキューを復旧可能に保ち、同じ値を再試行する。終了中の新たなbounds変更は保存しない。
+- 定期集計tickerはhelper／Workerの終了確認後に停止。終了が失敗して画面へ戻る場合は再開できる状態を保持する。
 
-## 証拠の範囲とV03
+## 4. 検証・残る実機受入
 
-#46の同一配布物による16サイズ計測、初期/最小viewportの不一致、残る実窓試験は[V03受入台帳](../validation/ui-acceptance.md)を参照。V03は未合格。
+- **unit**：`tests/coach-window.test.ts`、`tests/window-bounds.test.ts`などで単一窓、負座標・画面外補正、通常bounds保存・再open、失敗時の再試行、終了競合を確認。
+- **Electron smoke**：実Main／Renderer／IPCでhide・復元・画面状態、保存失敗時の終了取消、helperとWorkerの終了順、外形／content／viewportを確認。
+- **未合格のV03**：自前の最大化ボタンによる標準Snap Layoutのhover表示は未実証。実トレイ操作・別プロセス二重起動・混在DPI／画面着脱・再起動後bounds保持も同一配布buildで検証が必要。CSSのdrag／no-dragや最大化成功だけでOSのSnap UI対応と判断しない。
 
-unitは負座標/画面外/小画面補正、状態変化中の上書き防止、保存待機と遅延イベント拒否、実SQLite Worker経由の保存・削除保持・再open・不正値拒否を確認する。Electron smokeは限定IPCからの最大化/復元、CSS drag/no-drag、hide中の計測状態、共通second-instance復元、保存失敗時の終了取消・保存再試行、重複終了要求から実helper shutdownまでを通す。外形/content/viewport/devicePixelRatio/scaleFactorをfixture結果に含める。
-
-**未合格：V03の実機確認。** 自前HTMLの最大化ボタンはnative captionのhit-testを実装しておらず、標準Snap Layoutのhover表示を実証していない。clickによる最大化成功やCSSのno-drag設定をSnap UI成功の証拠にしない。OS caption overlayは外観が変わる代替候補のため無断採用していない。
-
-実機では当該配布buildについて最大化hoverの標準Snap UI、caption drag/double-click、実トレイ操作、別プロセスsecond-instance、100/150%等の混在DPI・負座標・物理画面着脱、再起動後bounds保持を確認する必要がある。実入力/UIA/キー送出を伴う試験は明示同意後とし、通常保存先・実利用記録は使わない。未確認のまま#22を完了・mergeせず、#27や実検出精度・公開受入の成功として扱わない。
+詳しい16サイズの証拠・未確認条件は[V03 UI受入台帳](../validation/ui-acceptance.md)。実OS操作の試験は本人の明示同意後に実施する。
