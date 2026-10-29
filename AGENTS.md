@@ -18,10 +18,12 @@
 - 長い作業では工程の区切りで、確認済み事実・残る仮説・変更revision・検証結果・次の作業を短く引き継ぐ。履歴が肥大化したら圧縮や新規セッションへの引継ぎを検討し、生ログを繰り返し投入しない。
 
 ## 正本と参照順序
+- **プロダクトの目的と最重要成果（操作効率の改善）**は[プロダクトの目的・思想](docs/product.md)。
 - **現在の製品要件・受入条件**は[確定要件](docs/ui-requirements.md)。個別の設計・実測は詳細の根拠として使う。[過去の調査・旧MVP・工程記録](docs/archive/README.md)は現行要件より優先しない。
 
 ## 必要なときだけ参照
-- 目的・操作条件：[要件書](docs/ui-requirements.md)、[技術判断](docs/operations/README.md)。責務変更・リファクタ：[設計](docs/design.md#architecture)。
+- 参照先が分からないとき：[ドキュメント索引](docs/index.md)。既知の資料があれば直接参照し、索引や全資料を毎回読み込まない。
+- 企画・価値判断：[プロダクトの目的](docs/product.md)。機能・操作条件：[要件書](docs/ui-requirements.md)、[操作別技術設計](docs/operations/README.md)。責務変更・リファクタ：[設計](docs/design.md#architecture)。
 - 実行・完了手順：[開発ガイド](docs/development.md#development-workflow)、[開発ツール](docs/development-tools.md)、[package.json](package.json)・[global.json](global.json)。
 - 機能実装・振る舞い変更・バグ修正・リファクタ・テスト追加・CI変更：実装前に進め方と検証範囲を[テスト設計Skill](.agents/skills/test-shortcut-coach/SKILL.md)で判断する。Issue・PR・merge・ラベル操作：[GitHub操作Skill](.agents/skills/github-workflow/SKILL.md)。
 - レビュー：[追加レビュー規則](docs/code-review.md)。専用レビュアーが参照先を自動で読んだと仮定せず、必要な観点を指示する。
