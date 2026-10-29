@@ -32,4 +32,4 @@
 
 まず[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)の製品証拠と[W02](../operations/monitor-move.md)、[W03・W04](../operations/window-state.md)、[W06・W07](../operations/window-placement.md)の境界を確認する。次に失敗した条件を**入力・monitor構成・release位置・終端・保存／通知**へ分離し、原本を残したまま追加試験する。
 
-調査入口`node scripts/eight-operation-probe.mjs --self-test`。本人の明示同意後のみ`--observe-consented`。研究probeの成功を製品Native→Main→SQLiteの成功や、最終buildでの実機認識率と混同しない。
+調査入口`node scripts/probes/eight-operation-probe.mjs --self-test`。本人の明示同意後のみ`--observe-consented`。研究probeの成功を製品Native→Main→SQLiteの成功や、最終buildでの実機認識率と混同しない。

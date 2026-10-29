@@ -30,5 +30,5 @@
 ## 4. 検証と未確認条件
 
 - **自動**：`tests/native-policy/WindowSwitchTests.cs`、`tests/window-switch.test.ts`、`tests/fixture-integration.test.ts`。C#→Main parse→Core→SQLite、取消・後着イベント・W12非重複・3状態・停止／保存失敗を確認する。
-- **実入力**：`node scripts/w01-natural-acceptance.mjs --package-dir <build> --observe-consented`。本人の明示同意後のみ、隔離環境でARM／FINISH・45秒／20分上限を守る。通常データや生入力列を保存しない。
+- **実入力**：`node scripts/acceptance/w01-natural-acceptance.mjs --package-dir <build> --observe-consented`。本人の明示同意後のみ、隔離環境でARM／FINISH・45秒／20分上限を守る。通常データや生入力列を保存しない。
 - **既存の局所証拠**：[失敗・原因調査・最終の限定試行](../../validation/evidence/w01-natural-20261026-key-and-negative-results.json)。時刻換算、未定義キーを含む解放判定、Shell中間窓の誤認による見逃しを修正した経緯を含む。自作窓・Chromeの一部試行成功を最終製品全体のR02／J04・OS通知受入の合格とは扱わない。
