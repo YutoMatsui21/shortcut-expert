@@ -3,6 +3,14 @@ import { validDate } from './dates.ts';
 
 export function classify(value: ObserverCandidate): Observation | null {
   if (value.protocolVersion === 1) return classifyWindow(value);
+  if (value.evidence.kind === 'window-close') {
+    const e = value.evidence;
+    if (!validDate(value.date) || value.injected || value.conflicted || !e.targetMatched || !e.destroyed ||
+        e.profile !== 'window-close-v1' || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0 || e.inputAgeMs > 1000 ||
+        (value.origin === 'mouse' ? value.route !== 'close-button' : value.origin !== 'key' || value.route !== 'alt-f4')) return null;
+    return { id: `${value.generation}:t${value.transaction}`, operation: 'W11', origin: value.origin === 'mouse' ? 'mouse' : 'key',
+      date: value.date, shortcut: 'Alt + F4', monitor: e.monitor };
+  }
   if (value.evidence.kind === 'placement') {
     const e = value.evidence;
     if (!validDate(value.date) || value.injected || value.conflicted || !e.targetMatched || e.monitorChanged ||

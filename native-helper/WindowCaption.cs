@@ -4,6 +4,9 @@ using Point = NativeMethods.Point;
 
 internal static class WindowCaption
 {
+    internal static bool CloseButton(TitleInfo title, Rect window, Point point) =>
+        SnapGeometry.Source(title.Bounds[2], title.Bounds[3], title.Bounds[5], window) == "title-rect" &&
+        (title.State[5] & 0x18001) == 0 && SnapGeometry.Contains(title.Bounds[5], point);
     internal static bool Read(nint window, out TitleInfo info)
     {
         info = new() { Size = (uint)Marshal.SizeOf<TitleInfo>(), State = new uint[6], Bounds = new Rect[6] };

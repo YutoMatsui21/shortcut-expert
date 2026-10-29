@@ -1,0 +1,19 @@
+{
+  "participantConfirmed": [
+    "mouse-close",
+    "key-close",
+    "cancel",
+    "hide",
+    "other-destroy",
+    "program",
+    "delay-confirm",
+    "tab-close"
+  ],
+  "scope": "owned-standard-windows",
+  "naturalInput": true,
+  "syntheticInputSent": false,
+  "releaseAcceptance": false,
+  "finalWindowsVersion": "10.0.26340.0",
+  "finalCaseCount": 8,
+  "initialExcludedUnknownTrial": 1
+}

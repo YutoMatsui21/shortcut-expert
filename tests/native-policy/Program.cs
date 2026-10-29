@@ -96,7 +96,8 @@ internal static partial class Program
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
-            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, monitorMoveSamples, globalInputCollected = false }));
+            var closeSamples = WindowCloseTests.Run(passed);
+            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, monitorMoveSamples, closeSamples, globalInputCollected = false }));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine($"Native policy failed after {passed.Count} cases: {error.Message}"); return 1; }

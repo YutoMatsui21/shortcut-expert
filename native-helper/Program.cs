@@ -13,6 +13,7 @@ internal static class Program
         switch (args[0])
         {
             case "--observe": return ObserverHost.Run();
+            case "--close-validation-consented": return ObserverHost.Run(closeValidation: true);
             case "--fixture": return ObserverHost.Run(fixture: true);
             case "--fixture-display": return ObserverHost.Run(fixture: true, realDisplay: true);
             case "--self-test": return ObserverHost.SelfTest();

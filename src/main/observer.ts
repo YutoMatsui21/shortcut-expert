@@ -59,6 +59,12 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'window-close':
+      if (raw.profile !== 'window-close-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.destroyed !== 'boolean' ||
+          typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 ||
+          !(raw.monitor === null || bounds(raw.monitor))) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, targetMatched: raw.targetMatched, destroyed: raw.destroyed,
+        inputAgeMs: raw.inputAgeMs, monitor: bounds(raw.monitor) }; break;
     case 'placement': {
       const monitor = bounds(raw.monitor);
       if (raw.profile !== 'placement-v1' || !['left-half', 'right-half', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(raw.shape as string) ||

@@ -1,0 +1,10 @@
+{
+  "helperDll": "7C313AE0E180F7A04DAD6CF418DA233315FFD4119C27C0D319482D5D2B7A0E4A",
+  "policySha256": "01A89BE36A049B9FCC8D02811C84E1A0BD68AF6B57DC4C9C9F868F736A0BB677",
+  "observerSha256": "4E8E9B02125527FE86C832FD10A586A7567CF1D6242D2C13B770C6569BB285F1",
+  "changeSinceManual": "diagnostic PollCancel guard only; input/state/confirmation/emission unchanged",
+  "naturalInputRetested": false,
+  "build": "PASS",
+  "nativeTests": 7,
+  "nativePolicyAssertions": 489
+}

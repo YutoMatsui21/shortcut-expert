@@ -1,0 +1,9 @@
+{"kind":"trial","caseId":"mouse-close","mouse":0,"key":0,"w01":0,"destroyedA":0,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"mouse-close","mouse":0,"key":0,"w01":0,"destroyedA":1,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"key-close","mouse":0,"key":0,"w01":0,"destroyedA":1,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"cancel","mouse":0,"key":0,"w01":0,"destroyedA":0,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"hide","mouse":0,"key":0,"w01":0,"destroyedA":0,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"other-destroy","mouse":0,"key":0,"w01":0,"destroyedA":0,"destroyedB":1,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"program","mouse":0,"key":0,"w01":0,"destroyedA":1,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"delay-confirm","mouse":0,"key":0,"w01":0,"destroyedA":1,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
+{"kind":"trial","caseId":"tab-close","mouse":0,"key":0,"w01":0,"destroyedA":0,"destroyedB":0,"stopped":true,"manualInput":true,"rawInputSaved":false}
