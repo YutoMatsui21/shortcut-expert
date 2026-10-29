@@ -63,7 +63,7 @@ Issueの目的・受入条件と、変更が失敗した場合の影響を先に
 | native-helper/C# | 本番C# policy、helper build・native suite | TSとの契約試験、関連Core・Electron smoke |
 | scripts/CI/package | 対応するtool試験と設定検証 | build・package・配布smoke |
 
-対象unitは`npm.cmd run test:unit -- --file=対象.test.ts`、nativeはhelperをbuild後に`node scripts/test.mjs native --file=native-policy.test.ts`などで絞る。詳細はREADMEを正本とする。
+対象unitは`npm.cmd run test:unit -- --file=対象.test.ts`、nativeはhelperをbuild後に`node scripts/test/test.mjs native --file=native-policy.test.ts`などで絞る。詳細はREADMEを正本とする。
 
 PRでは実装・テスト・設定・workflowを変更したらWindowsフルCIを維持する。MarkdownのみはフルCIを省略するが、必須チェック`windows-quality`は成功させる。依存関係が不明なら安全側に検証を広げる。
 

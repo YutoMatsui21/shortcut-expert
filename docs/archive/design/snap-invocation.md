@@ -62,9 +62,9 @@ Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけ�
 通常画面の開始操作からは観測を開始できない。パネルはhookや人工入力を持たず、別processに標準captionの対象窓を用意する。
 
 ```powershell
-node scripts/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --compile-only
+node scripts/acceptance/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --compile-only
 # 本人同意後だけ。ARM後は本人が対象窓で1操作し、FINISHを押す。
-node scripts/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --observe-consented
+node scripts/acceptance/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --observe-consented
 ```
 
 生成先は`.tools/validation/w08-natural/session-*`。同梱全体hash、panelソースhash、本人が指定する試行の期待値と
