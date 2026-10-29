@@ -2,7 +2,7 @@ import { test, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { cacheIssue, issueSection, pullRequestStatus } from '../scripts/github-workflow.mjs';
+import { cacheIssue, issueSection, pullRequestStatus } from '../scripts/dev/github-workflow.mjs';
 
 function fixture(t: TestContext) {
   mkdirSync('.tools/tests',{recursive:true});

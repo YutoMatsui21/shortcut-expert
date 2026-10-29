@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
-const runner = resolve('scripts/test.mjs');
+const runner = resolve('scripts/test/test.mjs');
 
 test('test CLI selects a file and name while retaining module mock support', () => {
   const parent = resolve('.tools/tests');

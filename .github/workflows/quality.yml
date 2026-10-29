@@ -123,11 +123,11 @@ jobs:
       # Keep `npm run build` self-contained for local use; CI bundles the checked sources.
       - name: Build
         if: ${{ needs.change-scope.outputs.full == 'true' }}
-        run: node scripts/dev-run.mjs electron-vite build
+        run: node scripts/dev/dev-run.mjs electron-vite build
       - name: Package and app UI and IPC smoke (synthetic input only)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/ci-package-smoke.mjs
+          node scripts/test/ci-package-smoke.mjs
           exit $LASTEXITCODE
       - name: Identify the tested foundation build
         if: ${{ needs.change-scope.outputs.full == 'true' }}
@@ -142,7 +142,7 @@ jobs:
       - name: Durable storage UI and IPC smoke (synthetic input only)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --storage 2>&1 | Tee-Object -FilePath .tools/test-results/storage-smoke.log
+          node scripts/test/smoke.mjs --storage 2>&1 | Tee-Object -FilePath .tools/test-results/storage-smoke.log
           exit $LASTEXITCODE
       - name: Packaged UI and IPC smoke
         if: ${{ needs.change-scope.outputs.full == 'true' }}
@@ -152,7 +152,7 @@ jobs:
       - name: Packaged durable storage UI and IPC smoke
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
+          node scripts/test/smoke.mjs --packaged --storage 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-storage-smoke.log
           exit $LASTEXITCODE
       - name: V02 packaged storage fault acceptance (isolated synthetic disk fixtures)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
@@ -162,30 +162,30 @@ jobs:
       - name: Acquired-record comparison and coverage info (isolated SQLite)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/comparison-smoke.log
+          node scripts/test/smoke.mjs --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/comparison-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/smoke.mjs --packaged --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-comparison-smoke.log
+          node scripts/test/smoke.mjs --packaged --comparison 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-comparison-smoke.log
           exit $LASTEXITCODE
       - name: JSON migration and process restart smoke
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --migration 2>&1 | Tee-Object -FilePath .tools/test-results/migration-smoke.log
+          node scripts/test/smoke.mjs --migration 2>&1 | Tee-Object -FilePath .tools/test-results/migration-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/smoke.mjs --packaged --migration 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-migration-smoke.log
+          node scripts/test/smoke.mjs --packaged --migration 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-migration-smoke.log
           exit $LASTEXITCODE
       - name: Settings panel and tray commands (isolated SQLite)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --settings 2>&1 | Tee-Object -FilePath .tools/test-results/settings-smoke.log
+          node scripts/test/smoke.mjs --settings 2>&1 | Tee-Object -FilePath .tools/test-results/settings-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/smoke.mjs --packaged --settings 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-settings-smoke.log
+          node scripts/test/smoke.mjs --packaged --settings 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-settings-smoke.log
           exit $LASTEXITCODE
       - name: Notification activation and restart (isolated SQLite, fake OS callbacks)
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
-          node scripts/smoke.mjs --activation 2>&1 | Tee-Object -FilePath .tools/test-results/activation-smoke.log
+          node scripts/test/smoke.mjs --activation 2>&1 | Tee-Object -FilePath .tools/test-results/activation-smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/smoke.mjs --packaged --activation 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-activation-smoke.log
+          node scripts/test/smoke.mjs --packaged --activation 2>&1 | Tee-Object -FilePath .tools/test-results/packaged-activation-smoke.log
           exit $LASTEXITCODE
       - name: Fixture diagnostics
         if: ${{ always() && needs.change-scope.outputs.full == 'true' }}

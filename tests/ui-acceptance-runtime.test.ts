@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { packageManifest, waitForUiAcceptance } from '../scripts/ui-acceptance-runtime.mjs';
+import { packageManifest, waitForUiAcceptance } from '../scripts/acceptance/ui-acceptance-runtime.mjs';
 
 class FixtureChild extends EventEmitter {
   stdout = new EventEmitter();
