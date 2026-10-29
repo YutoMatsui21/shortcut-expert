@@ -4,7 +4,7 @@
 
 
 2026-10-28。開始revision `7b4a2bed0549e792bc04cdc586cf8678d515aeed`。
-正本は[確定要件](../ui-redesign-requirements.md)。#9の[8操作調査](../research/eight-operation-validation.md)、#14の[複合ドラッグ再審査](../research/compound-drag-validation.md)を再利用する。G-W06/G-W07は制約付き着手PASSであり、今回の製品buildの自然入力成功を意味しない。過去の原本・評価は変更しない。
+正本は[確定要件](../ui-requirements.md)。#9の[8操作調査](../research/eight-operation-validation.md)、#14の[複合ドラッグ再審査](../research/compound-drag-validation.md)を再利用する。G-W06/G-W07は制約付き着手PASSであり、今回の製品buildの自然入力成功を意味しない。過去の原本・評価は変更しない。
 
 ## 共通処理と固有条件
 
