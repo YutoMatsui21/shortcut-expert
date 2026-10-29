@@ -66,7 +66,7 @@ test('v2でも既存5操作の条件と同等キーを緩めない', () => {
       candidateFixture({ origin, operation: 'minimize', after: { state: 'minimized' }, route: origin === 'mouse' ? 'min-button' : 'win-down' }),
       candidateFixture({ origin, operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false, route: origin === 'mouse' ? 'max-button' : 'win-down' }),
       candidateFixture({ origin, operation: 'close', after: { state: 'closed' }, route: origin === 'mouse' ? 'close-button' : 'alt-f4' }),
-      candidateFixture({ origin, operation: 'monitor-move', after: { state: 'normal' }, fromMonitor, toMonitor, moveDirection: 'right', route: origin === 'mouse' ? 'caption-drag' : 'win-shift-right' })
+      candidateFixture({ origin, operation: 'monitor-move', moveConfirmed: true, afterArranged: false, after: { state: 'normal' }, fromMonitor, toMonitor, moveDirection: 'right', route: origin === 'mouse' ? 'caption-drag' : 'win-shift-right' })
     ];
     for (const legacy of cases) {
       const value = v2Fixture(legacy);

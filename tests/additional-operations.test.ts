@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { classify } from '../src/core/detector.ts';
 import { Coach } from '../src/core/coach.ts';
 import { JsonRepository } from '../src/main/repository.ts';
-import { mkdir, mkdtemp } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { Candidate, Notice, OperationId } from '../src/shared/coach.ts';
 
 const base: Candidate = {
@@ -18,7 +19,7 @@ export const addedCases: { id: OperationId; candidate: Candidate; key: string; s
   { id: 'W04', candidate: { ...base, operation: 'restore', before: { state: 'maximized', arranged: false },
     after: { state: 'normal' }, afterArranged: false, route: 'max-button' }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W11', candidate: { ...base, operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4', shortcut: 'Alt + F4' },
-  { id: 'W02', candidate: { ...base, operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag',
+  { id: 'W02', candidate: { ...base, operation: 'monitor-move', moveConfirmed: true, afterArranged: false, after: { state: 'normal' }, route: 'caption-drag',
     fromMonitor: base.monitor, toMonitor: { x: 1920, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' },
     key: 'win-shift-right', shortcut: 'Win + Shift + →' }
 ];
@@ -50,12 +51,13 @@ test('元状態に合わない最小化・復元と元画面への往復を除�
   assert.equal(classify({ ...move, toMonitor: move.fromMonitor }), null);
   assert.equal(classify({ ...move, fromMonitor: null }), null);
   assert.equal(classify({ ...move, moveDirection: null })?.shortcut, null);
-  assert.equal(classify({ ...move, origin: 'key', route: 'win-shift-left' }), null);
+  assert.equal(classify({ ...move, origin: 'key', route: 'win-shift-left' })?.shortcut, null);
+  for (const moveConfirmed of [false, undefined]) assert.equal(classify({ ...move, moveConfirmed }), null);
 });
 
-test('追加4操作は通知・重複排除・操作別mute・停止・保存再読込まで接続する', async () => {
-  const root = resolve('.tools/tests'); await mkdir(root, { recursive: true });
-  const directory = await mkdtemp(join(root, 'coach-added-'));
+test('追加4操作は通知・重複排除・操作別mute・停止・保存再読込まで接続する', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'coach-added-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
   const repository = new JsonRepository(directory);
   const notices: Notice[] = []; let now = 0;
   const coach = new Coach({ repository, date: () => base.date, now: () => now,
@@ -72,6 +74,7 @@ test('追加4操作は通知・重複排除・操作別mute・停止・保存再
     assert.notEqual(notices.at(-1)?.label, '最大化');
     await coach.accept({ ...mouse, sequence: ++sequence, origin: 'key', route: entry.key });
     await coach.setMuted(entry.id, true); now += 60_000;
+    assert.equal(coach.snapshot().error, null);
     const count = notices.length;
     await coach.accept({ ...mouse, sequence: ++sequence });
     assert.equal(notices.length, count);

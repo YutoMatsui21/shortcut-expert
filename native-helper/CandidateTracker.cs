@@ -5,6 +5,9 @@ internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
     MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0);
+// Ephemeral, verified compound terminal for #113. No current protocol/writer emits it.
+internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMonitor, MonitorBounds ToMonitor,
+    string Terminal, long InputAgeMs);
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
@@ -19,6 +22,7 @@ internal sealed class CandidateTracker
     private readonly Dictionary<nint, Input> drags = new();
     private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
     private Input? input;
+    private bool moveKeyReleased;
     private Input? completedWinDown;
     private bool winDownHeld;
     private nint lastCaption;
@@ -30,6 +34,10 @@ internal sealed class CandidateTracker
     internal int NextTransaction() => checked(++transaction);
     internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
     {
+        if (input is { Route: "win-shift-left" or "win-shift-right" } move && move.Window == window && moveKeyReleased) {
+            if (injected || after is null) { ClearInput(); return null; }
+            return Complete(window, move.Before, after, now, window, date, after.Monitor);
+        }
         if (Placement.WinHeld) return null;
         var maximize = Placement.Maximize(window, after, now, injected);
         var placed = Placement.Finish(window, after, now, injected);
@@ -37,9 +45,15 @@ internal sealed class CandidateTracker
         var source = new Input(window, m.Before, "key", "win-up", now - m.Age, false, false, true, m.Transaction);
         return Build("maximize", m.Before, after, source, m.Age, true, false, date, after.Monitor);
     }
-    internal void KeyReleased(uint key) { Placement.Released(key); if (key == VK_DOWN) winDownHeld = false; }
+    internal void KeyReleased(uint key) {
+        Placement.Released(key); if (key == VK_DOWN) winDownHeld = false;
+        if (input is { Route: "win-shift-left" } && key == VK_LEFT || input is { Route: "win-shift-right" } && key == VK_RIGHT)
+            moveKeyReleased = true;
+    }
     internal void ForegroundChanged(nint window) {
         Placement.Foreground(window);
+        if (input is { Route: "win-shift-left" or "win-shift-right" } && input.Window != window) input = null;
+        if (drags.Keys.Any(target => target != window)) { drags.Clear(); release = null; }
         if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
     }
 
@@ -107,6 +121,10 @@ internal sealed class CandidateTracker
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
+        if (route is "win-shift-left" or "win-shift-right" && input?.Route == route && !moveKeyReleased) {
+            if ((flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) ClearInput();
+            return;
+        }
         bool placementKey = winDown && !modifiers && !shiftDown && !altDown && key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
         if (!placementKey) Placement.Cancel();
         if (placementKey && Placement.Key(window, before, key, winDown, conflict, now, flags, NextTransaction))
@@ -119,6 +137,7 @@ internal sealed class CandidateTracker
         if (route is null || before is null) { input = null; return; }
         input = new Input(window, before, "key", route, now,
             (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, conflict, true, checked(++transaction));
+        moveKeyReleased = false;
     }
     internal static string? KeyRoute(uint key, bool win, bool shift, bool alt, bool other) => other ? null :
         (key, win, shift, alt) switch {
@@ -148,16 +167,21 @@ internal sealed class CandidateTracker
         {
             // Cross-monitor compound commits/notifications belong to #113. Do not emit
             // half a compound gesture through the current single-operation writer.
-            if (drag.Before.Monitor != after.Monitor || released is null || released.Value.Monitor != after.Monitor ||
+            if (released is null || released.Value.Monitor != after.Monitor ||
                 State(drag.Before.Show) != "normal" || drag.Before.Arranged != false || foreground != window) return null;
             var r = released.Value;
             // A narrow edge check is a conservative implementation boundary, not a claim
             // about Windows' Snap hit regions. Interior layout selections are excluded.
             if (r.Point.X < r.Work.x || (long)r.Point.X >= (long)r.Work.x + r.Work.width ||
                 r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
+            if (drag.Before.Monitor != after.Monitor)
+                return StableMove(drag.Before, after) && drag.Matched && !drag.Injected && !drag.Conflicted
+                    ? new CompoundMoveResult(drag.Transaction, drag.Before.Monitor, after.Monitor, "maximized", drag.At) : null;
             return Build("maximize", drag.Before, after, drag with { Route = "caption-top-drag" }, drag.At, true, false, date, after.Monitor);
         }
-        if (drag.Before.Monitor == after.Monitor) return null;
+        if (drag.Before.Monitor == after.Monitor || released is null || released.Value.Monitor != after.Monitor ||
+            released.Value.Work != after.Work || State(after.Show) != "normal" || after.Arranged != false ||
+            !StableMove(drag.Before, after) || drag.Injected || drag.Conflicted || !drag.Matched || foreground != window) return null;
         // Drag lifetime is bounded by MOVESIZEEND; age is the input-to-start interval, not its duration.
         return Build("monitor-move", drag.Before, after, drag, drag.At, foreground == window, false, date, after.Monitor);
     }
@@ -184,7 +208,8 @@ internal sealed class CandidateTracker
             ("maximized", "normal") => "restore", _ => null };
         Input? candidate = input?.Window == window ? input : null;
         if (candidate is not null && candidate.Before.Process != after.Process) { ClearInput(); candidate = null; }
-        if (candidate is { Route: "win-shift-left" or "win-shift-right" } && candidate.Before.DisplayLayout != after.DisplayLayout)
+        if (candidate is { Route: "win-shift-left" or "win-shift-right" } && !moveKeyReleased) return null;
+        if (candidate is { Route: "win-shift-left" or "win-shift-right" } && !StableMove(candidate.Before, after))
         { ClearInput(); return null; }
         if (candidate is { Route: "win-shift-left" or "win-shift-right" } && candidate.Before.Monitor is not null &&
             after.Monitor is not null && candidate.Before.Monitor != after.Monitor) operation = "monitor-move";
@@ -224,7 +249,13 @@ internal sealed class CandidateTracker
             new(State(before.Show), before.Arranged), new(operation == "close" ? "closed" : State(after.Show)), after.Arranged,
             recent ? candidate!.Origin : "unknown", recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",
             candidate?.Injected ?? false, candidate?.Conflicted ?? false, isMoving, false,
-            recent && candidate!.Matched && target, age, monitor, before.Monitor, after.Monitor, direction)
+            recent && candidate!.Matched && target, age, monitor, before.Monitor, after.Monitor, direction,
+            operation == "monitor-move" && StableMove(before, after))
             { Transaction = candidate?.Transaction ?? checked(++transaction) };
     }
+    private static bool StableMove(WindowState before, WindowState after) =>
+        before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
+        before.Monitor is not null && after.Monitor is not null && before.Work is not null && after.Work is not null &&
+        before.Dpi > 0 && after.Dpi > 0 && State(before.Show) is "normal" or "maximized" &&
+        State(after.Show) is "normal" or "maximized";
 }

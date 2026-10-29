@@ -13,6 +13,7 @@ export type Candidate = {
   fromMonitor?: Bounds | null;
   toMonitor?: Bounds | null;
   moveDirection?: 'left' | 'right' | null;
+  moveConfirmed?: boolean;
 };
 export type Observation = {
   id: string; operation: OperationId; origin: 'mouse' | 'key'; date: string;

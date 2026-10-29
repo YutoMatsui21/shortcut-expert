@@ -81,14 +81,15 @@ function classifyWindow(candidate: Candidate): Observation | null {
       operation = 'W11'; shortcut = 'Alt + F4'; break;
     case 'monitor-move': {
       const from = candidate.fromMonitor, to = candidate.toMonitor;
-      if (!from || !to || sameMonitor(from, to) || candidate.before.state === 'minimized' ||
+      if (candidate.moveConfirmed !== true || !from || !to || sameMonitor(from, to) || candidate.before.state === 'minimized' ||
+          (candidate.origin === 'mouse' && (candidate.after.state !== 'normal' || candidate.afterArranged !== false)) ||
           !['normal', 'maximized'].includes(candidate.before.state) || !['normal', 'maximized'].includes(candidate.after.state) ||
           !route(['caption-drag'], ['win-shift-left', 'win-shift-right'])) return null;
       const direction = candidate.moveDirection;
       if (direction !== undefined && direction !== null && direction !== 'left' && direction !== 'right') return null;
-      if (direction && (direction === 'left' ? to.x >= from.x : to.x <= from.x)) return null;
-      if (candidate.origin === 'key' && direction && candidate.route !== `win-shift-${direction}`) return null;
-      operation = 'W02'; shortcut = direction ? `Win + Shift + ${direction === 'left' ? '←' : '→'}` : null;
+      const equivalent = direction && from.y === to.y && (direction === 'left' ? to.x + to.width <= from.x : from.x + from.width <= to.x) &&
+        (candidate.origin !== 'key' || candidate.route === `win-shift-${direction}`);
+      operation = 'W02'; shortcut = equivalent ? `Win + Shift + ${direction === 'left' ? '←' : '→'}` : null;
       break;
     }
     default: return null;

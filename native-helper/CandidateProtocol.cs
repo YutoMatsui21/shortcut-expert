@@ -20,7 +20,7 @@ internal sealed record SnapInvocationEvidence(bool targetMatched, bool eligible,
     string? buttonSource, long dwellMs, long inputAgeMs, MonitorBounds? monitor) : Evidence("snap-invocation-v1");
 internal sealed record WindowResult(string app, string operation, CandidateState before, CandidateState after,
     bool? afterArranged, bool moving, bool elevated, bool targetMatched, long inputAgeMs, MonitorBounds? monitor,
-    MonitorBounds? fromMonitor, MonitorBounds? toMonitor, string? moveDirection);
+    MonitorBounds? fromMonitor, MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false);
 internal sealed record WindowEvidence(WindowResult result) : Evidence("legacy-window-v1");
 internal sealed record ShellDisplayEvidence(string feature, bool? wasVisible, bool? visible, bool? targetMatched) : Evidence("unverified");
 internal sealed record ActivationEvidence(int? slot, bool? appMatched, bool? targetMatched, bool? individualEquivalent, string result) : Evidence("unverified");
@@ -33,7 +33,7 @@ internal sealed record WindowCandidate(string type, int protocolVersion, int gen
     string app, string operation, string date, CandidateState before, CandidateState after, bool? afterArranged,
     string origin, string route, bool injected, bool conflicted, bool moving, bool elevated,
     bool targetMatched, long inputAgeMs, MonitorBounds? monitor, MonitorBounds? fromMonitor,
-    MonitorBounds? toMonitor, string? moveDirection)
+    MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false)
 {
     [JsonIgnore] internal int Transaction { get; init; }
 }
@@ -100,5 +100,5 @@ internal sealed class CandidateProtocol(Action<object> emit)
     internal static CandidateEnvelope V2(WindowCandidate c, int sequence, int transaction) => new(
         "candidate", 2, c.generation, sequence, transaction, c.date, c.origin, c.route, c.injected, c.conflicted,
         new WindowEvidence(new(c.app, c.operation, c.before, c.after, c.afterArranged, c.moving, c.elevated,
-            c.targetMatched, c.inputAgeMs, c.monitor, c.fromMonitor, c.toMonitor, c.moveDirection)));
+            c.targetMatched, c.inputAgeMs, c.monitor, c.fromMonitor, c.toMonitor, c.moveDirection, c.moveConfirmed)));
 }

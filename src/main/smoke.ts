@@ -98,7 +98,7 @@ export async function runCoachSmoke({ coach, observer, notice, window, getNotifi
     { candidate: { ...value, operation: 'restore', before: { state: 'maximized', arranged: false },
       after: { state: 'normal' }, afterArranged: false }, key: 'win-down' },
     { candidate: { ...value, operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4' },
-    { candidate: { ...value, operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag', fromMonitor: physical,
+    { candidate: { ...value, operation: 'monitor-move', moveConfirmed: true, afterArranged: false, after: { state: 'normal' }, route: 'caption-drag', fromMonitor: physical,
       toMonitor: { ...physical, x: physical.x + physical.width }, moveDirection: 'right' }, key: 'win-shift-right' }
   ];
   let addedSequence = 4;

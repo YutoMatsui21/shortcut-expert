@@ -91,11 +91,12 @@ internal static partial class Program
             CheckWinDownGrouping();
             var windowStateSamples = CheckWindowStates();
             var placementSamples = CheckPlacement();
+            CheckMonitorMoves();
             CheckProtocol();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
-            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, globalInputCollected = false }));
+            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, monitorMoveSamples, globalInputCollected = false }));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine($"Native policy failed after {passed.Count} cases: {error.Message}"); return 1; }
@@ -153,11 +154,12 @@ internal static partial class Program
             emitter.Complete(first with { generation = 2 }); Equal(1, delivered[2].sequence);
         });
         Check("v2 drag emits only its terminal evidence", () => {
-            var left = normal with { Monitor = new(-1920, 0, 1920, 1080) };
+            var left = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040), Dpi = 96, DisplayLayout = "stable" };
             var right = left with { Monitor = new(0, 0, 1920, 1080) };
             var tracker = Tracker(); tracker.Mouse(11, left, HTCAPTION, default, 0, 500, 0, false, true);
             tracker.MoveStart(11, 100);
             Equal<object?>(null, tracker.Complete(11, left, maximized, 200, 11, "2026-10-11", null));
+            tracker.MouseReleased(new Point { X = 500, Y = 400 }, right.Monitor, right.Work, 0);
             var end = (WindowCandidate)tracker.FinishMove(11, right, 5000, 11, "2026-10-11")!;
             Equal(1, end.Transaction); Equal("monitor-move", end.operation);
         });
@@ -169,7 +171,7 @@ internal static partial class Program
     }
     private static void CheckAdditionalOperations()
     {
-        var left = normal with { Monitor = new MonitorBounds(-1920, 0, 1920, 1080), HorizontalPair = true };
+        var left = normal with { Monitor = new MonitorBounds(-1920, 0, 1920, 1080), HorizontalPair = true, Work = new(-1920, 0, 1920, 1040), Dpi = 96, DisplayLayout = "stable" };
         var right = left with { Monitor = new MonitorBounds(0, 0, 1920, 1080) };
         var minimized = left with { Show = SW_SHOWMINIMIZED };
         foreach (bool key in new[] { false, true })
@@ -203,11 +205,13 @@ internal static partial class Program
                 var tracker = Tracker(); JsonElement result;
                 if (key) {
                     tracker.Key(11, left, VK_RIGHT, true, false, 0, 0, shiftDown: true);
+                    tracker.KeyReleased(VK_RIGHT);
                     result = Complete(tracker, before: left, after: right);
                 } else {
                     tracker.Mouse(11, left, HTCAPTION, default, 0, 500, 0, false, true);
                     tracker.MoveStart(11, 100);
                     tracker.Complete(11, left, left with { Show = SW_SHOWMAXIMIZED }, 200, 11, "2026-10-11", null);
+                    tracker.MouseReleased(new Point { X = 500, Y = 400 }, right.Monitor, right.Work, 0);
                     result = JsonSerializer.SerializeToElement(tracker.FinishMove(11, right, 5000, 11, "2026-10-11"));
                 }
                 Equal("monitor-move", result.GetProperty("operation").GetString());
@@ -234,6 +238,7 @@ internal static partial class Program
             var tracker = Tracker(); var before = left with { Show = SW_SHOWMAXIMIZED };
             tracker.Key(11, before, VK_RIGHT, true, false, 0, 0, shiftDown: true);
             Equal<object?>(null, tracker.Complete(11, before, left, 30, 11, "2026-10-11", null));
+            tracker.KeyReleased(VK_RIGHT);
             var result = Complete(tracker, before: left, after: right);
             Equal("monitor-move", result.GetProperty("operation").GetString());
         });

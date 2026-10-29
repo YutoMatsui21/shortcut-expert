@@ -17,6 +17,12 @@ internal static class ObserverHost
         using var dispatcher = new Control(); _ = dispatcher.Handle;
         using var context = new ApplicationContext();
         using var observer = new Observer(Emit, fixture);
+        // Marshal display/settings invalidation to the same thread as input and WinEvent callbacks.
+        void DisplayChanged(object? sender, EventArgs args) {
+            try { dispatcher.BeginInvoke(() => observer.InvalidateDisplay()); } catch (InvalidOperationException) { }
+        }
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanging += DisplayChanged;
+        Microsoft.Win32.SystemEvents.UserPreferenceChanging += DisplayChanged;
         int selectedProtocol = 1;
         Emit(new { type = "ready", protocolVersion = 1, supportedProtocols = new[] { 1, 2 }, arrangedAvailable = Observer.ArrangedAvailable });
         _ = Task.Run(() =>
@@ -64,6 +70,10 @@ internal static class ObserverHost
             }
             finally { try { dispatcher.BeginInvoke(() => { observer.Stop(); context.ExitThread(); }); } catch { } }
         });
-        Application.Run(context); observer.Stop(); return 0;
+        try { Application.Run(context); observer.Stop(); return 0; }
+        finally {
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanging -= DisplayChanged;
+            Microsoft.Win32.SystemEvents.UserPreferenceChanging -= DisplayChanged;
+        }
     }
 }

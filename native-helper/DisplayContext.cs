@@ -20,9 +20,9 @@ internal static class DisplayContext
         var a = displays[0].Bounds; var b = displays[1].Bounds;
         return a.Top == b.Top && (a.Right <= b.Left || b.Right <= a.Left);
     }
-    internal static string Layout() => string.Join(";", Screen.AllScreens.Select(screen => screen.Bounds)
-        .OrderBy(bounds => bounds.X).ThenBy(bounds => bounds.Y)
-        .Select(bounds => $"{bounds.X},{bounds.Y},{bounds.Width},{bounds.Height}"));
+    internal static string Layout() => string.Join(";", Screen.AllScreens.OrderBy(screen => screen.Bounds.X).ThenBy(screen => screen.Bounds.Y)
+        .Select(screen => $"{screen.Bounds.X},{screen.Bounds.Y},{screen.Bounds.Width},{screen.Bounds.Height}:" +
+            $"{screen.WorkingArea.X},{screen.WorkingArea.Y},{screen.WorkingArea.Width},{screen.WorkingArea.Height}"));
     internal static MonitorBounds? Bounds(nint window) => Monitor(window);
     internal static object Query(JsonElement bounds, bool diagnostic = false)
     {
