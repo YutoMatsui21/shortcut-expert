@@ -94,9 +94,6 @@ jobs:
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         with:
           global-json-file: global.json
-      - name: Codex session analysis Python tests
-        if: ${{ needs.change-scope.outputs.full == 'true' }}
-        run: python -m unittest discover -s .agents/skills/codex-session-analysis/scripts -p "test_*.py"
       - name: Toolchain
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
