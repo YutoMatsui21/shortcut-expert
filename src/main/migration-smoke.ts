@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { app, type BrowserWindow } from 'electron';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Coach } from '../core/coach';
+import type { DurableCoach } from '../core/durable-coach';
 import { SqliteRepository } from './sqlite-repository';
 import { waitFor } from './storage-smoke';
 import { selectPage } from './learning-smoke';
 
 export async function runMigrationSmoke({ coach, window, repository }: {
-  coach: Pick<Coach, keyof Coach>; window: BrowserWindow; repository: unknown;
+  coach: DurableCoach; window: BrowserWindow; repository: unknown;
 }) {
   assert.ok(repository instanceof SqliteRepository);
   const state = coach.snapshot(); assert.equal(state.error, null);

@@ -1,12 +1,12 @@
 import { defaultRecordsQuery, isRecordsQuery } from '../shared/records.ts';
 import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
-import { operations, type CoachBridge } from '../shared/coach.ts';
+import { type CoachBridge } from '../shared/coach.ts';
 import { validDate } from '../core/dates.ts';
 import { daysBefore } from '../shared/storage.ts';
 import { isLearningState, learningOperations } from '../shared/learning.ts';
 import { DeleteConfirmation } from './delete-confirmation.ts';
 
-type Requests = Pick<CoachBridge, 'getSnapshot' | 'getNotice' | 'command' | 'setMuted' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'getRecordSummary' | 'windowCommand'>;
+type Requests = Pick<CoachBridge, 'getSnapshot' | 'command' | 'setLearningState' | 'deleteCounts' | 'getRecords' | 'getLearning' | 'getRecordSummary' | 'windowCommand'>;
 type Command = Parameters<CoachBridge['command']>[0];
 
 function isCommand(value: unknown): value is Command {
@@ -14,15 +14,15 @@ function isCommand(value: unknown): value is Command {
     value === 'start' || value === 'retry-save' || value === 'quit';
 }
 
-export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSender: (id: number) => boolean, requests: Requests): void {
+export function registerCoachIpc(getWindow: () => BrowserWindow | null, requests: Requests): void {
   const confirmation = new DeleteConfirmation();
   const boundWindows = new WeakSet<BrowserWindow>();
   const tokenArgument = (token: unknown): string => {
     if (typeof token !== 'string' || !/^[a-f0-9-]{36}$/.test(token)) throw new Error('Invalid delete confirmation.');
     return token;
   };
-  const assertSender = (event: IpcMainInvokeEvent, notice = false) => {
-    const allowed = notice ? noticeSender(event.sender.id) : event.sender === getWindow()?.webContents;
+  const assertSender = (event: IpcMainInvokeEvent) => {
+    const allowed = event.sender === getWindow()?.webContents;
     if (!allowed || event.senderFrame !== event.sender.mainFrame) throw new Error('Unknown sender.');
   };
   ipcMain.handle('coach:get-snapshot', (event) => { assertSender(event); return requests.getSnapshot(); });
@@ -42,17 +42,10 @@ export function registerCoachIpc(getWindow: () => BrowserWindow | null, noticeSe
     if (typeof from !== 'string' || typeof to !== 'string' || !validDate(from) || !validDate(to) || from > to || to > daysBefore(from, -59) || !requests.getRecords) throw new Error('Invalid range.');
     return requests.getRecords(from, to);
   });
-  ipcMain.handle('coach:get-notice', (event) => { assertSender(event, true); return requests.getNotice(); });
   ipcMain.handle('coach:command', (event, value: unknown) => {
     assertSender(event);
     if (!isCommand(value)) throw new Error('Unknown command.');
     return requests.command(value);
-  });
-  ipcMain.handle('coach:set-muted', (event, operation: unknown, muted: unknown) => {
-    assertSender(event);
-    const supported = operations.find((op) => op.id === operation);
-    if (!supported || typeof muted !== 'boolean') throw new Error('Invalid setting.');
-    return requests.setMuted(supported.id, muted);
   });
   ipcMain.handle('coach:set-learning-state', (event, operation: unknown, state: unknown) => {
     assertSender(event);

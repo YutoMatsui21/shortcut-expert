@@ -53,20 +53,20 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 | 仕組み | 根拠 | 評価 |
 | --- | --- | --- |
-| Coreへの時計・保存・通知の注入 | [Coach](../../src/core/coach.ts)、[coach.test.ts](../../tests/coach.test.ts) | 時間境界と失敗を決定的に再現できる。維持すべき |
-| 期限1999/2000/2001ms、頻度10秒/60秒の境界 | [coach.test.ts](../../tests/coach.test.ts) | 実装の条件式が変わった時に有効 |
-| 世代・sequence・除外候補の消費 | [Coach](../../src/core/coach.ts)、関連テスト | 重複と停止後の候補を排除する基盤 |
-| 保存文書の厳格な検証と原本保持 | [repository.ts](../../src/main/repository.ts)、[repository.test.ts](../../tests/repository.test.ts) | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
-| 書込み直列化・一時ファイル・sync・rename | [repository.ts](../../src/main/repository.ts) | 通常の途中書込みに備える。電源断までの保証は別検証 |
+| Coreへの時計・保存・通知の注入 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、[coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 時間境界と失敗を決定的に再現できる。維持すべき |
+| 期限1999/2000/2001ms、頻度10秒/60秒の境界 | [coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 実装の条件式が変わった時に有効 |
+| 世代・sequence・除外候補の消費 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、関連テスト | 重複と停止後の候補を排除する基盤 |
+| 保存文書の厳格な検証と原本保持 | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)、[repository.test.ts](../../tests/repository.test.ts) | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
+| 書込み直列化・一時ファイル・sync・rename | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts) | 通常の途中書込みに備える。電源断までの保証は別検証 |
 | SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
 | 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../src/main/index.ts)、[Observer](../../native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
-| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../src/main/coach-app.ts)、[notification.ts](../../src/main/notification.ts)、[preload](../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
+| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../src/main/coach-app.ts)、[notification.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)、[preload](../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
 | 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../development.md)、[research](research-overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
 | lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../package.json)、[build-helper](../../scripts/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
 
 ## 3. 再現できた不具合：設定の再試行が最新操作を取り消す
 
-対象：[Coach.setMuted / retrySave](../../src/core/coach.ts)。`setMuted`の保存失敗で`pendingSettings`を保持する一方、後の`setMuted`成功では、その古い保留値を解消しない。
+対象：[Coach.setMuted / retrySave](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)。`setMuted`の保存失敗で`pendingSettings`を保持する一方、後の`setMuted`成功では、その古い保留値を解消しない。
 
 | 手順 | 保存結果・状態 |
 | --- | --- |
@@ -83,7 +83,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 ## 4. 本番のC#候補生成が自動テストの外にある
 
-[native.test.ts](../../tests/native.test.ts)は、DisplayPolicyの7例、hook登録・解除、stdin終了、start/stop/再開/shutdownを検証する。一方、`Observer.OnMouse / OnKey / OnEvent`はfixture中に処理を早期終了する。[smoke](../../src/main/smoke.ts)も完成済みCandidateをhelperに渡している。従って、**OS入力からそのCandidateを作る本番ロジックは、これらの成功では検証されない**。
+[native.test.ts](../../tests/native.test.ts)は、DisplayPolicyの7例、hook登録・解除、stdin終了、start/stop/再開/shutdownを検証する。一方、`Observer.OnMouse / OnKey / OnEvent`はfixture中に処理を早期終了する。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)も完成済みCandidateをhelperに渡している。従って、**OS入力からそのCandidateを作る本番ロジックは、これらの成功では検証されない**。
 
 [validation/probes/OriginCandidateTests.cs](../../validation/probes/OriginCandidateTests.cs)は過去のprobe用ロジックの試験で、製品Observerを直接試験しておらず、`npm test`にも入っていない。単にこのprobe試験をCIへ足しても、本番の穴は埋まらない。
 
@@ -154,7 +154,7 @@ property/model-based testingは、この状態列と「停止中は新規観測�
 
 提案するUIの最小ケースは、日付選択と合計、通知停止でも記録継続、全停止と再開、muteと再起動後の保持、削除取消／確定と設定保持、保存エラーと再試行、窓を閉じても常駐、trayから再表示、二重起動、正常終了である。Rendererの細かい状態はbridge fixtureで試験し、Main/Preloadを含む少数のElectron E2Eで結線を確認する。PlaywrightのElectron支援はexperimentalなので、現行Electron版・sandboxと組み合わせて小さく互換性を確かめる。[Playwright Electron](https://playwright.dev/docs/api/class-electron)
 
-[NotificationWindow](../../src/main/notification.ts)では、表示前と後の再照会、期限、epoch、画面消失、poll、focus、click-through、4秒消去を分けて確認する。人工画面adapterと遅延応答を使い、次の条件を再現する。
+[NotificationWindow](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)では、表示前と後の再照会、期限、epoch、画面消失、poll、focus、click-through、4秒消去を分けて確認する。人工画面adapterと遅延応答を使い、次の条件を再現する。
 
 - 全画面・不明・照会失敗・画面不一致なら集計は保持し、通知だけ抑制。
 - 読込中の停止／mute、表示直前の全画面化、表示中の全画面化。
@@ -164,7 +164,7 @@ property/model-based testingは、この状態列と「停止中は新規観測�
 
 現行pollはawait後に通知世代を確認せず`dismiss()`するため、古い照会応答と新しい表示が競合するケースは特に試験する。これは未再現のリスク。
 
-smokeの改善は、固定4200ms待ちの成功確認だけでなく、通知開始／終了eventや有界の条件待機を使うこと。4秒そのものの仕様試験はfake clockで行い、少数の実時間試験で結線を確認する。現在、smokeのcatchは`COACH_SMOKE_FAILED`にまとめられるため、どの段階で失敗したかを特定しづらい。fixture用に段階名・終了コード・秘匿情報を含まない原因分類を出す。[smoke](../../src/main/smoke.ts)、[coach-app](../../src/main/coach-app.ts)
+smokeの改善は、固定4200ms待ちの成功確認だけでなく、通知開始／終了eventや有界の条件待機を使うこと。4秒そのものの仕様試験はfake clockで行い、少数の実時間試験で結線を確認する。現在、smokeのcatchは`COACH_SMOKE_FAILED`にまとめられるため、どの段階で失敗したかを特定しづらい。fixture用に段階名・終了コード・秘匿情報を含まない原因分類を出す。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)、[coach-app](../../src/main/coach-app.ts)
 
 ## 8. CIの具体的な設計案
 

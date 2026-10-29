@@ -1,3 +1,4 @@
+import { v2Fixture } from './support/fixtures.ts';
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
@@ -19,7 +20,7 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   Object.assign(globalThis, { __dirname: path.resolve('src/main') });
   mock.module('node:path', { namedExports: { ...path, join: (...parts: string[]) =>
     parts.at(-1) === 'storage-worker.cjs' ? path.resolve('src/main/storage-worker.ts') : path.join(...parts) } });
-  let api!: Required<Parameters<typeof registerCoachIpc>[2]>;
+  let api!: Required<Parameters<typeof registerCoachIpc>[1]>;
   let deliver!: (candidate: ObserverCandidate) => void;
   let generation = 0, quits = 0, notices = 0;
   const app = Object.assign(new EventEmitter(), { getPath: () => root, quit: () => { quits++; app.emit('will-quit'); } });
@@ -35,23 +36,16 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
     withWindowState(value: Snapshot) { return value; }
     async flush() {} async create() { return window; }
   } } });
-  mock.module('../src/main/coach-ipc.ts', { namedExports: { registerCoachIpc: (_window: unknown, _notice: unknown, requests: typeof api) => { api = requests; } } });
+  mock.module('../src/main/coach-ipc.ts', { namedExports: { registerCoachIpc: (_window: unknown, requests: typeof api) => { api = requests; } } });
   mock.module('../src/main/observer.ts', { namedExports: { ObserverClient: class {
     constructor(candidate: typeof deliver, _fault: unknown, fixture: boolean) { assert.equal(fixture, false); deliver = candidate; }
     async start() { return ++generation; } async stop() {} async shutdown() {}
-  } } });
-  mock.module('../src/main/notification.ts', { namedExports: { NotificationWindow: class {
-    dismiss() {} sender() { return false; } current() { return null; }
-    show() { assert.fail('normal composition must not use legacy notifications'); }
   } } });
   mock.module('../src/main/standard-notification.ts', { namedExports: { StandardNotifications: class {
     async show() { notices++; return true; } dispose() {}
   } } });
   mock.module('../src/main/validation-runtime.ts', { namedExports: { ValidationRuntime: class {
     constructor() { assert.fail('normal startup must not load fixtures'); }
-  } } });
-  mock.module('../src/core/coach.ts', { namedExports: { Coach: class {
-    constructor() { assert.fail('normal startup must not construct legacy Coach'); }
   } } });
   const { runCoach } = await import('../src/main/coach-app.ts');
   t.after(async () => {
@@ -62,7 +56,7 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   await runCoach(async () => {}, startupMode([]));
   assert.equal((await api.getSnapshot()).observing, true);
   assert.deepEqual((await api.getRecords('2020-01-02', '2020-01-02')).counts['2020-01-02'], { W03: { mouse: 7, key: 5 } });
-  deliver(candidateFixture({ date: localDate(), origin: 'mouse', generation }));
+  deliver(v2Fixture(candidateFixture({ date: localDate(), origin: 'mouse', generation })));
   assert.equal((await api.getSnapshot()).counts[localDate()]?.W03?.mouse, 1);
   assert.equal(notices, 1, 'one committed operation requests one standard notification');
   assert.ok((await api.getLearning()).revision > 0);

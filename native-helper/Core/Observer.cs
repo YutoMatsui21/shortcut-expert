@@ -40,7 +40,7 @@ internal sealed class Observer : IDisposable
         return user != 0 && NativeLibrary.TryGetExport(user, "IsWindowArranged", out nint address)
             ? Marshal.GetDelegateForFunctionPointer<Arranged>(address) : null;
     }
-    internal void Start(int newGeneration, int protocolVersion = 1)
+    internal void Start(int newGeneration, int protocolVersion = 2)
     {
         Stop(); tracker.Reset(newGeneration);
         epoch = newGeneration;
@@ -61,7 +61,7 @@ internal sealed class Observer : IDisposable
             if (hook != 0) eventHooks.Add(hook);
         }
         if (!Active) { Stop(); throw new InvalidOperationException("hook-init-failed"); }
-        if (!fixture && protocolVersion == 2) { taskbar.Start(newGeneration); switching.Start(newGeneration); closing.Start(newGeneration); }
+        if (!fixture) { taskbar.Start(newGeneration); switching.Start(newGeneration); closing.Start(newGeneration); }
     }
     internal void Stop()
     {

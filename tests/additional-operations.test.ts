@@ -1,12 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
-import { Coach } from '../src/core/coach.ts';
-import { JsonRepository } from '../src/main/repository.ts';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import type { Candidate, Notice, OperationId } from '../src/shared/coach.ts';
+import { classify as classifyV2 } from '../src/core/detector.ts';
+import type { OperationId } from '../src/shared/coach.ts';
+import { v2Fixture, type Candidate } from './support/fixtures.ts';
+
+const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
 const base: Candidate = {
   type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1, app: 'chrome', date: '2026-10-12',
@@ -53,37 +51,4 @@ test('元状態に合わない最小化・復元と元画面への往復を除�
   assert.equal(classify({ ...move, moveDirection: null })?.shortcut, null);
   assert.equal(classify({ ...move, origin: 'key', route: 'win-shift-left' })?.shortcut, null);
   for (const moveConfirmed of [false, undefined]) assert.equal(classify({ ...move, moveConfirmed }), null);
-});
-
-test('追加4操作は通知・重複排除・操作別mute・停止・保存再読込まで接続する', async t => {
-  const directory = await mkdtemp(join(tmpdir(), 'coach-added-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const repository = new JsonRepository(directory);
-  const notices: Notice[] = []; let now = 0;
-  const coach = new Coach({ repository, date: () => base.date, now: () => now,
-    notify: async (notice) => { notices.push(notice); return true; }, changed: () => {} });
-  await coach.initialize(); coach.begin(1);
-  let sequence = 0;
-  for (const entry of addedCases) {
-    now += 60_000;
-    const mouse = { ...entry.candidate, sequence: ++sequence };
-    await coach.accept(mouse); await coach.accept(mouse);
-    assert.equal(coach.snapshot().error, null);
-    assert.equal(notices.at(-1)?.operation, entry.id);
-    assert.equal(notices.at(-1)?.shortcut, entry.shortcut);
-    assert.notEqual(notices.at(-1)?.label, '最大化');
-    await coach.accept({ ...mouse, sequence: ++sequence, origin: 'key', route: entry.key });
-    await coach.setMuted(entry.id, true); now += 60_000;
-    assert.equal(coach.snapshot().error, null);
-    const count = notices.length;
-    await coach.accept({ ...mouse, sequence: ++sequence });
-    assert.equal(notices.length, count);
-  }
-  coach.stop(); await coach.accept({ ...base, sequence: ++sequence });
-  const loaded = await repository.load();
-  for (const id of new Set(addedCases.map(entry => entry.id))) {
-    const multiplicity = addedCases.filter(entry => entry.id === id).length;
-    assert.deepEqual(loaded.counts[base.date][id], { mouse: 2 * multiplicity, key: multiplicity });
-  }
-  assert.deepEqual(loaded.settings.muted, [...new Set(addedCases.map((entry) => entry.id))]);
 });

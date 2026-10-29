@@ -6,7 +6,6 @@ import { SerialQueue } from '../core/serial-queue.ts';
 import { localDate } from '../core/dates.ts';
 import type { Snapshot } from '../shared/coach.ts';
 import { ObserverClient } from './observer.ts';
-import { NotificationWindow } from './notification.ts';
 import { StandardNotifications } from './standard-notification.ts';
 import { CoachWindow } from './coach-window.ts';
 import { registerCoachIpc } from './coach-ipc.ts';
@@ -29,11 +28,9 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   let exitRequested = false;
   let deleteResume: boolean | null = null;
   const control = new SerialQueue();
-  const previews: { notification: BrowserWindow | null } = { notification: null };
   const observer = new ObserverClient((candidate) => { validation?.naturalControl?.candidate(candidate); void coach.accept(candidate); }, () => {
-    notice.dismiss(); coach.fault('Windowsの観測が停止しました。再開してください。');
+    coach.fault('Windowsの観測が停止しました。再開してください。');
   }, fixture);
-  const notice = new NotificationWindow(observer, async (window, mode) => { previews.notification = window; await load(window, mode); });
   const standardNotices = new StandardNotifications(() => { validation?.activated(); showCoach(); }, result => {
     validation?.notificationResult(result);
     if (result.status === 'failed' || result.status === 'unknown') console.error('COACH_NOTIFICATION_' + result.status.toUpperCase());
@@ -46,9 +43,8 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
       tray.setContextMenu(Menu.buildFromTemplate(coachTrayMenu(snapshot, command, showCoach, quit)));
     }
-    if (snapshot.error && !errorStop) { errorStop = true; notice.dismiss(); void observer.stop().catch(() => {}); }
+    if (snapshot.error && !errorStop) { errorStop = true; void observer.stop().catch(() => {}); }
   };
-  await validation?.prepareData();
   const workerPath = join(__dirname, 'storage-worker.cjs').replace('app.asar', 'app.asar.unpacked');
   const common = { date: localDate, now: () => performance.now(), changed: publish };
   const createDurableRuntime = async () => {
@@ -66,7 +62,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       capabilities: () => validation?.capabilities() ?? [] });
     return { repository, coach, tick: () => { void coach.tick(); } };
   };
-  const { repository, coach, tick } = validation?.createLegacyRuntime(common, notice) ?? await createDurableRuntime();
+  const { repository, coach, tick } = await createDurableRuntime();
   await validation?.prepareRepository(repository);
   const startObservation = async () => {
     if (validation && !validation.canStartObservation) return;
@@ -83,14 +79,14 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       : 'Windowsの観測を開始できません。再開してください。'); }
   };
   const stopObservation = async () => {
-    coach.stop(); notice.dismiss();
+    coach.stop();
     try { await observer.stop(); }
     catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
   };
   const command = (value: string) => control.run(async () => {
     if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
     switch (value) {
-      case 'pause-notifications': coach.pauseNotifications(true); notice.dismiss(); break;
+      case 'pause-notifications': coach.pauseNotifications(true); break;
       case 'resume-notifications': coach.pauseNotifications(false); break;
       case 'stop': await stopObservation(); break;
       case 'start': await startObservation(); break;
@@ -140,7 +136,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     }
     return coachWindow.withWindowState(coach.snapshot());
   });
-  registerCoachIpc(() => coachWindow.current, (id) => notice.sender(id), {
+  registerCoachIpc(() => coachWindow.current, {
     getRecordSummary: (query) => control.run(async () => {
       if (exitRequested) throw new Error('終了処理中です。');
       try {
@@ -166,16 +162,10 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       } catch { coach.storageFault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
     },
     getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
-    getNotice: async () => notice.current(),
     command: value => value === 'quit' ? quit().then(() => coachWindow.withWindowState(coach.snapshot())) : command(value),
-    setMuted: (operation, muted) => control.run(async () => {
-      if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
-      await coach.setMuted(operation, muted); if (muted) notice.dismiss(); return coachWindow.withWindowState(coach.snapshot());
-    }),
     setLearningState: (operation, state) => control.run(async () => {
       if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
       await coach.setLearningState(operation, state);
-      if (state !== 'learning') notice.dismiss();
       return coachWindow.withWindowState(coach.snapshot());
     }),
     deleteCounts
@@ -202,15 +192,14 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   ticker = setInterval(() => {
     if (exitRequested) return;
     tick();
-    validation?.tick?.();
   }, 1000);
   app.once('will-quit', () => clearInterval(ticker));
-  powerMonitor.on('suspend', () => { if (coach.snapshot().observing) { notice.dismiss(); coach.fault('スリープで観測が中断しました。再開してください。'); } });
-  const displaysChanged = () => { notice.dismiss(); coachWindow.correctBounds(); };
+  powerMonitor.on('suspend', () => { if (coach.snapshot().observing) { coach.fault('スリープで観測が中断しました。再開してください。'); } });
+  const displaysChanged = () => { coachWindow.correctBounds(); };
   screen.on('display-added', displaysChanged);
   screen.on('display-removed', displaysChanged);
   screen.on('display-metrics-changed', displaysChanged);
-  await validation?.run({ coach, observer, notice, window, repository, workerPath, standardNotices, previews,
+  await validation?.run({ coach, observer, window, repository, workerPath, standardNotices,
     command, startObservation, stopObservation, quit, showCoach, control,
     get ticker() { return ticker; }, get quitting() { return quitting; },
     set quitting(value) { quitting = value; }, get exitRequested() { return exitRequested; }

@@ -68,10 +68,6 @@ internal static partial class Program
             Check("reset creates new generation without input", () => { var tracker = Tracker(); Mouse(tracker); tracker.Reset(2); var result = Complete(tracker); Equal(2, result.GetProperty("generation").GetInt32()); Equal(1, result.GetProperty("sequence").GetInt32()); Equal("unknown", result.GetProperty("origin").GetString()); });
             Check("duplicate result is not a transition", () => { var tracker = Tracker(); Mouse(tracker); Complete(tracker); Equal<object?>(null, tracker.Complete(11, maximized, maximized, 136, 11, "2026-10-11", null)); });
             Check("arranged source is carried without claiming shortcut", () => { var tracker = Tracker(); tracker.Mouse(11, normal with { Arranged = true }, HTMAXBUTTON, default, 0, 500, 0, false, true); Equal(true, Complete(tracker).GetProperty("before").GetProperty("arranged").GetBoolean()); });
-            var monitor = new Rect { Left = -1920, Top = 0, Right = 0, Bottom = 1080 };
-            Check("negative monitor coordinates", () => Equal("fullscreen", DisplayPolicy.Classify(true, 0, true, monitor, monitor, false, false)));
-            Check("fullscreen tolerance at 2px", () => { var rect = monitor; rect.Left += 2; rect.Top += 2; rect.Right -= 2; rect.Bottom -= 2; Equal("fullscreen", DisplayPolicy.Classify(true, 0, true, rect, monitor, false, false)); });
-            Check("3px gap is ordinary", () => { var rect = monitor; rect.Left += 3; Equal("ordinary", DisplayPolicy.Classify(true, 0, true, rect, monitor, false, false)); });
             Check("reused window handle cannot join different processes", () => {
                 var tracker = Tracker(); Mouse(tracker);
                 Equal<object?>(null, tracker.Complete(11, normal, maximized with { Process = 8 }, 135, 11, "2026-10-11", null));

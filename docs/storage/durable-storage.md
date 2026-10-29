@@ -11,7 +11,7 @@
 | Core `DurableCoach` | 採用候補の世代、未確定差分、観測間隔・日付・再試行 |
 | Renderer | 限定IPCから得た集計・確定状態だけを表示。SQL・DB path・全履歴への直接アクセスなし |
 
-- 通常起動は`records-v1/`のSQLiteをauthorityとする。初回のみ作成／旧JSONから[安全に移行](json-migration.md)。**既存のauthorityが欠落・破損・未知版でもJSONや空DBへfallbackしない**。旧JsonRepositoryは隔離回帰用。
+- 通常起動は`records-v1/`のSQLiteをauthorityとする。初回のみ作成／旧JSONから[安全に移行](json-migration.md)。**既存のauthorityが欠落・破損・未知版でもJSONや空DBへfallbackしない**。旧JSON writerは持たず、移行用の厳格なreaderだけを保持する。
 - SQLiteはElectron同梱`node:sqlite`、専用Workerの**単一writer接続、WAL・`synchronous=FULL`**を使用。Workerと必要chunkをASARからunpackし、DBはASAR外へ置く。保存root単位のOS named pipeで複数writerを排他し、pipeへ記録を流さない。
 - 日別の集計は**自動削除せず全期間を保持**。画面向けの有界queryは最大60暦日（直近7／30日と比較対象を含む）。全履歴をRendererへ転送しない。
 - 保存可能な旧操作IDと**現行UIの8操作**は別概念。旧IDは移行・互換のため保持し、表示対象や「検出可能」の判定へ自動追加しない。

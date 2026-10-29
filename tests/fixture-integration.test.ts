@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import type { Candidate, OperationId } from '../src/shared/coach.ts';
+import type { OperationId } from '../src/shared/coach.ts';
+import type { Candidate } from './support/fixtures.ts';
 import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, placementFixture, closeFixture, deferred } from './support/fixtures.ts';
 
 // Only Electron/OS boundaries are fake. Parse, classification, writer and models are real.

@@ -58,7 +58,9 @@ internal static class TaskbarTests
         protocol.Taskbar(1, 2, "2026-10-21", "key", new(1, true, 100, 200, new(0, 0, 1920, 1080)));
         protocol.Stop(); protocol.Taskbar(1, 3, "2026-10-21", "mouse", new(1, true, 0, 0, null));
         protocol.Start(2, 2); protocol.Taskbar(1, 4, "2026-10-21", "mouse", new(1, true, 0, 0, null));
-        protocol.Start(3, 1); protocol.Taskbar(3, 5, "2026-10-21", "mouse", new(1, true, 0, 0, null));
+        bool rejectedV1 = false;
+        try { protocol.Start(3, 1); } catch (ArgumentException) { rejectedV1 = true; }
+        Check("v1 start fails before emission", rejectedV1);
         Check("stop epoch and v1 reject", emitted.Count == 2);
         return emitted;
     }

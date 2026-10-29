@@ -21,9 +21,9 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 `Windows API → Native候補 → Mainの型・世代検証 → Coreの採用判定 → 保存 → 必要なら通知`
 
 - **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateProtocol`で送信順を確定する。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
-- **Main**：`observer.ts`で通信形式・必須項目・世代・選択したprotocol版を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
+- **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
-- **境界**：同一世代でprotocol v1/v2を混在させず、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
+- **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
 
 操作ごとの成立条件は[operations/](operations/)、技術検証の原本は[research/](research/)を参照。**W02（画面移動）とW03（最大化）／W07（四隅配置）の同時成立**は、1ジェスチャから異なる操作IDをそれぞれ1件採用し、同じIDを重複させない設計とする。実装・最終受入が完了した意味ではない（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）。1操作への複数代替キー案内は将来の[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)で扱う。
 
@@ -41,7 +41,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - 通常起動は`DurableCoach`と`SqliteRepository`を使う。`sqlite-repository.ts`が単一writer／`storage-worker.ts`を管理し、`storage-store.ts`だけがSQLiteへアクセスする。
 - 件数・観測範囲・checkpoint等の一貫性を維持し、ACK喪失時の再送でも二重計上しない。複合操作の複数カウントは原子的に保存する設計とする。
 - 記録は無期限に保持し、UI/IPCの取得は最大60日へ制限。旧JSONの厳格検証・staging移行・再照合は`storage-migration.ts`が担当する。失敗を空記録への初期化で隠さない。
-- 旧`Coach`／`JsonRepository`は隔離回帰試験の互換経路としてのみ使用する。
+- 通常起動・隔離smokeともに同じSQLite／標準通知経路を使う。旧JSON writer・30日prune・独自通知窓は設けない。旧JSONの読み取り検証だけを`legacy-documents.ts`に保持する。
 
 詳細：[保存契約](storage/durable-storage.md)、[移行](storage/json-migration.md)、[削除](storage/history-deletion.md)。
 

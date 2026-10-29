@@ -93,7 +93,9 @@ internal static class SnapTests
                 origin == "mouse" ? 500 : 0, 0, new(0, 0, 1920, 1080)));
         protocol.Invocation(2, 3, "key", new(true, true, true, null, 0, 0, null));
         protocol.Stop(); protocol.Invocation(1, 4, "key", new(true, true, true, null, 0, 0, null));
-        protocol.Start(1, 1); protocol.Invocation(1, 5, "key", new(true, true, true, null, 0, 0, null));
+        bool rejectedV1 = false;
+        try { protocol.Start(1, 1); } catch (ArgumentException) { rejectedV1 = true; }
+        Check("v1 start fails before emission", rejectedV1);
         Check("old generation, stopped, v1 suppressed", samples.Count == 2);
         Check("transaction allocator shared with legacy input", tracker.NextTransaction() == 3);
         return samples;

@@ -20,8 +20,7 @@ export function useCoach(bridge: CoachBridge = window.coach) {
     finally { pending.current--; setBusy(pending.current > 0); }
   };
   const command = (value: Parameters<CoachBridge['command']>[0]) => act(() => bridge.command(value));
-  const setMuted = (operation: OperationId, muted: boolean) => act(() => bridge.setMuted(operation, muted));
   const setLearningState = (operation: OperationId, state: Parameters<CoachBridge['setLearningState']>[1]) => act(() => bridge.setLearningState(operation, state));
   const deleteCounts = (token: string) => act(() => bridge.deleteCounts(token));
-  return { snapshot, busy, message, command, setMuted, setLearningState, deleteCounts };
+  return { snapshot, busy, message, command, setLearningState, deleteCounts };
 }

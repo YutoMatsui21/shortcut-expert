@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
-import type { Candidate } from '../src/shared/coach.ts';
+import { classify as classifyV2 } from '../src/core/detector.ts';
+import { v2Fixture, type Candidate } from './support/fixtures.ts';
+
+const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
 export function maximize(overrides: Partial<Candidate> = {}): Candidate {
   return {
@@ -16,7 +18,7 @@ export function maximize(overrides: Partial<Candidate> = {}): Candidate {
 
 test('通常窓の最大化ボタンと最大化結果が対応するとW03を返す', () => {
   assert.deepEqual(classify(maximize()), {
-    id: '1:1', operation: 'W03', origin: 'mouse', date: '2026-10-11',
+    id: '1:t1', operation: 'W03', origin: 'mouse', date: '2026-10-11',
     shortcut: 'Win + ↑', monitor: { x: 0, y: 0, width: 1920, height: 1080 }
   });
 });

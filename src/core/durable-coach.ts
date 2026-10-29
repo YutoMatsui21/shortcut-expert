@@ -14,7 +14,7 @@ type Dependencies = {
   repository: DurableRepository; session: string; date(): string; now(): number;
   capabilities(): Capability[]; notify(value: ShortcutNotice): Promise<boolean>; changed(value: Snapshot): void;
 };
-// Durable path for new and migrated users; legacy Coach is retained for isolated regression fixtures.
+// Single product runtime: durable SQLite storage and v2 gesture observations.
 export class DurableCoach {
   private data: StorageState = { counts: {}, coverage: {}, settings: { muted: [], opened: false }, epoch: 1, highWater: '', revision: 0 };
   private observing = false;
@@ -29,7 +29,6 @@ export class DurableCoach {
   private loaded = false;
   private generation = 0;
   private candidateSequence = 0;
-  private protocol: 1 | 2 | null = null;
   private transactions = new Set<number>();
   private latestTransaction = 0;
   private writeSequence = 0;
@@ -60,7 +59,7 @@ export class DurableCoach {
   begin(generation: number): void {
     if (!this.loaded || this.error || this.clockError || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
     this.generation = generation; this.candidateSequence = 0; this.observing = true;
-    this.protocol = null; this.transactions.clear(); this.latestTransaction = 0;
+    this.transactions.clear(); this.latestTransaction = 0;
     this.baseline = { day: this.deps.date(), time: this.deps.now(), observing: true, capabilities: this.deps.capabilities() };
   }
   stop(): void { this.observing = false; this.generation++; this.baseline = null; this.publish(); }
@@ -155,9 +154,6 @@ export class DurableCoach {
     } catch { this.pendingSettings = value; this.settingsError = '設定を保存できません。再試行してください。'; this.stop(); }
     if (notify || this.pendingSettings) this.publish();
   }
-  setMuted(id: OperationId, muted: boolean): Promise<void> {
-    return this.setLearningState(id, muted ? 'excluded' : 'learning');
-  }
   setLearningState(id: OperationId, state: LearningState): Promise<void> {
     // Invalidate before entering the writer queue: a save may currently be awaiting I/O.
     if (state !== 'learning') this.operationNoticeEpoch.set(id, (this.operationNoticeEpoch.get(id) ?? 0) + 1);
@@ -196,8 +192,7 @@ export class DurableCoach {
     return this.queue.run(async () => {
       if (!Number.isInteger(candidate.sequence) || candidate.sequence < 1 || candidate.sequence > 0x7fffffff) return;
       if (!this.observing || this.error || candidate.generation !== this.generation || candidate.sequence <= this.candidateSequence) return;
-      if (this.protocol !== null && candidate.protocolVersion !== this.protocol) return;
-      this.protocol = candidate.protocolVersion;
+      if (candidate.protocolVersion !== 2) return;
       this.candidateSequence = candidate.sequence;
       if (candidate.protocolVersion === 2) {
         const id = candidate.transaction;

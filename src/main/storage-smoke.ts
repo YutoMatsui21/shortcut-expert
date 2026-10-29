@@ -6,7 +6,6 @@ import { runLearningSmoke, selectPage, waitForLearning } from './learning-smoke'
 import { runRecordsSmoke } from './records-smoke';
 import { SqliteRepository } from './sqlite-repository';
 import { DurableCoach } from '../core/durable-coach';
-import type { Coach } from '../core/coach';
 import type { ObserverClient } from './observer';
 import { localDate } from '../core/dates';
 import { daysBefore } from '../shared/storage';
@@ -21,22 +20,27 @@ export async function waitFor(window: BrowserWindow, condition: string, stage: s
 }
 
 export async function runStorageSmoke({ coach, observer, window, repository, workerPath, verifyPendingExit, verifyNotifications }: {
-  coach: Pick<Coach, keyof Coach>; observer: ObserverClient; window: BrowserWindow; repository: unknown;
+  coach: DurableCoach; observer: ObserverClient; window: BrowserWindow; repository: unknown;
   workerPath: string;
   verifyPendingExit?: () => Promise<void>;
-  verifyNotifications?: (sample: import('../shared/coach').Candidate) => Promise<void>;
+  verifyNotifications?: (sample: import('../shared/coach').CandidateV2) => Promise<void>;
 }) {
   assert.ok(repository instanceof SqliteRepository);
   assert.equal(coach.snapshot().observing, true);
   const today = localDate();
-  const sample = { type: 'candidate' as const, protocolVersion: 1 as const, generation: 1, sequence: 1, app: 'chrome', operation: 'maximize', date: today,
-    before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, origin: 'key', route: 'win-up', injected: false,
-    conflicted: false, moving: false, elevated: false, targetMatched: true, inputAgeMs: 100, monitor: screen.getPrimaryDisplay().bounds } satisfies import('../shared/coach').Candidate;
+  const sample: import('../shared/coach').CandidateV2 & { evidence: Extract<import('../shared/coach').Evidence, { kind: 'window' }> } = {
+    type: 'candidate', protocolVersion: 2, generation: 1, sequence: 1, transaction: 1, date: today,
+    origin: 'key', route: 'win-up', injected: false, conflicted: false,
+    evidence: { kind: 'window', profile: 'legacy-window-v1', result: { app: 'chrome', operation: 'maximize',
+      before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, moving: false, elevated: false,
+      targetMatched: true, inputAgeMs: 100, monitor: screen.getPrimaryDisplay().bounds,
+      afterArranged: null, fromMonitor: null, toMonitor: null, moveDirection: null } }
+  };
   coach.pauseNotifications(true);
   await observer.inject(sample);
-  await observer.inject({ ...sample, sequence: 2, origin: 'mouse', route: 'max-button' });
+  await observer.inject({ ...sample, sequence: 2, transaction: 2, origin: 'mouse', route: 'max-button' });
   const oldDay = daysBefore(today, 120);
-  await observer.inject({ ...sample, sequence: 3, date: oldDay });
+  await observer.inject({ ...sample, sequence: 3, transaction: 3, date: oldDay });
   await coach.idle();
   assert.equal(coach.snapshot().counts[today].W03?.key, 1);
   assert.equal(coach.snapshot().counts[today].W03?.mouse, 1);
@@ -105,6 +109,40 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
   const older = await window.webContents.executeJavaScript(`window.coach.getRecords('${oldDay}','${oldDay}')`);
   assert.equal(older.counts[oldDay].W03.key, 1);
   await runRecordsSmoke(window);
+  // The shipped preload exposes only the coach surface; the retired notice IPC is absent.
+  assert.equal(await window.webContents.executeJavaScript(`typeof require === 'undefined' && typeof process === 'undefined' &&
+    Object.keys(window.coach).sort().join(',') === 'cancelDelete,command,deleteCounts,getLearning,getRecordSummary,getRecords,getSnapshot,requestDelete,setLearningState,subscribe,windowCommand'`), true);
+  await observer.stop(); coach.stop();
+  const eightGeneration = await observer.start(); coach.begin(eightGeneration);
+  const monitor = sample.evidence.result.monitor!;
+  const endMonitor = { ...monitor, x: monitor.x + monitor.width };
+  const entries: { operation: import('../shared/coach').OperationId; mouse: string; key: string; evidence: import('../shared/coach').Evidence }[] = [
+    { operation: 'W04', mouse: 'min-button', key: 'win-down', evidence: { ...sample.evidence,
+      result: { ...sample.evidence.result, operation: 'minimize', after: { state: 'minimized' } } } },
+    { operation: 'W02', mouse: 'caption-drag', key: 'win-shift-right', evidence: { ...sample.evidence,
+      result: { ...sample.evidence.result, operation: 'monitor-move', after: { state: 'normal' }, afterArranged: false,
+        fromMonitor: monitor, toMonitor: endMonitor, moveDirection: 'right', moveConfirmed: true } } },
+    { operation: 'W12', mouse: 'taskbar-click', key: 'win-digit', evidence: { kind: 'taskbar-input', profile: 'taskbar-input-v1',
+      slot: 10, mappingConfirmed: true, snapshotAgeMs: 100, confirmationAgeMs: 200, monitor } },
+    { operation: 'W01', mouse: 'direct-click', key: 'alt-tab', evidence: { kind: 'window-switch', profile: 'window-switch-v1',
+      windowsDifferent: true, eligible: true, inputTargetMatched: true, foregroundMatched: true, inputAgeMs: 500, settleMs: 300, monitor } }
+  ];
+  let sequence = 100;
+  for (const entry of entries) {
+    for (const origin of ['mouse', 'key'] as const) {
+      const value: import('../shared/coach').CandidateV2 = { type: 'candidate', protocolVersion: 2,
+        generation: eightGeneration, sequence: ++sequence, transaction: sequence, date: today, origin,
+        route: entry[origin], injected: false, conflicted: false, evidence: entry.evidence };
+      await observer.inject(value); await observer.inject(value); await coach.idle();
+    }
+    assert.deepEqual((await repository.query(today, today)).counts[today][entry.operation], { mouse: 1, key: 1 });
+    await selectPage(window, '記録');
+    await waitFor(window, `document.querySelector('[data-operation="${entry.operation}"] [data-kind="mouse"]')?.textContent === '1' &&
+      document.querySelector('[data-operation="${entry.operation}"] [data-kind="key"]')?.textContent === '1'`, 'eight-operation-records');
+    await selectPage(window, 'ショートカット一覧');
+    await waitForLearning(window, `document.querySelector('[data-learning-operation="${entry.operation}"] select')?.value === 'learning'`);
+  }
+  await selectPage(window, '記録');
   // Isolated placement transport -> strict Main parse -> SQLite -> actual renderer/IPC.
   await observer.stop(); coach.stop();
   const placementGeneration = await observer.start(); coach.begin(placementGeneration);
@@ -115,7 +153,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
         sequence: id, transaction: id, date: today, origin: origin as 'mouse' | 'key',
         route: origin === 'mouse' ? 'caption-edge-drag' : 'win-held-arrows', injected: false, conflicted: false,
         evidence: { kind: 'placement', profile: 'placement-v1', shape, targetMatched: true, inputAgeMs: 100,
-          monitorChanged: false, monitor: sample.monitor } };
+          monitorChanged: false, monitor: sample.evidence.result.monitor! } };
       await observer.inject(value); await observer.inject(value); await coach.idle();
     }
     const saved = await repository.query(today, today);
@@ -133,7 +171,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
       sequence: id, transaction: id, date: today, origin: origin === 'mouse' ? 'mouse' : 'key',
       route: origin === 'mouse' ? 'close-button' : 'alt-f4', injected: false, conflicted: false,
       evidence: { kind: 'window-close', profile: 'window-close-v1', targetMatched: true, destroyed: true,
-        inputAgeMs: 200, monitor: sample.monitor } };
+        inputAgeMs: 200, monitor: sample.evidence.result.monitor! } };
     await observer.inject(value); await observer.inject(value); await coach.idle();
   }
   assert.deepEqual((await repository.query(today, today)).counts[today].W11, { mouse: 1, key: 1 });
@@ -206,7 +244,7 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
   } finally { await reopened.close(); }
   return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: verifyNotifications ? 5 : 2, key: 1, sevenDayRenderer: true, retained120Days: true,
     standardToastRequests: verifyNotifications ? 5 : 2, compoundRecords: true, osToastDisplayVerified: false,
-    reopened: true, boundedIpc: true, placementRecords: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
+    reopened: true, boundedIpc: true, eightOperationRecords: true, placementRecords: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
     saveErrorWidths: [800, 920, 1120, 1360], pendingStartBlocked: true, pendingExitRecovered: !!verifyPendingExit,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };
 }

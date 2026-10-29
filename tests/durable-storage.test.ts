@@ -10,7 +10,7 @@ import { DurableCoach, type Capability } from '../src/core/durable-coach.ts';
 import { SqliteRepository, selectRepository } from '../src/main/sqlite-repository.ts';
 import { StorageStore } from '../src/main/storage-store.ts';
 import type { RecordMutation } from '../src/shared/storage.ts';
-import type { Candidate } from '../src/shared/coach.ts';
+import type { Candidate } from './support/fixtures.ts';
 import { v2Fixture } from './support/fixtures.ts';
 
 const worker = resolve('src/main/storage-worker.ts');
@@ -56,11 +56,11 @@ async function fixture(t: TestContext) {
 }
 test('empty userData -> real worker commit/counts/coverage -> reopen; bounded views retain >30 days', async t => {
   const h = await fixture(t);
-  await h.coach.accept({ ...candidate, date: '2026-01-01' });
+  await h.coach.accept(v2Fixture({ ...candidate, date: '2026-01-01' }));
   assert.deepEqual(h.coach.snapshot().counts, {}, 'old record is disk-only, outside work set');
   assert.equal((await h.repository.query('2026-01-01', '2026-01-01')).counts['2026-01-01'].W03?.key, 1);
   h.time(1000); await h.coach.tick();
-  h.coach.pauseNotifications(true); h.time(2000); await h.coach.accept({ ...candidate, sequence: 2 });
+  h.coach.pauseNotifications(true); h.time(2000); await h.coach.accept(v2Fixture({ ...candidate, sequence: 2 }));
   const saved = await h.repository.query('2026-10-19', '2026-10-19');
   assert.equal(saved.coverage['2026-10-19'].W03?.activeMs, 2000);
   assert.equal(saved.coverage['2026-10-19'].W03?.knowledge, 'observed');
@@ -95,7 +95,7 @@ test('zero-operation day high water survives restart and stops date rollback wit
   assert.equal((await h.repository.load('2026-10-19')).highWater, '2026-10-20');
 });
 test('future candidate stops observation, retains source, and never creates future coverage', async t => {
-  const h = await fixture(t); await h.coach.accept({ ...candidate, date: '2026-10-20' });
+  const h = await fixture(t); await h.coach.accept(v2Fixture({ ...candidate, date: '2026-10-20' }));
   assert.equal(h.coach.snapshot().observing, false); assert.deepEqual(h.coach.snapshot().counts, {});
   assert.deepEqual((await h.repository.query('2026-10-20', '2026-10-20')).coverage, {});
 });
@@ -130,14 +130,14 @@ test('delete drains an in-flight durable write, discards queued old candidates a
   const held = new Promise<void>(resolve => { release = resolve; });
   const started = new Promise<void>(resolve => { entered = resolve; });
   h.repository.commit = async value => { if (value.count) { entered(); await held; } await commit(value); };
-  const writing = h.coach.accept(candidate); await started;
-  const queued = h.coach.accept({...candidate,sequence:2});
+  const writing = h.coach.accept(v2Fixture(candidate)); await started;
+  const queued = h.coach.accept(v2Fixture({...candidate,sequence:2}));
   const deletion = h.coach.deleteCounts();
   assert.equal(h.coach.snapshot().observing,false);
   release(); await Promise.all([writing,queued,deletion]);
   assert.deepEqual(h.coach.snapshot().counts,{});
   assert.deepEqual(h.coach.snapshot().coverage,{});
-  h.coach.begin(3); await h.coach.accept({...candidate,sequence:3});
+  h.coach.begin(3); await h.coach.accept(v2Fixture({...candidate,sequence:3}));
   assert.deepEqual(h.coach.snapshot().counts,{});
   await h.repository.close();
   const reopened = new SqliteRepository(h.root,worker);
@@ -148,7 +148,7 @@ test('delete drains an in-flight durable write, discards queued old candidates a
 test('retry completes confirmed deletion after an earlier pending record write keeps failing', async t => {
   const h = await fixture(t), commit = h.repository.commit.bind(h.repository);
   h.repository.commit = async () => { throw new Error('fixture write failure'); };
-  await h.coach.accept(candidate);
+  await h.coach.accept(v2Fixture(candidate));
   await h.coach.deleteCounts();
   assert.equal(h.coach.snapshot().pendingSave,true);
   h.repository.commit = commit;
@@ -162,7 +162,7 @@ test('retry completes confirmed deletion after an earlier pending record write k
 test('lost ACK through real worker commit retains exact pending mutation; retry and reopen are nonduplicating', async t => {
   const h = await fixture(t); const commit = h.repository.commit.bind(h.repository); let lose = true;
   h.repository.commit = async value => { await commit(value); if (lose) { lose = false; throw new Error('lost ACK'); } };
-  await h.coach.accept({ ...candidate, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } });
+  await h.coach.accept(v2Fixture({ ...candidate, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } }));
   assert.equal(h.coach.snapshot().observing, false); assert.equal(h.coach.snapshot().pendingSave, true);
   await Promise.all([h.coach.retrySave(), h.coach.retrySave()]); assert.equal(h.coach.snapshot().pendingSave, false);
   assert.equal(h.coach.snapshot().observing, false); assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.mouse, 1);
@@ -179,19 +179,19 @@ test('lost ACK through real worker commit retains exact pending mutation; retry 
 test('commit failure retry saves the pending count once and never replays its canceled notice', async t => {
   const h = await fixture(t), commit = h.repository.commit.bind(h.repository);
   h.repository.commit = async () => { throw new Error('fixture disk failure'); };
-  await h.coach.accept({ ...candidate, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } });
+  await h.coach.accept(v2Fixture({ ...candidate, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } }));
   assert.equal(h.coach.snapshot().errorKind, 'record-save'); assert.equal(h.coach.snapshot().pendingSave, true);
   assert.equal(h.notifications(), 0);
   h.repository.commit = commit; await h.coach.retrySave();
   assert.equal(h.coach.snapshot().pendingSave, false); assert.equal(h.coach.snapshot().observing, false);
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.mouse, 1); assert.equal(h.notifications(), 0);
   h.coach.begin(2); assert.equal(h.coach.snapshot().observing, true);
-  await h.coach.accept({ ...candidate, generation: 2, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } });
+  await h.coach.accept(v2Fixture({ ...candidate, generation: 2, origin: 'mouse', route: 'max-button', monitor: { x: 0, y: 0, width: 1920, height: 1080 } }));
   assert.equal(h.notifications(), 1, 'only a new eligible observation may request a notice');
 });
 test('storage read failure is retryable without replacing data or automatically resuming observation', async t => {
   const h = await fixture(t), load = h.repository.load.bind(h.repository);
-  await h.coach.accept(candidate); await h.coach.setLearningState('W03', 'mastered');
+  await h.coach.accept(v2Fixture(candidate)); await h.coach.setLearningState('W03', 'mastered');
   const before = h.coach.snapshot();
   h.repository.load = async () => { throw new Error('fixture read failure'); };
   await h.coach.initialize();
@@ -222,7 +222,7 @@ test('real Worker exit stops observation; pending start and repeated retry canno
   const h = await fixture(t);
   const active = Reflect.get(h.repository, 'worker'); assert.ok(active instanceof Worker);
   active.postMessage = () => { void active.terminate(); };
-  await h.coach.accept(candidate);
+  await h.coach.accept(v2Fixture(candidate));
   assert.equal(h.coach.snapshot().pendingSave, true); assert.equal(h.coach.snapshot().errorKind, 'record-save');
   h.coach.begin(2); assert.equal(h.coach.snapshot().observing, false);
   await Promise.all([h.coach.retrySave(), h.coach.retrySave(), h.coach.retrySave()]);
@@ -282,13 +282,13 @@ test('real transaction rollback preserves counts/coverage/checkpoint; identical 
   finally { store.close(); }
 });
 test('disk transaction rejection through the real Worker preserves prior data and retries the delta once', async t => {
-  const h = await fixture(t); await h.coach.accept(candidate); await h.coach.setLearningState('W03', 'mastered');
+  const h = await fixture(t); await h.coach.accept(v2Fixture(candidate)); await h.coach.setLearningState('W03', 'mastered');
   const before = await h.repository.query('2026-10-19', '2026-10-19');
   const file = join(h.root, 'records-v1', 'records.sqlite');
   const inject = new DatabaseSync(file);
   try { inject.exec("CREATE TRIGGER issue25_disk_failure BEFORE INSERT ON coverage BEGIN SELECT RAISE(ABORT,'fixture disk failure'); END;"); }
   finally { inject.close(); }
-  h.time(1000); await h.coach.accept({ ...candidate, sequence: 2 });
+  h.time(1000); await h.coach.accept(v2Fixture({ ...candidate, sequence: 2 }));
   assert.deepEqual(await h.repository.query('2026-10-19', '2026-10-19'), before);
   assert.equal(h.coach.snapshot().observing, false); assert.equal(h.coach.snapshot().pendingSave, true);
   const repair = new DatabaseSync(file); try { repair.exec('DROP TRIGGER issue25_disk_failure'); } finally { repair.close(); }
@@ -339,16 +339,16 @@ test('stopped zero-operation dates advance only high water and never create cove
 test('settings retry cannot clear a helper fault; deletion retains settings and rejects old generation', async t => {
   const h = await fixture(t); const settings = h.repository.saveSettings.bind(h.repository);
   h.repository.saveSettings = async () => { throw new Error('fixture settings failure'); };
-  await h.coach.setMuted('W03', true); h.coach.fault('fixture helper failure');
+  await h.coach.setLearningState('W03', 'excluded'); h.coach.fault('fixture helper failure');
   h.repository.saveSettings = settings; await h.coach.retrySave(); h.coach.begin(2);
   assert.equal(h.coach.snapshot().observing, false); assert.equal(h.coach.snapshot().error, 'fixture helper failure');
-  await h.coach.initialize(); h.coach.begin(2); await h.coach.accept({ ...candidate, generation: 2 });
+  await h.coach.initialize(); h.coach.begin(2); await h.coach.accept(v2Fixture({ ...candidate, generation: 2 }));
   await h.coach.deleteCounts();
   assert.deepEqual(h.coach.snapshot().counts, {}); assert.deepEqual(h.coach.snapshot().coverage, {});
   assert.deepEqual(h.coach.snapshot().settings.muted, ['W03']);
-  h.coach.begin(3); await h.coach.accept({ ...candidate, generation: 2, sequence: 2 });
+  h.coach.begin(3); await h.coach.accept(v2Fixture({ ...candidate, generation: 2, sequence: 2 }));
   assert.deepEqual(h.coach.snapshot().counts, {});
-  await h.coach.accept({ ...candidate, generation: 3 });
+  await h.coach.accept(v2Fixture({ ...candidate, generation: 3 }));
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
 });
 test('load failure cannot be erased by opened/settings writes or restart observation', async t => {
@@ -356,7 +356,7 @@ test('load failure cannot be erased by opened/settings writes or restart observa
   h.repository.load = async () => { throw new Error('fixture load failure'); };
   let writes = 0; const save = h.repository.saveSettings.bind(h.repository);
   h.repository.saveSettings = async value => { writes++; await save(value); };
-  await h.coach.initialize(); await h.coach.opened(); await h.coach.setMuted('W03', true); h.coach.begin(2);
+  await h.coach.initialize(); await h.coach.opened(); await h.coach.setLearningState('W03', 'excluded'); h.coach.begin(2);
   assert.equal(writes, 0); assert.match(h.coach.snapshot().error!, /読み込めません/);
   assert.equal(h.coach.snapshot().observing, false);
   h.repository.load = load; await h.coach.initialize(); h.coach.begin(2);
@@ -372,38 +372,38 @@ test('stopped ticks preserve revision and checkpoint until date changes; rollbac
 });
 test('durable v2 consumes transactions once, rejects version mixing and protects queued payload', async t => {
   const h = await fixture(t); const v2 = v2Fixture(candidate, 10);
-  const accepted = h.coach.accept(v2); v2.date = '2099-01-01'; await accepted;
-  await h.coach.accept({ ...v2Fixture(candidate, 10), sequence: 2 });
-  await h.coach.accept({ ...candidate, sequence: 3 });
-  await h.coach.accept({ ...v2Fixture(candidate, 11), sequence: 3 });
+  const accepted = h.coach.accept(v2Fixture(v2)); v2.date = '2099-01-01'; await accepted;
+  await h.coach.accept(v2Fixture({ ...v2Fixture(candidate, 10), sequence: 2 }));
+  await h.coach.accept({ ...v2Fixture(candidate), sequence: 3, protocolVersion: 1 } as unknown as import('../src/shared/coach.ts').CandidateV2);
+  await h.coach.accept(v2Fixture({ ...v2Fixture(candidate, 11), sequence: 3 }));
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 2);
   const unverified = v2Fixture(candidate, 12); unverified.evidence.profile = 'unverified'; unverified.sequence = 4;
-  await h.coach.accept(unverified);
-  await h.coach.accept({ ...v2Fixture(candidate, 12), sequence: 5 });
+  await h.coach.accept(v2Fixture(unverified));
+  await h.coach.accept(v2Fixture({ ...v2Fixture(candidate, 12), sequence: 5 }));
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 2);
 });
 test('settings failure and recovery preserve a preexisting clock error', async t => {
   const h = await fixture(t); h.date('2026-10-20'); await h.coach.tick(); h.date('2026-10-19'); await h.coach.tick();
   const save = h.repository.saveSettings.bind(h.repository);
   h.repository.saveSettings = async () => { throw new Error('fixture settings'); };
-  await h.coach.setMuted('W03', true); h.repository.saveSettings = save; await h.coach.retrySave(); h.coach.begin(2);
+  await h.coach.setLearningState('W03', 'excluded'); h.repository.saveSettings = save; await h.coach.retrySave(); h.coach.begin(2);
   assert.match(h.coach.snapshot().error!, /日付/); assert.equal(h.coach.snapshot().observing, false);
 });
 test('explicit full deletion recovers from a future high water without restoring old records', async t => {
-  const h = await fixture(t); await h.coach.accept(candidate);
+  const h = await fixture(t); await h.coach.accept(v2Fixture(candidate));
   h.date('2026-10-20'); await h.coach.tick(); h.date('2026-10-19'); await h.coach.tick();
   assert.match(h.coach.snapshot().error!, /日付/);
   await h.coach.deleteCounts();
   assert.equal(h.coach.snapshot().error, null); assert.deepEqual(h.coach.snapshot().counts, {});
   const state = await h.repository.load('2026-10-19'); assert.equal(state.epoch, 2); assert.equal(state.highWater, '2026-10-19');
-  h.coach.begin(2); await h.coach.accept({ ...candidate, generation: 2 });
+  h.coach.begin(2); await h.coach.accept(v2Fixture({ ...candidate, generation: 2 }));
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
 });
 test('a second toggle and opened preserve earlier pending settings changes', async t => {
   const h = await fixture(t); const save = h.repository.saveSettings.bind(h.repository);
   h.repository.saveSettings = async () => { throw new Error('fixture settings'); };
-  await h.coach.setMuted('W03', true); h.repository.saveSettings = save;
-  await h.coach.setMuted('W04', true); await h.coach.opened();
+  await h.coach.setLearningState('W03', 'excluded'); h.repository.saveSettings = save;
+  await h.coach.setLearningState('W04', 'excluded'); await h.coach.opened();
   const settings = (await h.repository.load('2026-10-19')).settings;
   assert.deepEqual(settings.muted, ['W03', 'W04']); assert.equal(settings.opened, true);
   assert.equal(h.coach.snapshot().pendingSave, false);
@@ -414,7 +414,7 @@ test('midnight during post-commit refresh never expands the bounded query to 61 
     await commit(value); let first = true;
     h.dateReader(() => { if (first) { first = false; return '2026-10-19'; } return '2026-10-20'; });
   };
-  await h.coach.accept(candidate);
+  await h.coach.accept(v2Fixture(candidate));
   assert.equal(h.coach.snapshot().error, null); assert.equal(h.coach.snapshot().pendingSave, false);
   assert.equal(h.coach.snapshot().counts['2026-10-19'].W03?.key, 1);
 });

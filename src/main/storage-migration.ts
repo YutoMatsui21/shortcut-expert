@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, openSync, writeFileSync, fsyncSync, closeSync, renameSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
-import { countsDocument, settingsDocument } from './repository.ts';
+import { countsDocument, settingsDocument } from './legacy-documents.ts';
 import { StorageStore } from './storage-store.ts';
 import { fileExists } from './storage-files.ts';
 import type { Counts, Settings } from '../shared/coach.ts';
@@ -25,7 +25,7 @@ function syncDocument(file: string, value: unknown): void {
   try { writeFileSync(fd, JSON.stringify(value)); fsyncSync(fd); } finally { closeSync(fd); }
   renameSync(file + '.tmp', file);
 }
-// Called in the sole writer, before Coach can load or prune any legacy history.
+// Called in the sole writer, before the SQLite authority is opened.
 export function prepareStorage(target: string): void {
   if (fileExists(target)) return; // Committed authority always wins, including damaged/missing DBs.
   const root = dirname(target), staging = join(root, 'migration-v1');
