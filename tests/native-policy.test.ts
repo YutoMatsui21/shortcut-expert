@@ -67,7 +67,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
       deliveries.push(delivery); return delivery.then(() => true);
     } });
   await coach.initialize(); coach.begin(1);
-  for (const entry of [...report.windowStateSamples, ...report.placementSamples]) {
+  for (const entry of [...report.windowStateSamples, ...report.placementSamples, ...report.monitorMoveSamples]) {
     const parsed = candidateV2(entry.candidate); assert.ok(parsed, 'new C# state evidence satisfies strict v2 parse');
     const observation = classify(parsed);
     assert.equal(observation?.operation ?? null, entry.expected);
@@ -85,4 +85,5 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.equal(totals.W05, undefined);
   assert.deepEqual(totals.W06, { mouse: 2, key: 3 });
   assert.deepEqual(totals.W07, { mouse: 4, key: 6 });
+  assert.deepEqual(totals.W02, { mouse: 5, key: 5 });
 });

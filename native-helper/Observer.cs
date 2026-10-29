@@ -29,6 +29,7 @@ internal sealed class Observer : IDisposable
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
+    internal void InvalidateDisplay() => tracker.ClearInput();
     internal static bool ArrangedAvailable => isArranged is not null;
     internal static string ForegroundToken => GetForegroundWindow().ToString();
     private static Arranged? LoadArranged()
@@ -165,7 +166,7 @@ internal sealed class Observer : IDisposable
             if (!down) {
                 if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) tracker.ClearInput();
                 tracker.KeyReleased(key.Key);
-                if (key.Key is VK_LWIN or VK_RWIN) {
+                if (key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT) {
                     nint releasedTarget = GetForegroundWindow();
                     states.TryGetValue(releasedTarget, out WindowState? releasedCached);
                     var result = tracker.FinishKey(releasedTarget, Read(releasedTarget, releasedCached), clock.ElapsedMilliseconds,

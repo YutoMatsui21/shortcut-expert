@@ -76,7 +76,8 @@ test('追加操作の状態・画面・方向を検証し、窓タイトルな�
     toMonitor: { x: 0, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' };
   assert.deepEqual(candidate({ ...move, title: 'private', path: 'private' }), move);
   for (const invalid of [{ afterArranged: 'false' }, { fromMonitor: [] }, { toMonitor: { x: 0, y: 0, width: -1, height: 1080 } },
-    { moveDirection: 'up' }, { toMonitor: { ...move.toMonitor, y: Infinity } }]) assert.equal(candidate({ ...move, ...invalid }), null);
+    { moveDirection: 'up' }, { moveConfirmed: 'true' }, { toMonitor: { ...move.toMonitor, y: Infinity } }]) assert.equal(candidate({ ...move, ...invalid }), null);
+  assert.equal(candidate({ ...move, moveConfirmed: true })?.moveConfirmed, true);
   assert.equal(candidate({ ...move, moveDirection: null })?.moveDirection, null);
 });
 

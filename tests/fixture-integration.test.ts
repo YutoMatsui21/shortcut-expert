@@ -14,7 +14,7 @@ mock.module('electron', { namedExports: { app: {}, Notification: class {} } });
 const { candidateV2 } = await import('../src/main/observer.ts');
 const { StandardNotifications } = await import('../src/main/standard-notification.ts');
 const today = '2026-10-21';
-const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string }[] = [
+const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string | null }[] = [
   { id: 'W01', mouse: {}, key: 'alt-tab', shortcut: 'Alt + Tab' },
   { id: 'W06', mouse: {}, key: 'win-held-arrows', shortcut: 'Win + ←' },
   { id: 'W07', mouse: {}, key: 'win-held-arrows', shortcut: 'Winを押したまま ←、続けて ↑' },
@@ -27,9 +27,11 @@ const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut
     route: 'min-button' }, key: 'win-down', shortcut: 'Win + ↓（必要に応じて繰り返す）' },
   { id: 'W04', mouse: { operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false }, key: 'win-down', shortcut: 'Win + ↓' },
   { id: 'W11', mouse: { operation: 'close', after: { state: 'closed' }, route: 'close-button' }, key: 'alt-f4', shortcut: 'Alt + F4' },
-  { id: 'W02', mouse: { operation: 'monitor-move', after: { state: 'normal' }, route: 'caption-drag',
+  { id: 'W02', mouse: { operation: 'monitor-move', moveConfirmed: true, afterArranged: false, after: { state: 'normal' }, route: 'caption-drag',
     fromMonitor: { x: 0, y: 0, width: 1920, height: 1080 }, toMonitor: { x: 1920, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' }, key: 'win-shift-right', shortcut: 'Win + Shift + →' }
 ];
+cases.push({ id: 'W02', mouse: { ...cases.find(c => c.id === 'W02')!.mouse,
+  toMonitor: { x: 0, y: -1080, width: 1920, height: 1080 }, moveDirection: null }, key: 'win-shift-left', shortcut: null });
 
 for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLite worker -> page models -> notification adapter`, async t => {
   const root = await mkdtemp(join(tmpdir(), 'coach-integration-'));
@@ -78,8 +80,8 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
     }
   }
   await Promise.all(deliveries);
-  assert.equal(requests.length, 1, 'mastered/excluded and replay do not notify');
-  assert.equal(requests[0].title, entry.shortcut); assert.equal(requests[0].silent, true);
+  assert.equal(requests.length, entry.shortcut ? 1 : 0, 'unknown direction/mastered/excluded and replay do not notify');
+  if (entry.shortcut) { assert.equal(requests[0].title, entry.shortcut); assert.equal(requests[0].silent, true); }
   coach.stop(); await coach.idle(); await repository.close();
   const reopened = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
   try {
@@ -89,7 +91,7 @@ for (const entry of cases) test(`${entry.id}: strict v2 -> three states -> SQLit
   } finally { await reopened.close(); }
 });
 
-for (const operation of ['W04', 'W06', 'W07'] as const) for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
+for (const operation of ['W04', 'W06', 'W07', 'W02'] as const) for (const boundary of ['pause', 'stop', 'failure', 'ack-loss'] as const)
   test(`${operation}: delayed SQLite commit / ${boundary} cancels notice; retry does not duplicate`, async t => {
     const root = await mkdtemp(join(tmpdir(), 'coach-w04-boundary-'));
     const repository = new SqliteRepository(root, resolve('src/main/storage-worker.ts'));
@@ -107,7 +109,7 @@ for (const operation of ['W04', 'W06', 'W07'] as const) for (const boundary of [
       await commit(mutation);
       if (mutation.count && boundary === 'ack-loss') throw new Error('fixture lost ACK');
     };
-    const input = candidateV2(operation === 'W04' ? v2Fixture(candidateFixture({ date: today, operation: 'minimize', route: 'min-button',
+    const input = candidateV2(operation === 'W02' ? v2Fixture(candidateFixture({ ...cases.find(c => c.id === 'W02')!.mouse, date: today })) : operation === 'W04' ? v2Fixture(candidateFixture({ date: today, operation: 'minimize', route: 'min-button',
       before: { state: 'maximized', arranged: false }, after: { state: 'minimized' } })) : placementFixture('mouse', 1, operation === 'W07'))!;
     const writing = coach.accept(input); await entered.promise;
     assert.equal(notices, 0);

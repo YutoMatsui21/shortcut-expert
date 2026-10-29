@@ -102,6 +102,7 @@ internal static partial class Program
             for (int i = 0; i < 2; i++) {
                 var before = i == 0 ? start : moved; var after = i == 0 ? moved : start;
                 tracker.Key(11, before, VK_RIGHT, true, false, i * 200, 0, shiftDown: true);
+                tracker.KeyReleased(VK_RIGHT);
                 var c = tracker.Complete(11, before, after, i * 200 + 50, 11, "2026-10-28", after.Monitor) as WindowCandidate;
                 Equal(true, c is not null); Equal("key", c!.origin); Equal("win-shift-right", c.route); tracker.KeyReleased(VK_RIGHT);
             }

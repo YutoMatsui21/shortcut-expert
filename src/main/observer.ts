@@ -29,6 +29,7 @@ export function candidate(value: unknown): Candidate | null {
   if ('afterArranged' in value && value.afterArranged !== null && typeof value.afterArranged !== 'boolean') return null;
   if (['fromMonitor', 'toMonitor'].some((key) => key in value && value[key] !== null && bounds(value[key]) === null)) return null;
   if ('moveDirection' in value && value.moveDirection !== null && !['left', 'right'].includes(value.moveDirection as string)) return null;
+  if ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean') return null;
   let monitor: Bounds | null = null;
   const rawMonitor = value.monitor;
   if (record(rawMonitor) && ['x', 'y', 'width', 'height'].every((key) => typeof rawMonitor[key] === 'number' && Number.isFinite(rawMonitor[key]))) {
@@ -44,7 +45,8 @@ export function candidate(value: unknown): Candidate | null {
     ...('afterArranged' in value ? { afterArranged: value.afterArranged as boolean | null } : {}),
     ...('fromMonitor' in value ? { fromMonitor: bounds(value.fromMonitor) } : {}),
     ...('toMonitor' in value ? { toMonitor: bounds(value.toMonitor) } : {}),
-    ...('moveDirection' in value ? { moveDirection: value.moveDirection as 'left' | 'right' | null } : {}) };
+    ...('moveDirection' in value ? { moveDirection: value.moveDirection as 'left' | 'right' | null } : {}),
+    ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}) };
 }
 
 function nullableBoolean(value: unknown): value is boolean | null { return value === null || typeof value === 'boolean'; }

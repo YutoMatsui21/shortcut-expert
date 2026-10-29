@@ -150,6 +150,8 @@ W03に加えW02・W04・W05・W11の条件付き検出を実装し、全11候補
 - NativeMethods／Observerは最小化イベント、最小化／閉鎖のhit test、Win+↓／Win+Shift+左右／Alt+F4、画面情報を取得する。CandidateTrackerが入力と同一窓の前後状態・破棄・ドラッグ終端を照合し、Coreが採用条件と通知キーを決める。最小化・閉鎖後の前面変更を許すが、入力時の前面対象一致は必要。
 - ドラッグの入力→開始は1秒以内。開始時の証拠を終端まで保持し、追加入力・取得失敗・対象process変更・停止で破棄する。途中変化と復元を別計上せず、終端が元画面なら0回。画面構成変更も除外する。方向付き通知は左右・上端一致・非重複の2画面だけ。
 - JSON protocolVersionは1を維持。Candidateに任意の`afterArranged`・`fromMonitor`・`toMonitor`・`moveDirection`を追加しMainで型検証する。旧最大化候補はそのまま受信できる。復元は`afterArranged=false`、画面移動は異なる前後画面が必須。不足時は該当操作を見送る。helperとMainは同じbuildで同梱する。
+
+2026-10-29 #38：W02はv1/v2 window証拠の`moveConfirmed=true`も必須とし、Nativeで解放/対象/構成/通常終端を確認する。方向不明時は記録のみ。単独操作の契約・人工検証・#113/#47との境界は[W02実装記録](monitor-move-implementation.md)を参照する。
 - HWND・process・入力時の画面構成はhelper内の一時情報。構成比較に画面矩形だけを使い、title・path・キー生ログは送らない。通常保存のschemaVersion、操作ID、Preload APIは変更せず、既存記録と設定を引き継ぐ。
 
 試験は本番C#→TS契約、Core→通知／集計／隔離保存、Electronの追加4操作mouse/key表示と全11行のキー、fixture通知画面を扱う。実入力精度・混在DPIの実画面・NSIS・通常60分は別の受入試験とする。
