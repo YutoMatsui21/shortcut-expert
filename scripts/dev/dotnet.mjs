@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { developmentEnvironment } from 'dev-environment.mjs';
+import { developmentEnvironment } from './dev-environment.mjs';
 
 const localSdk = resolve('.tools/dotnet/dotnet.exe');
 export const dotnet = existsSync(localSdk) ? localSdk : 'dotnet';

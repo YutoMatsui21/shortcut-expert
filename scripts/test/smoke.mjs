@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { developmentEnvironment } from '../dev/dev-environment.mjs';
-import { smokeSucceeded, smokeFailureSummary } from 'smoke-result.mjs';
+import { smokeSucceeded, smokeFailureSummary } from './smoke-result.mjs';
 
 const packaged = process.argv.includes('--packaged');
 const packageOption = process.argv.indexOf('--package-dir');

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { developmentEnvironment, checkWritableDirectories } from 'dev-environment.mjs';
+import { developmentEnvironment, checkWritableDirectories } from './dev-environment.mjs';
 
 const env = developmentEnvironment();
 const [tool, ...args] = process.argv.slice(2);

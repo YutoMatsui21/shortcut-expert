@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, writeFile, appendFile, rename } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { developmentEnvironment } from '../dev/dev-environment.mjs';
-import { packageManifest } from 'ui-acceptance-runtime.mjs';
+import { packageManifest } from './ui-acceptance-runtime.mjs';
 
 const option = process.argv.indexOf('--package-dir');
 if (option < 0 || !process.argv[option + 1]) throw new Error('Pass --package-dir release/<build>');
