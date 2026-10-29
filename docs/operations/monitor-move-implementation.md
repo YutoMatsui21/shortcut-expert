@@ -1,7 +1,7 @@
 # W02単独の画面移動検出（#38）
 
-2026-10-29。基準revision `840bf26`。[現行要件](ui-redesign-requirements.md)と[#38](https://github.com/YutoMatsui21/shortcut-expert/issues/38)が正本。
-技術ゲートは[#14の再審査](research-compound-drag-validation.md)を再利用する。調査原本の成功を今回の製品buildの実入力受入に置き換えない。
+2026-10-29。基準revision `840bf26`。[現行要件](../ui-redesign-requirements.md)と[#38](https://github.com/YutoMatsui21/shortcut-expert/issues/38)が正本。
+技術ゲートは[#14の再審査](../research/compound-drag-validation.md)を再利用する。調査原本の成功を今回の製品buildの実入力受入に置き換えない。
 
 ## 単独操作の成立条件
 

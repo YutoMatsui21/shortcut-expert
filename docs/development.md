@@ -4,21 +4,21 @@
 
 ## 現行ビルドの実装・受入状況
 
-2026-10-28：W06左右half・W07四隅quarterの単独検出を共通policyから保存・通知・一覧/記録へ接続。Win保持列の中間W06は計上しない。W02＋W07の製品確定・原子保存・単一Toastは#38/#113待ちで、#37の全Close条件は未達。[実装・試験・保守的mouse判定と未確認範囲](placement-implementation.md)。初回対象の正本は[8操作の確定要件](ui-redesign-requirements.md)。
+2026-10-28：W06左右half・W07四隅quarterの単独検出を共通policyから保存・通知・一覧/記録へ接続。Win保持列の中間W06は計上しない。W02＋W07の製品確定・原子保存・単一Toastは#38/#113待ちで、#37の全Close条件は未達。[実装・試験・保守的mouse判定と未確認範囲](operations/placement-implementation.md)。初回対象の正本は[8操作の確定要件](ui-redesign-requirements.md)。
 
-W01「ウィンドウの切替」の基本検出器を直接click／Alt+Tab確定から保存・通知・一覧/記録へ接続。製品の実入力受入は未完了で#29は未完了。番号不明時はAlt+Tabのみを案内する。[契約・除外条件と確認入口](window-switch.md)。
+W01「ウィンドウの切替」の基本検出器を直接click／Alt+Tab確定から保存・通知・一覧/記録へ接続。製品の実入力受入は未完了で#29は未完了。番号不明時はAlt+Tabのみを案内する。[契約・除外条件と確認入口](operations/window-switch.md)。
 
-W12「タスクバーのアプリを開く」は主タスクバーのクリック／Win+数字を入力前後の番号照合から記録する。代表環境の自然入力17ケースを確認済み。別タスクバー・overflow・古い照会はunknownで計上しない。全11操作・通常環境全体の受入は#47に残る。[契約・試験結果と限界](taskbar-input.md)。
+W12「タスクバーのアプリを開く」は主タスクバーのクリック／Win+数字を入力前後の番号照合から記録する。代表環境の自然入力17ケースを確認済み。別タスクバー・overflow・古い照会はunknownで計上しない。全11操作・通常環境全体の受入は#47に残る。[契約・試験結果と限界](operations/taskbar-input.md)。
 
-W08「配置候補を呼び出す」はWin+Z／最大化ボタン500ms hoverからの推定を製品経路へ接続した。設定unknown時は記録・通知しない。メニュー表示成功は計測せず、一覧は自然入力受入まで準備中。[契約と未確認事項](snap-invocation.md)。
+W08「配置候補を呼び出す」はWin+Z／最大化ボタン500ms hoverからの推定を製品経路へ接続した。設定unknown時は記録・通知しない。メニュー表示成功は計測せず、一覧は自然入力受入まで準備中。[契約と未確認事項](operations/snap-invocation.md)。
 
-W08の同意後の自然入力試験は`node scripts/w08-natural-acceptance.mjs --package-dir release/<build> --observe-consented`。専用flag対応の同梱版・新しい隔離保存先・手動ARMを使い、起動時と試行間は観測しない。[実施方法と証拠の範囲](snap-invocation.md#製品の自然入力受入入口)。
+W08の同意後の自然入力試験は`node scripts/w08-natural-acceptance.mjs --package-dir release/<build> --observe-consented`。専用flag対応の同梱版・新しい隔離保存先・手動ARMを使い、起動時と試行間は観測しない。[実施方法と証拠の範囲](operations/snap-invocation.md#製品の自然入力受入入口)。
 
 Windows 11の窓操作を検出し、ショートカットの学習通知と利用記録を提供するデスクトップアプリ。初回リリース対象は11操作で、全操作の自然入力受入は未完了。実装済みの機能と公開基準を混同しない。
 
-Navy Shellの「ショートカット一覧」「記録」へ切り替える構成。一覧は正式11操作を全て「準備中」と表示し、実際に取得した直近7日のキー率を示す。各行で学習中・習得済み・対象外を変更して保存できる。全状態で記録を続け、習得済み・対象外は通知を止める。記録画面は7/30暦日のKPI・率バー・正式11操作と前期間比を表示し、欠損があればinfoで説明する。保存後のWindows標準Toast発行を接続済み（OS受入は未確認）。[記録の契約・検証範囲](records-ui.md)。[一覧・assets・検証範囲](learning-ui.md)。
+Navy Shellの「ショートカット一覧」「記録」へ切り替える構成。一覧は正式11操作を全て「準備中」と表示し、実際に取得した直近7日のキー率を示す。各行で学習中・習得済み・対象外を変更して保存できる。全状態で記録を続け、習得済み・対象外は通知を止める。記録画面は7/30暦日のKPI・率バー・正式11操作と前期間比を表示し、欠損があればinfoで説明する。保存後のWindows標準Toast発行を接続済み（OS受入は未確認）。[記録の契約・検証範囲](features/records-ui.md)。[一覧・assets・検証範囲](features/learning-ui.md)。
 
-**今後の製品要件の正本**：[UI刷新の確定要件](ui-redesign-requirements.md)。本ガイドは現行ビルドの動作と開発工程、[旧MVP要件](archive/mvp-requirements.md)は過去の工程記録、[design.md](design.md)は設計・実装状況、[research.md](research.md)は調査・実測原本。
+**今後の製品要件の正本**：[UI刷新の確定要件](ui-redesign-requirements.md)。本ガイドは現行ビルドの動作と開発工程、[旧MVP要件](archive/mvp-requirements.md)は過去の工程記録、[design.md](design.md)は設計・実装状況、[research.md](research/overview.md)は調査・実測原本。
 
 ## 開発ロードマップ（2026-10-18決定）
 
@@ -42,15 +42,15 @@ Navy Shellの「ショートカット一覧」「記録」へ切り替える構�
 
 画面移動はタイトルバーのドラッグ終端、またはWin＋Shift＋左右と移動結果を照合する。長いドラッグも扱い、途中変化・元画面への往復・派生復元は別計上しない。マウスへの方向付きキー案内は左右に並ぶ2画面で方向を確定できる場合だけ。移動中の画面構成変更は見送る。切替・左右／四隅スナップ・スナップレイアウト・デスクトップ表示・タスクビューはキー一覧のみで、検出は準備中。
 
-通常起動では、学習中の確証済みマウス操作を保存した後、操作ごとにWindows標準Toastを無音で発行する。表示時間と通知センターの履歴はOSに委ねる。通知停止中も記録し、全停止では観測・記録・通知を止める。保存失敗で取消した通知や結果不明の通知は自動再送しない。停止状態は再起動で解除し、操作別通知設定は保持する。自動起動登録なし。[通知契約・検証範囲](standard-notifications.md)。
+通常起動では、学習中の確証済みマウス操作を保存した後、操作ごとにWindows標準Toastを無音で発行する。表示時間と通知センターの履歴はOSに委ねる。通知停止中も記録し、全停止では観測・記録・通知を止める。保存失敗で取消した通知や結果不明の通知は自動再送しない。停止状態は再起動で解除し、操作別通知設定は保持する。自動起動登録なし。[通知契約・検証範囲](features/standard-notifications.md)。
 
 記録画面で直近7日のキー率とキー/マウス回数を確認する。通知・計測の停止/再開、記録全削除は共通の歯車から操作する。全削除は設定を残す。時計が既存記録より前の日付になると、記録を保持して計測を止める。日時を戻すか、記録全削除後に再開する。
 
-窓の通常位置・サイズをDIPで保存し、再表示と画面構成変更時にcaptionが画面外へ出ないよう補正する。最大化/最小化のサイズでは上書きしない。終了は保存とhelper/Worker解除を待ち、未保存時は確認する。自前最大化ボタンの標準Snap UIは未実証で、混在DPI・実トレイ等のV03受入も未合格。[窓制御の契約と検証範囲](window-lifecycle.md)。
+窓の通常位置・サイズをDIPで保存し、再表示と画面構成変更時にcaptionが画面外へ出ないよう補正する。最大化/最小化のサイズでは上書きしない。終了は保存とhelper/Worker解除を待ち、未保存時は確認する。自前最大化ボタンの標準Snap UIは未実証で、混在DPI・実トレイ等のV03受入も未合格。[窓制御の契約と検証範囲](features/window-lifecycle.md)。
 
 保存は日別集計と設定だけ。文字・キー生ログ・URL・窓タイトル・clipboard・画像を通常実行で保存せず、外部送信・アカウントなし。開発時は`.tools/coach-data`、同梱版は`%APPDATA%\window-shortcut-coach`へ保存（実行時identityと既存配布物で確認）。設定を含む完全削除はアプリ終了後に同梱版の保存フォルダーを削除する。
 
-`records-v1/`のSQLiteへ日別記録を無期限に保存する。画面・IPCの読込は最大60日へ制限し、古い日は有界queryで読み出せる。記録画面は現在の7日間を表示する。観測の根拠がない項目は「—」。既存JSONは原本を保持し、全日分・設定を別stagingへ移して再読込・全行照合後に有効化する。移行前に削除済みの記録は復元できない。DB欠落・破損・未来版は空記録へ戻さず停止する。[保存経路](durable-storage.md)・[移行と検証範囲](json-migration.md)。
+`records-v1/`のSQLiteへ日別記録を無期限に保存する。画面・IPCの読込は最大60日へ制限し、古い日は有界queryで読み出せる。記録画面は現在の7日間を表示する。観測の根拠がない項目は「—」。既存JSONは原本を保持し、全日分・設定を別stagingへ移して再読込・全行照合後に有効化する。移行前に削除済みの記録は復元できない。DB欠落・破損・未来版は空記録へ戻さず停止する。[保存経路](storage/durable-storage.md)・[移行と検証範囲](storage/json-migration.md)。
 
 ## 開発・確認
 
@@ -108,11 +108,11 @@ node .\scripts\smoke.mjs --packaged --real-display --package-dir release/operati
 
 #44の実Windows通知受入は、ユーザー同意後にNSIS導入版exeへ`--os-notification-acceptance`を渡す。
 通常起動をtrayで完全終了してから実行する。隔離人工候補の保存後、本番OS adapterへ3要求を送り、
-窓とtrayを維持する。通知の可視表示・履歴clickは別途確認する。[入口と証拠の範囲](standard-notifications.md#v01の実os発行入口44)。
+窓とtrayを維持する。通知の可視表示・履歴clickは別途確認する。[入口と証拠の範囲](features/standard-notifications.md#v01の実os発行入口44)。
 
 #46の隔離UI受入は`node scripts/ui-acceptance.mjs --package-dir release/<build> --matrix-only`。
 16サイズの外形/content/viewportとfixture画像を記録して終了する。`--matrix-only`を外すと実窓操作用に残る（操作には本人同意が必要）。
-寸法不一致を合格へ置き換えない。[V03の結果・残る実機確認](ui-acceptance.md)。
+寸法不一致を合格へ置き換えない。[V03の結果・残る実機確認](validation/ui-acceptance.md)。
 
 `test:unit`はhelperのpublishを待たず、判定・日付・集計・保存失敗・通知・通信を隔離fixtureで確認する。`test:native`はhelperを再buildし、本番C#候補生成/全画面policyの人工事象試験、C#→TS契約、hook開始終了を確認する。`test`は両方を順に実行する。Node 24のexperimental module mockはElectron/子プロセス/FS境界にのみ使う。`test:coverage`は速いsuiteのimport済みNode対象だけを計測し、未import・Renderer・C#を含む全体率ではない。
 
@@ -122,21 +122,21 @@ protocol v2の回帰は`test:unit`のvariant必須証拠・未知能力・再配
 
 `--settings`は設定panelの回帰に加え、本番Main/Preload/React/SQLiteで削除dialogの4幅・初期focus・Tab/Esc・取消、確定前の計測継続、重送防止、旧世代拒否、失敗/retry、元の計測状態への復帰を確認する。`tests/delete-purge.test.ts`は掃除失敗と再起動、旧write拒否、設定保持を実SQLiteで確認する。
 
-`--activation`はopened=trueの隔離SQLiteで3プロセスを順に起動し、cold表示要求→一覧/計測開始、instance click・共通global入口・second-instanceの重複→既存窓復元/停止・pause保持、再起動時の初期値、初期化失敗時の一覧エラーを確認する。OS通知・COM配送はfakeで、通常userDataと実入力を使わない。Windowsの初回ShowWindowをhidden指定で抑えないよう、このmodeだけ試験processのwindowsHideを外す。NSIS導入と実OS通知clickの受入は[通知契約](standard-notifications.md)を参照。
+`--activation`はopened=trueの隔離SQLiteで3プロセスを順に起動し、cold表示要求→一覧/計測開始、instance click・共通global入口・second-instanceの重複→既存窓復元/停止・pause保持、再起動時の初期値、初期化失敗時の一覧エラーを確認する。OS通知・COM配送はfakeで、通常userDataと実入力を使わない。Windowsの初回ShowWindowをhidden指定で抑えないよう、このmodeだけ試験processのwindowsHideを外す。NSIS導入と実OS通知clickの受入は[通知契約](features/standard-notifications.md)を参照。
 
 テスト追加の選び方は[Skill](../.agents/skills/test-shortcut-coach/SKILL.md)、層と証拠の範囲は[テスト設計](design.md#test-design)。CI定義は[quality.yml](../.github/workflows/quality.yml)。Windows runnerで同じ入口を実行し、fixtureログと自アプリ画像だけ3日保存する。実入力・Windows 11通常権限の精度・NSIS導入/再導入/削除・通常60分は別の受入試験。
 
-[#43の先行fixture統合の対応表と未通過経路](fixture-integration.md)。既存5操作は厳格v2 parseから実SQLite Worker、両ページ用モデル、通知adapterまでを3学習状態で結合試験する。残る7操作のCore採用は未実装で、12行表示や取得済みcountsの投入はその代わりにならない。
+[#43の先行fixture統合の対応表と未通過経路](validation/fixture-integration.md)。既存5操作は厳格v2 parseから実SQLite Worker、両ページ用モデル、通知adapterまでを3学習状態で結合試験する。残る7操作のCore採用は未実装で、12行表示や取得済みcountsの投入はその代わりにならない。
 
 窓管理・IPC・画面状態処理の整理に対する回帰試験では、unitで窓の重複生成防止・不正IPC拒否・Preload購読解除を確認する。smokeは×で非表示、人工second-instanceイベントから同じ窓の再表示と最小化復元、画面再読込後の状態取得と操作も確認する。実際の二重起動やトレイのOSイベント配送はこの人工イベント試験の対象外。
 
-記録画面のqueryは今日を含む7/30日、現在の学習状態に基づく3フィルタ、5ソートを扱い、両期間を最大60日で読込む。隔離smokeはcontrols→限定IPC→集計→行/KPIの反映、状態変更、画面往復保持、Renderer再読込時の初期値復帰も確認する。`--comparison`は専用の隔離SQLiteに取得済みcountsとcoverageを作り、J01の比較・既知0・unknown・legacy、欠損infoの有無、4幅、hover/focus/Space/Esc/クリック、フィルタ/期間/状態変更を本番IPCとReactで確認する。[記録queryの契約](records-ui.md)。
+記録画面のqueryは今日を含む7/30日、現在の学習状態に基づく3フィルタ、5ソートを扱い、両期間を最大60日で読込む。隔離smokeはcontrols→限定IPC→集計→行/KPIの反映、状態変更、画面往復保持、Renderer再読込時の初期値復帰も確認する。`--comparison`は専用の隔離SQLiteに取得済みcountsとcoverageを作り、J01の比較・既知0・unknown・legacy、欠損infoの有無、4幅、hover/focus/Space/Esc/クリック、フィルタ/期間/状態変更を本番IPCとReactで確認する。[記録queryの契約](features/records-ui.md)。
 
 操作追加版のsmokeは正式12行のキーと準備中表示、追加4操作それぞれのmouse/key→helper通信→判定→保存→Reactも確認する。追加4操作の通知画面はfixture通知で別途表示確認し、Coreの通知判断はunit試験で確認する。製品の通知間隔は変更しない。
 
 `package:dir`は直前にbuildした内容から`release/win-unpacked`へ実行フォルダーを作る。旧版が起動中の場合は別の出力先を指定し、同じ出力先のexeを検証する。
 
-`--settings`は隔離SQLiteと実UIで共通gearの2スイッチ、停止中の通知希望値保持、トレイの共通command、4幅×2ページ、キーボード・focus・閉じ方を確認する。[設定パネルの契約と証拠の範囲](settings-panel.md)。OSトレイの実クリック配送と実入力精度は別の受入試験。
+`--settings`は隔離SQLiteと実UIで共通gearの2スイッチ、停止中の通知希望値保持、トレイの共通command、4幅×2ページ、キーボード・focus・閉じ方を確認する。[設定パネルの契約と証拠の範囲](features/settings-panel.md)。OSトレイの実クリック配送と実入力精度は別の受入試験。
 
 ```powershell
 npm.cmd run build
@@ -144,15 +144,15 @@ npm.cmd run package:dir -- --config.directories.output=release/quality-tests
 node .\scripts\smoke.mjs --packaged --package-dir release/quality-tests
 ```
 
-原本probeは`validation/probes`のソースから再ビルドする。[再現手順](research.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。
+原本probeは`validation/probes`のソースから再ビルドする。[再現手順](research/overview.md#probes)。旧probeの生成exe・同内容のlatestログコピー・調査用ダウンロードコピー・固定のfixture画像は整理済み。時刻付き原本ログ・初回原本・API結果は保持する。
 
-#5のSnap Layout限定probeは`node scripts/snap-layout-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後の手動採取は`--sample`、既知Xaml classと隔離窓直下3点の限定探索は`--sample-xaml`。実機で表示・解除を目視確認したが、本体selector・対象照合は未成立。[結果・範囲・再開手順](research-snap-layout-validation.md)。
+#5のSnap Layout限定probeは`node scripts/snap-layout-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後の手動採取は`--sample`、既知Xaml classと隔離窓直下3点の限定探索は`--sample-xaml`。実機で表示・解除を目視確認したが、本体selector・対象照合は未成立。[結果・範囲・再開手順](research/snap-layout-validation.md)。
 
 W08の製品仕様は2026-10-23に「Snap Layout表示成功の直接検出」から「Win+Z／最大化ボタンの500ms以上のhoverによる呼び出し推定」へ変更した（[確定要件](ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)）。設定がunknownの場合は計上しない。#83の技術的成立と製品のR02精度合格は別。
 
-#83の呼び出し推定probeは`node scripts/snap-invocation-probe.mjs --self-test`で状態機械、`--query-self-test`で別processのtimeout、`--geometry-self-test`で自作窓のボタン矩形とhit testを確認する。同意後は`--observe-consented`で本人の画面へ2窓を開き、panelのARMからFINISHまでWin+Zと最大化hoverを観測する。probeは設定読取のみ。調査は矩形優先・空矩形時だけhit test、設定欠落はunknownで完了。[8ケース・追加実測・確定した実装判断](research-snap-invocation-validation.md)。
+#83の呼び出し推定probeは`node scripts/snap-invocation-probe.mjs --self-test`で状態機械、`--query-self-test`で別processのtimeout、`--geometry-self-test`で自作窓のボタン矩形とhit testを確認する。同意後は`--observe-consented`で本人の画面へ2窓を開き、panelのARMからFINISHまでWin+Zと最大化hoverを観測する。probeは設定読取のみ。調査は矩形優先・空矩形時だけhit test、設定欠落はunknownで完了。[8ケース・追加実測・確定した実装判断](research/snap-invocation-validation.md)。
 
-SQLite方式の検証（[#10の結果・採用方式・限界](sqlite-storage-validation.md)）は以下で再実行する。製品ビルドや.NET SDKを使わず、同じ固定版Electron/ASAR/Windows x64の独立した無署名probe配布物を作る。hook・実入力・通常の保存先は使わず、毎回`.tools/validation/sqlite-*`へfixtureと結果JSONを出力する。故障試験では自分で起動したprobeを強制終了し、fixture DBだけにread-only属性・NTFS書込拒否ACLを設定してfinallyで解除する。配布物内ソースが現在のprobeと異なれば実行前に再packageを要求する。
+SQLite方式の検証（[#10の結果・採用方式・限界](storage/sqlite-storage-validation.md)）は以下で再実行する。製品ビルドや.NET SDKを使わず、同じ固定版Electron/ASAR/Windows x64の独立した無署名probe配布物を作る。hook・実入力・通常の保存先は使わず、毎回`.tools/validation/sqlite-*`へfixtureと結果JSONを出力する。故障試験では自分で起動したprobeを強制終了し、fixture DBだけにread-only属性・NTFS書込拒否ACLを設定してfinallyで解除する。配布物内ソースが現在のprobeと異なれば実行前に再packageを要求する。
 
 実行したElectronの版も`package.json`の固定版と照合する。SQLite保存・移行の回帰7件は通常の`test:unit`に含まれ、配布probeでは初期schema作成中の強制終了、JSON未作成、FULL後の同一書込の再送も確認する。
 
@@ -177,9 +177,9 @@ npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
 
 nativeだけを絞る場合はhelperをbuildした後、`node scripts/test.mjs native --file=native-policy.test.ts`を使う。`test:native`経由では従来どおり毎回helperをbuildする。全体ログが必要な時は`.tools/test-results`へ保存し、結果の要約と失敗箇所を読む。
 
-#6のW12入力probeは`node scripts/taskbar-input-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後は`--observe-consented`でpanelを開き、手動ARMからFINISHまでだけ観測する。技術検証は制約付きで実装着手可。主タスクバーの番号一致とWin+0、負例除外を確認し、別タスクバー・overflow等はunknown。製品の保存・通知・R02/J04は未検証。[原本・採用条件・試行手順](research-taskbar-input-validation.md)。
+#6のW12入力probeは`node scripts/taskbar-input-probe.mjs --self-test`で実入力なしのcompile・自己検査を行う。同意後は`--observe-consented`でpanelを開き、手動ARMからFINISHまでだけ観測する。技術検証は制約付きで実装着手可。主タスクバーの番号一致とWin+0、負例除外を確認し、別タスクバー・overflow等はunknown。製品の保存・通知・R02/J04は未検証。[原本・採用条件・試行手順](research/taskbar-input-validation.md)。
 
-#7のW01切替probeは`node scripts/window-switch-probe.mjs --self-test`で実入力なしのcompile・29件の自己検査を行う。同意後の`--observe-consented`は自作A/B/C窓と手動ARMを使い、1試行20秒まで観測する。直接click・Alt+Tab確定と負例/W12入口の非採用を実測し、基本経路は制約付きで実装着手可。任意外部アプリ・Edgeタブ・owner窓への一般化、W12製品との統合、番号対応は未確認。番号不明ならAlt+Tabのみ。[12試行の原本・失敗例・#29/#96への条件](research-window-switch-validation.md)。
+#7のW01切替probeは`node scripts/window-switch-probe.mjs --self-test`で実入力なしのcompile・29件の自己検査を行う。同意後の`--observe-consented`は自作A/B/C窓と手動ARMを使い、1試行20秒まで観測する。直接click・Alt+Tab確定と負例/W12入口の非採用を実測し、基本経路は制約付きで実装着手可。任意外部アプリ・Edgeタブ・owner窓への一般化、W12製品との統合、番号対応は未確認。番号不明ならAlt+Tabのみ。[12試行の原本・失敗例・#29/#96への条件](research/window-switch-validation.md)。
 
 ## 開発者向け公開準備
 

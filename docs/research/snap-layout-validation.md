@@ -4,9 +4,9 @@
 
 ## 成果物と現在の判断
 
-- [一次資料メモ](research-snap-layout-sources.md)：hover/Win+Zは公式の入口だが、本体selectorや対象窓対応は別に実証が必要。
-- [限定probe](../validation/probes/SnapLayoutProbe.cs)と[実行入口](../scripts/snap-layout-probe.mjs)：標準captionの隔離WinForms窓、限定Shell UIA、MSAA、owner照合を準備した。
-- 現チェックアウトにShellOperationProbeの再ビルド可能なソースはない。[#4の所在確認](research-task-view-validation.md)を参照。出自不明な既存exeを本検証の入口にしない。
+- [一次資料メモ](snap-layout-sources.md)：hover/Win+Zは公式の入口だが、本体selectorや対象窓対応は別に実証が必要。
+- [限定probe](../../validation/probes/SnapLayoutProbe.cs)と[実行入口](../../scripts/snap-layout-probe.mjs)：標準captionの隔離WinForms窓、限定Shell UIA、MSAA、owner照合を準備した。
+- 現チェックアウトにShellOperationProbeの再ビルド可能なソースはない。[#4の所在確認](task-view-validation.md)を参照。出自不明な既存exeを本検証の入口にしない。
 
 実行環境はWindows x64、Node 24.11.1、.NET Framework 4.xのcsc。準備の基準commitは`9326337`。Computer Useのnode runtimeは「指定されたパスが見つかりません (os error 3)」で初期化できなかった。UI操作は自動化していない。
 
@@ -16,7 +16,7 @@
 
 Windows build **26340**、Node 24.11.1、通常のユーザーデスクトップで実行。基準はPR #80のmain `74c5385`。入力hookと人工キー送出は使わず、本人が隔離窓を操作した。
 
-正本は[試行集約](../validation/evidence/snap-layout-summary-20261022.json)。ローカルJSONL、source/exeのSHA-256を含む。各時点のsourceはhash一致を検証して`validation/evidence/snap-layout-sources/`へ保存した。EXEはcscの再buildでhashが変わるため、各sessionの実行時hashを残す。
+正本は[試行集約](../../validation/evidence/snap-layout-summary-20261022.json)。ローカルJSONL、source/exeのSHA-256を含む。各時点のsourceはhash一致を検証して`validation/evidence/snap-layout-sources/`へ保存した。EXEはcscの再buildでhashが変わるため、各sessionの実行時hashを残す。
 
 保存ソースは`.gitattributes`の`-text`で改行変換を止める。`tests/research-evidence.test.ts`は隔離Gitリポジトリでautocrlfを有効にし、登録後のblobと記録hashを照合する。作業ファイルだけの照合ではGit内の改行変換を検出できないため、登録後のbytesも確認する。
 

@@ -22,7 +22,7 @@ boundsだけの保存は記録ReadModelを変えないためmeta.revisionを進�
 
 ## 証拠の範囲とV03
 
-#46の同一配布物による16サイズ計測、初期/最小viewportの不一致、残る実窓試験は[V03受入台帳](ui-acceptance.md)を参照。V03は未合格。
+#46の同一配布物による16サイズ計測、初期/最小viewportの不一致、残る実窓試験は[V03受入台帳](../validation/ui-acceptance.md)を参照。V03は未合格。
 
 unitは負座標/画面外/小画面補正、状態変化中の上書き防止、保存待機と遅延イベント拒否、実SQLite Worker経由の保存・削除保持・再open・不正値拒否を確認する。Electron smokeは限定IPCからの最大化/復元、CSS drag/no-drag、hide中の計測状態、共通second-instance復元、保存失敗時の終了取消・保存再試行、重複終了要求から実helper shutdownまでを通す。外形/content/viewport/devicePixelRatio/scaleFactorをfixture結果に含める。
 

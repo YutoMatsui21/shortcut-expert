@@ -43,7 +43,7 @@ Mainの`ui-acceptance.ts`が16サイズを計測し、各画像と`ui-acceptance
 全349ファイルのmanifest hash：`c564bea68fb3f0b0f3e90e24252fd7787a2a6915f376a55820cac197a58924b3`。
 原本は`.tools/tests/ui-acceptance-BVN77a/{build.json,package-manifest.json,ui-acceptance.json,session.log,ui-*.png}`。
 配布smokeのログは`.tools/issue-46-final-{smoke,settings,comparison,storage}.log`。
-JSON計測値の転記は[受入証拠](../validation/ui-acceptance-20261022.json)に固定した。
+JSON計測値の転記は[受入証拠](../../validation/ui-acceptance-20261022.json)に固定した。
 画像・ローカルログはGitへ追加せず、fixture経路・build hashと対応づける。
 
 ## 結果と未確認事項

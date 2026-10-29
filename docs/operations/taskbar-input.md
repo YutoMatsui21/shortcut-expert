@@ -1,6 +1,6 @@
 # W12：タスクバーのアプリを開く（#28）
 
-W12の**現行実装**は1〜10番のアプリアイコン左クリック（同じ項目でdown/up）と、有効なWin+1〜9／Win+0の初回downを記録する。起動・前景化・グループの選択結果は待たない。[確定要件](ui-redesign-requirements.md#ウィンドウ切替と案内キーの対応2026-10-25-方針変更)と[#6の採用条件](research-taskbar-input-validation.md#28への採用条件と残る確認)を適用する。**2026-10-25追加の起動状態別Alt+Tab候補・11番目以降のマウス検出・複数候補表示は[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)であり、本実装の対応済み範囲ではない。**
+W12の**現行実装**は1〜10番のアプリアイコン左クリック（同じ項目でdown/up）と、有効なWin+1〜9／Win+0の初回downを記録する。起動・前景化・グループの選択結果は待たない。[確定要件](../ui-redesign-requirements.md#ウィンドウ切替と案内キーの対応2026-10-25-方針変更)と[#6の採用条件](../research/taskbar-input-validation.md#28への採用条件と残る確認)を適用する。**2026-10-25追加の起動状態別Alt+Tab候補・11番目以降のマウス検出・複数候補表示は[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)であり、本実装の対応済み範囲ではない。**
 
 ## 製品経路
 
@@ -27,7 +27,7 @@ W12の**現行実装**は1〜10番のアプリアイコン左クリック（同�
 
 panelでkind、state、pause、期待slot（負例は0）を選ぶ。キーを全解放してARM、ARMEDから3秒待ち、指定入力を1回行い、さらに3秒待ってFINISHする。slotは1〜9、10はWin+0。通常アプリの主アイコンmouse/key、3状態、pause/stopと復旧、長押し、追加修飾、無効番号、空白、サムネイル後続、別タスクバーを確認する。pin/並べ替え/overflowを作る変更は内容を示して個別同意を得る。
 
-結果は試行ごとの期待slot、件数差分、slot一致、通知要求数と誤番号、W01差分、無効/期限/障害だけを保存する。キー列・入力時刻列・アプリ識別子は保存しない。通知要求の成功とOS表示は別であり、表示・案内番号は本人確認を併記する。[R02](ui-redesign-requirements.md#r02自然入力の機能確認2026-10-24-試行方針改定)に従い各ケース原則1回、予想外だけ再試行する。最終同一buildの再受入は#47。
+結果は試行ごとの期待slot、件数差分、slot一致、通知要求数と誤番号、W01差分、無効/期限/障害だけを保存する。キー列・入力時刻列・アプリ識別子は保存しない。通知要求の成功とOS表示は別であり、表示・案内番号は本人確認を併記する。[R02](../ui-redesign-requirements.md#r02自然入力の機能確認2026-10-24-試行方針改定)に従い各ケース原則1回、予想外だけ再試行する。最終同一buildの再受入は#47。
 
 ## 2026-10-25の製品局所受入
 
@@ -48,7 +48,7 @@ panelでkind、state、pause、期待slot（負例は0）を選ぶ。キーを�
 
 panelと追加3窓の終了を本人確認。launcherと自作窓runnerは終了code 0、productの最終statusはCLOSED/error=false。終了後の隔離SQLiteのread-only再openで`integrity_check=ok`、2026-10-25のW12 mouse 6/key 6を確認した。別にW11 mouse 1/key 0が存在する。本人はARM中に窓を×で閉じた可能性があると回答したが、その1件と試行の対応は特定しない。W12以外の全操作が0だったとは主張しない。
 
-原本：[17試行の製品status](../validation/evidence/w12-natural-20261025-results.json)、[同梱版manifest](../validation/evidence/w12-natural-20261025-build.json)。manifest hashは`a8d0583edbca9ed9eb41f21b2fbe34978a9d4e969351536f4bf0eccf32932f5f`、app.asarは`d6dd51c7abe71f183eb692a78d9d1693ef613dd8c00204a67741bdc298d98cb3`。実装commitは`e5981600afe8fd07c6169c2ad6e37fb7ecdc697e`。同梱後のソース差分は意味の変わらないNode import拡張子と手動panelの可視起動だけで、検出/保存/通知コードを変更せず試験した。
+原本：[17試行の製品status](../../validation/evidence/w12-natural-20261025-results.json)、[同梱版manifest](../../validation/evidence/w12-natural-20261025-build.json)。manifest hashは`a8d0583edbca9ed9eb41f21b2fbe34978a9d4e969351536f4bf0eccf32932f5f`、app.asarは`d6dd51c7abe71f183eb692a78d9d1693ef613dd8c00204a67741bdc298d98cb3`。実装commitは`e5981600afe8fd07c6169c2ad6e37fb7ecdc697e`。同梱後のソース差分は意味の変わらないNode import拡張子と手動panelの可視起動だけで、検出/保存/通知コードを変更せず試験した。
 
 ローカルはunit 250件、native 7件（C# policy 197 assertion）、build、開発/同梱smokeと同梱SQLite smokeが成功。ローカル専用レビューのP1（W08受入flag不一致）を修正し、全体再レビューで具体的不具合なし。実装headのCIも成功。sandboxのesbuildアクセス拒否、既存JSON保存試験と同梱smokeでの予想外の保存失敗は、通常環境/同一同梱版で再実行して成功した。失敗を初回から成功だったとは扱わない。
 

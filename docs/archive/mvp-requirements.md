@@ -6,7 +6,7 @@
 
 2026-10-09承認・完了。ステップ3は資料中心の技術判断、ステップ4「最小設計」は2026-10-11承認・完了。ステップ5「環境準備」も完了。ステップ6はW03の初回接続後、2026-10-12の依頼で全11候補のキー表示とW02・W04・W05・W11の条件付き検出を追加した。残る候補の実装・公開前確認へ続く。各工程の開始・終了・経過・把握できた作業時間・手戻りを本書に記録する。
 
-目的・採用理由：[採用理由](../research.md#value)。技術判断：[操作別の技術判断](../research.md#operations)。実測：[技術検証記録](../research.md#measurements)。
+目的・採用理由：[採用理由](../research/overview.md#value)。技術判断：[操作別の技術判断](../research/overview.md#operations)。実測：[技術検証記録](../research/overview.md#measurements)。
 
 ## 確定条件
 
@@ -37,7 +37,7 @@ A＝希望する中核7、B＝補助4。優先度は検出容易性を意味し�
 
 W12は2026-10-24に、タスクバーのアプリアイコンクリック／存在する番号のWin+数字の入力のみを計測する仕様へ変更した。個別窓の結果照合は不要で、W01への二重計上は不可。[W12の確定要件](../ui-redesign-requirements.md#w12タスクバーのアプリを開く2026-10-24-仕様変更)と[#6技術検証](https://github.com/YutoMatsui21/shortcut-expert/issues/6)を優先する。従来W01行の「Win+数字」は過去の検討案であり現行W12の所属と混同しない。
 
-W08の2026-10-23改定・unknown時の非計上・API選択は[確定要件](../ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)と[#83の実測](../research-snap-invocation-validation.md)を優先する。自然入力受入の基準は維持する。
+W08の2026-10-23改定・unknown時の非計上・API選択は[確定要件](../ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)と[#83の実測](../research/snap-invocation-validation.md)を優先する。自然入力受入の基準は維持する。
 
 キーの意味：[Microsoft](https://support.microsoft.com/ja-jp/accessibility/windows/keyboard-shortcuts-in-windows)、[Snap](https://support.microsoft.com/ja-jp/windows/experience/snap-your-windows)。W06・W08を2窓配置の入口として優先。レイアウトは画面サイズ等に依存。境界ドラッグによる連動リサイズは公式にあるが、任意比率の同等キーは今回未確認（不存在の断定ではない）。
 

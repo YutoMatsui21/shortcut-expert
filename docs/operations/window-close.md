@@ -1,6 +1,6 @@
 # W11：入力と同じ窓の破棄の照合（#39）
 
-正本は[確定要件](ui-redesign-requirements.md)。[G-W11の限定的な着手根拠](research-eight-operation-validation.md)を引き継ぎ、通常権限の前面top-level窓を対象にする。製品検出器の自然入力受入と最終buildのR02は[#47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)で別途確認する。
+正本は[確定要件](../ui-redesign-requirements.md)。[G-W11の限定的な着手根拠](../research/eight-operation-validation.md)を引き継ぎ、通常権限の前面top-level窓を対象にする。製品検出器の自然入力受入と最終buildのR02は[#47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)で別途確認する。
 
 [2026-10-29の検証結果・見逃し原本・buildと制約](window-close-validation.md)。
 

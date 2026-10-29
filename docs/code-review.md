@@ -5,7 +5,7 @@ Codexの既定のバグ判定基準を置き換えず、変更が仕様を満た
 
 ## 1. 仕様適合性
 
-1. 対象Issueの目的・受入条件、関係する[要件](ui-redesign-requirements.md)・[技術判断](research.md#operations)・[設計](design.md)の必要な節を確認する。
+1. 対象Issueの目的・受入条件、関係する[要件](ui-redesign-requirements.md)・[技術判断](research/overview.md#operations)・[設計](design.md)の必要な節を確認する。
 2. 各受入条件について対応する実装を特定し、未達・挙動の不一致・意図しない仕様変更を調べる。
 3. 曖昧な仕様を勝手に補完せず、根拠がない指摘と確認できない事項を区別する。
 

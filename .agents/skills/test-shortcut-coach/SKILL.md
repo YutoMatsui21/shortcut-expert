@@ -5,7 +5,7 @@ description: shortcut-expertの機能実装・振る舞い変更・バグ修正�
 
 # 実装とテストの進め方
 
-正本は[テスト設計](../../../docs/design.md#test-design)。実行方法は[開発・検証ガイド](../../../docs/development.md#development-workflow)と[package.json](../../../package.json)。成立条件を変える場合は[要件](../../../docs/ui-redesign-requirements.md)・[技術判断](../../../docs/research.md#operations)も読む。
+正本は[テスト設計](../../../docs/design.md#test-design)。実行方法は[開発・検証ガイド](../../../docs/development.md#development-workflow)と[package.json](../../../package.json)。成立条件を変える場合は[要件](../../../docs/ui-redesign-requirements.md)・[技術判断](../../../docs/research/overview.md#operations)も読む。
 
 ## 実装前に進め方を選ぶ
 

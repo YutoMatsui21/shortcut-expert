@@ -1,6 +1,6 @@
 # Issue #4：Task View表示の調査と限定probe
 
-> 2026-10-27：W08（Win+Z）・W10（Win+Tab）は初回8操作の対象外。関連学習候補にも含めない。本書は対象変更前の実装・調査・証拠として保持する。現行の対象は[確定要件](ui-redesign-requirements.md)を参照。
+> 2026-10-27：W08（Win+Z）・W10（Win+Tab）は初回8操作の対象外。関連学習候補にも含めない。本書は対象変更前の実装・調査・証拠として保持する。現行の対象は[確定要件](../ui-redesign-requirements.md)を参照。
 
 
 2026-10-22。対象は [Issue #4](https://github.com/YutoMatsui21/shortcut-expert/issues/4) のB03/A03。製品検出器の実装ではない。本体の閉→開→閉、mouse/key由来、負例での誤判定0は**未実証**。Issueは未完了。
@@ -113,7 +113,7 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 2026-10-22、本人の「準備できた」を受け、60秒・60秒・30秒の3回を実施した。最初の2回はWin+Tab→10秒維持→Esc、Task Viewボタン→10秒維持→Escを依頼し、両方の表示・解除を本人が確認した。最後の30秒はWin+Tabによる表示・解除を依頼し、本人が実施を確認した。自動キー送出は使っていない。
 
-結果の正本は [匿名化した試行集約](../validation/evidence/task-view-summary-20261022.json)。ローカルJSONLのSHA-256と当時のsource/exe hashを含む。個々のsnapshotに手動ラベルを貼っておらず、本人の回答は各session全体の目視oracleである。採取ごとの表示時刻・開閉時刻・入力由来は測定していない。
+結果の正本は [匿名化した試行集約](../../validation/evidence/task-view-summary-20261022.json)。ローカルJSONLのSHA-256と当時のsource/exe hashを含む。個々のsnapshotに手動ラベルを貼っておらず、本人の回答は各session全体の目視oracleである。採取ごとの表示時刻・開閉時刻・入力由来は測定していない。
 
 当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・窓名等の観測内容を含むソースではない。
 

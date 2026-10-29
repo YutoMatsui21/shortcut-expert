@@ -1,8 +1,8 @@
 # 設計・実装状況
 
-現行の受入条件は[確定要件](ui-redesign-requirements.md)、実行手順は[開発・検証ガイド](development.md)、根拠・原本は[research.md](research.md)。
+現行の受入条件は[確定要件](ui-redesign-requirements.md)、実行手順は[開発・検証ガイド](development.md)、根拠・原本は[research.md](research/overview.md)。
 
-W03/W04の局所実装・共通処理・#113との未解消依存は[検出器と受入条件](window-state-implementation.md)を参照。複合記録・通知の未達を単独操作の試験成功で代替しない。
+W03/W04の局所実装・共通処理・#113との未解消依存は[検出器と受入条件](operations/window-state-implementation.md)を参照。複合記録・通知の未達を単独操作の試験成功で代替しない。
 
 ## 現行の開発順序（2026-10-27更新）
 
@@ -23,9 +23,9 @@ W13の上下halfは一般的な横向き画面で標準マウス入口を確認�
 
 ## 現行アーキテクチャ
 
-#46の隔離UI受入はMainの`ui-acceptance.ts`が本番CoachWindow/Rendererを計測する。起動scriptが新規fixture保存先と配布物hashを記録し、helperは実入力を読まない。[責務・結果・証拠の範囲](ui-acceptance.md)。
+#46の隔離UI受入はMainの`ui-acceptance.ts`が本番CoachWindow/Rendererを計測する。起動scriptが新規fixture保存先と配布物hashを記録し、helperは実入力を読まない。[責務・結果・証拠の範囲](validation/ui-acceptance.md)。
 
-日別保存は[保存契約と検証](durable-storage.md)に従う。Mainの`sqlite-repository.ts`が単一writerと専用`storage-worker.ts`を所有し、`storage-store.ts`だけがSQLiteへアクセスする。Coreの`durable-coach.ts`は限定Repository契約を介して、件数・coverage・時計高水位・非重複checkpointを同時保存する。Core/Rendererは最大60日のread modelだけを持つ。Worker起動時の`storage-migration.ts`が旧JSONの厳格検査とstagingへの移行・再open照合・有効化を担当する。旧JSON用`Coach`/`JsonRepository`は隔離回帰試験用に維持し、通常起動は30日剪定を通さない。移行・削除の故障時も旧JSONへのfallbackは行わない。[移行契約](json-migration.md)を参照。限定bridgeの`getRecords`はMainでsender/mainFrame・実在日付・最大60日を再検証する。
+日別保存は[保存契約と検証](storage/durable-storage.md)に従う。Mainの`sqlite-repository.ts`が単一writerと専用`storage-worker.ts`を所有し、`storage-store.ts`だけがSQLiteへアクセスする。Coreの`durable-coach.ts`は限定Repository契約を介して、件数・coverage・時計高水位・非重複checkpointを同時保存する。Core/Rendererは最大60日のread modelだけを持つ。Worker起動時の`storage-migration.ts`が旧JSONの厳格検査とstagingへの移行・再open照合・有効化を担当する。旧JSON用`Coach`/`JsonRepository`は隔離回帰試験用に維持し、通常起動は30日剪定を通さない。移行・削除の故障時も旧JSONへのfallbackは行わない。[移行契約](storage/json-migration.md)を参照。限定bridgeの`getRecords`はMainでsender/mainFrame・実在日付・最大60日を再検証する。
 
 機能追加・リファクタ・責務配置の判断に用いる。下記の責務分担を現行方針とし、過去の工程記録は[アーカイブ](archive/design-implementation-history.md)に分離した。
 
@@ -44,18 +44,18 @@ W13の上下halfは一般的な横向き画面で標準マウス入口を確認�
 - MainはCore・Sharedを利用し、CoreはSharedと純粋な処理を利用する。CoreからMainを参照しない。
 - RendererはSharedと必要な純粋関数を利用する。Mainとの通信はPreloadが公開する橋渡しを使う。
 - Mainの`CoachWindow`（`coach-window.ts`）は単一の数値窓の生成・非表示・最小化からの復元・前面化・状態配信を担当する。トレイと二重起動は共通の`showCoach`を呼ぶ。`coach-ipc.ts`はIPC登録・送信元frame・引数検証と`DeleteConfirmation`の短命・単回tokenを担当し、検証後に`coach-app.ts`の処理を呼ぶ。計測制御・直列化・削除実行・終了判断は`coach-app.ts`に残す。確認UIはRendererの`DeleteDialog`で、キャンセル初期focus・modal Tab拘束・Esc取消と二重click防止を持つ。
-- #22の通常boundsはCoachWindowがDIPで取得し、Mainのwindow-boundsがwork areaへ補正する。Coreの設定キューから既存SQLite Workerへ保存する。最大化状態は非永続のsnapshot項目。coach-appの終了は重複要求をまとめ、制御待機→停止→bounds/保存flush→未保存確認→helper/Worker終了を待つ。[契約・V03未確認条件](window-lifecycle.md)。
-- #23のSettingsPopoverは共通gearの下に2スイッチを表示し、トレイと同じMain commandでsessionの通知pause・計測stop/startを制御する。停止中は通知の希望値を保持して変更を無効にする。CoachWindowの非永続stateVersionで、Rendererが新しい配信後に届く古いIPC応答を無視する。[設定パネル・検証範囲](settings-panel.md)。
-- #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。7日記録表示は`RecordsPage.tsx`に置き、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](learning-ui.md)。
-- #18の3学習状態はSharedで解決し、Mainが検証した`setLearningState`をCoreの直列キューから既存settings保存へ渡す。DurableCoachの確定済みcounts/settings/revisionから一覧を生成する。全状態で記録を継続し、失敗時の保留は成功状態として表示しない。[保存・互換・検証範囲](learning-ui.md#3状態18)。
-- #26のDurableCoachは受理時の通知tokenと発行直前の状態を照合し、保存成功後にMainのStandardNotificationsへ毎回要求する。Mainは新規instance/UUID、正式名・証明キー、無音・OS時間で発行し、要求/API返却/イベント/失敗/不明を分ける。配送応答をwriterで待たず、障害後に通知を再送しない。起動時のAUMID・global activationとinstance clickは共通showCoachへ集約する。旧NotificationWindowはJSON隔離fixtureだけで使う。[通知・参照寿命・未確認のOS受入](standard-notifications.md)。**#96は、既存の単一`shortcut`をW01/W12の状態別・構造化した複数候補へ拡張する後続作業。1操作・1保存・1通知要求と既存の保存後発行/非再送契約を維持する。現行実装はまだ複数候補に非対応。**
+- #22の通常boundsはCoachWindowがDIPで取得し、Mainのwindow-boundsがwork areaへ補正する。Coreの設定キューから既存SQLite Workerへ保存する。最大化状態は非永続のsnapshot項目。coach-appの終了は重複要求をまとめ、制御待機→停止→bounds/保存flush→未保存確認→helper/Worker終了を待つ。[契約・V03未確認条件](features/window-lifecycle.md)。
+- #23のSettingsPopoverは共通gearの下に2スイッチを表示し、トレイと同じMain commandでsessionの通知pause・計測stop/startを制御する。停止中は通知の希望値を保持して変更を無効にする。CoachWindowの非永続stateVersionで、Rendererが新しい配信後に届く古いIPC応答を無視する。[設定パネル・検証範囲](features/settings-panel.md)。
+- #17のAppShellでは`CoachApp.tsx`が単一のuseCoach購読・2ページ・session表示状態を所有する。7日記録表示は`RecordsPage.tsx`に置き、一覧は`LearningPage.tsx`、7日集計はCoreの`learning.ts`へ置く。Mainの限定`getLearning`から実読取モデルを返す。[一覧の契約・assets・検証](features/learning-ui.md)。
+- #18の3学習状態はSharedで解決し、Mainが検証した`setLearningState`をCoreの直列キューから既存settings保存へ渡す。DurableCoachの確定済みcounts/settings/revisionから一覧を生成する。全状態で記録を継続し、失敗時の保留は成功状態として表示しない。[保存・互換・検証範囲](features/learning-ui.md#3状態18)。
+- #26のDurableCoachは受理時の通知tokenと発行直前の状態を照合し、保存成功後にMainのStandardNotificationsへ毎回要求する。Mainは新規instance/UUID、正式名・証明キー、無音・OS時間で発行し、要求/API返却/イベント/失敗/不明を分ける。配送応答をwriterで待たず、障害後に通知を再送しない。起動時のAUMID・global activationとinstance clickは共通showCoachへ集約する。旧NotificationWindowはJSON隔離fixtureだけで使う。[通知・参照寿命・未確認のOS受入](features/standard-notifications.md)。**#96は、既存の単一`shortcut`をW01/W12の状態別・構造化した複数候補へ拡張する後続作業。1操作・1保存・1通知要求と既存の保存後発行/非再送契約を維持する。現行実装はまだ複数候補に非対応。**
 - #27のMain indexはsingle-instance lock取得後にglobal activationを登録し、表示しないNotification instanceでWindows presenter/COM受信初期化を開始する。CoachWindowが読込前/読込中の表示要求を保留する。coldではopenedにかかわらず一覧を表示して通常の起動経路で計測し、稼働中clickは既存窓復元のみで停止/pauseを保持する。NSIS shortcut名とAUMIDは既存identityを維持する。COM ready race・旧通知から更新/再導入版の起動・OS focusは配布版受入が残る。
-- #19の記録ページはCoreの`records.ts`で操作別7日集計とKPIを生成する。限定`getRecordSummary`がCore直列キュー→Repositoryの7日query→同一revision確認→12行/KPIを返す。Rendererは全履歴を取得せず、共通Shellに縦積み/4列表を表示する。[記録の契約・検証](records-ui.md)。
-- #25のDurableCoachはSnapshotへerrorKindを渡し、両画面の共通SaveErrorBannerが固定header直下に表示する。記録/設定保存、保存先読込、時計、observerを区別し、retryは同一checkpointの保留差分だけを再送する。保存復旧はobserver/時計故障を解除せず、通知tokenを復元せず、観測も自動再開しない。[保存・障害契約](durable-storage.md)。
-- #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。#21のRecordsPageはこの比較値をKPI/操作行へ表示し、MissingCoverageInfoが説明のhover/focus/クリックと画面内配置を担当する。[記録queryの契約](records-ui.md)。
+- #19の記録ページはCoreの`records.ts`で操作別7日集計とKPIを生成する。限定`getRecordSummary`がCore直列キュー→Repositoryの7日query→同一revision確認→12行/KPIを返す。Rendererは全履歴を取得せず、共通Shellに縦積み/4列表を表示する。[記録の契約・検証](features/records-ui.md)。
+- #25のDurableCoachはSnapshotへerrorKindを渡し、両画面の共通SaveErrorBannerが固定header直下に表示する。記録/設定保存、保存先読込、時計、observerを区別し、retryは同一checkpointの保留差分だけを再送する。保存復旧はobserver/時計故障を解除せず、通知tokenを復元せず、観測も自動再開しない。[保存・障害契約](storage/durable-storage.md)。
+- #20の記録queryはSharedの期間/フィルタ/ソート型をMainで検証し、CoreのrecordsReadModelが現在の操作集合を両期間・KPI・比較・欠損判定へ共通適用する。DurableCoachが同じ直列キューで最大60日を一括読取し、整数分数の丸め前ソート結果を返す。AppShellは表示条件をsessionだけに保持する。#21のRecordsPageはこの比較値をKPI/操作行へ表示し、MissingCoverageInfoが説明のhover/focus/クリックと画面内配置を担当する。[記録queryの契約](features/records-ui.md)。
 - C#のWin32宣言はNativeMethods、通信制御はObserverHost、型付き証拠と最終送信の直列化はCandidateProtocol、画面照会はDisplayContext、純粋な全画面分類はDisplayPolicy、フック・Windows状態取得はObserver、取得済み事象からの候補組立はCandidateTrackerに置く。
-- **過去のW08実装（初回対象外）**：8操作版はSnapInvocationObserverを通常観測へ接続せず、CoreでもW08候補を採用しない。旧証拠型・純粋policy試験・実測資料は保持する。旧W08の入力・50ms照会は既存hookを共用するSnapInvocationObserver、純粋な滞在/キー/設定/幾何判定はSnapInvocationPolicyに置く。専用v2証拠をMainで検査しCoreでW08へ判定する。[契約・検証と未受入事項](snap-invocation.md)。
-- W12はTaskbarInputObserverが既存hookを共用し、TaskbarQueryの独立processでUIAを照会する。TaskbarInputPolicyが番号の入力前後照合・期限・repeat/注入除外を担当する。専用v2証拠をMainで検査しCoreがW12/Win+数字へ変換する。[契約・unknownと受入](taskbar-input.md)。**W12 11番目以降・起動状態でのAlt+Tab候補と、W01切替先のtaskbar番号照合は#96で追加予定。既存の1〜10番の実測をそのまま拡張の成立証拠としない。**
+- **過去のW08実装（初回対象外）**：8操作版はSnapInvocationObserverを通常観測へ接続せず、CoreでもW08候補を採用しない。旧証拠型・純粋policy試験・実測資料は保持する。旧W08の入力・50ms照会は既存hookを共用するSnapInvocationObserver、純粋な滞在/キー/設定/幾何判定はSnapInvocationPolicyに置く。専用v2証拠をMainで検査しCoreでW08へ判定する。[契約・検証と未受入事項](operations/snap-invocation.md)。
+- W12はTaskbarInputObserverが既存hookを共用し、TaskbarQueryの独立processでUIAを照会する。TaskbarInputPolicyが番号の入力前後照合・期限・repeat/注入除外を担当する。専用v2証拠をMainで検査しCoreがW12/Win+数字へ変換する。[契約・unknownと受入](operations/taskbar-input.md)。**W12 11番目以降・起動状態でのAlt+Tab候補と、W01切替先のtaskbar番号照合は#96で追加予定。既存の1〜10番の実測をそのまま拡張の成立証拠としない。**
 - 同意後のW08/W12製品受入は`natural-input-acceptance.ts`が試行の開始/停止と集計差分を担当し、別processの手動panelから操作する。専用flag以外では接続せず、通常の検出・保存・通知処理を共用する。
 - 新操作は既存の操作定義・観測・判定・表示の担当箇所へ追加する。既存の通信契約や保存形式を変える場合は互換性と移行方法を設計に記録する。
 - 共通化・新しい階層・操作別フォルダーは、実際の重複や差し替え需要が生じた時点で判断する。
@@ -80,7 +80,7 @@ W13の上下halfは一般的な横向き画面で標準マウス入口を確認�
 
 ### #10：SQLite方式の成立確認（2026-10-18）
 
-配布版の隔離probeで`node:sqlite`・専用Worker・WAL/FULLのディスク保存、応答消失時の重複防止、故障時の原本保持、JSON全件/bytes照合後の移行、長期期間読込を確認した。方式と証拠・限界・#15/#16への引継ぎは[SQLite保存方式の技術検証](sqlite-storage-validation.md)を参照する。製品は引き続き`JsonRepository`を使い、このprobeを本番保存として呼ばない。
+配布版の隔離probeで`node:sqlite`・専用Worker・WAL/FULLのディスク保存、応答消失時の重複防止、故障時の原本保持、JSON全件/bytes照合後の移行、長期期間読込を確認した。方式と証拠・限界・#15/#16への引継ぎは[SQLite保存方式の技術検証](storage/sqlite-storage-validation.md)を参照する。製品は引き続き`JsonRepository`を使い、このprobeを本番保存として呼ばない。
 
 2026-10-19のPR #55レビュー対応では、未作成JSONの既定値と欠落保持、所有情報で限定したschema初期化再開、全削除時のledger削除と世代更新、不正暦日の拒否、FULL後の同じ書込の再送、現在のElectron固定版との照合を追加した。初期schemaのtransaction内も強制終了試験の対象とし、所有情報のないDBや未知版は上書きしない。
 
@@ -121,7 +121,7 @@ CandidateTrackerは同じHWND/processに対する、前回の成立入力から1
 
 ### #13：型付き証拠とprotocol v2の併設
 
-後続#39ではW11を`window-close/window-close-v1`へ分離した。[入力・同一対象破棄・期限・検証範囲](window-close.md)を参照。以下の#13時点のvariant/legacy記述は導入時の契約を示す。
+後続#39ではW11を`window-close/window-close-v1`へ分離した。[入力・同一対象破棄・期限・検証範囲](operations/window-close.md)を参照。以下の#13時点のvariant/legacy記述は導入時の契約を示す。
 
 Sharedの`ObserverCandidate`は旧`Candidate`と`CandidateV2`のunion。v2はgeneration/最終送信sequence/入力transaction/完了日/由来/route/注入・競合と、`window`・`shell-display`・`activation`・`global`の証拠を分ける。Nativeの`CandidateProtocol`は限定された証拠recordを直列送信し、Mainがvariantの必須項目・型・ID範囲を検査して許可項目だけをCoreへ渡す。未知の能力はnullのまま保持し、成功へ変換しない。生キー列・窓token・process ID・タイトル・path・UIA treeは通信型に含めない。hookへUIA処理は追加していない。
 
@@ -153,7 +153,7 @@ W03に加えW02・W04・W05・W11の条件付き検出を実装し、全11候補
 - ドラッグの入力→開始は1秒以内。開始時の証拠を終端まで保持し、追加入力・取得失敗・対象process変更・停止で破棄する。途中変化と復元を別計上せず、終端が元画面なら0回。画面構成変更も除外する。方向付き通知は左右・上端一致・非重複の2画面だけ。
 - JSON protocolVersionは1を維持。Candidateに任意の`afterArranged`・`fromMonitor`・`toMonitor`・`moveDirection`を追加しMainで型検証する。旧最大化候補はそのまま受信できる。復元は`afterArranged=false`、画面移動は異なる前後画面が必須。不足時は該当操作を見送る。helperとMainは同じbuildで同梱する。
 
-2026-10-29 #38：W02はv1/v2 window証拠の`moveConfirmed=true`も必須とし、Nativeで解放/対象/構成/通常終端を確認する。方向不明時は記録のみ。単独操作の契約・人工検証・#113/#47との境界は[W02実装記録](monitor-move-implementation.md)を参照する。
+2026-10-29 #38：W02はv1/v2 window証拠の`moveConfirmed=true`も必須とし、Nativeで解放/対象/構成/通常終端を確認する。方向不明時は記録のみ。単独操作の契約・人工検証・#113/#47との境界は[W02実装記録](operations/monitor-move-implementation.md)を参照する。
 - HWND・process・入力時の画面構成はhelper内の一時情報。構成比較に画面矩形だけを使い、title・path・キー生ログは送らない。通常保存のschemaVersion、操作ID、Preload APIは変更せず、既存記録と設定を引き継ぐ。
 
 試験は本番C#→TS契約、Core→通知／集計／隔離保存、Electronの追加4操作mouse/key表示と全11行のキー、fixture通知画面を扱う。実入力精度・混在DPIの実画面・NSIS・通常60分は別の受入試験とする。
