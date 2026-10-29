@@ -6,15 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../native-helper/PlacementPolicy.cs" Link="PlacementPolicy.cs" />
-    <Compile Include="../../native-helper/NativeMethods.cs" Link="NativeMethods.cs" />
-    <Compile Include="../../native-helper/CandidateTracker.cs" Link="CandidateTracker.cs" />
-    <Compile Include="../../native-helper/WindowCaption.cs" Link="WindowCaption.cs" />
-    <Compile Include="../../native-helper/CandidateProtocol.cs" Link="CandidateProtocol.cs" />
-    <Compile Include="../../native-helper/DisplayPolicy.cs" Link="DisplayPolicy.cs" />
-    <Compile Include="../../native-helper/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />
-    <Compile Include="../../native-helper/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
-    <Compile Include="../../native-helper/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />
-    <Compile Include="../../native-helper/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
+    <Compile Include="../../native-helper/Window/PlacementPolicy.cs" Link="PlacementPolicy.cs" />
+    <Compile Include="../../native-helper/Platform/NativeMethods.cs" Link="NativeMethods.cs" />
+    <Compile Include="../../native-helper/Core/CandidateTracker.cs" Link="CandidateTracker.cs" />
+    <Compile Include="../../native-helper/Window/WindowCaption.cs" Link="WindowCaption.cs" />
+    <Compile Include="../../native-helper/Core/CandidateProtocol.cs" Link="CandidateProtocol.cs" />
+    <Compile Include="../../native-helper/Platform/DisplayPolicy.cs" Link="DisplayPolicy.cs" />
+    <Compile Include="../../native-helper/Snap/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />
+    <Compile Include="../../native-helper/Taskbar/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
+    <Compile Include="../../native-helper/Window/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />
+    <Compile Include="../../native-helper/Window/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
   </ItemGroup>
 </Project>
