@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = fileURLToPath(new URL('../../', import.meta.url));
 const count = Number(process.argv[2] ?? 3);
 if (process.platform !== 'win32' || process.argv.length > 3 || !Number.isInteger(count) || count < 1 || count > 24) throw new Error('Specify fixture count 1..24 (default 3).');
 const output = path.join(root, '.tools/validation/taskbar-input');

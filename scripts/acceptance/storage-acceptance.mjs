@@ -4,7 +4,7 @@ import { resolve, join, normalize } from 'node:path';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { extractFile } from '@electron/asar';
-import { developmentEnvironment } from './dev-environment.mjs';
+import { developmentEnvironment } from '../dev/dev-environment.mjs';
 
 const packageArg = process.argv.find(value => value.startsWith('--package-dir='));
 const directory = resolve(packageArg?.slice('--package-dir='.length) ?? 'release/win-unpacked');

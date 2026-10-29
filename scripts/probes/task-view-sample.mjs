@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const run = promisify(execFile);
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = fileURLToPath(new URL('../../', import.meta.url));
 const seconds = process.argv[2] === '--seconds=30' ? 30 : 60;
 if (process.platform !== 'win32' || process.argv.length > 3 ||
     (process.argv[2] !== undefined && !['--seconds=30', '--seconds=60'].includes(process.argv[2]))) {
@@ -19,7 +19,7 @@ const exe = path.join(dir, 'TaskViewProviderProbe.exe');
 const hash = async file => createHash('sha256').update(await readFile(file)).digest('hex');
 try {
   // Compile once and verify offline boundaries before starting the sampling clock.
-  const built = await run(process.execPath, [path.join(root, 'scripts/task-view-probe.mjs')],
+  const built = await run(process.execPath, [path.join(root, 'scripts/probes/task-view-probe.mjs')],
     { cwd: root, windowsHide: true, timeout: 40_000 });
   if (!built.stdout.includes('TASK_VIEW_PROBE_SELF_TEST_OK')) throw new Error('Self-test failed');
   const records = [{ kind: 'sampling-session', durationSeconds: seconds,
