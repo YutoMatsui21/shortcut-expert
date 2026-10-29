@@ -8,6 +8,6 @@
 | [旧JSONからの移行](json-migration.md) | 原本保護、staging・全行照合、authority切替と再取り込み防止 |
 | [利用記録の全削除](history-deletion.md) | 確認token、削除とepoch、cleanup・失敗時の復旧 |
 
-**設計と証拠は分ける**：採用方式のprobeは[技術検証](../research/sqlite-storage-validation.md)、同梱製品のV02受入と未試験条件は[配布版受入](../validation/storage-acceptance.md)。個別のIssue・PRの実行履歴はここへコピーしない。
+**設計と証拠は分ける**：採用方式のprobeは[技術検証](../research/sqlite-storage-validation.md)、同梱製品のV02受入と未試験条件は[配布版受入](https://github.com/YutoMatsui21/shortcut-expert/issues/45)。個別のIssue・PRの実行履歴はここへコピーしない。
 
 初回公開の画面は**8操作**だが、SQLiteは互換性のため旧IDの記録も保持する。保存可能なID集合を画面対象・検出可能操作と混同しない。
