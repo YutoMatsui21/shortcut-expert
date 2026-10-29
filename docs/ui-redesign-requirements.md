@@ -82,7 +82,7 @@ Snap Layoutの呼び出し・選択、Task Viewの呼び出し・選択は初回
 
 ### W08・W10の過去の成果と初回対象外への変更
 
-W08の呼び出し推定実装・検証（#34、#83等）とW10の技術調査は過去の成果として保持する。8操作版の通常観測ではW08を起動・採用・通知しない。Win+Z／Win+Tabを関連学習候補として追加しない。詳細な旧条件・実測は[Snap呼び出しの記録](snap-invocation.md)と[Task Viewの記録](research-task-view-validation.md)に保持する。
+W08の呼び出し推定実装・検証（#34、#83等）とW10の技術調査は過去の成果として保持する。8操作版の通常観測ではW08を起動・採用・通知しない。Win+Z／Win+Tabを関連学習候補として追加しない。詳細な旧条件・実測は[Snap呼び出しの記録](operations/snap-invocation.md)と[Task Viewの記録](research/task-view-validation.md)に保持する。
 
 **将来候補（今回の一覧・記録・検出・受入から除外）：** W14「すべてのウィンドウを最小化する」、W09「デスクトップを表示する」、W13「上下半分に配置する」、W08「配置候補を呼び出す」、W10「ウィンドウ一覧を表示する」。[決定 #2](https://github.com/YutoMatsui21/shortcut-expert/issues/2)。
 
