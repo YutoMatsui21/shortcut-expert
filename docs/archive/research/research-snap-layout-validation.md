@@ -7,7 +7,7 @@
 ## 成果物と現在の判断
 
 - [一次資料メモ](research-snap-layout-sources.md)：hover/Win+Zは公式の入口だが、本体selectorや対象窓対応は別に実証が必要。
-- [限定probe](../../../validation/probes/SnapLayoutProbe.cs)と[実行入口](../../../scripts/snap-layout-probe.mjs)：標準captionの隔離WinForms窓、限定Shell UIA、MSAA、owner照合を準備した。
+- [限定probe](../../../validation/probes/SnapLayoutProbe.cs)と[実行入口](../../../scripts/probes/snap-layout-probe.mjs)：標準captionの隔離WinForms窓、限定Shell UIA、MSAA、owner照合を準備した。
 - 現チェックアウトにShellOperationProbeの再ビルド可能なソースはない。[#4の所在確認](research-task-view-validation.md)を参照。出自不明な既存exeを本検証の入口にしない。
 
 実行環境はWindows x64、Node 24.11.1、.NET Framework 4.xのcsc。準備の基準commitは`9326337`。Computer Useのnode runtimeは「指定されたパスが見つかりません (os error 3)」で初期化できなかった。UI操作は自動化していない。
@@ -40,8 +40,8 @@ Windows build **26340**、Node 24.11.1、通常のユーザーデスクトップ
 実入力を観測しないcompile・自己検査：
 
 ```powershell
-node scripts/snap-layout-probe.mjs --self-test
-node --check scripts/snap-layout-probe.mjs
+node scripts/probes/snap-layout-probe.mjs --self-test
+node --check scripts/probes/snap-layout-probe.mjs
 ```
 
 上記は通過。自己検査は固定role分類とcompileの確認であり、UIA/MSAA・窓表示の成功を保証しない。
@@ -49,7 +49,7 @@ node --check scripts/snap-layout-probe.mjs
 本人が画面を確認でき、実機試験の再開を指示した時だけ、ユーザーデスクトップのPowerShellから実行する：
 
 ```powershell
-node scripts/snap-layout-probe.mjs --sample
+node scripts/probes/snap-layout-probe.mjs --sample
 ```
 
 既知Xamlクラスと隔離窓直下3点だけの限定探索は`--sample-xaml`。同modeは範囲を狭める診断用で、全Shellやpopup全域を網羅しない。各sampleのstartMs/endMsはsession開始からの採取区間であり、入力時刻・開閉時刻ではない。

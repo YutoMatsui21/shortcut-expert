@@ -11,7 +11,7 @@
 
 ユーザーは同日に実入力/UIA/キー送出とcommit/push/PRの別途承認制約を解除し、最後まで進めるよう指示した。Issue本文にある旧承認条件を未承認の根拠として扱わない。Computer Useの初回取得は `Computer Use app approval timed out` で不成功となったが、本人の再試行許可後にexplorerへのアクセスを確認できた。sandboxでは対象root0、同意済みのユーザーデスクトップでの実行ではroot5を取得した。両環境の結果をTask Viewの表示有無として比較しない。キー自動送出・Shell再起動・入力由来の自動測定は行っていない。
 
-Specは `node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert` で検証したcacheを使用した。updatedAtは `2026-10-18T12:50:27Z`、本文SHA-256は `bdb040c9d2311e2f49bd547b46f01ab842f9c86397efa9435106b1983bcc7f89`。§6 A03と§12 B03を参照。旧Specの14操作という総数を現行の12操作要件へ転用しない。
+Specは `node scripts/dev/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert` で検証したcacheを使用した。updatedAtは `2026-10-18T12:50:27Z`、本文SHA-256は `bdb040c9d2311e2f49bd547b46f01ab842f9c86397efa9435106b1983bcc7f89`。§6 A03と§12 B03を参照。旧Specの14操作という総数を現行の12操作要件へ転用しない。
 
 ## 過去の失敗証拠の再確認
 
@@ -67,24 +67,24 @@ hashは動作・安全性・ソース対応の証明ではない。過去の承�
 
 ## 再現入口と実施結果
 
-`validation/probes/TaskViewProviderProbe.cs` と `scripts/task-view-probe.mjs` は製品から呼ばれない。Windows標準.NET Frameworkのcscで毎回コンパイルし、workerを別プロセスで実行する。
+`validation/probes/TaskViewProviderProbe.cs` と `scripts/probes/task-view-probe.mjs` は製品から呼ばれない。Windows標準.NET Frameworkのcscで毎回コンパイルし、workerを別プロセスで実行する。
 
 ```powershell
 # 実機アクセスなし。今回実施してPASS。
-node scripts/task-view-probe.mjs
+node scripts/probes/task-view-probe.mjs
 
 # 実機アクセスあり。本人の同意があるデスクトップで実行する。
-node scripts/task-view-probe.mjs --snapshot
+node scripts/probes/task-view-probe.mjs --snapshot
 
 # Desktop直下のShell host候補を列挙する。内部ツリーは探索しない。
-node scripts/task-view-probe.mjs --discover-hosts
+node scripts/probes/task-view-probe.mjs --discover-hosts
 
 # 主画面中央の一点から親だけを最大9要素たどる。
-node scripts/task-view-probe.mjs --point-host
+node scripts/probes/task-view-probe.mjs --point-host
 
 # 実入力観測なしのself-test後、3方式を60秒間交互に実行する。
 # 別途案内された本人の手動操作中に実施する。
-node scripts/task-view-sample.mjs --seconds=60
+node scripts/probes/task-view-sample.mjs --seconds=60
 ```
 
 実施済みの出力は `TASK_VIEW_PROBE_SELF_TEST_OK (no live observation)`。self-testは入口buttonと本体仮説の分離、候補0・不完全な観測をunknownにする境界を確認する。OS上の表示検出や入力精度の試験ではない。`npm.cmd run dev:check` は依存部品の存在とSDK 10.0.401の解決を確認しただけで、製品受入ではない。
@@ -117,7 +117,7 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・窓名等の観測内容を含むソースではない。
 
-`node scripts/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
+`node scripts/probes/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
 
 | session（`.tools/validation/task-view/` 以下） | 秒 / 採取数 | 探索完了 / 不完全 | 結果 |
 | --- | --- | --- | --- |

@@ -56,7 +56,7 @@ npm.cmd run dev
 npm.cmd run test:unit -- --file=coach-ipc.test.ts
 npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
 npm.cmd run helper:build
-node scripts/test.mjs native --file=native-policy.test.ts
+node scripts/test/test.mjs native --file=native-policy.test.ts
 ~~~
 
 `--file=`は`tests/`直下の`*.test.ts`を指定する。`--test-reporter=spec|tap|dot`と`--test-concurrency=1|2|4|8`も利用できる。**絞り込みの成功を全件合格とは扱わない。** `test:coverage`はimport済みNode対象だけで、RendererやC#を含む全体coverageではない。

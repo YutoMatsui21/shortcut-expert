@@ -9,18 +9,18 @@ npm.cmd run dev:check
 npm.cmd run dev:check -- --require=electron,sdk,helper
 ~~~
 
-`scripts/dev-run.mjs`はツール実行時のTEMPとnpm/Electron cacheを作業先へ向ける。`dev:check`は書込可能性と部品の有無を検査し、SDKの解決バージョンも表示するが、ソースの再buildや動作検証はしない。不足があれば`npm.cmd run dev:install`、Electron本体のみ不足なら`npm.cmd run dev:electron`を使う（ネットワーク取得あり）。SDK版は[global.json](../global.json)、Node/Electron版は[package.json](../package.json)を参照。
+`scripts/dev/dev-run.mjs`はツール実行時のTEMPとnpm/Electron cacheを作業先へ向ける。`dev:check`は書込可能性と部品の有無を検査し、SDKの解決バージョンも表示するが、ソースの再buildや動作検証はしない。不足があれば`npm.cmd run dev:install`、Electron本体のみ不足なら`npm.cmd run dev:electron`を使う（ネットワーク取得あり）。SDK版は[global.json](../global.json)、Node/Electron版は[package.json](../package.json)を参照。
 
 権限・接続エラーは**最初の失敗原因**を確認する。同じ失敗を設定変更なしで繰り返さず、別worktreeの生成物を無条件に流用しない。
 
 <a id="仕様の取得と読取"></a>
 ## 2. Issueとソースを必要な範囲だけ読む
 
-`scripts/github-workflow.mjs`は`gh`を利用してIssue本文を取得し、revision/hash付きで`.tools/issues/`にcacheする。変更が必要なら`--refresh`で再取得する。
+`scripts/dev/github-workflow.mjs`は`gh`を利用してIssue本文を取得し、revision/hash付きで`.tools/issues/`にcacheする。変更が必要なら`--refresh`で再取得する。
 
 ~~~powershell
-node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert
-node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert --section="見出し一覧の正確な見出し"
+node scripts/dev/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert
+node scripts/dev/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert --section="見出し一覧の正確な見出し"
 ~~~
 
 - `gh auth status`で**現在の実行環境**の認証を確認。CLIが利用できないときだけ接続済みGitHubツールを使う。
@@ -36,11 +36,11 @@ PR前レビュー・merge条件は[GitHub操作Skill](../.agents/skills/github-w
 gh pr checks <PR番号> --watch --interval 30
 ~~~
 
-詳細なチェックや未解決threadが必要なら`scripts/github-workflow.mjs pr-status`でheadを指定して要約を取得できる。
+詳細なチェックや未解決threadが必要なら`scripts/dev/github-workflow.mjs pr-status`でheadを指定して要約を取得できる。
 
 ~~~powershell
 $prHead = git rev-parse HEAD
-node scripts/github-workflow.mjs pr-status <PR番号> --repo=YutoMatsui21/shortcut-expert --head=$prHead
+node scripts/dev/github-workflow.mjs pr-status <PR番号> --repo=YutoMatsui21/shortcut-expert --head=$prHead
 ~~~
 
 - `head`不一致、チェック未開始・skip・取得失敗を成功と扱わない。必要時のみ`--details`で全文を取得する。
