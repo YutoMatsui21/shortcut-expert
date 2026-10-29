@@ -1,4 +1,20 @@
-import type { Candidate, CandidateV2 } from '../../src/shared/coach.ts';
+import type { Bounds, CandidateV2 } from '../../src/shared/coach.ts';
+export type Candidate = {
+  type: 'candidate'; protocolVersion: 1; generation: number; sequence: number;
+  app: string; operation: string; date: string;
+  before: { state: string; arranged: boolean | null };
+  after: { state: string };
+  origin: 'mouse' | 'key' | 'unknown'; route: string;
+  injected: boolean; conflicted: boolean; moving: boolean; elevated: boolean;
+  targetMatched: boolean; inputAgeMs: number;
+  monitor: Bounds | null;
+  afterArranged?: boolean | null;
+  fromMonitor?: Bounds | null;
+  toMonitor?: Bounds | null;
+  moveDirection?: 'left' | 'right' | null;
+  moveConfirmed?: boolean;
+};
+
 export function closeFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): CandidateV2 {
   return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
     date: '2026-10-21', origin, route: origin === 'mouse' ? 'close-button' : 'alt-f4', injected: false, conflicted: false,
@@ -25,7 +41,8 @@ export function snapFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): Ca
       inputAgeMs: 0, monitor: { x: 0, y: 0, width: 1920, height: 1080 } } };
 }
 
-export function v2Fixture(legacy = candidateFixture(), transaction = legacy.sequence): CandidateV2 {
+export function v2Fixture(legacy: Candidate | CandidateV2 = candidateFixture(), transaction = legacy.sequence): CandidateV2 {
+  if (legacy.protocolVersion === 2) return legacy;
   const { type, protocolVersion, generation, sequence, date, origin, route, injected, conflicted, ...result } = legacy;
   return { type, protocolVersion: 2, generation, sequence, transaction, date, origin, route, injected, conflicted,
     evidence: { kind: 'window', profile: 'legacy-window-v1', result: {

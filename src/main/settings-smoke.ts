@@ -7,9 +7,9 @@ import { coachTrayMenu } from './coach-tray';
 import { selectPage, waitForLearning } from './learning-smoke';
 import { SqliteRepository } from './sqlite-repository';
 import { runDeleteSmoke } from './delete-smoke';
-import type { Coach } from '../core/coach';
+import type { DurableCoach } from '../core/durable-coach';
 
-export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command'], repository: unknown, coach: Pick<Coach, keyof Coach>) {
+export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Snapshot, command: CoachBridge['command'], repository: unknown, coach: DurableCoach) {
   const js = (source: string) => window.webContents.executeJavaScript(source);
   const gear = `document.querySelector('.gear-button')`;
   const control = (name: string) => `document.querySelector('.settings-switch[aria-label="${name}"]')`;

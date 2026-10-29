@@ -23,7 +23,6 @@ const options = [migration ? '--migration-smoke' : process.argv.includes('--stor
 if (activation) options.push('--activation-smoke');
 if (settings) options.push('--settings-smoke');
 if (comparison) options.push('--comparison-smoke');
-if (process.argv.includes('--real-display')) options.push('--real-display-smoke');
 const args = packaged ? options : [resolve('.'), ...options];
 mkdirSync(resolve('.tools/tests'), { recursive: true });
 environment.COACH_TEST_DATA_DIR = mkdtempSync(join(resolve('.tools/tests'), 'coach-'));

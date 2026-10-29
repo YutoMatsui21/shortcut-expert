@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { app } from 'electron';
-import type { Bounds, Candidate, CandidateV2, Evidence, ObserverCandidate } from '../shared/coach';
+import type { Bounds, CandidateV2, Evidence, ObserverCandidate, WindowEvidenceResult } from '../shared/coach';
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function protocolId(value: unknown): value is number {
@@ -13,39 +13,25 @@ function bounds(value: unknown): Bounds | null {
   return { x: value.x as number, y: value.y as number, width: value.width as number, height: value.height as number };
 }
 const responseTypes: Record<string, string> = {
-  start: 'started', stop: 'stopped', shutdown: 'stopped', queryDisplayContext: 'displayContext',
+  start: 'started', stop: 'stopped', shutdown: 'stopped',
   fixtureCandidate: 'injected', fixtureFocus: 'focus'
 };
-export function candidate(value: unknown): Candidate | null {
-  if (!record(value) || value.type !== 'candidate' || value.protocolVersion !== 1 ||
-      !protocolId(value.generation) || !protocolId(value.sequence) ||
-      typeof value.app !== 'string' || typeof value.operation !== 'string' || typeof value.date !== 'string' ||
+function windowResult(value: unknown): WindowEvidenceResult | null {
+  if (!record(value) || typeof value.app !== 'string' || typeof value.operation !== 'string' ||
       !record(value.before) || typeof value.before.state !== 'string' ||
       !(value.before.arranged === null || typeof value.before.arranged === 'boolean') ||
       !record(value.after) || typeof value.after.state !== 'string' ||
-      typeof value.origin !== 'string' || !['mouse', 'key', 'unknown'].includes(value.origin) || typeof value.route !== 'string' ||
-      !['injected', 'conflicted', 'moving', 'targetMatched', 'elevated'].every((key) => typeof value[key] === 'boolean') ||
-      typeof value.inputAgeMs !== 'number' || !Number.isFinite(value.inputAgeMs)) return null;
-  if ('afterArranged' in value && value.afterArranged !== null && typeof value.afterArranged !== 'boolean') return null;
-  if (['fromMonitor', 'toMonitor'].some((key) => key in value && value[key] !== null && bounds(value[key]) === null)) return null;
-  if ('moveDirection' in value && value.moveDirection !== null && !['left', 'right'].includes(value.moveDirection as string)) return null;
-  if ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean') return null;
-  let monitor: Bounds | null = null;
-  const rawMonitor = value.monitor;
-  if (record(rawMonitor) && ['x', 'y', 'width', 'height'].every((key) => typeof rawMonitor[key] === 'number' && Number.isFinite(rawMonitor[key]))) {
-    const bounds = rawMonitor as Bounds;
-    if (bounds.width > 0 && bounds.height > 0) monitor = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-  }
-  return { type: 'candidate', protocolVersion: 1, generation: value.generation as number, sequence: value.sequence as number,
-    app: value.app, operation: value.operation, date: value.date,
+      !['moving', 'targetMatched', 'elevated'].every(key => typeof value[key] === 'boolean') ||
+      typeof value.inputAgeMs !== 'number' || !Number.isFinite(value.inputAgeMs) ||
+      !(value.afterArranged === null || typeof value.afterArranged === 'boolean') ||
+      !['monitor', 'fromMonitor', 'toMonitor'].every(key => value[key] === null || bounds(value[key])) ||
+      !(value.moveDirection === null || value.moveDirection === 'left' || value.moveDirection === 'right') ||
+      ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean')) return null;
+  return { app: value.app, operation: value.operation,
     before: { state: value.before.state, arranged: value.before.arranged }, after: { state: value.after.state },
-    origin: value.origin as Candidate['origin'], route: value.route, injected: value.injected as boolean,
-    conflicted: value.conflicted as boolean, moving: value.moving as boolean, elevated: value.elevated as boolean, targetMatched: value.targetMatched as boolean,
-    inputAgeMs: value.inputAgeMs, monitor,
-    ...('afterArranged' in value ? { afterArranged: value.afterArranged as boolean | null } : {}),
-    ...('fromMonitor' in value ? { fromMonitor: bounds(value.fromMonitor) } : {}),
-    ...('toMonitor' in value ? { toMonitor: bounds(value.toMonitor) } : {}),
-    ...('moveDirection' in value ? { moveDirection: value.moveDirection as 'left' | 'right' | null } : {}),
+    afterArranged: value.afterArranged, moving: value.moving as boolean, elevated: value.elevated as boolean,
+    targetMatched: value.targetMatched as boolean, inputAgeMs: value.inputAgeMs, monitor: bounds(value.monitor),
+    fromMonitor: bounds(value.fromMonitor), toMonitor: bounds(value.toMonitor), moveDirection: value.moveDirection,
     ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}) };
 }
 
@@ -112,14 +98,9 @@ export function candidateV2(value: unknown): CandidateV2 | null {
         dwellMs: raw.dwellMs, inputAgeMs: raw.inputAgeMs, monitor: bounds(raw.monitor) }; break;
     case 'window': {
       if (!(raw.profile === 'legacy-window-v1' || raw.profile === 'unverified') || !record(raw.result)) return null;
-      const result = candidate({ ...raw.result, type: 'candidate', protocolVersion: 1,
-        generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
-        route: value.route, injected: value.injected, conflicted: value.conflicted });
-      if (!result || result.afterArranged === undefined || result.fromMonitor === undefined || result.toMonitor === undefined || result.moveDirection === undefined ||
-          !(raw.result.monitor === null || bounds(raw.result.monitor))) return null;
-      const { type, protocolVersion, generation, sequence, date, origin, route, injected, conflicted, ...window } = result;
-      evidence = { kind: 'window', profile: raw.profile, result: { ...window, afterArranged: result.afterArranged,
-        fromMonitor: result.fromMonitor, toMonitor: result.toMonitor, moveDirection: result.moveDirection } }; break;
+      const result = windowResult(raw.result);
+      if (!result) return null;
+      evidence = { kind: 'window', profile: raw.profile, result }; break;
     }
     case 'shell-display':
       if (raw.profile !== 'unverified' || !(raw.feature === 'task-view' || raw.feature === 'snap-layout') ||
@@ -156,8 +137,6 @@ export class ObserverClient {
   private active = false;
   private closing = false;
   private arrangedAvailable = false;
-  private protocol: 1 | 2 = 1;
-  private v2Available = false;
   private pending = new Map<number, { type: string; resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: NodeJS.Timeout }>();
   constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false) {
     this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture;
@@ -167,7 +146,7 @@ export class ObserverClient {
       this.closing = false;
       const path = app.isPackaged ? join(process.resourcesPath, 'native-helper', 'WindowObserver.exe')
         : join(app.getAppPath(), 'resources', 'native-helper', 'WindowObserver.exe');
-      const mode = this.fixture ? process.argv.includes('--real-display-smoke') ? '--fixture-display' : '--fixture' : '--observe';
+      const mode = this.fixture ? '--fixture' : '--observe';
       this.child = spawn(path, [mode], { cwd: dirname(path), windowsHide: true, stdio: 'pipe' });
       const child = this.child;
       // A failed transport retires a child, but kill() alone does not confirm its exit.
@@ -206,8 +185,7 @@ export class ObserverClient {
       }
     }
     const generation = ++this.generation;
-    this.protocol = this.v2Available ? 2 : 1;
-    const result = await this.request('start', { generation, protocolVersion: this.protocol });
+    const result = await this.request('start', { generation, protocolVersion: 2 });
     if (result.type !== 'started') throw new Error('helper-not-started');
     this.active = true; return generation;
   }
@@ -238,17 +216,16 @@ export class ObserverClient {
     await Promise.all([shutdown(), ...waits]);
     if (this.child === child) this.child = null;
   }
-  async context(monitor: Bounds): Promise<{ known: boolean; fullscreen: boolean }> {
-    const response = await this.request('queryDisplayContext', { monitor });
-    const value = response.result;
-    return record(value) && value.known === true && typeof value.fullscreen === 'boolean'
-      ? { known: true, fullscreen: value.fullscreen } : { known: false, fullscreen: true };
-  }
   async inject(value: ObserverCandidate): Promise<void> {
     if (!this.fixture) throw new Error('fixture-only');
     await this.request('fixtureCandidate', { candidate: value });
   }
-  async focusToken(): Promise<unknown> { return (await this.request('fixtureFocus')).result; }
+  async focusToken(): Promise<string> {
+    if (!this.fixture) throw new Error('fixture-only');
+    const response = await this.request('fixtureFocus');
+    if (typeof response.result !== 'string') throw new Error('invalid-focus-token');
+    return response.result;
+  }
   private request(command: string, extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
     if (!this.child || this.child.stdin.destroyed) return Promise.reject(new Error('helper-unavailable'));
     const requestId = ++this.requestId;
@@ -265,16 +242,15 @@ export class ObserverClient {
       if (line.length > 16384) throw new Error('oversize');
       const message: unknown = JSON.parse(line);
       if (!record(message)) throw new Error('protocol');
-      if (message.type === 'ready' && message.protocolVersion === 1) {
+      if (message.type === 'ready') {
+        if (message.protocolVersion !== 2) throw new Error('helper-protocol');
         this.arrangedAvailable = message.arrangedAvailable === true;
-        this.v2Available = Array.isArray(message.supportedProtocols) && message.supportedProtocols.includes(2);
         if (this.ready) { clearTimeout(this.ready.timer); this.ready.resolve(); this.ready = null; }
         return;
       }
       if (message.type === 'candidate') {
-        const value = message.protocolVersion === 2 ? candidateV2(message) : candidate(message);
+        const value = candidateV2(message);
         if (!value) throw new Error('candidate');
-        if (value.protocolVersion !== this.protocol) throw new Error('candidate-protocol');
         if (this.active && value.generation === this.generation) this.onCandidate(value);
         return;
       }

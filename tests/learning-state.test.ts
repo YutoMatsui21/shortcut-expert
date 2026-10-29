@@ -1,3 +1,4 @@
+import { v2Fixture } from './support/fixtures.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -23,8 +24,8 @@ test('three states: real worker persistence, restart, unchanged history and noti
   assert.equal(learningState(coach.snapshot().settings, 'W03'), 'excluded');
   const sample = candidateFixture({ date: '2026-10-19', monitor: null });
   let sequence = 0, generation = 1;
-  const mouse = () => coach.accept({ ...sample, generation, sequence: ++sequence });
-  const key = () => coach.accept({ ...sample, generation, sequence: ++sequence, origin: 'key', route: 'win-up' });
+  const mouse = () => coach.accept(v2Fixture({ ...sample, generation, sequence: ++sequence }));
+  const key = () => coach.accept(v2Fixture({ ...sample, generation, sequence: ++sequence, origin: 'key', route: 'win-up' }));
   await mouse(); assert.equal(notices.length, 0, 'migrated excluded still records');
   const countsBefore = structuredClone(coach.snapshot().counts);
   for (const state of ['learning', 'mastered', 'excluded'] as const) {
@@ -74,7 +75,7 @@ test('settings failure keeps confirmed state; retry keeps latest choices and cou
   assert.equal(learningState(coach.snapshot().settings, 'W03'), 'excluded');
   assert.equal(learningState(coach.snapshot().settings, 'W12'), 'mastered');
   assert.deepEqual(coach.snapshot().counts, {});
-  await coach.setMuted('W12', false); assert.equal(learningState(coach.snapshot().settings, 'W12'), 'learning');
+  await coach.setLearningState('W12', 'learning'); assert.equal(learningState(coach.snapshot().settings, 'W12'), 'learning');
   const query = repository.query.bind(repository), confirmedRevision = coach.snapshot().revision;
   repository.query = async () => { throw new Error('fixture post-save read failure'); };
   await coach.setLearningState('W03', 'mastered');
@@ -99,7 +100,7 @@ for (const action of ['delay', 'pause', 'pause-resume', 'mastered', 'stop', 'sto
     await coach.initialize(); coach.begin(1);
     const commit = repository.commit.bind(repository), entered = deferred<void>(), release = deferred<void>();
     repository.commit = async value => { entered.resolve(); await release.promise; if (action === 'failure') throw new Error('disk'); await commit(value); };
-    const pending = coach.accept(candidateFixture({ date: '2026-10-19' }));
+    const pending = coach.accept(v2Fixture(candidateFixture({ date: '2026-10-19' })));
     await entered.promise; assert.equal(requests, 0);
     now = 5000;
     if (action === 'pause') coach.pauseNotifications(true);
@@ -121,15 +122,15 @@ for (const action of ['delay', 'pause', 'pause-resume', 'mastered', 'stop', 'sto
     assert.equal(requests, delivered, 'retry never replays a notice');
     if (action === 'failure' || action === 'delivery-hung') {
       coach.begin(2);
-      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 }));
+      await coach.accept(v2Fixture(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 })));
       assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 2);
       assert.equal(requests, delivered + 1, 'new operations resume without waiting for delivery');
     }
     if (action === 'stop-restart') {
       coach.begin(2); coach.pauseNotifications(false);
-      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 1, sequence: 2 }));
+      await coach.accept(v2Fixture(candidateFixture({ date: '2026-10-19', generation: 1, sequence: 2 })));
       assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 1, 'old generation stays rejected after restart');
-      await coach.accept(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 }));
+      await coach.accept(v2Fixture(candidateFixture({ date: '2026-10-19', generation: 2, sequence: 1 })));
       assert.equal(coach.snapshot().counts['2026-10-19'].W03?.mouse, 2);
       assert.equal(requests, 1, 'only the new generation can request a notice');
     }

@@ -49,18 +49,18 @@ internal sealed record WindowCandidate(string type, int protocolVersion, int gen
 internal sealed class CandidateProtocol(Action<object> emit)
 {
     private readonly object gate = new();
-    private int generation, sequence, version = 1;
+    private int generation, sequence;
     internal void Start(int nextGeneration, int protocolVersion)
     {
-        if (nextGeneration <= 0 || protocolVersion is not (1 or 2)) throw new ArgumentException("protocol");
-        lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
+        if (nextGeneration <= 0 || protocolVersion != 2) throw new ArgumentException("protocol");
+        lock (gate) { generation = nextGeneration; sequence = 0; }
     }
     internal void Stop() { lock (gate) generation = 0; }
     internal void Compound(int epoch, string date, CompoundMoveResult result)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), result.Transaction, date,
                 "mouse", "compound-caption-drag", false, false, new CompoundDragEvidence(result.Terminal, true, true, true,
                     result.InputAgeMs, result.FromMonitor, result.ToMonitor, result.MoveDirection, true)));
@@ -70,7 +70,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction, date,
                 origin, origin == "mouse" ? "close-button" : "alt-f4", false, false, evidence));
         }
@@ -79,7 +79,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             // Compound results await #113's atomic multi-operation transport/writer.
             if (result.Evidence.monitorChanged) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), result.Transaction, date,
@@ -90,7 +90,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction, date,
                 origin, origin == "mouse" ? "direct-click" : "alt-tab", false, false, evidence));
         }
@@ -99,7 +99,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction, date,
                 origin, origin == "mouse" ? "taskbar-click" : "win-digit", false, false, evidence));
         }
@@ -108,7 +108,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
     {
         lock (gate)
         {
-            if (generation == 0 || epoch != generation || version != 2) return;
+            if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), transaction,
                 DateTime.Now.ToString("yyyy-MM-dd"), origin, origin == "key" ? "win-z" : "max-button-hover",
                 false, false, evidence));
@@ -120,7 +120,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
         {
             if (generation == 0 || candidate.generation != generation) return;
             int finalSequence = checked(++sequence);
-            emit(version == 1 ? candidate with { sequence = finalSequence } : V2(candidate, finalSequence, candidate.Transaction));
+            emit(V2(candidate, finalSequence, candidate.Transaction));
         }
     }
     internal static CandidateEnvelope V2(WindowCandidate c, int sequence, int transaction) => new(

@@ -1,3 +1,4 @@
+import { v2Fixture } from './support/fixtures.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -22,7 +23,7 @@ test('record summary queries real Worker for seven days and serializes counts/se
     capabilities: () => [], changed: () => {}, notify: async () => false });
   await coach.initialize(); coach.begin(1);
   const sample = candidateFixture({date: today});
-  const writing = coach.accept(sample);
+  const writing = coach.accept(v2Fixture(sample));
   const setting = coach.setLearningState('W03', 'mastered');
   const bounded = mock.method(repository, 'query');
   const reading = coach.getRecordSummary(today);

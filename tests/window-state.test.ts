@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
-import { candidateFixture } from './support/fixtures.ts';
+import { classify as classifyV2 } from '../src/core/detector.ts';
+import { candidateFixture, v2Fixture, type Candidate } from './support/fixtures.ts';
+
+const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
 test('W03 top drag requires a confirmed same-monitor terminal result', () => {
   const screen = { x: 0, y: -1080, width: 1920, height: 1080 };

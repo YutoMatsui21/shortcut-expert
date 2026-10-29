@@ -11,7 +11,6 @@
     <Compile Include="../../native-helper/Core/CandidateTracker.cs" Link="CandidateTracker.cs" />
     <Compile Include="../../native-helper/Window/WindowCaption.cs" Link="WindowCaption.cs" />
     <Compile Include="../../native-helper/Core/CandidateProtocol.cs" Link="CandidateProtocol.cs" />
-    <Compile Include="../../native-helper/Platform/DisplayPolicy.cs" Link="DisplayPolicy.cs" />
     <Compile Include="../../native-helper/Snap/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />
     <Compile Include="../../native-helper/Taskbar/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
     <Compile Include="../../native-helper/Window/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />

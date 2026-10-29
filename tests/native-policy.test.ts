@@ -8,9 +8,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
+import { v2Fixture, type Candidate } from './support/fixtures.ts';
 
 mock.module('electron', { namedExports: { app: {} } });
-const { candidate, candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../src/main/observer.ts');
 
 test('本番のC#候補生成と全画面分類を人工イベント列で検証する', { timeout: 60_000 }, async (t) => {
   const result = spawnSync(dotnet, ['run', '--project', 'tests/native-policy/WindowObserver.PolicyTests.csproj',
@@ -22,8 +23,8 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.equal(report.globalInputCollected, false);
   assert.ok(report.passed.length > 0, 'Native policy suite must not silently discover zero tests');
   t.diagnostic(`C# production policy assertions: ${report.passed.length}`);
-  const observations = report.samples.map((sample: unknown) => {
-    const parsed = candidate(sample); assert.ok(parsed, 'C# output must satisfy TS protocol'); return classify(parsed);
+  const observations = report.samples.map((sample: Candidate) => {
+    const parsed = candidateV2(v2Fixture(sample)); assert.ok(parsed, 'internal C# sample must satisfy TS v2 protocol'); return classify(parsed);
   });
   assert.equal(observations[0]?.origin, 'mouse');
   assert.equal(observations[0]?.shortcut, 'Win + ↑');

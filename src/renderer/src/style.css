@@ -59,9 +59,6 @@ footer { display: flex; justify-content: space-between; padding: 12px 0; }
 .danger { color: #96624a; }
 .error { border-left: 3px solid #b8743e; background: #fff1de; color: #81532d; padding: 14px 18px; margin: 16px 0; font-size: 13px; }
 .error p { margin: 0 0 6px; }
-.notice { height: 100vh; padding: 18px 24px; background: #173c34; color: #f5f4ed; display: flex; flex-direction: column; justify-content: center; gap: 4px; border-left: 4px solid #b8ce80; }
-.notice-label { font-size: 13px; color: #d0ddc8; }
-.notice strong { font-size: 24px; font-weight: 600; letter-spacing: .04em; }
 @media (max-width: 680px) { main { padding: 0 20px; margin: 24px auto; } header { align-items: flex-start; } h1 { font-size: 22px; } .controls span { margin-left: 0; width: 100%; } .records { padding: 18px; } }
 /* AppShell: only each page's content scrolls. Legacy records keep their controls. */
 html, body, #root { height: 100%; overflow: hidden; }

@@ -24,22 +24,23 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
     getLearning: mock.fn(async () => ({ from: '2026-10-13', to: '2026-10-19', revision: 0, rows: [] })),
     windowCommand: mock.fn(async () => {}),
     getRecords: mock.fn(async () => ({ counts: {}, coverage: {}, revision: 0 })),
-    getSnapshot: mock.fn(async () => snapshot), getNotice: mock.fn(async () => null),
+    getSnapshot: mock.fn(async () => snapshot),
     command: mock.fn<CoachBridge['command']>(async () => snapshot),
-    setMuted: mock.fn<CoachBridge['setMuted']>(async () => snapshot),
     setLearningState: mock.fn<CoachBridge['setLearningState']>(async () => snapshot),
     deleteCounts: mock.fn(async () => snapshot)
   };
   const window = Object.assign(new EventEmitter(), { webContents: contents }) as Electron.BrowserWindow;
-  registerCoachIpc(() => window, (id) => id === 2, requests);
-  assert.equal(handlers.size, 12);
+  registerCoachIpc(() => window, requests);
+  assert.equal(handlers.has('coach:get-notice'), false);
+  assert.equal(handlers.has('coach:set-muted'), false);
+  assert.equal(handlers.size, 10);
   const invoke = (channel: string, from: Electron.IpcMainInvokeEvent, ...args: unknown[]) => handlers.get(channel)!(from, ...args);
   for (const channel of handlers.keys()) {
     if (channel === 'coach:delete' || channel === 'coach:cancel-delete') continue;
-    const sender = channel === 'coach:get-notice' ? noticeEvent : event;
-    const args = channel === 'coach:set-learning-state' ? ['W04', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:set-muted' ? ['W03', true] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
+    const sender = event;
+    const args = channel === 'coach:set-learning-state' ? ['W04', 'mastered'] : channel === 'coach:window' ? ['hide'] : channel === 'coach:command' ? ['stop'] : channel === 'coach:get-records' ? ['2026-10-01', '2026-10-19'] : [];
     assert.throws(() => invoke(channel, { ...sender, senderFrame: {} } as Electron.IpcMainInvokeEvent, ...args), /Unknown sender/);
-    assert.throws(() => invoke(channel, channel === 'coach:get-notice' ? event : noticeEvent, ...args), /Unknown sender/);
+    assert.throws(() => invoke(channel, noticeEvent, ...args), /Unknown sender/);
     await invoke(channel, sender, ...args);
   }
   for (const channel of ['coach:delete', 'coach:cancel-delete']) {
@@ -71,16 +72,11 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   for (const args of [[null, '2026-10-19'], ['2026-02-30', '2026-03-01'], ['2020-01-01', '2026-10-19'], ['2026-10-19', '2026-10-01']]) {
     assert.throws(() => invoke('coach:get-records', event, ...args), /Invalid range/);
   }
-  for (const args of [['W99', true], ['W03', 'true'], [null, false]]) {
-    assert.throws(() => invoke('coach:set-muted', event, ...args), /Invalid setting/);
-  }
   assert.equal(requests.command.mock.callCount(), 1);
   for (const args of [['W09', 'learning'], ['W14', 'excluded'], ['W99', 'learning'], ['W03', 'automatic'], ['W03', {}], [null, 'learning']]) {
     assert.throws(() => invoke('coach:set-learning-state', event, ...args), /Invalid learning state/);
   }
   assert.deepEqual(requests.setLearningState.mock.calls[0].arguments, ['W04', 'mastered']);
   assert.equal(requests.setLearningState.mock.callCount(), 1);
-  assert.equal(requests.setMuted.mock.callCount(), 1);
   assert.deepEqual(requests.command.mock.calls[0].arguments, ['stop']);
-  assert.deepEqual(requests.setMuted.mock.calls[0].arguments, ['W03', true]);
 });

@@ -11,13 +11,11 @@ export function startupMode(argv: readonly string[]) {
   return {
     fixture, osAcceptance, uiAcceptance, naturalOperation,
     validation: fixture || naturalOperation !== null,
-    storage: osAcceptance || uiAcceptance || argv.includes('--storage-smoke') || migration,
     migration, activation,
     activationFailure: activation && argv.includes('--activation-failure-smoke'),
     comparison: fixture && argv.includes('--comparison-smoke'),
     settings: argv.includes('--settings-smoke'),
     uiExit: argv.includes('--ui-acceptance-exit'),
-    get legacyRepository() { return fixture && !this.storage; },
     get showTray() { return !fixture || osAcceptance || uiAcceptance; },
     get systemNotifications() { return !fixture || osAcceptance; }
   };

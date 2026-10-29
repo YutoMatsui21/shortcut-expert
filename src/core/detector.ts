@@ -1,4 +1,4 @@
-import type { Bounds, Candidate, ObserverCandidate, Observation, OperationId } from '../shared/coach.ts';
+import type { Bounds, WindowEvidenceResult, ObserverCandidate, Observation, OperationId } from '../shared/coach.ts';
 import { validDate } from './dates.ts';
 
 // One envelope is one gesture. Never expose one half of an invalid compound result.
@@ -21,7 +21,7 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
 }
 
 export function classify(value: ObserverCandidate): Observation | null {
-  if (value.protocolVersion === 1) return classifyWindow(value);
+  if (value.protocolVersion !== 2) return null;
   if (value.evidence.kind === 'window-close') {
     const e = value.evidence;
     if (!validDate(value.date) || value.injected || value.conflicted || !e.targetMatched || !e.destroyed ||
@@ -65,16 +65,14 @@ export function classify(value: ObserverCandidate): Observation | null {
       date: value.date, shortcut: `Win + ${e.slot === 10 ? 0 : e.slot}`, monitor: e.monitor };
   }
   // Historical Snap evidence remains parseable; it is outside the first release.
-  // Historical Snap evidence remains parseable; it is outside the first release.
   if (value.evidence.kind === 'snap-invocation') return null;
   if (value.evidence.kind !== 'window' || value.evidence.profile !== 'legacy-window-v1') return null;
-  const observation = classifyWindow({ ...value.evidence.result, type: 'candidate', protocolVersion: 1,
-    generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
+  const observation = classifyWindow({ ...value.evidence.result, generation: value.generation, sequence: value.sequence, date: value.date, origin: value.origin,
     route: value.route, injected: value.injected, conflicted: value.conflicted });
   return observation ? { ...observation, id: `${value.generation}:t${value.transaction}` } : null;
 }
 
-function classifyWindow(candidate: Candidate): Observation | null {
+function classifyWindow(candidate: WindowEvidenceResult & Pick<ObserverCandidate, 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'>): Observation | null {
   if (!validDate(candidate.date) || !Number.isSafeInteger(candidate.sequence) || candidate.sequence < 1 ||
       !['chrome', 'obsidian', 'code', 'chatgpt'].includes(candidate.app) ||
       candidate.elevated !== false || candidate.injected || candidate.conflicted || candidate.moving || !candidate.targetMatched ||

@@ -287,16 +287,19 @@ async function suite() {
   });
   await test('Core Native generation reuse across Main sessions counts new input once; old epoch cannot resurrect', async () => {
     const root = fixture('generation');
-    const candidate = { type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1, app: 'chrome', operation: 'maximize',
-      date: today, before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, origin: 'key', route: 'win-up',
-      injected: false, conflicted: false, moving: false, elevated: false, targetMatched: true, inputAgeMs: 100, monitor: null };
+    const candidate = { type: 'candidate', protocolVersion: 2, generation: 1, sequence: 1, transaction: 1,
+      date: today, origin: 'key', route: 'win-up', injected: false, conflicted: false,
+      evidence: { kind: 'window', profile: 'legacy-window-v1', result: { app: 'chrome', operation: 'maximize',
+        before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, moving: false, elevated: false,
+        targetMatched: true, inputAgeMs: 100, monitor: null, afterArranged: null,
+        fromMonitor: null, toMonitor: null, moveDirection: null } } };
     for (let i = 1; i <= 2; i++) await using(root, async repo => {
       const coach = new DurableCoach({ repository: repo, session: repo.session, date: () => today, now: () => 0,
         capabilities: () => [], notify: async () => false, changed: () => {} });
       await coach.initialize(); assert.equal(coach.snapshot().error, null); coach.begin(1);
       await coach.accept(candidate); await coach.accept(candidate);
       assert.equal((await repo.load(today)).counts[today].W03.key, i);
-      if (i === 2) { await coach.deleteCounts(); await coach.accept({ ...candidate, sequence: 2 }); assert.deepEqual((await repo.load(today)).counts, {}); }
+      if (i === 2) { await coach.deleteCounts(); await coach.accept({ ...candidate, sequence: 2, transaction: 2 }); assert.deepEqual((await repo.load(today)).counts, {}); }
     });
   });
   await test('bundled Core Worker death keeps pending/error and stops; retry clears pending without auto-resume', async () => {
@@ -306,9 +309,12 @@ async function suite() {
         capabilities: () => [{ operation: 'W03', revision: 'v02-fixture' }], notify: async () => false, changed: () => {} });
       await coach.initialize(); assert.equal(coach.snapshot().error, null); coach.begin(1);
       const active = Reflect.get(repo, 'worker'); active.postMessage = () => { void active.terminate(); };
-      await coach.accept({ type: 'candidate', protocolVersion: 1, generation: 1, sequence: 1, app: 'chrome', operation: 'maximize',
-        date: today, before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, origin: 'key', route: 'win-up',
-        injected: false, conflicted: false, moving: false, elevated: false, targetMatched: true, inputAgeMs: 100, monitor: null });
+      await coach.accept({ type: 'candidate', protocolVersion: 2, generation: 1, sequence: 1, transaction: 1,
+        date: today, origin: 'key', route: 'win-up', injected: false, conflicted: false,
+        evidence: { kind: 'window', profile: 'legacy-window-v1', result: { app: 'chrome', operation: 'maximize',
+          before: { state: 'normal', arranged: false }, after: { state: 'maximized' }, moving: false, elevated: false,
+          targetMatched: true, inputAgeMs: 100, monitor: null, afterArranged: null,
+          fromMonitor: null, toMonitor: null, moveDirection: null } } });
       assert.equal(coach.snapshot().pendingSave, true); assert.equal(coach.snapshot().errorKind, 'record-save');
       coach.begin(2); assert.equal(coach.snapshot().observing, false);
       await Promise.all([coach.retrySave(), coach.retrySave()]);

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Windows.Forms;
 
 internal static class Program
@@ -15,19 +14,8 @@ internal static class Program
             case "--observe": return ObserverHost.Run();
             case "--close-validation-consented": return ObserverHost.Run(closeValidation: true);
             case "--fixture": return ObserverHost.Run(fixture: true);
-            case "--fixture-display": return ObserverHost.Run(fixture: true, realDisplay: true);
             case "--self-test": return ObserverHost.SelfTest();
             case "--taskbar-query-self-test": return TaskbarQuery.SelfTest().GetAwaiter().GetResult();
-            case "--display-policy-test":
-                Console.WriteLine(JsonSerializer.Serialize(DisplayPolicy.Check())); return 0;
-            case "--display-check":
-                foreach (Screen screen in Screen.AllScreens)
-                {
-                    var r = screen.Bounds;
-                    using var document = JsonDocument.Parse(JsonSerializer.Serialize(new { x = r.X, y = r.Y, width = r.Width, height = r.Height }));
-                    Console.WriteLine(JsonSerializer.Serialize(DisplayContext.Query(document.RootElement, diagnostic: true)));
-                }
-                return 0;
             default: Console.Error.WriteLine("Unknown observer mode."); return 2;
         }
     }

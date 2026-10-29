@@ -1,28 +1,17 @@
 export type OperationId = 'W01' | 'W02' | 'W03' | 'W04' | 'W05' | 'W06' | 'W07' | 'W08' | 'W09' | 'W10' | 'W11' | 'W12' | 'W13' | 'W14';
 export type Bounds = { x: number; y: number; width: number; height: number };
-export type Candidate = {
-  type: 'candidate'; protocolVersion: 1; generation: number; sequence: number;
-  app: string; operation: string; date: string;
-  before: { state: string; arranged: boolean | null };
-  after: { state: string };
-  origin: 'mouse' | 'key' | 'unknown'; route: string;
-  injected: boolean; conflicted: boolean; moving: boolean; elevated: boolean;
-  targetMatched: boolean; inputAgeMs: number;
-  monitor: Bounds | null;
-  afterArranged?: boolean | null;
-  fromMonitor?: Bounds | null;
-  toMonitor?: Bounds | null;
-  moveDirection?: 'left' | 'right' | null;
-  moveConfirmed?: boolean;
-};
 export type Observation = {
   id: string; operation: OperationId; origin: 'mouse' | 'key'; date: string;
   shortcut: string | null; monitor: Bounds | null;
 };
 // Protocol v2 expands the transport without asserting new detector capabilities.
 export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
-export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
-  Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
+export type WindowEvidenceResult = {
+  app: string; operation: string; before: { state: string; arranged: boolean | null }; after: { state: string };
+  moving: boolean; elevated: boolean; targetMatched: boolean; inputAgeMs: number; monitor: Bounds | null;
+  afterArranged: boolean | null; fromMonitor: Bounds | null; toMonitor: Bounds | null;
+  moveDirection: 'left' | 'right' | null; moveConfirmed?: boolean;
+};
 export type Evidence =
   | { kind: 'compound-drag'; profile: 'compound-drag-v1'; terminal: 'maximized' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
       targetMatched: boolean; released: boolean; layoutStable: boolean; inputAgeMs: number;
@@ -47,7 +36,7 @@ export type CandidateV2 = {
   date: string; origin: 'mouse' | 'key' | 'unknown'; route: string; injected: boolean; conflicted: boolean;
   evidence: Evidence;
 };
-export type ObserverCandidate = Candidate | CandidateV2;
+export type ObserverCandidate = CandidateV2;
 export type Counts = Record<string, Partial<Record<OperationId, { mouse: number; key: number }>>>;
 export type LearningState = 'learning' | 'mastered' | 'excluded';
 export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>>; normalBounds?: Bounds };
@@ -60,18 +49,15 @@ export type Snapshot = {
   windowMaximized?: boolean;
   stateVersion?: number;
 };
-export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
-export type ShortcutNoticeItem = Pick<Notice, 'operation' | 'label' | 'shortcut'>;
+export type ShortcutNoticeItem = { operation: OperationId; label: string; shortcut: string };
 export type ShortcutNotice = ShortcutNoticeItem & { items?: ShortcutNoticeItem[] };
 export type CoachBridge = {
   getLearning(): Promise<import('./learning.ts').LearningReadModel>;
   getRecordSummary(query?: import('./records.ts').RecordsQuery): Promise<import('./records.ts').RecordsReadModel>;
   windowCommand(command: 'minimize' | 'maximize' | 'hide'): Promise<void>;
   getRecords?(from: string, to: string): Promise<import('./storage.ts').RecordRange>;
-  getNotice(): Promise<Notice | null>;
   getSnapshot(): Promise<Snapshot>;
   command(command: 'pause-notifications' | 'resume-notifications' | 'stop' | 'start' | 'retry-save' | 'quit'): Promise<Snapshot>;
-  setMuted(operation: OperationId, muted: boolean): Promise<Snapshot>;
   setLearningState(operation: OperationId, state: LearningState): Promise<Snapshot>;
   requestDelete(): Promise<string>;
   cancelDelete(token: string): Promise<void>;

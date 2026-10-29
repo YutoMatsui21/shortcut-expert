@@ -178,7 +178,9 @@ internal static class WindowSwitchTests
             protocol.Switch(1, emitted.Count + 1, "2026-10-21", sample.Origin, new(true, true, true, true, sample.InputAgeMs, sample.SettleMs, new(0, 0, 1920, 1080)));
         protocol.Stop(); protocol.Switch(1, 3, "2026-10-21", "mouse", new(true, true, true, true, 100, 50, null));
         protocol.Start(2, 2); protocol.Switch(1, 4, "2026-10-21", "mouse", new(true, true, true, true, 100, 50, null));
-        protocol.Start(3, 1); protocol.Switch(3, 5, "2026-10-21", "mouse", new(true, true, true, true, 100, 50, null));
+        bool rejectedV1 = false;
+        try { protocol.Start(3, 1); } catch (ArgumentException) { rejectedV1 = true; }
+        Check("v1 start fails before emission", rejectedV1);
         Check("epoch stop and v1", emitted.Count == 2);
         return emitted;
     }

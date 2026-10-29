@@ -19,12 +19,12 @@ export class HelperProcess extends EventEmitter {
   killed = false;
   writeError: Error | null = null;
   respond: ((request: HelperRequest) => void) | null = (request) => {
-    const types: Record<string, string> = { start: 'started', stop: 'stopped', shutdown: 'stopped', queryDisplayContext: 'displayContext' };
-    this.send({ type: types[request.command], requestId: request.requestId, result: { known: true, fullscreen: false } });
+    const types: Record<string, string> = { start: 'started', stop: 'stopped', shutdown: 'stopped', fixtureFocus: 'focus' };
+    this.send({ type: types[request.command], requestId: request.requestId, result: 'fixture-focus' });
     if (request.command === 'shutdown') this.exit();
   };
   constructor() { super(); this.stdin.on('error', () => {}); }
-  ready(protocolVersion = 1, arrangedAvailable = true): void {
+  ready(protocolVersion = 2, arrangedAvailable = true): void {
     this.send({ type: 'ready', protocolVersion, arrangedAvailable });
   }
   send(value: unknown): void { this.stdout.write(JSON.stringify(value) + '\n'); }

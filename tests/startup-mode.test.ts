@@ -8,7 +8,7 @@ test('secondary runner flags cannot enable fixtures, mock notifications or legac
     const mode = startupMode(argv);
     assert.equal(mode.validation, false);
     assert.equal(mode.fixture, false);
-    assert.equal(mode.legacyRepository, false);
+    assert.equal('legacyRepository' in mode, false);
     assert.equal(mode.activationFailure, false);
     assert.equal(mode.comparison, false);
     assert.equal(mode.systemNotifications, true);
@@ -18,14 +18,15 @@ test('secondary runner flags cannot enable fixtures, mock notifications or legac
 
 test('fixture entry points retain storage, notification and tray policies', () => {
   const legacy = startupMode(['--coach-smoke']);
-  assert.equal(legacy.legacyRepository, true);
+  assert.equal('legacyRepository' in legacy, false);
+  assert.equal(legacy.validation, true);
   assert.equal(legacy.systemNotifications, false);
   assert.equal(legacy.showTray, false);
   for (const flag of ['--storage-smoke', '--migration-smoke', '--ui-acceptance', '--os-notification-acceptance']) {
     const mode = startupMode([flag]);
     assert.equal(mode.validation, true);
     assert.equal(mode.fixture, true);
-    assert.equal(mode.legacyRepository, false);
+    assert.equal('legacyRepository' in mode, false);
     assert.equal(mode.systemNotifications, flag === '--os-notification-acceptance');
     assert.equal(mode.showTray, flag.endsWith('-acceptance'));
   }
@@ -33,7 +34,7 @@ test('fixture entry points retain storage, notification and tray policies', () =
     const mode = startupMode([`--${operation}-natural-acceptance`]);
     assert.equal(mode.validation, true);
     assert.equal(mode.fixture, false, 'natural acceptance must use the real observer');
-    assert.equal(mode.legacyRepository, false);
+    assert.equal('legacyRepository' in mode, false);
     assert.equal(mode.systemNotifications, true);
   }
 });

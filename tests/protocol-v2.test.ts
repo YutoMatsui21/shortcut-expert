@@ -1,8 +1,12 @@
-import { test, mock } from 'node:test';
+import { test, mock, type TestContext } from 'node:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { classify } from '../src/core/detector.ts';
-import { Coach } from '../src/core/coach.ts';
-import type { CandidateV2, Evidence, Notice } from '../src/shared/coach.ts';
+import { DurableCoach } from '../src/core/durable-coach.ts';
+import { SqliteRepository } from '../src/main/sqlite-repository.ts';
+import type { CandidateV2, Evidence, ShortcutNotice } from '../src/shared/coach.ts';
 import { candidateFixture, v2Fixture } from './support/fixtures.ts';
 mock.module('electron', { namedExports: { app: {} } });
 const { candidateV2 } = await import('../src/main/observer.ts');
@@ -68,10 +72,12 @@ test('v2でも既存5操作の条件と同等キーを緩めない', () => {
       candidateFixture({ origin, operation: 'close', after: { state: 'closed' }, route: origin === 'mouse' ? 'close-button' : 'alt-f4' }),
       candidateFixture({ origin, operation: 'monitor-move', moveConfirmed: true, afterArranged: false, after: { state: 'normal' }, fromMonitor, toMonitor, moveDirection: 'right', route: origin === 'mouse' ? 'caption-drag' : 'win-shift-right' })
     ];
-    for (const legacy of cases) {
+    for (const [index, legacy] of cases.entries()) {
       const value = v2Fixture(legacy);
       const observation = classify(value)!;
-      assert.deepEqual({ ...observation, id: '1:1' }, classify(legacy));
+      assert.equal(observation.operation, ['W03', 'W04', 'W04', 'W11', 'W02'][index]);
+      assert.equal(observation.origin, origin);
+      assert.equal(observation.shortcut, ['Win + ↑', 'Win + ↓', 'Win + ↓', 'Alt + F4', 'Win + Shift + →'][index]);
       for (const invalid of [{ injected: true }, { conflicted: true }, { origin: 'unknown' as const }, { route: 'unverified-route' }])
         assert.equal(classify({ ...value, ...invalid }), null);
       for (const invalid of [{ inputAgeMs: 1001 }, { targetMatched: false }, { elevated: true }, { moving: true }]) {
@@ -84,37 +90,41 @@ test('v2でも既存5操作の条件と同等キーを緩めない', () => {
   assert.equal(classify(arranged)?.shortcut, null);
 });
 
-test('Coreは完了順を採用し、transaction/sequenceの再配送・差替え・旧世代・protocol混在を拒否する', async () => {
-  const notices: Notice[] = [];
-  const coach = new Coach({ repository: { load: async () => ({ counts: {}, settings: { muted: [], opened: false } }),
-    saveCounts: async () => {}, saveSettings: async () => {} }, date: () => '2026-10-11', now: () => 0,
-    notify: async (notice) => { notices.push(notice); return true; }, changed: () => {} });
-  await coach.initialize(); coach.begin(1);
+async function durableFixture(t: TestContext, notify: (notice: ShortcutNotice) => Promise<boolean>) {
+  const directory = await mkdtemp(join(tmpdir(), 'coach-protocol-v2-'));
+  const repository = new SqliteRepository(directory, resolve('src/main/storage-worker.ts'));
+  t.after(async () => { await repository.close(); await rm(directory, { recursive: true, force: true }); });
+  const coach = new DurableCoach({ repository, session: repository.session, date: () => '2026-10-11', now: () => 0,
+    capabilities: () => [], notify, changed: () => {} });
+  await coach.initialize(); assert.equal(coach.snapshot().error, null); coach.begin(1);
+  return coach;
+}
+
+test('Coreは完了順を採用し、transaction/sequenceの再配送・差替え・旧世代・protocol混在を拒否する', async t => {
+  const notices: ShortcutNotice[] = [];
+  const coach = await durableFixture(t, async notice => { notices.push(notice); return true; });
   const event = (sequence: number, transaction: number): CandidateV2 => v2Fixture(candidateFixture({ sequence }), transaction);
   await coach.accept(event(1, 2)); await coach.accept(event(2, 1)); // late completion of an earlier input
   await coach.accept(event(3, 2)); // same input, new sequence
   await coach.accept(event(3, 3)); // same sequence, replacement content
   await coach.accept({ ...event(4, 4), generation: 2 });
-  await coach.accept(candidateFixture({ sequence: 5 }));
+  await coach.accept({ ...event(5, 5), protocolVersion: 1 } as unknown as CandidateV2);
   await coach.accept({ ...event(6, 6), evidence: reserved[0] });
   await coach.accept(event(7, 6)); // excluded transaction cannot become success
   assert.equal(coach.snapshot().counts['2026-10-11'].W03?.mouse, 2);
-  assert.equal(notices.length, 1);
+  assert.equal(notices.length, 2);
   await coach.accept(event(8, 5000)); await coach.accept(event(9, 1)); // retired tombstone
   coach.stop(); await coach.accept(event(10, 10));
   coach.begin(2); await coach.accept({ ...event(1, 1), generation: 2 });
   assert.equal(coach.snapshot().counts['2026-10-11'].W03?.mouse, 4);
   coach.stop(); coach.begin(3);
-  await coach.accept(candidateFixture({ generation: 3 }));
+  await coach.accept({ ...event(1, 1), generation: 3, protocolVersion: 1 } as unknown as CandidateV2);
   await coach.accept({ ...event(2, 2), generation: 3 });
   assert.equal(coach.snapshot().counts['2026-10-11'].W03?.mouse, 5);
 });
 
-test('直列化待ちの候補を呼出し元から差し替えられない', async () => {
-  const coach = new Coach({ repository: { load: async () => ({ counts: {}, settings: { muted: [], opened: false } }),
-    saveCounts: async () => {}, saveSettings: async () => {} }, date: () => '2026-10-11', now: () => 0,
-    notify: async () => false, changed: () => {} });
-  await coach.initialize(); coach.begin(1);
+test('直列化待ちの候補を呼出し元から差し替えられない', async t => {
+  const coach = await durableFixture(t, async () => false);
   const value = v2Fixture(); const accepting = coach.accept(value); value.origin = 'key';
   await accepting;
   assert.deepEqual(coach.snapshot().counts['2026-10-11'].W03, { mouse: 1, key: 0 });
