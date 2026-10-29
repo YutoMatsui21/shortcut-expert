@@ -2,7 +2,7 @@
 
 このディレクトリは**過去の意思決定・調査・実装の証拠**を保管します。現行仕様の正本ではありません。
 
-現在の参照先：[確定要件](../ui-requirements.md)／[設計](../design.md)／[実行方法](../../README.md)／[Agent方針](../../AGENTS.md)
+現在の参照先：[プロダクトの目的](../product.md)／[確定要件](../ui-requirements.md)／[設計](../design.md)／[開発・実行方法](../development.md)／[Agent方針](../../AGENTS.md)
 
 ## 過去資料
 
