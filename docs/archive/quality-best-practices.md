@@ -4,7 +4,7 @@
 
 調査日：2026-10-12。対象：Electron＋React＋TypeScriptと、C#／.NET／Win32の補助プロセスを持つ個人開発MVP。
 
-本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。製品の要件は[mvp-requirements.md](mvp-requirements.md)、責務は[現行アーキテクチャ](../design.md#architecture)、実行手順は[開発・検証ガイド](../development.md#development-workflow)を正本とし、本書はそれらを変更しない。
+本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。**当時の調査対象となった要件**は[旧MVP](mvp-requirements.md)に残っているが、**現在の製品要件の正本**は[確定要件](../ui-requirements.md)。責務は[現行設計](../design.md#architecture)、実行手順は[開発・検証ガイド](../development.md#development-workflow)を参照する。本書はこれらを変更しない。
 
 各節の「一次資料」は資料が述べる事実・原則、「適用案」はその原則を本製品へ当てはめた調査者の判断である。「先に必要」は現在のリスクに対応する推奨であり、新しい公開受け入れ条件の承認を意味しない。操作候補11件、Windows 11・1〜2画面、4アプリの成立範囲、人工試験と実入力精度の区別を維持する。
 
