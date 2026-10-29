@@ -1,92 +1,53 @@
-# 新規利用者の日別保存（#15 / T13）
+# SQLiteの永続保存・障害復旧
 
-2026-10-19。#10で採用したElectron同梱`node:sqlite`、専用Worker、単一writer、WAL / synchronous=FULLを製品経路へ接続した。検出器の自然入力精度・旧JSON移行・新しい分析画面の受入とは別の変更である。
+**責務**：操作回数と観測範囲を失わず保存し、再送・故障・再起動で**二重加算や空データへの置換を起こさない**。[製品要件](../ui-requirements.md)、[移行](json-migration.md)、[履歴削除](history-deletion.md)を参照。
 
-## 保存先と責務
+## 1. 保存先と責務
 
-- `selectRepository`はCoach初期化より先にSQLiteを選ぶ。#16ではWorker起動時に旧JSONの全日分を[原本保護・全行照合して移行](json-migration.md)する。JsonRepositoryと旧Coachは明示した隔離回帰試験だけで使用する。
-- 空のuserDataでは`records-v1/`にSQLiteを作り、DurableCoachを使用する。既に同ディレクトリがあれば常にそちらを選び、DB欠落・破損・未来版でもJSONへ戻らない。通常データとfixtureのuserDataは既存の起動時分離を維持する。
-- MainのSqliteRepositoryが要求ID・queue・プロセス固有writeSession・接続寿命を所有する。保存ディレクトリごとのOS管理named pipeでwriterを排他し、プロセス異常終了時はOSが解放する。pipeは受信した接続を閉じるだけで、記録の送受信には使わない。
-- StorageStoreはWorker内だけでSQLiteを開く。schema transaction、日別加算、coverage、時計高水位、recordEpoch、直近checkpointを担当する。Workerと共通chunkをASARからunpackする。
-- CoreはSQL・FS・Electronへ依存しない。日付・世代・未保存差分・coverage用monotonic間隔・再試行を制御する。JSON経路のCoreは移行Issueまで残す。
-
-## transactionと保持
-
-全日分をdiskへ保持し、自動削除しない。Core/Snapshotは今日を含む最大60日だけを読む。過去日の表示は限定bridgeの`getRecords(from,to)`から最大60暦日の範囲でqueryし、indexedな日付keyで取得する。全履歴をMain/Core/Rendererへ転送して上書きしない。UIは任意の過去日を選択できる。
-
-**複合gesture拡張（2026-10-28決定・#113で実装）**：同じ確定ドラッグがW02＋W03/W07を満たす場合、操作IDごとにmouse +1（2行・合計+2）とし、**両行は同じ書込transactionで原子的に確定**する。別操作IDを重複として誤削除しない一方、同一gesture・同一操作IDは一度しか加算しない。ACK喪失のretryもtransaction全体を冪等にする。gesture識別子はプロセス内の相関用に限定し、操作時刻列・窓名・生入力・座標履歴を永続化しない。通知適格性は保存後に各操作を独立判定して1Toastに束ねる。現行の単一観測候補実装がこの仕様を満たすという意味ではない。
-
-1回のrecord transactionに、count差分・日別×操作のknowledge/activeMs/gap/capabilityRevision・最後の正常localDate・revision・writeSession/sequence/hashを含める。前日完了の遅延候補も元の日付へ保存し、その日のcoverageはunknownを保つ。保存するのは集計だけで、操作時刻列・入力列・イベントログを作らない。
-
-checkpointはmetaの1行のみ。正常commitの応答だけが失われた場合、Workerを開き直して同じsession/sequence/payloadを送ると加算せず成功する。同じ識別子の異なる内容・飛んだsequence・旧session・旧epochは拒否する。Nativeのgenerationが再利用されてもMainのsessionとは別になる。新Mainは排他取得後に新sessionをclaimする。
-
-全削除は観測停止→Core queue drain→未確定commitの解決→counts/coverage/legacy_days削除とepoch更新のtransaction。学習状態・opened・normal boundsは保持する。削除自身の応答喪失にも同じcheckpointで対応し、古い候補・古いepochから復活させない。移行の有無にかかわらず同じtransactionで`deletion_cleanup.pending=1`を立て、旧JSON両文書・その`.tmp`・固定staging `migration-v1/`を掃除してから成功を返す。別のmigration backupは作成していない。失敗時は停止・再試行し、再起動時にも観測前にcleanupする。既存の移行metaのpending purgeも引き継ぐ。
-
-削除確認はRendererの440×218 dialogで行う。MainがmainFrameに紐付いた5分有効の単回tokenを発行し、確定時はcontrol queueへ入れる前に消費する。取消・新規確認・hide・navigation・終了で旧tokenを無効化する。確定までは計測を継続し、削除・掃除成功後は元が計測中のときだけ新世代で再開する。失敗時は完了表示せず既存の保存エラー/再試行へ返し、その削除の再試行が成功した場合も元の計測状態へ戻す。先行する未保存writeの解決に失敗した場合も、Coreは削除要求をpendingとして維持し、retryでwrite解決後に削除を完了する。
-
-## coverage・時計・失敗
-
-新規保存契約は初回対象12操作に対応する。現在の11行の旧表示一覧の刷新は別Issueであり、Storageの12操作を検出対応済みと表示する意味ではない。自然入力の能力証明がない本番経路はcapability集合を空にし、稼働量や既知0件へ変換しない。fixtureだけW03へ明示した能力revisionを与える。
-
-観測継続中、同じ日・同じ能力revisionで、連続するmonotonic間隔が0超〜2500msの場合だけactiveMsへ加算する。通知pauseは継続する。全停止・helper故障・suspend・能力不足・長いticker中断・revision変更・日付境界の不確実な間隔は加算しない。2500msは1秒tickerの連続性上限であり、検出精度の保証値ではない。部分日・開始前・中断等のgapを保持する。停止した無操作日は高水位だけ更新し、counts/coverageを生成しない。
-
-起動・候補受理・毎秒tickで高水位とlocalDateを照合する。無操作・停止中でも高水位は永続化し、日付後退または未来日の候補では保存済み記録を削除せず停止する。時計修正後の再開は保存先を再検査する。timezone変更で過去日を再配分しない。
-
-UIは保存済みの数値を表示する。coverage根拠もcountもない操作は「—」とし、取得済みcountをunknownのために隠さない。queryのrevisionとeffect取消で古い返信が新しい選択・削除後の表示を上書きするのを防ぐ。期間比較・欠損infoの正式デザインは後続Issueの範囲。
-
-#22のnormalBoundsだけのsettings保存はReadModelへ影響しないためrevisionを進めない。他のsettings変更と記録transactionのrevision更新は維持する。[窓制御の契約](../features/window-lifecycle.md)。
-
-保存失敗・結果不明は同じ差分をメモリーに残し、観測・通知を停止する。再試行はWorker再接続後に同一transactionを再送し、観測の自動再開や過去通知の再送はしない。DB破損等の読込失敗でも空のDBへ置き換えず、原本を保持する。プロセス終了時に未commitのメモリー分が失われる制約は従来どおり。
-
-保存・読込エラーはSnapshotの`errorKind`で記録保存、設定保存、保存先読込、時計、observerに区別する。両画面は固定header直下に共通SaveErrorBannerを表示し、本文を押し下げる。保存保留と保存先読込は再試行できる。読込再試行は同じSQLite authorityを再接続・再読込し、元のobserver故障や時計異常は解除しない。記録保存の再試行は同じwriteSession/sequence/checkpointを使う。保存障害時に取消済みの通知要求は復旧後に再生成しない。観測再開は設定panelまたはtrayでの明示操作だけで行う。
-
-時計故障は保存・読込エラーと独立して保持する。Snapshotの`canRetrySave`は、表示上優先されるobserver/時計故障があっても保存の再試行を可能にする。明示startで再検査するまで、保存成功だけで観測へ戻さない。#24で確定した削除の成功後に元の計測状態へ戻す契約は維持する。
-
-Mainは既存のobserver/時計故障がある時も新しい読込失敗をCoreへ渡す。停止中の同じ保存先故障は再配信せず、Reactの読込→故障配信→再読込の循環を防ぐ。`--storage` smokeでobserver故障→query失敗→retry→observer故障と停止の保持を実IPCから確認する。
-
-retryは保留記録・設定を確定してから残る読込故障を再検査し、設定保留と読込故障の同時発生でも1回で復旧する。RecordsPageは`canRetrySave`の変化でも再取得し、優先されるobserverメッセージ・revision・設定が不変でも復旧後の行を戻す。Codex指摘に対する回帰はCoreの単回retryと実Rendererの`masked-read-recovery-rows`で確認する。
-
-### #25：保存エラー・保留・再試行の受入対応
-
-| 条件 | 本番経路と検証 |
+| 層 | 所有するもの |
 | --- | --- |
-| 正式バナー・両画面 | Figma `348:1950`の52px、警告SVG、色、枠、文言、92×32 buttonを採用。`--storage` smokeで800/920/1120/1360×両画面のheader直下、本文押下げ、固定表示、icon/buttonのgeometryと画像を取得する |
-| count/設定/Worker/disk/応答喪失 | `durable-storage.test.ts`で実Worker強制終了、SQL triggerによるtransaction失敗、count/設定のcommit後応答喪失、同じcheckpointのretry連打を確認。元のcounts/coverage/設定を保ち、保留差分だけを一度反映する |
-| 障害後の通知非再送 | 通知適格なmouse候補の保存失敗/ACK喪失→retry→新Repository/Core再生成まで、過去通知0を確認。Noticeはpending mutation/DBに含めず、世代と処理中の候補はruntimeだけに置く。新世代の新規適格操作だけ通知要求へ進む。標準Toast adapter自体は#26 |
-| 読込・start・retry・終了競合 | 原本保持のload失敗、pending中start、retry連打、observer/時計故障の独立保持をunitで確認。`--storage` smokeは実Main command/Preload/Reactでretry、pending start拒否、未保存終了取消と競合したstart/retryの無効化、復旧後も停止維持を通す |
+| Main `SqliteRepository` | 保存先の選択、専用Worker・要求ID・直列queue・書込sessionの寿命・接続 |
+| Worker `StorageStore` | SQLite接続、schema、transaction、日別件数、coverage、checkpoint、epoch |
+| Core `DurableCoach` | 採用候補の世代、未確定差分、観測間隔・日付・再試行 |
+| Renderer | 限定IPCから得た集計・確定状態だけを表示。SQL・DB path・全履歴への直接アクセスなし |
 
-smokeは空の隔離userDataと人工helper候補だけを使用する。`save-error-*.png`と`save-error-layout.json`が配置の証拠。物理disk full・電源断・OS crash・混在DPI/文字拡大・自然入力精度は本Issueのfixture成功で代替せず、V02/V03/V05の受入に残す。
+- 通常起動は`records-v1/`のSQLiteをauthorityとする。初回のみ作成／旧JSONから[安全に移行](json-migration.md)。**既存のauthorityが欠落・破損・未知版でもJSONや空DBへfallbackしない**。旧JsonRepositoryは隔離回帰用。
+- SQLiteはElectron同梱`node:sqlite`、専用Workerの**単一writer接続、WAL・`synchronous=FULL`**を使用。Workerと必要chunkをASARからunpackし、DBはASAR外へ置く。保存root単位のOS named pipeで複数writerを排他し、pipeへ記録を流さない。
+- 日別の集計は**自動削除せず全期間を保持**。画面向けの有界queryは最大60暦日（直近7／30日と比較対象を含む）。全履歴をRendererへ転送しない。
+- 保存可能な旧操作IDと**現行UIの8操作**は別概念。旧IDは移行・互換のため保持し、表示対象や「検出可能」の判定へ自動追加しない。
 
-## 検証
+## 2. transactionと冪等な再送
 
-#45の製品配布Workerによるdisk故障・移行・削除受入は[専用入口と証拠](storage-acceptance.md)を参照。SQLiteの実FULLと実ボリューム枯渇、明示境界のprocess中断と電源断を区別する。
+1回の記録transactionで、操作別・日別`mouse/key`差分、coverage、正常`localDate`、`revision`、`writeSession/sequence/payload hash`、再送判定用checkpointを**一緒に確定**する。元の日付が確定している遅延入力はその日に記録し、観測が不明な時間を既知扱いしない。
 
-### PR #57のCI・レビュー修正
+- **COMMIT後だけACK**。応答が失われた場合は**同じsession・sequence・payload**を再送し、checkpointによって加算済みを再加算しない。内容違い・sequence飛び・古いsession／epochは拒否する。別IDでの再送は冪等性の保証外。
+- Mainの新しい起動はwriter排他取得後に新sessionをclaimする。Nativeのgenerationとは別に管理する。保存・読戻しエラーでは原本を残し、未確定差分を同じIDのまま保留する。**プロセス強制終了時の未commitメモリ差分は復元保証しない**。
+- 保存には操作の集計・必要な観測metadataのみを含め、入力キー列・操作時刻列・HWND・アプリ名・座標履歴は保存しない。
+- **未実装の複合gesture設計（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）**：同一ドラッグでW02＋W03／W07が独立成立したら、異なる2操作IDを**同じtransactionで原子的に各+1**、同一操作IDは重複加算なし、ACK喪失時は全体を冪等再送する。現行の単一候補経路で実装済みという意味ではない。
 
-最新mainのprotocol v2と結合し、DurableCoachもObserverCandidateを受け取る。世代内のprotocol固定、4096 transaction範囲の重複拒否、採用前の候補複製をJSON経路と揃えた。起動時load失敗では設定を書かず、設定保存成功は設定由来のエラーだけを解除する。読込時にも設定の形式を検査する。
+## 3. coverageと時計の扱い
 
-追加レビューでは、SQLite authorityを確認した後は旧JSONへアクセスしないようにし、全削除だけは時計高水位を現在日へ戻して復旧できるようにした。設定変更は保留中の最新値を引き継ぐ。過去日のqueryはエラー解除後に同じrevisionでも再実行し、全停止中のsuspendは故障扱いしない。過去queryの失敗→同一revisionでの再開と、停止後suspendは本番Main/Worker/Reactを通す隔離smokeへ追加した。
+- `counts`と`coverage`は区別する。**件数の根拠なし＝未観測**、観測済みの0回＝既知0回。取得済み件数はcoverage不足を理由に非表示へ変えない。表示上の集計・欠損判定は[記録画面](../features/records-ui.md)が担当する。
+- capabilityが実証されない経路は未知のまま。連続した`monotonic`間隔が**0超〜2500ms**かつ同日・同じ能力revision・観測継続中のときだけ`activeMs`へ加算する。停止／suspend／helper異常、長い空白、能力変更や日付境界の不確実な時間は既知時間にしない。部分日・停止・gapを保持する。
+- 起動・候補受理・毎秒tickでローカル日付と**時計の高水位**を検査。無操作・停止中も時計を監視し、日付後退／未来日候補では既存記録を消さず安全停止する。timezone変更に応じた過去の集計日付の再配分は行わない。
+- `normalBounds`だけのsettings変更は記録ReadModelの`revision`を進めない。学習状態等と記録変更は通常どおり更新する。[窓の設計](../features/window-lifecycle.md)。
 
-停止中のtickは時計確認を継続するが、日付高水位・count・coverageに差分がなければtransactionと配信を省く。保存方式のprobe失敗は原本を保持して再試行/終了のOS dialogを示す。CIには開発版・配布版両方のSQLite smokeを追加した。今後の実装完了条件（push、最新headのCI/Codex確認、必要な修正と再検証）はAGENTS.mdに集約する。
+## 4. 失敗・停止・復旧
 
-以下の125件等は初回実装時の記録。レビュー修正後の最終確認はPR #57の最新headに対応するCIとCodexレビューで確認する。
-
-2026-10-19、Windows 11 build 26300 / x64で確認。ホストNode 24.11.1、開発版・配布版Electron 44.7.0 / 同梱Node 24.21.0。
-
-| 確認 | 結果 |
+| 状況 | 守る条件 |
 | --- | --- |
-| `npm.cmd run typecheck` | 成功 |
-| `npm.cmd run test:unit` | 125件成功（新規保存12件を含む） |
-| `node node_modules/electron-vite/bin/electron-vite.js build` | Main / Worker / Preload / Renderer成功。helperの再buildは今回の実施範囲外 |
-| `npm.cmd run package:dir` | 最終のWindows x64配布フォルダー作成成功 |
-| 開発版・配布版の`--storage` smoke | 各成功。mouse1/key1、120日前のquery/React表示、保存先再open、範囲外IPC拒否、helper停止を確認 |
-| 開発版・配布版の従来JSON smoke | 各成功。既存の設定・停止・削除・再読込・通知・窓・IPCの回帰 |
-| `git diff --check` | 成功 |
+| 保存／応答不明 | 未確定差分を保持、観測・通知を停止。再接続後に**同一ID**で再試行 |
+| DB読込失敗・破損 | 原本を保持して失敗を示す。空DB作成・旧JSONへのfallback禁止 |
+| 保存保留中の開始要求 | 新しい観測の開始を拒否し、明示的な再開前に未保存を解決 |
+| 保存再試行成功 | 旧通知は再発行しない。**自動では計測再開しない** |
+| observer／時計の別故障 | 保存の回復と独立に故障状態を保持。保存成功だけで解除しない |
+| 削除の失敗 | [履歴削除](history-deletion.md)に従いpending purgeと世代を保持 |
 
-単一writer試験は同じ保存先を開く二つ目のRepositoryを拒否し、強制終了試験は隔離Main子プロセスを終了した後の再取得を確認した。ACK喪失は本番Workerのcommit後に外部境界で応答を失わせ、実Worker再接続後の同一差分retryで非重複を確認した。物理I/O故障や停電の代用とは扱わない。
+- `errorKind`は記録保存・設定保存・読込・時計・observerを区別。保留記録・最新設定を先に確定し、残る読込故障を再検査する。Mainからの再読込やRendererの古い非同期応答によって確定データを巻き戻さない。
+- 両画面の保存エラーバナー・retryは[設定パネル](../features/settings-panel.md)／[UI要件](../ui-requirements.md)に従う。再試行可能な保存障害が復旧しても、observer／時計による停止を消さない。
 
-再現コマンドはREADMEの開発確認を参照。`tests/durable-storage.test.ts`は実SQLite/本番Worker/Coreを使い、保持・再読込・稼働量・無操作高水位・未来日・単一writer・応答喪失再接続・epoch・session・削除・rollback・Main異常終了・原本保護を確認する。SQL triggerのRAISE(ABORT)はtransactionの故障注入であり、物理disk fullの実測とは呼ばない。
+## 5. 検証と保証の限界
 
-`node scripts/smoke.mjs --storage`は空の隔離userDataから、本番helperのfixture候補→判定→Workerのdisk commit→bridge→Reactのmouse/key表示、120日前の記録のqueryと画面表示、同じ保存先を開き直した保持を確認する。`--packaged --storage`は同じ試験を配布exeで実行する。再読込は保存Worker/Coreの再生成で、OSからの通常アプリ起動とは区別する。従来のsmokeは明示的な隔離JSONで既存経路の回帰を維持する。
-
-本変更では実入力・UIA追加観測・キー送出・通常userDataの読書きを行わない。helperソースは変更せず既存の同梱artifactを使用した。実ボリューム枯渇・WAL同期中の物理I/O故障・停電・OS crash・NSIS導入は今回の検証外。#10の技術検証を新製品の全故障条件の実測へ読み替えない。保存中断時の安全性は上記の試験条件内で確認する。
+- `tests/durable-storage.test.ts`、`tests/repository-faults.test.ts`等：本番Worker／SQLite・checkpoint・WAL、rollback・ACK喪失・再接続・再起動・単一writer・時計／coverage・エラーの競合と原本保持。
+- 隔離`node scripts/smoke.mjs --storage`：人工helper候補→実SQLite→IPC→React、古い日の有界queryと再open、保存エラー／再試行。配布版は`--packaged --storage`。
+- **配布版受入の実施範囲・未確認項目**は[V02検証記録](../validation/storage-acceptance.md)を参照。SQLiteのpage制限・SQL注入・プロセス強制終了は、**実ボリューム枯渇・OS crash・停電・SSD故障の再現ではない**。

@@ -1,31 +1,34 @@
-# 既存JSONの移行（#16 / T14）
+# 旧JSONからSQLiteへの移行
 
-通常起動は旧Coachの剪定を通さず、単一writerを確保した保存Worker内で旧v1文書を検査する。日付・旧W01〜W11・非負安全整数・設定・未知field/版を厳格に検査し、ENOENTだけを既定値へ置換する。原本はbyteのまま残し、存在しなかった文書は作らない。
+**責務**：既存の利用記録・設定を保全したままSQLiteへ移し、移行途中の中断や再起動でも**二重取り込み・原本の上書き・空データ化**を起こさない。[保存方式](durable-storage.md)を前提とする。
 
-## 保存と有効化
+## 1. 移行の前提と原本保護
 
-source identity（両文書の有無・長さ・bytesのSHA-256、pathや入力列なし）を`migration-init-*`へ同期保存し、markerを含むdirectoryを`migration-v1/`へ原子的に公開する。公開前中断で残るinit directoryにはDBも記録copyもなく、次の起動では新しいinitで再試行できる。所有markerがない既存stage・source変更・読取不能は停止する。存在確認もENOENTだけを未作成とし、ACL/I/Oエラーを握り潰さない。
+- 通常起動は保存先を選択して**単一writer排他を取得した後**、Worker内で旧counts／settingsのv1 JSONを厳格検査する。実在暦日、旧操作ID、非負安全整数、設定、未知field・未知schema版を検査し、**ENOENTのみ「未作成」**として扱う。ACL／I/O失敗や不正原本を空値に変換しない。
+- 旧JSONは**元のbytesのまま**保持し、欠落していた文書を作成しない。両ファイルの存在有無・長さ・SHA-256（path・キー列なし）で`source identity`を決める。移行中にsourceが変化したら停止する。
 
-counts・各旧rowのlegacy-unknown coverage（activeMs=0/gap=true）・opened・muted→excluded・他全IDのlearning・時計高水位・移行identityをtransactionで取り込む。旧全日付を`legacy_days`にも同時保存し、空日も再open照合・有界queryで保持する。新操作の過去countや既知0件、masteredは作らない。空日に架空の操作rowやcoverageは作らない。
+## 2. stagingとデータ変換
 
-DBを閉じて再openし、全旧日付集合・全日×ID×mouse/key、全coverage、全状態、opened、identity/metaとpurge=0を照合する。総和だけで合格にしない。stagingモードではpurgeを実行しない。sourceも再照合し、閉じた保存一式を同一ボリュームのdirectory renameで`records-v1/`へ原子的に有効化する。新規保存のauthority markerと初期化保護もそのまま移る。
+1. `migration-init-*`にidentityを同期保存し、所有markerのある`migration-v1/`へdirectoryを原子的に公開する。所有markerのないstage・不一致は再初期化せず停止。
+2. **ひとつのtransaction**で旧日別件数・全日付（空日を含む`legacy_days`）・状態・時計高水位・移行identityを取り込む。
+3. 旧件数のcoverageは**legacy-unknown（`activeMs=0 / gap=true`）**。過去の観測能力・既知0回・習得済みを推定せず、新操作へ旧回数を合算しない。
+4. 旧`muted`は`excluded`へ、その他は学習中へ写す。旧W09など対象外の記録もDBへ保全するが、**現行の8操作UIには含めない**。旧IDの再採番はしない。
 
-中断stageは所有identityが一致したときだけ再開する。transaction前なら再取込、commit済みなら全行照合だけを行い加算しない。未知・不一致のstageは空にして再作成しない。activation後は`records-v1/`自体がauthorityであり、JSONへアクセスしない。移行済みsource markerがあればDBとinitializedの両方を必須にし、同時欠落でも空DBを再作成しない。DB破損・欠落・未来版も再importしない。
+## 3. 全行照合とauthorityの切替
 
-W09の旧count/設定はDBへ保持し、通常の一覧・合計から外す。W14のIDは詰め替えず状態をlearningで確保する（旧v1 registryはW01〜W11のみ）。一覧は#17の正式12操作を使用し、移行したmutedも対象外として表示する。記録ページは#19で刷新するまで既存表を維持し、その合計からもW09を外す。
+- DBを**閉じて再open**し、旧日付集合・全日×操作ID×mouse/key・coverage・空日・全状態・`opened`・identity/metaを照合する。**総和の一致だけでは合格にしない**。
+- sourceも直前に再照合し、閉じた保存一式を同一ボリュームのdirectory renameで`records-v1/`へ**原子的に有効化**する。移行済みsource markerとDB／初期化情報が食い違えば停止。
+- 中断したstageは**同じidentityで所有が確認できる場合のみ**再開する。transaction前なら再取込、commit後なら再照合だけで二重加算しない。既存active DBの`migration`／`legacy_days`欠落、未知版・欠損・破損は空表や空DBへ再作成しない。
+- **有効化後はSQLiteが唯一のauthority**。残存JSONへfallback／再importせず、通常起動時に原本を再走査しない。WALを含めDBの一部だけをコピーして安全なバックアップとみなさない。
 
-移行済みactive DBでは`migration`/`legacy_days`の存在も必須とし、欠落を空表として再作成しない。補助表の追加は非移行DBのschema拡張と未公開stagingに限る。
+## 4. 削除と利用者データの場所
 
-## 全削除
+全記録の削除では旧JSON・一時`.tmp`・固定stagingの掃除まで完了して初めて成功。失敗時はpending cleanupとして再起動でも続行し、**旧原本から再度記録を復活させない**。学習状態・opened・normalBounds・消費済みsource identityは保持する。[削除の詳細](history-deletion.md)。
 
-件数・coverage・legacy_days削除とepoch更新のtransactionで移行metaと`deletion_cleanup`をpending purgeにする。続けて旧counts.json/settings.json、その`.tmp`、固定staging `migration-v1/`を削除し、完了metaを保存してから応答する。新規SQLite利用者の削除も`deletion_cleanup`で追跡する。原本削除前にもDBは消費済みauthorityを維持する。cleanup失敗は未保存エラーとして停止し、同じ要求のretryまたは次のWorker起動時に残りを削除する。設定・状態・opened・normal bounds・source消費identityはDBへ残す。stagingは通常activation時に移動済みで記録の別backupは作らない。SSDの物理消去は保証しない。
+通常userDataは既存の`window-shortcut-coach`を維持し、開発用`.tools/coach-data`、試験用の専用userDataと分離する。アプリ名・appId・保存先の変更を移行の理由で行わない。
 
-## identityと検証
+## 5. 検証と限界
 
-`electron-builder.yml`のproductName=`Window Shortcut Coach`、appId=`local.window-shortcut-coach`、package name=`window-shortcut-coach`、通常のuserData選択を維持する。配布版はElectronの既存userData、開発版は`.tools/coach-data`、fixtureは起動時に専用userDataへ分離する。名称変更・別dir探索・通常の記録ファイル読取は行わない。
-
-2026-10-19に既存`release/operation-detection/win-unpacked/resources/app.asar`のpackage nameとMain内の`app.getPath('userData')`使用を読み取り、実行時identity=`window-shortcut-coach`と照合した。通常保存フォルダー`%APPDATA%\window-shortcut-coach`の存在もメタデータだけ確認し、従来READMEの`Window Shortcut Coach`（空白あり）は存在せず表記誤りと判明した。通常記録の内容は読まず、移行対象の実保存位置と既存identityを維持する。旧NSISからの更新自体は未確認。
-
-`tests/storage-migration.test.ts`は本番reader/Store/Workerを使い、原本bytes、長期row、状態、coverage、再open、schemaのみ/commit後中断、transaction rollback、総和一致の行改変拒否、source変更、破損/未知版、authority優先、削除後再importなし、purge失敗と再起動復旧を確認する。
-
-`node scripts/smoke.mjs --migration`は隔離旧JSONから起動し、本番Worker→Core→IPC→Reactで古い日の7/5件とW09除外を確認する。同じuserDataで完全終了・再プロセス起動して再確認する。`--packaged --migration`は配布exeで同じ確認を行う。人工fixtureの結果であり、実入力精度・通常userData/旧NSIS更新・停電の証明ではない。
+- `tests/storage-migration.test.ts`、`tests/storage-migration-files.test.ts`：既存原本bytes、空日、長期履歴、source変更、schema中断、部分commit・再実行、全行照合、破損・旧原本の再import拒否、cleanup復旧。
+- 隔離`node scripts/smoke.mjs --migration`：旧JSON→Worker→Core→IPC→画面、完全終了後の**別プロセス起動**による二重取り込み防止。配布版は`--packaged --migration`。
+- 選定時の技術的根拠は[SQLite方式のprobe](../research/sqlite-storage-validation.md)、配布版の検証範囲は[V02受入](../validation/storage-acceptance.md)を参照。通常userDataの実アップグレード、NSIS更新、電源断による任意のrename途中の安全性はfixture成功だけでは保証しない。

@@ -1,29 +1,29 @@
-# 履歴削除（#24）
+# 利用記録の全削除
 
-正本：承認済みSpec §7.4/§9、[Figma 349:2534](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=349-2534)。対象は正式確認・限定IPC・履歴削除と非復活。保存エラーバナーの正式デザインは#25、V02/V03全体の受入は#45/#46に残す。
+**責務**：利用者の明示確認後に記録を論理的に削除し、遅延書込・再起動・旧JSONからの**記録の復活を防ぐ**。確認画面は[製品要件](../ui-requirements.md)と[Figma](https://www.figma.com/design/mMfK6fQQzfhUqRHR7jsGne?node-id=349-2534)を正本とする。
 
-## 確認から削除まで
+## 1. 確認から削除まで
 
-1. gearから設定を閉じ、440×218pxの`DeleteDialog`を開く。キャンセル初期focus、Tab/Shift+Tab循環、Esc取消、背景inert、確定中の二重操作防止を持つ。
-2. `requestDelete()`でMainがUUID tokenを発行する。mainFrameに紐付け、5分・単回有効。再確認・取消・hide・navigation・終了で旧tokenは無効。`deleteCounts(token)`はsender/引数/tokenを検証し、control queueへ入る前に消費する。パスや保存内容は渡さない。
-3. 確定までは計測を継続。Mainで観測停止・旧世代無効化後、Core queueと未確定writeを解決する。Repository transactionでcounts/coverage/legacy_daysを削除し、epochとpending purgeを更新する。
-4. 旧JSON・その一時ファイル・固定stagingの掃除と完了meta保存まで成功した場合だけ成功応答する。コピーの別backupは作成していない。学習状態/opened/normal boundsとsource消費identityは残す。
-5. 元が計測中なら新世代で再開し、停止中なら停止を保持。失敗は停止・保存エラー/再試行へ返す。削除の再試行成功時も元の計測状態へ戻す。先行writeが失敗し続けた場合もCoreは削除要求を保留し、retryで先行write解決後に削除まで完了する。起動時はpending purgeを観測前に実行し、authorityがあれば旧コピーを再importしない。
+1. 設定から`DeleteDialog`を開き、キャンセル初期focus、Tab／Shift+Tabのfocus循環・Esc取消・二重確定防止を提供する。
+2. `requestDelete()`でMainが**mainFrameに紐付いたUUID token**を発行（5分・1回限り）。再確認／取消／hide／navigation／終了で無効化し、`deleteCounts(token)`はsender・引数・tokenを検査して**control queue投入前に消費**する。
+3. 確定までは計測を続け、実行時は観測停止・旧世代無効化→Core queueと先行の未確定保存解決→削除transactionへ進む。
+4. **同じtransaction**で`counts / coverage / legacy_days`を削除し、`recordEpoch`とpending cleanupを更新。旧JSONの2文書・`.tmp`・固定`migration-v1/`を掃除し、完了meta保存後にのみ成功応答する。
+5. 元が計測中なら**新世代**で再開し、元から停止中なら停止を維持する。古いepochの遅延要求は受け付けない。
 
-## 2026-10-20 検証
+## 2. 保持する情報と失敗時の扱い
 
-Windows 11 Home build 26300、Node 24.11.1/npm 10.9.2、.NET SDK 10.0.401、Electron 44.7.0（内蔵Node 24.21.0）。通常userDataには触れず、全て専用の人工fixture。
-
-| 経路 | 結果と証拠の範囲 |
+| 保持・削除 | 内容 |
 | --- | --- |
-| typecheck / unit | 成功、211件。token期限・frame・取消・重送・不正IPC、実SQLiteで掃除失敗→再起動・旧epoch拒否・設定保持、実Worker/Coreで遅延write→削除→再open、既存ACK喪失・rollback回帰 |
-| native | 6件成功、内部で本番C# policy 63 assertions。実入力payloadを読まないhook fixture |
-| build / package:dir | 成功。`release/issue-24/win-unpacked/Window Shortcut Coach.exe` |
-| 通常版・同梱版のsettings smoke | 成功。4幅800/920/1120/1360、dialog寸法、初期focus、実キーボードTab/Shift+Tab/Esc、取消、確定前のCore人工記録、重送防止、旧世代拒否、reset故障→retry、計測中/停止中の復帰。本番Main/Preload/React/SQLiteを使用。画像を目視照合 |
-| 通常版・同梱版の既存smoke | UI/IPC・storage・migration（各2起動）・comparisonが成功 |
+| 削除する | 操作回数・coverage・旧移行日付と残存旧JSON／staging |
+| 保持する | 学習状態、`opened`、`normalBounds`、移行済みsource identity |
+| 保証しない | 物理SSDの完全消去・復元不能化。別のbackupを自動生成しない |
 
-実行入口はREADME。削除UIの回帰は`node scripts/smoke.mjs --settings`と`node scripts/smoke.mjs --packaged --settings --package-dir release/issue-24`。CIも同じsettings smokeを実行し、自アプリの`delete-*.png`を保存する。
+- 先行する保存が失敗したら削除要求を**pendingとして保持**し、保存解決後に削除する。削除自体の掃除が失敗した場合も**成功と表示しない**。保存エラーで停止し、同一要求の再試行または次の起動時に掃除を完了する。
+- 削除後のACK喪失でもcheckpointと更新済みepochで**二重削除・旧データ復活を防ぐ**。cleanupの完了が確認できるまで観測を始めない。復旧成功時は削除実行前の計測状態へ戻す。
+- authorityが存在するときは残った旧JSONを**再importしない**。論理的な削除の原子性と、記憶媒体からの物理消去は区別する。[保存・再送の詳細](durable-storage.md)。
 
-同梱exe SHA-256：`2D0FA69A94D04E76D1BFE66279B4116150DA7AE6BEEB038FC00AB73047BBF449`。これはこの時点の隔離検証物であり、リリース成果物ではない。
+## 3. 検証と限界
 
-実入力精度・UIA・自然キー送出・物理disk full/停電・SSD物理消去・混在DPI/文字拡大・NSIS導入・通常60分は未検証。Coreへ直接与えた人工候補はNative検出の証拠に含めない。データ削除の論理原子性と故障回復の試験を、物理媒体の完全消去や自然入力精度の保証にしない。
+- `tests/delete-confirmation.test.ts`、`tests/delete-purge.test.ts`、`tests/durable-storage.test.ts`：tokenの期限・単回性とframe制限、並行保存・失敗・再試行、epoch更新・旧書込拒否、設定保持と移行原本の掃除。
+- 隔離`node scripts/smoke.mjs --settings`（配布版は`--packaged --settings`）：実Main／Preload／React／SQLiteのfocus・取消・確定・失敗復旧を確認。
+- V02の配布物受入・未確認の物理障害は[検証記録](../validation/storage-acceptance.md)。人工入力・SQLiteエラーの注入・画面smokeだけで自然入力精度／実OS障害／SSD物理消去を保証しない。
