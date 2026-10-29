@@ -1,5 +1,8 @@
 # W03・W04の検出器と受入条件（#31・#33）
 
+> **2026-10-29 Issue責務の更新：** 本文の「#31は#113待ちでOpen」という完了判断は、PR #115時点の旧Close基準による履歴。#31はW03単独の局所実装として完了・Close済み。W02＋W03の複合確定・原子保存・単一Toastは[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)、実機最終受入は[#47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)の責務。現行Close基準は[#31](https://github.com/YutoMatsui21/shortcut-expert/issues/31)を参照。以下の当時の実装証拠・未確認範囲は変更しない。
+
+
 2026-10-28。開始revisionは`bcd8fad2709460f4d48a0d2c54f8d2970e8360cb`。
 正本は[確定要件](ui-redesign-requirements.md)。[技術再審査](research-compound-drag-validation.md)と最新の#9・#14により、G-W03/G-W04は制約付き着手PASS。研究時の成功を、この製品buildの自然入力精度へ読み替えない。
 
