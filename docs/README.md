@@ -1,9 +1,9 @@
 # ドキュメント案内
 
-現行の製品要件・受入条件は[確定要件](ui-redesign-requirements.md)を優先します。過去資料は現行仕様の根拠には使いません。
+現行の製品要件・受入条件は[確定要件](ui-requirements.md)を優先します。過去資料は現行仕様の根拠には使いません。
 
 ## 基本資料
-- [確定要件](ui-redesign-requirements.md)：何を実現し、どの条件で受け入れるか
+- [確定要件](ui-requirements.md)：何を実現し、どの条件で受け入れるか
 - [設計・アーキテクチャ](design.md)：モジュール構成、責務分担、実装方針
 - [開発・検証ガイド](development.md)：起動・ビルド・試験
 - [開発ツール](development-tools.md)：開発環境、取得・監視の手順

@@ -1,6 +1,6 @@
 # Issue #4：Task View表示の調査と限定probe
 
-> 2026-10-27：W08（Win+Z）・W10（Win+Tab）は初回8操作の対象外。関連学習候補にも含めない。本書は対象変更前の実装・調査・証拠として保持する。現行の対象は[確定要件](../ui-redesign-requirements.md)を参照。
+> 2026-10-27：W08（Win+Z）・W10（Win+Tab）は初回8操作の対象外。関連学習候補にも含めない。本書は対象変更前の実装・調査・証拠として保持する。現行の対象は[確定要件](../ui-requirements.md)を参照。
 
 
 2026-10-22。対象は [Issue #4](https://github.com/YutoMatsui21/shortcut-expert/issues/4) のB03/A03。製品検出器の実装ではない。本体の閉→開→閉、mouse/key由来、負例での誤判定0は**未実証**。Issueは未完了。

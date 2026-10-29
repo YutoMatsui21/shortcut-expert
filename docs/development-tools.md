@@ -1,54 +1,55 @@
-# 開発時の取得・読取・監視
+# 開発ツールの使い方
 
-## 実行環境
+開発ガイドに載せきらない**取得・調査・PR監視・実行環境の補助ツール**だけを扱う。標準のビルド・テスト手順は[開発ガイド](development.md)、ツールの実装と引数は`scripts/`・[package.json](../package.json)、GitHub操作の規則は[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)を正本とする。
 
-`npm.cmd run dev:check`は作業先のTEMPとElectron/builderキャッシュでwrite→renameを確認し、Electron・SDK・helperの有無を要約する。SDKは.NET hostがglobal.jsonのrollForwardも含めて解決した版を採用し、基準版と実際の版を返す。必要な部品は`-- --require=electron,sdk,helper`で指定する。部品の存在確認はソースの新しさや検証成功を保証しない。
+## 1. 実行環境を確認する
 
-依存は`npm.cmd run dev:install`、Electron本体だけ不足する場合は`npm.cmd run dev:electron`を使う。installはネットワークを使う明示的な操作。`dev-run.mjs`を通るnpm入口、unit/native runner、helper build、smokeは各子プロセスへ作業先のTEMP/cacheを渡す。builderのElectron取得は環境変数だけを参照しないため、wrapperが`electronDownload.cache`も明示する。前のshellで設定した環境変数を引き継ぐ必要はない。SDKの版はglobal.json、各入口はpackage.jsonを正本とする。
+~~~powershell
+npm.cmd run dev:check
+npm.cmd run dev:check -- --require=electron,sdk,helper
+~~~
 
-権限・接続失敗時は最初の原因を確認し、設定修正や承認済みの再実行で条件を変えてから再試行する。同じURLの接続切断を別HTTPクライアントでも繰り返したら、接続先/実行環境を切り分け、版・licenseを確認できる配布経路へ移る。別worktreeの依存や古い生成物を標準の代替にしない。
+`scripts/dev-run.mjs`はツール実行時のTEMPとnpm/Electron cacheを作業先へ向ける。`dev:check`は書込可能性と部品の有無を検査し、SDKの解決バージョンも表示するが、ソースの再buildや動作検証はしない。不足があれば`npm.cmd run dev:install`、Electron本体のみ不足なら`npm.cmd run dev:electron`を使う（ネットワーク取得あり）。SDK版は[global.json](../global.json)、Node/Electron版は[package.json](../package.json)を参照。
 
-## 仕様の取得と読取
+権限・接続エラーは**最初の失敗原因**を確認する。同じ失敗を設定変更なしで繰り返さず、別worktreeの生成物を無条件に流用しない。
 
-GitHub CLIが使える実行環境では、取得・UTF-8保存・revision/hashの記録を一つの入口で行う。初回はネットワークから取得し、次回は検証したcacheを使う。標準出力はmetadataと見出しだけ。
+<a id="仕様の取得と読取"></a>
+## 2. Issueとソースを必要な範囲だけ読む
 
-```powershell
+`scripts/github-workflow.mjs`は`gh`を利用してIssue本文を取得し、revision/hash付きで`.tools/issues/`にcacheする。変更が必要なら`--refresh`で再取得する。
+
+~~~powershell
 node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert
-node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert --section="見出し一覧にある正確な見出し"
-```
+node scripts/github-workflow.mjs issue 14 --repo=YutoMatsui21/shortcut-expert --section="見出し一覧の正確な見出し"
+~~~
 
-cacheは`.tools/issues/<owner>--<repo>/<number>.json`。ATX（#形式）の該当見出しと下位節だけを出力し、3文字までの字下げ・末尾の閉じる#を扱う。code fence内の見出しは検索対象にしない。他形式や同名見出しが複数あるときはcacheの行位置から読む。仕様更新が必要なら`--refresh`で再取得する。取得・identity検証が失敗した場合は正常cacheを置換しない。cache破損は自動採用せずrefreshを要求する。
+- `gh auth status`で**現在の実行環境**の認証を確認。CLIが利用できないときだけ接続済みGitHubツールを使う。
+- `rg`で関連する型・関数・呼出し元を特定し、必要な節と差分を読む。調査済みの全文を毎回読み直さない。
+- 読込失敗やcache破損を最新仕様と見なさず、取得元・revisionを確認する。
 
-`gh auth status`は利用する実行環境で一度確認する。CLIが使えない場合は接続済みGitHubツールで取得し、必要節をファイル編集APIで保存する。本文全体をshellの引数へ再生成して運ばない。取得元・updated_at/revisionと保存成功を確認し、必要になった節だけを読む。認証・権限の失敗を別環境の恒久的な失敗とみなさない。
+<a id="pr監視"></a>
+## 3. PRとCIを確認する
 
-ソース調査は`rg`で型・関数・呼出し元を探し、必要な範囲を読む。既読の仕様節・型/関数・関連試験を短く作業メモへ残し、変更後は対象関数とdiffを読む。全文再読は、未知の責務や差分だけでは判断できない理由がある時に行う。変更後の再読や生成されたログ末尾の確認は重複とは限らない。
+PR前レビュー・merge条件は[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)。**PR後は最新headの必須CI `windows-quality` を確認**し、GitHub Codexレビューの結果をmerge条件にしない。
 
-## PR監視
+~~~powershell
+gh pr checks <PR番号> --watch --interval 30
+~~~
 
-PR前のローカルレビューとCI失敗後の再レビューは[追加レビュー規則](code-review.md)・[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)に従う。PR後はCIを必須として監視する。GitHub上の`@codex review`は依頼しない。以下は最新headのCIを効率的に確認する手順。
+詳細なチェックや未解決threadが必要なら`scripts/github-workflow.mjs pr-status`でheadを指定して要約を取得できる。
 
-最新headの完全SHAを固定してCIのチェックを確認する。`pr-status`は1回のGraphQL取得からchecks・review/comment識別子・未解決thread数も要約できるが、GitHub Codexレビューの完了はMerge条件にしない。
-
-```powershell
+~~~powershell
 $prHead = git rev-parse HEAD
-node scripts/github-workflow.mjs pr-status 64 --repo=YutoMatsui21/shortcut-expert --head=$prHead
-```
+node scripts/github-workflow.mjs pr-status <PR番号> --repo=YutoMatsui21/shortcut-expert --head=$prHead
+~~~
 
-同じheadで状態が変わらない場合は小さな要約だけを返し、過去コメントの省略警告も保持する。コメント本文の編集やthreadの変化も差分として検出する。30秒以上空け、状態不変なら60秒へ延ばす。必要な指摘本文と最終確認は`--details`で取得する。
+- `head`不一致、チェック未開始・skip・取得失敗を成功と扱わない。必要時のみ`--details`で全文を取得する。
+- Markdownのみの変更は軽量CI、コード・設定変更はWindowsフルCI。いずれも`windows-quality`成功が必須（[quality.yml](../.github/workflows/quality.yml)）。
+- 反復取得ではステータス要約を優先し、生ログや全コメントを繰り返し取り込まない。branch protectionの追加条件は別に確認する。
 
-head不一致・取得エラー・checks/reviews/threadsおよび各thread内コメントのページ上限超過では完了扱いにしない。threadは最初の指摘から返信まで100件を取得し、本文の編集も差分検出へ含める。上限を超えた項目は接続済みツールやCLIのpaginationで最後まで確認する。PR全体のcommentsは直近20件なので、`earlierCommentsOmitted`なら必要な過去コメントを追加取得する。`checksPassed`はレビュー合格を意味しない。レビュー結果の不存在はCI失敗として扱わない。既存の重大なレビュー指摘やbranch protectionの追加条件は個別に確認する。この監視スクリプト自身はmergeやレビュー依頼を実行しない。
+## 4. 編集・診断の注意
 
-`change-scope`で差分を分類し、Markdownのみなら軽量Linux、それ以外はWindowsフルCIを実行する。差分取得失敗・手動実行時はフルCIを選ぶ。必須`windows-quality`は必ず実行し、判定不明時は失敗する。軽量チェックの成功とジョブ自体のskipは区別する。
-
-成功には本リポジトリのQuality job `windows-quality`の成功を必要とし、未開始・skip・無関係なbot checkだけでは合格にしない。job名を変更する時はworkflowと`github-workflow.mjs`のrequiredChecksを同時に更新する。branch protection等の追加条件は最終merge確認で照合する。
-
-GitHub APIが使える限り、待機中にrun/job/全コメントを別々に全面取得しない。取得失敗を成功扱いせず、対応する接続済みツールへ切り替える場合も最新headを維持する。
-
-## 編集とプロセスの扱い
-
-- patchは同じファイルの変更を一つの操作にまとめ、古いhunkが拒否されたら対象行だけを再確認する。
-- Pythonで日本語ソースを編集する場合は`python -X utf8`と`read_text/write_text(encoding='utf-8')`を使う。長いファイル内容はファイル編集APIで渡す。
-- 非同期処理は返されたIDを保存し、終了結果を受け取ったIDを待機対象から外す。`functions.wait`のcell IDと`write_stdin`のsession IDを区別する。
-- 成功した検証はソース・依存・生成物・環境と対応づける。変更した範囲を再検証し、UI/fixtureの期待を固めてから最終packageする。現行の全体確認や最新headのレビューを省略しない。
-
-smokeはElectronモジュールの読込より先にTEMP/cacheを設定し、初回の自動downloadも同じ作業先へ向ける。同梱版では開発用Electronを読み込まない。終了時に成功markerがない場合は、exit 0でも不成功とする。通常のstage/stackに加え、空出力やtimeoutでもmode・起動回数・終了status/signal・出力byte数を表示する。不正IPC拒否のような意図した負例ログと、最初の失敗stageを区別する。診断は隔離fixtureの試験経路だけで出す。
+- 変更は対象箇所と差分に限定する。古いpatchが失敗したら対象行を再読込する。
+- 日本語ファイルをPythonで編集する場合は`python -X utf8`などでUTF-8を明示する。
+- 長時間処理は実際の終了状態を確認し、失敗stage・終了コード・必要なログだけを読む。
+- Electron smokeは専用のTEMP/cacheと隔離userDataを使い、**成功markerがないexit 0は合格にしない**。検証結果はbuild・環境と結び付けて残す。

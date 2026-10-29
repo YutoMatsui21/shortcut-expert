@@ -4,7 +4,7 @@
 
 
 2026-10-28。開始revisionは`bcd8fad2709460f4d48a0d2c54f8d2970e8360cb`。
-正本は[確定要件](../ui-redesign-requirements.md)。[技術再審査](../research/compound-drag-validation.md)と最新の#9・#14により、G-W03/G-W04は制約付き着手PASS。研究時の成功を、この製品buildの自然入力精度へ読み替えない。
+正本は[確定要件](../ui-requirements.md)。[技術再審査](../research/compound-drag-validation.md)と最新の#9・#14により、G-W03/G-W04は制約付き着手PASS。研究時の成功を、この製品buildの自然入力精度へ読み替えない。
 
 ## 共通処理と操作別の条件
 

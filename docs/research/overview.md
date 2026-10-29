@@ -1,6 +1,6 @@
 # 調査・検証根拠
 
-**2026-10-09〜11の調査・実測の記録**。現在の要件は[確定要件](../ui-redesign-requirements.md)、設計は[現行アーキテクチャ](../design.md#architecture)を正本とする。旧MVP要件は[アーカイブ](../archive/mvp-requirements.md)へ移動した。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
+**2026-10-09〜11の調査・実測の記録**。現在の要件は[確定要件](../ui-requirements.md)、設計は[現行アーキテクチャ](../design.md#architecture)を正本とする。旧MVP要件は[アーカイブ](../archive/mvp-requirements.md)へ移動した。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
 
 必要な節だけ読む： [採用理由](#value)・[判断修正](#review)・[KPX](#kpx)・[競合](#tools)・[環境別制約](#platforms)・[11操作の判断](#operations)・[API保証範囲](#apis)・[実測](#measurements)・[probe再現](#probes)。
 
@@ -10,7 +10,7 @@
 
 ## ステップ1：価値検証
 
-2026-10-09承認・完了。当時の要件は[旧MVP要件](../archive/mvp-requirements.md)。現在の受入条件は[確定要件](../ui-redesign-requirements.md)。
+2026-10-09承認・完了。当時の要件は[旧MVP要件](../archive/mvp-requirements.md)。現在の受入条件は[確定要件](../ui-requirements.md)。
 
 ### 目的・採用理由
 
@@ -70,7 +70,7 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 - 事実・提供状況・公開コード：[競合調査](overview.md#tools)。
 - IDE内部Action：[KPX参照](overview.md#kpx)。コマンド履歴・Windows画面推定：[競合調査](overview.md#tools)。API制約：[環境別調査](overview.md#platforms)。
 
-ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現在の仕様は[確定要件](../ui-redesign-requirements.md)。
+ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現在の仕様は[確定要件](../ui-requirements.md)。
 
 <a id="kpx"></a>
 
@@ -151,11 +151,11 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 W11の本番実装と局所検証は[#39の判定契約](../operations/window-close.md)・[2026-10-29の結果](../operations/window-close-validation.md)を参照。通常閉鎖でもHIDE/前面変更/DESTROY時点の生存が先行する実測を保存し、同一対象の破棄と消滅を照合する。
 
-> 2026-10-27：初回は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合、W08/W10は関連学習候補も含め対象外。以下の表は判断時点の証拠・仮説を保持し、現在の対象・経路は[確定要件](../ui-redesign-requirements.md)を優先する。W03上端直接ドラッグ、W07のWin保持列、W04連続Win+↓は個別ゲートで確認する。
+> 2026-10-27：初回は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合、W08/W10は関連学習候補も含め対象外。以下の表は判断時点の証拠・仮説を保持し、現在の対象・経路は[確定要件](../ui-requirements.md)を優先する。W03上端直接ドラッグ、W07のWin保持列、W04連続Win+↓は個別ゲートで確認する。
 
 > 2026-10-28 #9実測中の本人決定：画面をまたいで上端へ直接ドラッグし最大化した操作はW03だけ、別画面の通常位置で離した移動はW02だけとする。「monitorが変われば常にW02優先」という調査時の仮説はこの境界では採用しない。入力対象・ドラッグ終端・最大化を照合し、Snap Layout選択やprogram最大化を混同しない。移動中の派生復元の非計上は維持する。Win+↑単独と画面移動込みの操作全体との同等性は未成立。左右半分／四隅の画面跨ぎへは優先順位を拡張しない。過去の原本と判断は当時の証拠として保持する。
 
-> **2026-10-28 後続の仕様改訂（調査原本・当時の判断は変更しない）**：上記の「画面跨ぎ上端dragはW03のみ」の排他的ルールを撤回。drag終了時に別monitorへ移動が確定し、同じdragで最大化も確定したら**W02＋W03各1件**、四隅quarterも確定したら**W02＋W07各1件**を記録する。中間monitor変化のみ・派生復元・中間halfは記録しない。操作別記録2件・同一gestureの通知最大1件の契約は[現行要件](../ui-redesign-requirements.md)と[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。下記の2026-10-28実測や評価は**当時の証拠と評価**として残し、新方針の技術成立を実証したことにはしない。
+> **2026-10-28 後続の仕様改訂（調査原本・当時の判断は変更しない）**：上記の「画面跨ぎ上端dragはW03のみ」の排他的ルールを撤回。drag終了時に別monitorへ移動が確定し、同じdragで最大化も確定したら**W02＋W03各1件**、四隅quarterも確定したら**W02＋W07各1件**を記録する。中間monitor変化のみ・派生復元・中間halfは記録しない。操作別記録2件・同一gestureの通知最大1件の契約は[現行要件](../ui-requirements.md)と[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。下記の2026-10-28実測や評価は**当時の証拠と評価**として残し、新方針の技術成立を実証したことにはしない。
 
 > [2026-10-28の8操作調査結果（#9）](eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、当時はW12/W01/W04/W06/W11が制約付き着手可、W03/W07/W02は未成立。その後の新仕様と16追加試行による[#14の再審査](compound-drag-validation.md)で、全8ゲートを制約付き着手PASSとした。製品完全対応・リリース合格ではない。下表の初期仮説や過去の結論は最新ゲートの代用にしない。
 
@@ -197,7 +197,7 @@ W11の本番実装と局所検証は[#39の判定契約](../operations/window-cl
 - rectはDPI仮想化・不可視枠、画面は作業領域を考慮して座標系をそろえる。固定pxだけでsnapと断定しない。
 - W08は2026-10-23に呼び出し推定方式へ仕様変更。EVENT_SYSTEM_ARRANGMENTPREVIEWはpreview rectの表示であり、W08の呼び出し証拠にも本体表示成功の証拠にも代用しない。W10のSWITCHSTART/ENDはAlt+Tab用。
 - W09の裸のdesktop表示をIAppVisibilityだけで断定しない。[API](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-iappvisibility)、[値](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/ne-shobjidl_core-monitor_app_visibility)
-- W08〜10の専用APIが存在しないとは断定しない。旧W08の表示成功方式は未成立の調査記録として保持し、現行W08の根拠は[呼び出し推定の実測判断](snap-invocation-validation.md)と[確定要件](../ui-redesign-requirements.md#w08配置候補を呼び出す2026-10-23-仕様変更)を優先する。
+- W08〜10の専用APIが存在しないとは断定しない。旧W08の表示成功方式は未成立の調査記録として保持し、現行W08の根拠は[呼び出し推定の実測判断](snap-invocation-validation.md)と[確定要件](../ui-requirements.md#excluded-operations)を優先する。
 - UIA tree・提供eventsは固定保証がなく、action eventsにもuser/program両方がある。
 - key押下や中間stateを成功数にしない。観測回数を習得率・全操作成功数としない。常用4アプリへの一般化も未確認。
 
