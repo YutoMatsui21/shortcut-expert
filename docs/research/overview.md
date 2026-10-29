@@ -149,7 +149,7 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 <a id="operations"></a>
 
-W11の本番実装と局所検証は[#39の判定契約](../operations/window-close.md)・[2026-10-29の結果](../operations/window-close-validation.md)を参照。通常閉鎖でもHIDE/前面変更/DESTROY時点の生存が先行する実測を保存し、同一対象の破棄と消滅を照合する。
+W11の本番実装と局所検証は[#39の判定契約](../operations/window-close.md)・[2026-10-29の結果](../validation/window-close-20261029.md)を参照。通常閉鎖でもHIDE/前面変更/DESTROY時点の生存が先行する実測を保存し、同一対象の破棄と消滅を照合する。
 
 > 2026-10-27：初回は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合、W08/W10は関連学習候補も含め対象外。以下の表は判断時点の証拠・仮説を保持し、現在の対象・経路は[確定要件](../ui-requirements.md)を優先する。W03上端直接ドラッグ、W07のWin保持列、W04連続Win+↓は個別ゲートで確認する。
 

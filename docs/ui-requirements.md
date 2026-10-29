@@ -43,7 +43,7 @@
 <a id="excluded-operations"></a>
 ### 初回対象外と既存データの扱い
 
-W05（旧最大化解除）はW04に統合。W08（Snap Layout呼び出し）・W10（Task View）・W09（デスクトップ表示）・W14（全最小化）・W13（上下半分配置）は初回の一覧・記録・通知・関連候補・受入に含めない。Snap Layout選択UIを通る配置もW03/W06/W07へ帰属させない。旧W08の観測実装は通常の8操作経路で採用・通知しない。過去の検証は[operations/snap-invocation.md](operations/snap-invocation.md)と[research/](research/)に残す。
+W05（旧最大化解除）はW04に統合。W08（Snap Layout呼び出し）・W10（Task View）・W09（デスクトップ表示）・W14（全最小化）・W13（上下半分配置）は初回の一覧・記録・通知・関連候補・受入に含めない。Snap Layout選択UIを通る配置もW03/W06/W07へ帰属させない。旧W08の観測実装は通常の8操作経路で採用・通知しない。過去の検証は[W08の過去設計](archive/snap-invocation.md)と[research/](research/)に残す。
 
 8操作への切替に伴う**旧データ削除は承認済み**で、W04/W05間の履歴・学習状態の統合を要求しない。ただし、以後の通常のデータ保全・移行契約まで撤回した意味ではない。
 
