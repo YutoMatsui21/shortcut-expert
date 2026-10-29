@@ -26,5 +26,5 @@
 ## 3. 代替案と検証入口
 
 - **候補の新しい取得方法**を試すなら、UIA識別→物理座標→前後照会のうち失敗した層を先に特定する。番号が不明なままWin+数字通知を出す、process名から直接推定する、W01へfallbackする案は採用しない。
-- [probe source](../../validation/probes/TaskbarInputProbe.cs)、[実行入口](../../scripts/taskbar-input-probe.mjs)、[初期原本](../../validation/evidence/taskbar-input-20261025-initial.jsonl)・[物理座標診断](../../validation/evidence/taskbar-input-20261025-diagnostics.jsonl)・[worker再利用](../../validation/evidence/taskbar-input-20261025-worker.jsonl)。
-- 再実行は`node scripts/taskbar-input-probe.mjs --self-test`。本人の明示同意後のみ`--observe-consented`。通常アプリやpin／配置を変える試験は変更内容を事前に確認する。人工・自作窓の試行を、最終製品の実入力／OS通知／全環境の合格と混同しない。
+- [probe source](../../validation/probes/TaskbarInputProbe.cs)、[実行入口](../../scripts/probes/taskbar-input-probe.mjs)、[初期原本](../../validation/evidence/taskbar-input-20261025-initial.jsonl)・[物理座標診断](../../validation/evidence/taskbar-input-20261025-diagnostics.jsonl)・[worker再利用](../../validation/evidence/taskbar-input-20261025-worker.jsonl)。
+- 再実行は`node scripts/probes/taskbar-input-probe.mjs --self-test`。本人の明示同意後のみ`--observe-consented`。通常アプリやpin／配置を変える試験は変更内容を事前に確認する。人工・自作窓の試行を、最終製品の実入力／OS通知／全環境の合格と混同しない。

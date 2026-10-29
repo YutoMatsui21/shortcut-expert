@@ -1,7 +1,7 @@
 // Offline source-integrity check; never compile or execute historical probe sources.
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const evidence = new URL('../validation/evidence/', import.meta.url);
+const evidence = new URL('../../validation/evidence/', import.meta.url);
 try {
   const summary = JSON.parse(await readFile(new URL('task-view-summary-20261022.json', evidence), 'utf8'));
   if (summary.verdict !== 'unknown' || summary.acceptancePassed !== false) throw new Error('Invalid research verdict');

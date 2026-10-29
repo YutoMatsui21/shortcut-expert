@@ -49,5 +49,5 @@
 ## 5. 検証と保証の限界
 
 - `tests/durable-storage.test.ts`、`tests/repository-faults.test.ts`等：本番Worker／SQLite・checkpoint・WAL、rollback・ACK喪失・再接続・再起動・単一writer・時計／coverage・エラーの競合と原本保持。
-- 隔離`node scripts/smoke.mjs --storage`：人工helper候補→実SQLite→IPC→React、古い日の有界queryと再open、保存エラー／再試行。配布版は`--packaged --storage`。
+- 隔離`node scripts/test/smoke.mjs --storage`：人工helper候補→実SQLite→IPC→React、古い日の有界queryと再open、保存エラー／再試行。配布版は`--packaged --storage`。
 - **配布版受入の実施範囲・未確認項目**は[V02検証記録](https://github.com/YutoMatsui21/shortcut-expert/issues/45)を参照。SQLiteのpage制限・SQL注入・プロセス強制終了は、**実ボリューム枯渇・OS crash・停電・SSD故障の再現ではない**。

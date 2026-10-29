@@ -8,7 +8,7 @@ import { performance } from 'node:perf_hooks';
 import assert from 'node:assert/strict';
 import electron from 'electron';
 import { extractFile } from '@electron/asar';
-import { assertRuntime } from '../validation/probes/sqlite/runtime.cjs';
+import { assertRuntime } from '../../validation/probes/sqlite/runtime.cjs';
 
 const packaged = process.argv.includes('--packaged');
 const pinnedElectron = JSON.parse(await readFile('package.json', 'utf8')).devDependencies.electron;
@@ -22,7 +22,7 @@ const environment = { ...process.env };
 delete environment.ELECTRON_RUN_AS_NODE;
 delete environment.ELECTRON_RENDERER_URL;
 const sourceHashes = {};
-for (const file of ['scripts/sqlite-probe.mjs', 'validation/probes/sqlite/main.cjs', 'validation/probes/sqlite/worker.cjs',
+for (const file of ['scripts/probes/sqlite-probe.mjs', 'validation/probes/sqlite/main.cjs', 'validation/probes/sqlite/worker.cjs',
   'validation/probes/sqlite/store.cjs', 'validation/probes/sqlite/runtime.cjs', 'validation/probes/sqlite/electron-builder.cjs']) {
   const bytes = await readFile(file);
   sourceHashes[file] = sha(bytes);

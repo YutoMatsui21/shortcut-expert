@@ -28,4 +28,4 @@
 
 - [33試行の原本 1](../../validation/evidence/eight-operation-20261028-session1.jsonl)・[2](../../validation/evidence/eight-operation-20261028-session2.jsonl)・[3](../../validation/evidence/eight-operation-20261028-session3.jsonl)、[使用した調査source](../../validation/probes/EightOperationProbe.cs)、[#9での判断](https://github.com/YutoMatsui21/shortcut-expert/issues/9)。
 - 新しい問題があれば、**該当する入力経路・結果・不足した証拠**をまず特定する。原本の自作窓・上下2画面の結果を一般アプリ／横並び／混在DPIへ一般化せず、未確認条件を負例と一緒に試験する。
-- 調査入口は`node scripts/eight-operation-probe.mjs --self-test`。実入力観測は本人の明示同意後に限り`--observe-consented`。自然入力の観測と製品の保存／通知・OS可視バナーは別に受け入れる。
+- 調査入口は`node scripts/probes/eight-operation-probe.mjs --self-test`。実入力観測は本人の明示同意後に限り`--observe-consented`。自然入力の観測と製品の保存／通知・OS可視バナーは別に受け入れる。

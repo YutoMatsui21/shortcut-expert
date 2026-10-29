@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { developmentEnvironment } from './dev-environment.mjs';
+import { developmentEnvironment } from '../dev/dev-environment.mjs';
 
 const suite = process.argv[2];
 if (!['unit', 'native'].includes(suite)) throw new Error('Expected unit or native suite');

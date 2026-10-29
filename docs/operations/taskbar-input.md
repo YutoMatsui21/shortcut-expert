@@ -24,5 +24,5 @@
 ## 3. 検証と未確認条件
 
 - **自動**：`tests/native-policy/TaskbarTests.cs`、`tests/native-taskbar-query.test.ts`、`tests/taskbar-input.test.ts`、`tests/fixture-integration.test.ts`。番号照合・期限・再生成・停止・C#→Main／Core、3状態・SQLite・通知adapterを確認する。
-- **自然入力入口**：本人の明示同意後だけ、`node scripts/w12-natural-acceptance.mjs --package-dir <build> --observe-consented`。隔離SQLiteを使用し、ARM→操作→FINISHでのみ観測（1試行45秒・session20分）。通常userData、生入力列・アプリ識別子は保存しない。
+- **自然入力入口**：本人の明示同意後だけ、`node scripts/acceptance/w12-natural-acceptance.mjs --package-dir <build> --observe-consented`。隔離SQLiteを使用し、ARM→操作→FINISHでのみ観測（1試行45秒・session20分）。通常userData、生入力列・アプリ識別子は保存しない。
 - **局所の実測結果**：2026-10-25の主タスクバー／代表環境17ケースは期待したW12件数・通知要求・W01非重複と一致。[結果原本](../../validation/evidence/w12-natural-20261025-results.json)、[build manifest](../../validation/evidence/w12-natural-20261025-build.json)。Explorer／Chromeと自作窓を含む限定試験であり、一般アプリ全体・pin変動・overflow・secondaryの番号対応・最終公開buildのR02／J04・実OS通知の網羅を示さない。

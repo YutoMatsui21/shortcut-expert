@@ -11,10 +11,10 @@
 `--query-self-test`は自分の別processのmessage-only窓でtimeoutを発生させ、実入力なしで失敗処理を検証する。`--geometry-self-test`は自分の隔離窓だけを短時間表示し、ボタン矩形内の9点とhit testを比較する診断で、実入力は観測しない。実操作を観測するのは`--observe-consented`だけである。
 
 ```powershell
-node scripts/snap-invocation-probe.mjs --self-test
-node scripts/snap-invocation-probe.mjs --query-self-test
-node scripts/snap-invocation-probe.mjs --geometry-self-test
-node scripts/snap-invocation-probe.mjs --observe-consented
+node scripts/probes/snap-invocation-probe.mjs --self-test
+node scripts/probes/snap-invocation-probe.mjs --query-self-test
+node scripts/probes/snap-invocation-probe.mjs --geometry-self-test
+node scripts/probes/snap-invocation-probe.mjs --observe-consented
 ```
 
 後者は本人の明示的な許可と画面確認が必要。起動だけでは観測しない。2窓の可視表示を本人が確認してから、panelでケース・対象アプリ・active/inactive・候補閾値を選び、ARMを押す。対象を操作した後、実際のSnap Layout表示を`displayed`／`not-displayed`／`unknown`で選び、FINISHで試行単位の集約を保存する。各試行は60秒で自動停止する。時間切れ・取消・表示不明は精度の分母に加えない。panelを閉じると終了し、runnerの上限は20分。継続する場合は新しいsessionを開始する。

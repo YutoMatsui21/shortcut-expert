@@ -65,7 +65,7 @@ Grafana Lokiの `grafanacloud-logs` / `service_name="codex-app-server"` を使�
 
 ### 4. 関連テストの入口を共通化する
 
-**根拠**：複数チャットで単一ファイルの直接Node実行とsuite全体を行き来していた。既存 `scripts/test.mjs` は追加引数を捨てており、ファイル・名前を渡しても絞り込めない。今回のfixtureでも、指定を無視して無関係な失敗テストまで実行する失敗を確認した。過去の各失敗をすべて引数の問題と断定しない。
+**根拠**：複数チャットで単一ファイルの直接Node実行とsuite全体を行き来していた。既存 `scripts/test/test.mjs` は追加引数を捨てており、ファイル・名前を渡しても絞り込めない。今回のfixtureでも、指定を無視して無関係な失敗テストまで実行する失敗を確認した。過去の各失敗をすべて引数の問題と断定しない。
 
 **適用**：既存入口に `--file=`、`--test-name-pattern=`、`--test-reporter=` を追加。mock・timeout・coverageと既定の全件実行を維持し、未知引数・不正なファイル・suite違いを拒否する。修正中の絞り込みと完了時の必要なsuite確認を分ける。READMEに実行例を追加。
 

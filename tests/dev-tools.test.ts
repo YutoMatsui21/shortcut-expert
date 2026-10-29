@@ -4,8 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from 'nod
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { developmentEnvironment, checkWritableDirectories } from '../scripts/dev-environment.mjs';
-import { smokeSucceeded, smokeFailureSummary } from '../scripts/smoke-result.mjs';
+import { developmentEnvironment, checkWritableDirectories } from '../scripts/dev/dev-environment.mjs';
+import { smokeSucceeded, smokeFailureSummary } from '../scripts/test/smoke-result.mjs';
 
 test('development runner passes workspace TEMP and caches to child tools on every invocation', t => {
   mkdirSync('.tools/tests', {recursive:true});
@@ -19,7 +19,7 @@ test('development runner passes workspace TEMP and caches to child tools on ever
   const env = developmentEnvironment(root, { ...process.env, TEMP:'unwritable-old-temp', ELECTRON_CACHE:'old-cache' });
   checkWritableDirectories(env);
   for (const tool of ['electron-vite','electron-builder']) {
-    const result = spawnSync(process.execPath, [resolve('scripts/dev-run.mjs'),tool,'build','a & b'], {
+    const result = spawnSync(process.execPath, [resolve('scripts/dev/dev-run.mjs'),tool,'build','a & b'], {
       cwd:root, env:{...process.env,TEMP:'unwritable-old-temp'}, encoding:'utf8', windowsHide:true
     });
     assert.equal(result.status, 0, result.stderr);
@@ -50,7 +50,7 @@ test('preflight accepts the SDK resolved by global.json rollForward and rejects 
   writeFileSync(child, `import { mock } from 'node:test';
     mock.module('node:child_process',{namedExports:{spawnSync:()=>({status:Number(process.env.FIXTURE_SDK_STATUS),stdout:'10.0.402\\n'})}});
     process.argv=['node','dev-run.mjs','check','--require=sdk'];
-    await import(${JSON.stringify(pathToFileURL(resolve('scripts/dev-run.mjs')).href)});`);
+    await import(${JSON.stringify(pathToFileURL(resolve('scripts/dev/dev-run.mjs')).href)});`);
   const env={...process.env}; delete env.NODE_TEST_CONTEXT;
   for (const status of [0,1]) {
     const result=spawnSync(process.execPath,['--experimental-test-module-mocks',child],{cwd:root,encoding:'utf8',windowsHide:true,env:{...env,FIXTURE_SDK_STATUS:String(status)}});
@@ -62,8 +62,8 @@ test('smoke sets local cache before Electron module can trigger its first downlo
   mkdirSync('.tools/tests',{recursive:true});
   const root=mkdtempSync(resolve('.tools/tests/smoke-loader-'));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
-  mkdirSync(join(root,'scripts')); mkdirSync(join(root,'node_modules/electron'),{recursive:true});
-  for(const name of ['smoke.mjs','dev-environment.mjs','smoke-result.mjs']) copyFileSync(resolve('scripts',name),join(root,'scripts',name));
+  mkdirSync(join(root,'scripts/test'),{recursive:true}); mkdirSync(join(root,'scripts/dev'),{recursive:true}); mkdirSync(join(root,'node_modules/electron'),{recursive:true});
+  for(const [dir,name] of [['test','smoke.mjs'],['dev','dev-environment.mjs'],['test','smoke-result.mjs']]) copyFileSync(resolve('scripts',dir,name),join(root,'scripts',dir,name));
   writeFileSync(join(root,'package.json'),JSON.stringify({main:'fixture-app.cjs'}));
   writeFileSync(join(root,'node_modules/electron/index.js'),`
     const assert=require('node:assert/strict'),path=require('node:path');
@@ -73,7 +73,7 @@ test('smoke sets local cache before Electron module can trigger its first downlo
   `);
   writeFileSync(join(root,'fixture-app.cjs'),`console.log('COACH_SMOKE_OK {}');`);
   const env:NodeJS.ProcessEnv={...process.env,TEMP:'old-temp',electron_config_cache:'old-cache'}; delete env.NODE_TEST_CONTEXT;
-  const result=spawnSync(process.execPath,[join(root,'scripts/smoke.mjs')],{cwd:root,env,encoding:'utf8',windowsHide:true});
+  const result=spawnSync(process.execPath,[join(root,'scripts/test/smoke.mjs')],{cwd:root,env,encoding:'utf8',windowsHide:true});
   assert.equal(result.status,0,result.stdout+result.stderr);
   assert.match(result.stdout,/COACH_SMOKE_OK/);
 });

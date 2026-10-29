@@ -4,16 +4,17 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const runner = resolve('scripts/ci-package-smoke.mjs');
+const runner = resolve('scripts/test/ci-package-smoke.mjs');
 for (const failing of ['none', 'smoke', 'package', 'log']) {
   test(`CI packaging and smoke overlap and preserve ${failing} failure`, t => {
     mkdirSync('.tools/tests', { recursive: true });
     const root = mkdtempSync(resolve('.tools/tests/ci-package-'));
     t.after(() => rmSync(root, { recursive: true, force: true }));
-    mkdirSync(join(root, 'scripts'));
+    mkdirSync(join(root, 'scripts/test'), { recursive: true });
+    mkdirSync(join(root, 'scripts/dev'), { recursive: true });
     if (failing === 'log') mkdirSync(join(root, '.tools/test-results/package.log'), { recursive: true });
     for (const [own, peer, file] of [['smoke', 'package', 'smoke.mjs'], ['package', 'smoke', 'dev-run.mjs']]) {
-      writeFileSync(join(root, 'scripts', file), `
+      writeFileSync(join(root, 'scripts', own === 'smoke' ? 'test' : 'dev', file), `
         import { writeFile, rename, access } from 'node:fs/promises';
         import { setTimeout } from 'node:timers/promises';
         import assert from 'node:assert/strict';

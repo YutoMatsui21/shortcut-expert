@@ -31,4 +31,4 @@
 3. **結果イベントの遅れか**：WinEventと入力hookのWindows message timestampを比較し、古いイベントを新しい結果にしない。期限だけmonotonic時計で判定する。
 4. **W12や別操作との重複か**：入力経路別の排除条件を検証。キー候補の追加は別Issueで扱う。
 
-[研究C# source](../../validation/probes/WindowSwitchProbe.cs)、[初回の見逃し原本](../../validation/evidence/window-switch-20261025-initial.jsonl)、[診断版の再試行原本](../../validation/evidence/window-switch-20261025-diagnostics.jsonl)。`node scripts/window-switch-probe.mjs --self-test`で人工確認、本人の明示同意後のみ`--observe-consented`。当時の12試行（再試行含む）を独立した12ケースや精度率とみなさない。
+[研究C# source](../../validation/probes/WindowSwitchProbe.cs)、[初回の見逃し原本](../../validation/evidence/window-switch-20261025-initial.jsonl)、[診断版の再試行原本](../../validation/evidence/window-switch-20261025-diagnostics.jsonl)。`node scripts/probes/window-switch-probe.mjs --self-test`で人工確認、本人の明示同意後のみ`--observe-consented`。当時の12試行（再試行含む）を独立した12ケースや精度率とみなさない。

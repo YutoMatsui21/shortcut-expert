@@ -1,7 +1,7 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { dotnet, dotnetEnvironment } from '../scripts/dotnet.mjs';
+import { dotnet, dotnetEnvironment } from '../scripts/dev/dotnet.mjs';
 import { classify, classifyGesture } from '../src/core/detector.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

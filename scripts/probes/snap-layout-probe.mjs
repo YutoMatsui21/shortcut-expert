@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const run = promisify(execFile);
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = fileURLToPath(new URL('../../', import.meta.url));
 const mode = process.argv[2] ?? '--self-test';
 if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--sample', '--sample-xaml'].includes(mode)) {
   console.error('Use --self-test (default), --sample or --sample-xaml (explicit consent required).');

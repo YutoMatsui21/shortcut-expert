@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const run = promisify(execFile);
-const root = fileURLToPath(new URL('../', import.meta.url));
+const root = fileURLToPath(new URL('../../', import.meta.url));
 const mode = process.argv[2] ?? '--self-test';
 if (process.platform !== 'win32' || process.argv.length > 3 || !['--self-test', '--query-self-test', '--geometry-self-test', '--observe-consented'].includes(mode)) {
   throw new Error('Use --self-test, --query-self-test, --geometry-self-test or --observe-consented (explicit consent required).');

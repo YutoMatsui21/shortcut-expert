@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { developmentEnvironment } from './dev-environment.mjs';
+import { developmentEnvironment } from '../dev/dev-environment.mjs';
 import { packageManifest, waitForUiAcceptance } from './ui-acceptance-runtime.mjs';
 
 const option = process.argv.indexOf('--package-dir');
