@@ -24,7 +24,9 @@ export class StandardNotifications {
     let settled = false;
     const report = (status: NotificationResult['status']) => this.result({ id, status });
     try {
-      const notification = this.create({ id, title: value.shortcut, body: value.label, silent: true, timeoutType: 'default' });
+      const items = value.items ?? [value];
+      const notification = this.create({ id, title: items.length === 1 ? items[0].shortcut : 'ショートカットのヒント',
+        body: items.length === 1 ? items[0].label : items.map(item => `${item.label}: ${item.shortcut}`).join('\n'), silent: true, timeoutType: 'default' });
       const timer = setTimeout(() => { if (!settled) report('unknown'); this.release(id); }, 60_000);
       timer.unref();
       this.active.set(id, { notification, timer, unknown: () => { if (!settled) report('unknown'); } });

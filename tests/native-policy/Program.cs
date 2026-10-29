@@ -8,7 +8,7 @@ internal static partial class Program
     private static readonly List<string> passed = new();
     private static readonly List<object> samples = new();
     private static readonly List<object> v2Samples = new();
-    private static void Check(string name, Action action) { action(); passed.Add(name); }
+    private static void Check(string name, Action action) { try { action(); passed.Add(name); } catch (Exception error) { throw new Exception($"{name}: {error.Message}", error); } }
     private static void Equal<T>(T expected, T actual)
     {
         if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"expected {expected}, actual {actual}");
@@ -91,13 +91,13 @@ internal static partial class Program
             CheckWinDownGrouping();
             var windowStateSamples = CheckWindowStates();
             var placementSamples = CheckPlacement();
-            CheckMonitorMoves();
+            CheckMonitorMoves(); CheckCompoundDrags();
             CheckProtocol();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
             var closeSamples = WindowCloseTests.Run(passed);
-            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, monitorMoveSamples, closeSamples, globalInputCollected = false }));
+            Console.WriteLine(JsonSerializer.Serialize(new { passed, samples, v2Samples, snapSamples, taskbarSamples, switchSamples, windowStateSamples, placementSamples, monitorMoveSamples, compoundSamples, closeSamples, globalInputCollected = false }));
             return 0;
         }
         catch (Exception error) { Console.Error.WriteLine($"Native policy failed after {passed.Count} cases: {error.Message}"); return 1; }

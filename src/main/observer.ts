@@ -59,6 +59,16 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case 'compound-drag': {
+      const fromMonitor = bounds(raw.fromMonitor), toMonitor = bounds(raw.toMonitor);
+      if (raw.profile !== 'compound-drag-v1' || !['maximized', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(raw.terminal as string) ||
+          !['targetMatched', 'released', 'layoutStable', 'terminalEquivalent'].every(key => typeof raw[key] === 'boolean') ||
+          typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 || !fromMonitor || !toMonitor ||
+          !(raw.moveDirection === null || raw.moveDirection === 'left' || raw.moveDirection === 'right')) return null;
+      evidence = { kind: raw.kind, profile: raw.profile, terminal: raw.terminal as Extract<Evidence, { kind: 'compound-drag' }>['terminal'],
+        targetMatched: raw.targetMatched as boolean, released: raw.released as boolean, layoutStable: raw.layoutStable as boolean,
+        terminalEquivalent: raw.terminalEquivalent as boolean, inputAgeMs: raw.inputAgeMs, fromMonitor, toMonitor, moveDirection: raw.moveDirection }; break;
+    }
     case 'window-close':
       if (raw.profile !== 'window-close-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.destroyed !== 'boolean' ||
           typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 ||

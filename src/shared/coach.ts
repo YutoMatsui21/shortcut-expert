@@ -24,6 +24,9 @@ export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
 export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
   Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
 export type Evidence =
+  | { kind: 'compound-drag'; profile: 'compound-drag-v1'; terminal: 'maximized' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
+      targetMatched: boolean; released: boolean; layoutStable: boolean; inputAgeMs: number;
+      fromMonitor: Bounds; toMonitor: Bounds; moveDirection: 'left' | 'right' | null; terminalEquivalent: boolean }
   | { kind: 'window-close'; profile: 'window-close-v1'; targetMatched: boolean; destroyed: boolean;
       inputAgeMs: number; monitor: Bounds | null }
   | { kind: 'placement'; profile: 'placement-v1'; shape: 'left-half' | 'right-half' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
@@ -58,7 +61,8 @@ export type Snapshot = {
   stateVersion?: number;
 };
 export type Notice = { operation: OperationId; label: string; shortcut: string; monitor: Bounds; expiresAt: number };
-export type ShortcutNotice = Pick<Notice, 'operation' | 'label' | 'shortcut'>;
+export type ShortcutNoticeItem = Pick<Notice, 'operation' | 'label' | 'shortcut'>;
+export type ShortcutNotice = ShortcutNoticeItem & { items?: ShortcutNoticeItem[] };
 export type CoachBridge = {
   getLearning(): Promise<import('./learning.ts').LearningReadModel>;
   getRecordSummary(query?: import('./records.ts').RecordsQuery): Promise<import('./records.ts').RecordsReadModel>;

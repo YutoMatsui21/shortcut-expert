@@ -2,7 +2,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { dotnet, dotnetEnvironment } from '../scripts/dotnet.mjs';
-import { classify } from '../src/core/detector.ts';
+import { classify, classifyGesture } from '../src/core/detector.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -87,4 +87,17 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.deepEqual(totals.W07, { mouse: 4, key: 6 });
   assert.deepEqual(totals.W02, { mouse: 5, key: 5 });
   assert.deepEqual(totals.W11, { mouse: 1, key: 1 });
+  for (const sample of report.compoundSamples) {
+    // Each sample starts its own native observer session; reset the Core session as well.
+    coach.begin(1);
+    const parsed = candidateV2(sample); assert.ok(parsed);
+    const observations = classifyGesture(parsed); assert.equal(observations.length, 2);
+    for (const observation of observations) (totals[observation.operation] ??= { mouse: 0, key: 0 }).mouse++;
+    await coach.accept(parsed); await coach.accept({ ...parsed, sequence: parsed.sequence + 1 });
+    await Promise.all(deliveries);
+    assert.deepEqual((await repository.query('2026-10-28', '2026-10-28')).counts['2026-10-28'], totals);
+  }
+  assert.equal(report.compoundSamples.length, 6);
+  assert.equal(notices, expectedNotices + 6, 'each compound gesture requests only one notification');
+
 });

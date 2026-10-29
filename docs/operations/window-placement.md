@@ -23,7 +23,7 @@
 
 Nativeの`placement-v1`証拠へ終端shape・対象一致・入力の経過・monitor変更・通知monitorを載せる。Mainが厳格parse、Coreが由来・経路・期限・結果を再確認。W06/W07は操作別の件数・キー率・学習状態として保存し、W07は**Winを保持した順次方向キー**として案内する。
 
-**別monitorのW02＋W07**は[複合要件](../ui-requirements.md#compound-gesture)で各1件の原子保存・1つの通知が必要。現行policyが`PlacementResult.monitorChanged`を保持できても、複合候補の製品送信・保存・通知の実装済み証拠ではない。現時点では一方だけの暫定送信をしない。実装責務は[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)。W02＋W06は未検証。
+**別monitorのW02＋W07**は[複合契約](compound-drag.md)で各1件を原子保存し、通知を1つへまとめる。cross-monitor quarterは`CompoundMoveResult`へ変換し、単独placementとして部分送信しない。W02＋W06は未検証のため送信しない。
 
 ## 4. 検証と未確認条件
 

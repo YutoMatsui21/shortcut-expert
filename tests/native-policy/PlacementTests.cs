@@ -159,12 +159,8 @@ internal static partial class Program
                     Y = destinationWork.y }, destination, destinationWork, mode == "injected" ? LLMHF_INJECTED : 0);
                 if (mode == "cancel") tracker.Key(11, start, 0x1b, false, false, 200, 0);
                 var result = tracker.FinishMove(11, after, 5000, mode == "other-window" ? 12 : 11, "2026-10-28");
-                if (mode.StartsWith("cross-")) {
-                    Equal(true, result is PlacementResult); var pending = (PlacementResult)result!;
-                    Equal(true, pending.Evidence.monitorChanged); Sample(pending, null);
-                    var emitted = new List<object>(); var protocol = new CandidateProtocol(emitted.Add); protocol.Start(1, 2);
-                    protocol.Placement(1, "2026-10-28", pending); Equal(0, emitted.Count);
-                } else Equal<object?>(null, result);
+                if (mode == "cross-quarter") Equal(true, result is CompoundMoveResult);
+                else Equal<object?>(null, result);
             });
         return output;
     }

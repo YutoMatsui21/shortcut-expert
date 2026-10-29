@@ -6,7 +6,7 @@ internal static partial class Program
     {
         var samples = new List<object>();
         var screen = new MonitorBounds(0, 0, 1920, 1080);
-        var start = normal with { Monitor = screen, DisplayLayout = "stable" };
+        var start = normal with { Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
         void Sample(WindowCandidate candidate, string? expected) => samples.Add(new {
