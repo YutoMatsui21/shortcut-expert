@@ -1,25 +1,43 @@
 # 過去資料アーカイブ
 
-このディレクトリは**過去の意思決定・調査・実装の証拠**を保管します。現行仕様の正本ではありません。
+> **履歴専用・現行仕様ではありません。** ここには過去に試した方式、当時の判断、実行結果を保存します。ファイル中の「確定」「現行」「未実装」「OPEN」「次工程」は**記録当時の意味**です。実装タスクの受入条件や現在の作業指示として読み込まないでください。
 
-現在の参照先：[プロダクトの目的](../product.md)／[確定要件](../ui-requirements.md)／[設計](../design.md)／[開発・実行方法](../development.md)／[Agent方針](../../AGENTS.md)
+## 現行情報の参照先
 
-## 過去資料
+- **なぜ作るか／成功指標**：[プロダクトの目的](../product.md)
+- **現在のMVP・機能仕様・受入条件**：[製品要件](../ui-requirements.md)（初回対象は**8操作**）
+- **全体・個別の技術設計**：[全体設計](../design.md)・[操作別設計](../operations/README.md)
+- **開発と検証**：[開発ガイド](../development.md)・[ドキュメント索引](../index.md)
+- **進捗・現在の未解決事項・実測の受入**：[GitHub Issues](https://github.com/YutoMatsui21/shortcut-expert/issues)・PR・対応する検証証拠
 
-- [旧MVP要件と工程記録](mvp-requirements.md) — 旧11操作・30日保持・旧通知条件
-- [設計・実装の過去工程](design-implementation-history.md) — 初期設計、環境準備、実装・リファクタの記録
-- [テスト・CIの背景調査](quality-best-practices.md) — 2026-10-12時点の一般原則と適用案
-- [品質保証の不足分析](quality-gap-analysis.md) — 2026-10-12時点の不具合・改善案
-- [10月19日の振り返り](implementation-retro-2026-10-19.md)
-- [10月20日の振り返り](implementation-retro-2026-10-20.md)
+過去には11操作、途中で12操作などの構成を検討しましたが、**現行の初回公開条件は8操作**です。過去資料で別の操作数・保存期間・試験回数・合格率が示されても、現行要件を上書きしません。
 
-以前の[価値検証・競合・技術調査](research-overview.md)と、初回対象外の[Snap Layout資料](research-snap-layout-validation.md)・[Snap呼び出し資料](research-snap-invocation-validation.md)・[Task View資料](research-task-view-validation.md)も保管します。現在の調査判断は[research](../research/)を参照してください。
+## 過去の判断を調べたいときだけ読む資料
 
-日時付きの受入記録は関連GitHub Issueへ引き継ぎ、実測のJSON／source等の原本はリポジトリ直下の`validation/evidence/`などに保持します。資料中の「CIがない」「未実装」などは**当時の状態**です。
+| 知りたいこと | 履歴資料 | 使い方 |
+| --- | --- | --- |
+| なぜ作り始めたか、既存製品・Windows APIの初期調査 | [初期の価値・技術検証](research-overview.md) | 当時の課題・代替案・観測根拠の確認 |
+| 昔のMVPをなぜ選んだか | [旧MVPと工程記録](mvp-requirements.md) | 現行仕様には適用しない |
+| 初期アーキテクチャの選択と変更経緯 | [初期の設計・実装記録](design-implementation-history.md) | 現行設計と差分を理解したいときだけ |
+| 2026-10-12時点の品質戦略と資料 | [品質・テストの背景調査](quality-best-practices.md) | 選択肢・一次資料の再利用。採用要否は再判断 |
+| 2026-10-12時点で何が不足していたか | [当時の品質ギャップ](quality-gap-analysis.md) | 不具合の経緯確認。今の不足一覧にはしない |
+| 実装セッション・CIの効率化をどう検討したか | [10月19日](implementation-retro-2026-10-19.md)・[10月20日](implementation-retro-2026-10-20.md) | 再分析時のみ。現在の作業指示にはしない |
 
-## 更新ルール
+## 初回対象外の機能を再検討するときだけ読む資料
 
-1. 現行仕様は[確定要件](../ui-requirements.md)へ記述し、READMEやSkillsへ詳細を重複させない。
-2. 実装状況はコード・Issue・受入証拠で確認する。設計上の合格条件とは区別する。
-3. 変更理由はIssue・Git履歴に残し、重要な検証原本は保持する。現行設計書へ古い作業日誌を追記しない。
-4. 歴史資料を現行の受入条件として引用しない。文書移動時はリンクを検証する。
+| 対象 | 履歴資料 |
+| --- | --- |
+| W08：Snap Layout呼び出しの過去の製品設計・実測 | [呼び出し経路](snap-invocation.md) |
+| Snap Layout表示の技術成立性・試した方式 | [限定検証](research-snap-layout-validation.md)・[API一次資料](research-snap-layout-sources.md) |
+| Win+Z／hoverによる呼び出し推定の根拠・制約 | [限定検証](research-snap-invocation-validation.md)・[API一次資料](research-snap-invocation-api.md) |
+| W10：Task View表示の技術成立性 | [Task View限定検証](research-task-view-validation.md) |
+
+現在の対象8操作について採用済みの技術方式が破綻した場合は、まず[現行技術調査](../research/README.md)から必要な判断根拠を探してください。初回対象外の機能を再開する場合も、**古い設計の再採用は自動では行わず**、現行の製品要件・実装・Windows環境を再確認します。
+
+## 保持と参照のルール
+
+1. **通常の実装・レビュー・新規設計では本ディレクトリを一括読込しない**。古い判断理由・再現手順が必要な場合だけ対象の節を読む。
+2. 旧MVP・過去の技術検証・初回対象外の機能は、現在の仕様・承認・受入条件として扱わない。
+3. 当時の時刻・試験結果・候補・変更経緯は歴史的な証拠として残す。現在の動作・実装状況はコード・テスト・Issueで確認する。
+4. 今後の結論は現行の正本に反映し、日時付きの調査経過・一時課題はIssue・PR・検証証拠へ残す。アーカイブへ現行のルールを追記しない。
+5. 履歴資料を統合・削除するときは、独自の判断理由や一次資料への参照が失われないこと、他のリンクが壊れないことを確認する。
