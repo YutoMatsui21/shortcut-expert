@@ -1,12 +1,12 @@
 # #39 W11の局所検証（2026-10-29）
 
-[判定契約](window-close.md)と[#9/#14のG-W11](research-eight-operation-validation.md)を前提に、入力・対象・破棄の本番照合と保存/表示の結合を確認した。完成版のR02・一般アプリでの適用範囲・実OS通知・配布受入は#47へ残す。
+[判定契約](window-close.md)と[#9/#14のG-W11](../research/eight-operation-validation.md)を前提に、入力・対象・破棄の本番照合と保存/表示の結合を確認した。完成版のR02・一般アプリでの適用範囲・実OS通知・配布受入は#47へ残す。
 
 ## 本人の自然入力と自作窓
 
 本人の明示同意後、自作標準WinForms窓A/Bだけを使い、本人がARM/FINISHを操作した。自動入力送出なし。WindowsのAPI報告版は`10.0.26340.0`。実行中の入力/窓識別子は本番helper内部の一時照合のみで、保存した証拠は固定カテゴリの集計。全試行のstop ACKを確認し、終了後にパネルとhelperを終了した。
 
-最終8ケースは同一helper DLL SHA-256 `4DA55628BFA2B6294AAC896F238E57478B4A601C0FC6A7B56F3AA5E64897AAE0`。起点mainは`7177e73c481f05e0af38dc6c4b8e4605ff4efaad`で、当時の作業差分を使用した。[build/source hashes](../validation/evidence/window-close-20261029/confirmed-build.json)、[集計原本](../validation/evidence/window-close-20261029/confirmed-trials.jsonl)、[本人確認と範囲](../validation/evidence/window-close-20261029/participant-confirmation.json)を保持する。
+最終8ケースは同一helper DLL SHA-256 `4DA55628BFA2B6294AAC896F238E57478B4A601C0FC6A7B56F3AA5E64897AAE0`。起点mainは`7177e73c481f05e0af38dc6c4b8e4605ff4efaad`で、当時の作業差分を使用した。[build/source hashes](../../validation/evidence/window-close-20261029/confirmed-build.json)、[集計原本](../../validation/evidence/window-close-20261029/confirmed-trials.jsonl)、[本人確認と範囲](../../validation/evidence/window-close-20261029/participant-confirmation.json)を保持する。
 
 | 手動case | A破棄/B破棄 | W11 mouse/key | W01 | 結果 |
 | --- | --- | --- | --- | --- |
@@ -23,11 +23,11 @@
 
 ## 見逃し原本と原因
 
-- [初回](../validation/evidence/window-close-20261029/trials.jsonl)：冒頭1件は説明の不明点が申告された時期のA破棄0の記録で、操作実施を確証できずunknownとして除外。続く正例2件はA破棄1だがW11 0、6負例は0。初回buildのDLL hashは収集していない。
-- [理由別診断](../validation/evidence/window-close-20261029/diagnostic-trials.jsonl)：正例2件とも入力・対象を受付後に`ForegroundCancel=1`。通常閉鎖でも次の窓への前面変更が破棄前に来ていた。このbuildのDLL hashは未収集。
-- [HIDE取消の試行](../validation/evidence/window-close-20261029/fixed-trials.jsonl)：正例2件とも`HideCancel=1`、W11 0。[build hashes](../validation/evidence/window-close-20261029/fixed-build.json)。通常閉鎖でもHIDE時点でHWNDが生存していたため、HIDE単独取消を撤回した。
-- [破棄時の生存確認](../validation/evidence/window-close-20261029/result-trials.jsonl)：正例2件とも`DestroyTarget=1/DestroyAlive=1`、thread/tick/期限/解放の不一致0、W11 0。[build hashes](../validation/evidence/window-close-20261029/result-build.json)。DESTROY callbackでHWNDがまだ生存する実測に対応し、同一対象の消滅を元の入力期限内で待つようにした。
-- 最終原本は正例各1・負例0。正常確定でも`PollCancel=1`が付く診断上の問題が残っていたため、最後に「正常完了と取消を二重に集計しない」ガードだけを修正した。入力判定・待機・確定・送信条件は変更していない。[診断修正版のhash/検証](../validation/evidence/window-close-20261029/final-build.json)と自然入力で試したbuildを区別し、同一最終配布buildの自然入力合格とは扱わない。
+- [初回](../../validation/evidence/window-close-20261029/trials.jsonl)：冒頭1件は説明の不明点が申告された時期のA破棄0の記録で、操作実施を確証できずunknownとして除外。続く正例2件はA破棄1だがW11 0、6負例は0。初回buildのDLL hashは収集していない。
+- [理由別診断](../../validation/evidence/window-close-20261029/diagnostic-trials.jsonl)：正例2件とも入力・対象を受付後に`ForegroundCancel=1`。通常閉鎖でも次の窓への前面変更が破棄前に来ていた。このbuildのDLL hashは未収集。
+- [HIDE取消の試行](../../validation/evidence/window-close-20261029/fixed-trials.jsonl)：正例2件とも`HideCancel=1`、W11 0。[build hashes](../../validation/evidence/window-close-20261029/fixed-build.json)。通常閉鎖でもHIDE時点でHWNDが生存していたため、HIDE単独取消を撤回した。
+- [破棄時の生存確認](../../validation/evidence/window-close-20261029/result-trials.jsonl)：正例2件とも`DestroyTarget=1/DestroyAlive=1`、thread/tick/期限/解放の不一致0、W11 0。[build hashes](../../validation/evidence/window-close-20261029/result-build.json)。DESTROY callbackでHWNDがまだ生存する実測に対応し、同一対象の消滅を元の入力期限内で待つようにした。
+- 最終原本は正例各1・負例0。正常確定でも`PollCancel=1`が付く診断上の問題が残っていたため、最後に「正常完了と取消を二重に集計しない」ガードだけを修正した。入力判定・待機・確定・送信条件は変更していない。[診断修正版のhash/検証](../../validation/evidence/window-close-20261029/final-build.json)と自然入力で試したbuildを区別し、同一最終配布buildの自然入力合格とは扱わない。
 
 生入力やイベント時刻列を取得せず、固定理由の有界集計で入力受付→取消→破棄→消滅の境界を切り分けた。回帰試験では、前面変更による取消とHIDE単独取消、DESTROY時点での生存に起因する見逃しのRedを確認し、実測順序と期限/対象不一致/停止等の負例でGreenを確認した。
 
