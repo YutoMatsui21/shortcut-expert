@@ -71,7 +71,7 @@ node scripts/test.mjs native --file=native-policy.test.ts
 | 自然入力の実機受入 | 代表アプリで実際のマウス／キー入力と検出結果・案内を照合 |
 | NSIS受入 | インストール／再インストール／通知クリック／アンインストール・データ保護 |
 
-自然入力の観測は**本人の明示的な同意後**に、対象build・操作手順・隔離保存先を確定して実施する。自作fixtureと通常の記録を混ぜず、実測結果には未確認条件も記す。技術調査の再現方法は[research/](research/)、操作ごとの受入手順は[operations/](operations/)、UI受入は[validation/](validation/)へ集約する。
+自然入力の観測は**本人の明示的な同意後**に、対象build・操作手順・隔離保存先を確定して実施する。自作fixtureと通常の記録を混ぜず、実測結果には未確認条件も記す。技術調査の判断根拠は[research/](research/)、操作ごとの実装上の制約は[operations/](operations/)、実機・配布の受入条件は[製品要件](ui-requirements.md#release-acceptance)と対応するGitHub Issueを正本とする。検証コードと証拠原本はリポジトリ直下の`tests/`・`scripts/`・`validation/`を参照する。
 
 ## 5. 公開前に確認すること
 

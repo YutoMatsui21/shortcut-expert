@@ -1,6 +1,6 @@
 # W11：ウィンドウを閉じる
 
-**責務**：閉じるボタンまたはAlt+F4という入力と、**その同じ通常窓の破棄**を照合し、hide・確認取消・別窓破棄を計上しない。[製品要件](../ui-requirements.md)、[研究](../research/eight-operation-validation.md)、[局所実測と原因](../validation/window-close-20261029.md)。
+**責務**：閉じるボタンまたはAlt+F4という入力と、**その同じ通常窓の破棄**を照合し、hide・確認取消・別窓破棄を計上しない。[製品要件](../ui-requirements.md)、[研究](../research/eight-operation-validation.md)、[局所実測と原因](https://github.com/YutoMatsui21/shortcut-expert/issues/39)。
 
 ## 1. 対象と操作の成立
 
@@ -27,5 +27,5 @@
 
 - `tests/native-policy/WindowCloseTests.cs`：入力・破棄・取消・hide・別対象・遅延／HWND再利用・repeat・世代停止。`tests/window-close.test.ts`／`tests/native-policy.test.ts`でv2検証・Core／SQLiteへ接続。
 - `tests/fixture-integration.test.ts`と隔離smoke：3学習状態、ページモデル、通知adapter、停止・保存失敗／ACK喪失の非重複と復旧。
-- **実機検証入口**：本人の明示同意後、`validation/window-close/`の手動パネルでARMからFINISHまで（自動キー送出なし）。8ケースの結果・途中の見逃し原因・同じbuildかどうかの区別は[検証記録](../validation/window-close-20261029.md)に保存。
+- **実機検証入口**：本人の明示同意後、`validation/window-close/`の手動パネルでARMからFINISHまで（自動キー送出なし）。8ケースの結果・途中の見逃し原因・同じbuildかどうかの区別は[検証記録](https://github.com/YutoMatsui21/shortcut-expert/issues/39)に保存。
 - **未受入**：自作WinForms窓での局所8ケース成功は、代表外部アプリ、独自枠／多段確認、実OS Toast、同一最終buildのR02／J04を保証しない。[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)。

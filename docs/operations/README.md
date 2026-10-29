@@ -13,4 +13,4 @@
 
 **横断する未完の条件**：W02＋W03／W07の同時成立・原子保存・通知統合は[Issue #113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)、同一最終buildでの自然入力／一般環境の受入は[Issue #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)で追跡する。個別のfixture合格を公開合格とは扱わない。
 
-初回対象外のW08「Snap Layout呼び出し」の過去設計は[archive](../archive/snap-invocation.md)、W11の日時付き実測・修正経緯は[validation](../validation/window-close-20261029.md)。技術的な成立性の調査全般は[research](../research/)を参照する。
+初回対象外のW08「Snap Layout呼び出し」の過去設計は[archive](../archive/snap-invocation.md)、W11の日時付き実測・修正経緯は[validation](https://github.com/YutoMatsui21/shortcut-expert/issues/39)。技術的な成立性の調査全般は[research](../research/)を参照する。
