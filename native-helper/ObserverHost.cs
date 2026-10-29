@@ -12,11 +12,15 @@ internal static class ObserverHost
         Emit(new { type = "self-test", hooksStarted = started, hooksStopped = !observer.Active, globalInputCollected = false });
         return started && !observer.Active ? 0 : 1;
     }
-    internal static int Run(bool fixture = false, bool realDisplay = false)
+    internal static int Run(bool fixture = false, bool realDisplay = false, bool closeValidation = false)
     {
         using var dispatcher = new Control(); _ = dispatcher.Handle;
         using var context = new ApplicationContext();
-        using var observer = new Observer(Emit, fixture);
+        var closeCounts = closeValidation ? Enum.GetValues<CloseReason>().ToDictionary(k => k.ToString(), _ => 0) : null;
+        void CloseDiagnostic(CloseReason reason) {
+            if (closeCounts is not null) closeCounts[reason.ToString()] = Math.Min(1000, closeCounts[reason.ToString()] + 1);
+        }
+        using var observer = new Observer(Emit, fixture, closeValidation ? CloseDiagnostic : null);
         // Marshal display/settings invalidation to the same thread as input and WinEvent callbacks.
         void DisplayChanged(object? sender, EventArgs args) {
             try { dispatcher.BeginInvoke(() => observer.InvalidateDisplay()); } catch (InvalidOperationException) { }
@@ -44,10 +48,14 @@ internal static class ObserverHost
                             switch (command.GetProperty("command").GetString())
                             {
                                 case "start":
+                                    if (closeCounts is not null) foreach (var key in closeCounts.Keys) closeCounts[key] = 0;
                                     selectedProtocol = command.TryGetProperty("protocolVersion", out var version) ? version.GetInt32() : 1;
                                     observer.Start(command.GetProperty("generation").GetInt32(), selectedProtocol);
                                     Emit(new { type = "started", requestId }); break;
-                                case "stop": observer.Stop(); Emit(new { type = "stopped", requestId }); break;
+                                case "stop":
+                                    observer.Stop();
+                                    if (closeCounts is not null) Emit(new { type = "close-diagnostics", counts = closeCounts });
+                                    Emit(new { type = "stopped", requestId }); break;
                                 case "queryDisplayContext": Emit(new { type = "displayContext", requestId, result = fixture && !realDisplay ? new { known = true, fullscreen = false } : DisplayContext.Query(command.GetProperty("monitor")) }); break;
                                 case "fixtureCandidate" when fixture:
                                     var fixtureValue = command.GetProperty("candidate");

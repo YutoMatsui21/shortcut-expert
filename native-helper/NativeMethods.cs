@@ -11,6 +11,7 @@ internal static class NativeMethods
     internal const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B, EVENT_SYSTEM_MOVESIZESTART = 0xA,
         EVENT_SYSTEM_MOVESIZEEND = 0xB, EVENT_SYSTEM_FOREGROUND = 3, EVENT_OBJECT_DESTROY = 0x8001,
         EVENT_SYSTEM_MINIMIZESTART = 0x16, EVENT_SYSTEM_MINIMIZEEND = 0x17;
+    internal const uint EVENT_OBJECT_CREATE = 0x8000, EVENT_OBJECT_HIDE = 0x8003;
     internal const int OBJID_WINDOW = 0, CHILDID_SELF = 0;
     internal const int WM_LBUTTONDOWN = 0x201, WM_LBUTTONUP = 0x202, WM_RBUTTONDOWN = 0x204, WM_MBUTTONDOWN = 0x207,
         WM_MOUSEWHEEL = 0x20A, WM_KEYDOWN = 0x100, WM_SYSKEYDOWN = 0x104;
@@ -75,6 +76,8 @@ internal static class NativeMethods
     [DllImport("user32.dll")] internal static extern uint GetWindowThreadProcessId(nint window, out uint process);
     [DllImport("user32.dll")] internal static extern bool GetWindowPlacement(nint window, ref Placement placement);
     [DllImport("user32.dll")] internal static extern bool IsWindowVisible(nint window);
+    [DllImport("user32.dll")] internal static extern bool IsWindow(nint window);
+    [DllImport("user32.dll")] internal static extern bool IsWindowEnabled(nint window);
     [DllImport("user32.dll")] internal static extern bool IsIconic(nint window);
     [DllImport("user32.dll")] internal static extern bool IsZoomed(nint window);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] internal static extern nint GetWindowStyle(nint window, int index);

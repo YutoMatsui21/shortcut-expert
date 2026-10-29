@@ -126,6 +126,22 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
     await waitForLearning(window, `document.querySelector('[data-learning-operation="${operation}"] select')?.value === 'learning'`);
     await selectPage(window, '記録');
   }
+  // W11's typed production evidence reaches both real pages through Main/IPC/SQLite.
+  for (const [index, origin] of ['mouse', 'key'].entries()) {
+    const id = 1100 + index;
+    const value: import('../shared/coach').CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: placementGeneration,
+      sequence: id, transaction: id, date: today, origin: origin === 'mouse' ? 'mouse' : 'key',
+      route: origin === 'mouse' ? 'close-button' : 'alt-f4', injected: false, conflicted: false,
+      evidence: { kind: 'window-close', profile: 'window-close-v1', targetMatched: true, destroyed: true,
+        inputAgeMs: 200, monitor: sample.monitor } };
+    await observer.inject(value); await observer.inject(value); await coach.idle();
+  }
+  assert.deepEqual((await repository.query(today, today)).counts[today].W11, { mouse: 1, key: 1 });
+  await waitFor(window, `document.querySelector('[data-operation="W11"] [data-kind="mouse"]')?.textContent === '1' &&
+    document.querySelector('[data-operation="W11"] [data-kind="key"]')?.textContent === '1'`, 'close-records');
+  await selectPage(window, 'ショートカット一覧');
+  await waitForLearning(window, `document.querySelector('[data-learning-operation="W11"] select')?.value === 'learning'`);
+  await selectPage(window, '記録');
   const query = repository.query.bind(repository);
   let failQuery = true;
   repository.query = async (from, to) => {

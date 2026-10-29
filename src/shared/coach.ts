@@ -24,6 +24,8 @@ export type CapabilityProfile = 'legacy-window-v1' | 'unverified';
 export type WindowEvidenceResult = Omit<Candidate, 'type' | 'protocolVersion' | 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'> &
   Required<Pick<Candidate, 'afterArranged' | 'fromMonitor' | 'toMonitor' | 'moveDirection'>>;
 export type Evidence =
+  | { kind: 'window-close'; profile: 'window-close-v1'; targetMatched: boolean; destroyed: boolean;
+      inputAgeMs: number; monitor: Bounds | null }
   | { kind: 'placement'; profile: 'placement-v1'; shape: 'left-half' | 'right-half' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
       targetMatched: boolean; inputAgeMs: number; monitorChanged: boolean; monitor: Bounds }
   | { kind: 'window-switch'; profile: 'window-switch-v1'; windowsDifferent: boolean; eligible: boolean;

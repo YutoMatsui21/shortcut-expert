@@ -1,4 +1,10 @@
 import type { Candidate, CandidateV2 } from '../../src/shared/coach.ts';
+export function closeFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): CandidateV2 {
+  return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
+    date: '2026-10-21', origin, route: origin === 'mouse' ? 'close-button' : 'alt-f4', injected: false, conflicted: false,
+    evidence: { kind: 'window-close', profile: 'window-close-v1', targetMatched: true, destroyed: true,
+      inputAgeMs: 200, monitor: { x: 0, y: 0, width: 1920, height: 1080 } } };
+}
 export function placementFixture(origin: 'mouse' | 'key', sequence: number, quarter = false): CandidateV2 {
   return { type: 'candidate', protocolVersion: 2, generation: 1, sequence, transaction: sequence,
     date: '2026-10-21', origin, route: origin === 'mouse' ? 'caption-edge-drag' : 'win-held-arrows', injected: false, conflicted: false,

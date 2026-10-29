@@ -15,5 +15,6 @@
     <Compile Include="../../native-helper/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />
     <Compile Include="../../native-helper/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
     <Compile Include="../../native-helper/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />
+    <Compile Include="../../native-helper/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
   </ItemGroup>
 </Project>

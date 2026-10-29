@@ -17,6 +17,7 @@ DBへの直接投入や判定器のfakeで未実装の検出器を通過扱い�
 | J03人工activation | `--activation`、`tests/notification-*.test.ts` | cold/稼働中/初期化失敗の人工callback。実COM/OS通知clickではない |
 | 削除/再試行・不正IPC・世代・時計 | `--settings`、`tests/delete-*.test.ts`、`tests/coach-ipc.test.ts`、`tests/observer.test.ts`、`tests/protocol-v2.test.ts`、`tests/durable-storage.test.ts` | 取消/確定、保存障害、世代/transaction/版混在、時計後退。各試験が隔離する境界は個別ソースに記載 |
 | Native既存window判定・W01/W12と旧W08 policy | `npm.cmd run test:native` | 本番C# policy/通信→TS契約、fixture helperの開始/停止。未成立の実検出経路はfixtureで通過扱いにしない |
+| W11の型付き閉鎖結果 | `tests/native-policy.test.ts`、`tests/fixture-integration.test.ts`、storage smoke | 本番C# close policy→`window-close-v1`→Main/Core→SQLite/保存後通知/両ページ。確認取消・遅延・対象不一致・再配送・停止/障害/retryと、[手動試験の範囲](window-close.md)を区別 |
 
 全件のunit/native、build、各smokeの実行方法は[開発・検証ガイド](development.md#development-workflow)。CIの`windows-quality`は通常版と同梱版でstorage/comparison/settings/activation/migrationを含む既存smokeを実行する。
 

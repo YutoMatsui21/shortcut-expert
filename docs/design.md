@@ -121,6 +121,8 @@ CandidateTrackerは同じHWND/processに対する、前回の成立入力から1
 
 ### #13：型付き証拠とprotocol v2の併設
 
+後続#39ではW11を`window-close/window-close-v1`へ分離した。[入力・同一対象破棄・期限・検証範囲](window-close.md)を参照。以下の#13時点のvariant/legacy記述は導入時の契約を示す。
+
 Sharedの`ObserverCandidate`は旧`Candidate`と`CandidateV2`のunion。v2はgeneration/最終送信sequence/入力transaction/完了日/由来/route/注入・競合と、`window`・`shell-display`・`activation`・`global`の証拠を分ける。Nativeの`CandidateProtocol`は限定された証拠recordを直列送信し、Mainがvariantの必須項目・型・ID範囲を検査して許可項目だけをCoreへ渡す。未知の能力はnullのまま保持し、成功へ変換しない。生キー列・窓token・process ID・タイトル・path・UIA treeは通信型に含めない。hookへUIA処理は追加していない。
 
 readyは旧版互換のprotocolVersion=1とsupportedProtocols=[1,2]を返す。新Mainはstartでv2を選び、広告のない旧helperにはv1を選ぶ。旧Mainから版指定なしのstartを受けた新helperはv1を送る。同じ世代では1経路だけを使い、Mainは選択版と違う候補を通信故障として停止する。Coreでも世代内の版混在を拒否する。fixture命令だけは既存のv1人工候補を選択中のv2へ変換する。この変換は実入力経路には存在しない。

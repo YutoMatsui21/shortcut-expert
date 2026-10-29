@@ -13,6 +13,7 @@ internal sealed class Observer : IDisposable
     private readonly CandidateTracker tracker = new();
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
+    private readonly WindowCloseObserver closing;
     // Native側がcallbackを呼ぶ間、解除までdelegateをGCから保護する。
     private readonly InputHook mouseCallback, keyCallback;
     private readonly EventHook eventCallback;
@@ -21,15 +22,16 @@ internal sealed class Observer : IDisposable
     private int epoch;
     private static readonly Arranged? isArranged = LoadArranged();
 
-    internal Observer(Action<object> emit, bool fixture = false)
+    internal Observer(Action<object> emit, bool fixture = false, Action<CloseReason>? closeDiagnostic = null)
     {
         protocol = new CandidateProtocol(emit); this.fixture = fixture;
         taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
+        closing = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
-    internal void InvalidateDisplay() => tracker.ClearInput();
+    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); }
     internal static bool ArrangedAvailable => isArranged is not null;
     internal static string ForegroundToken => GetForegroundWindow().ToString();
     private static Arranged? LoadArranged()
@@ -52,20 +54,21 @@ internal sealed class Observer : IDisposable
             (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
             (EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND),
             (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
-            (EVENT_OBJECT_DESTROY, EVENT_OBJECT_DESTROY),
+            (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
             (EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND) })
         {
             nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
             if (hook != 0) eventHooks.Add(hook);
         }
         if (!Active) { Stop(); throw new InvalidOperationException("hook-init-failed"); }
-        if (!fixture && protocolVersion == 2) { taskbar.Start(newGeneration); switching.Start(newGeneration); }
+        if (!fixture && protocolVersion == 2) { taskbar.Start(newGeneration); switching.Start(newGeneration); closing.Start(newGeneration); }
     }
     internal void Stop()
     {
         protocol.Stop();
         taskbar.Stop();
         switching.Stop();
+        closing.Stop();
         bool released = true;
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
@@ -119,6 +122,7 @@ internal sealed class Observer : IDisposable
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
+            closing.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message == WM_LBUTTONUP)
@@ -148,7 +152,7 @@ internal sealed class Observer : IDisposable
                 GetAsyncKeyState(VK_MENU) < 0 || GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0,
                 GetForegroundWindow() == target);
         }
-        catch { tracker.ClearInput(); switching.Cancel(); }
+        catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
         return CallNextHookEx(0, code, message, data);
     }
     private nint OnKey(int code, nint message, nint data)
@@ -160,6 +164,7 @@ internal sealed class Observer : IDisposable
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             taskbar.Key(key.Key, down, key.Flags);
             switching.Key(key.Key, down, key.Flags, key.Time);
+            closing.Key(key.Key, down, key.Flags, key.Time);
             // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
             if (key.Key is >= 0x30 and <= 0x39 && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0))
             { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
@@ -193,7 +198,7 @@ internal sealed class Observer : IDisposable
             }
             tracker.Key(target, before, key.Key, win, modifiers, clock.ElapsedMilliseconds, key.Flags, shift, alt);
         }
-        catch { tracker.ClearInput(); switching.Cancel(); }
+        catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
         return CallNextHookEx(0, code, message, data);
     }
     private void OnEvent(nint hook, uint kind, nint window, int obj, int child, uint thread, uint time)
@@ -201,13 +206,12 @@ internal sealed class Observer : IDisposable
         if (fixture || !Active || window == 0) return;
         try
         {
+            closing.Event(kind, window, obj, child, thread, time);
             if (kind == EVENT_SYSTEM_FOREGROUND) { tracker.ForegroundChanged(window); switching.Foreground(window, time); }
             if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
             {
-                states.TryGetValue(window, out WindowState? closed);
-                object? result = tracker.Close(window, closed, clock.ElapsedMilliseconds, DateTime.Now.ToString("yyyy-MM-dd"));
+                tracker.Forget(window);
                 states.Remove(window);
-                if (result is WindowCandidate evidence) protocol.Complete(evidence);
                 return;
             }
             if (kind == EVENT_SYSTEM_MOVESIZESTART) { switching.Cancel(); tracker.MoveStart(window, clock.ElapsedMilliseconds); return; }
@@ -231,7 +235,7 @@ internal sealed class Observer : IDisposable
                 GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"), DisplayContext.Bounds(window));
             if (candidate is WindowCandidate evidenceResult) protocol.Complete(evidenceResult);
         }
-        catch { tracker.ClearInput(); switching.Cancel(); }
+        catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
     }
-    public void Dispose() { Stop(); taskbar.Dispose(); switching.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); taskbar.Dispose(); switching.Dispose(); closing.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }
