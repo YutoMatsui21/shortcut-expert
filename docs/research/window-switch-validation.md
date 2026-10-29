@@ -17,7 +17,7 @@
 
 ## probeの範囲と実行
 
-[C# probe](../validation/probes/WindowSwitchProbe.cs)と[Node入口](../scripts/window-switch-probe.mjs)。Windows x64の.NET Framework cscでsource hashごとのexeをcompileする。通常のuserData、helper、製品IPC、通知は使わない。
+[C# probe](../../validation/probes/WindowSwitchProbe.cs)と[Node入口](../../scripts/window-switch-probe.mjs)。Windows x64の.NET Framework cscでsource hashごとのexeをcompileする。通常のuserData、helper、製品IPC、通知は使わない。
 
 ```powershell
 node scripts/window-switch-probe.mjs --self-test
@@ -63,10 +63,10 @@ node scripts/window-switch-probe.mjs --observe-consented
 - 初期版`--self-test`：26 fixture checksに成功。直接click、同窓、program foreground、対象不一致、期限切れ、W12入口の除外、Alt+Tab、複数Tab、元窓、Esc、switcher mouse、追加key、external、settle期限、注入、up不一致、Tab単独、repeat、Shell中間foreground、Alt再押下、mouse中のAlt、早期停止、補助button競合。診断版はcallback時の一致、不一致の後着Shellイベント、不一致のtargetイベントを採用しない3件を追加し29件成功。実入力・hookの到達性・Shell仕様の実証ではない。
 - `node --check scripts/window-switch-probe.mjs`：成功。
 - 専用`codex review`で全3ファイルを確認。初回のP2指摘3件（早期FINISHの証拠検査迂回、確定待ち中のAlt再押下、XBUTTON競合）を修正し、26件の自己検査と静的再レビューを実施。再レビューは重大な追加問題なし。ログは`.tools/validation/window-switch/local-review.txt`と`local-review-followup.txt`。実機検証の代替ではない。
-- [初期session原本](../validation/evidence/window-switch-20261025-initial.jsonl)：2完了試行、session-endあり。source hash `67c90b8bf78a559b99a20f53a07b3be3a1f140902aee1dbd9161fedd754ad851`、exe hash `1ce11d6e2dd94d611c2d3af07886adb3f4c5e714fd557410c90cfcca11aa3588`。同一sourceでもcompile環境でexe hashは変わるため実行sessionの値を正本とする。
+- [初期session原本](../../validation/evidence/window-switch-20261025-initial.jsonl)：2完了試行、session-endあり。source hash `67c90b8bf78a559b99a20f53a07b3be3a1f140902aee1dbd9161fedd754ad851`、exe hash `1ce11d6e2dd94d611c2d3af07886adb3f4c5e714fd557410c90cfcca11aa3588`。同一sourceでもcompile環境でexe hashは変わるため実行sessionの値を正本とする。
 - 試行1：本人がA→Bを直接click。`armed A → left-down B → foreground B → left-up B → settle-poll B`、mouse候補1件、unknownなし。settledMs 4492はARMからfreezeまでの試行内経過で、click処理のlatencyではない。
 - 試行2：本人がAlt+TabでBへ切替。Tab 2回、最終poll B。イベントはAlt解除後にexternal-7→B→external-6の順で到着し、最後のイベントとpollの不一致でunknown。external aliasの窓の種類は取得していないため、Shell窓だと断定しない。SWITCHSTART/ENDはこの2試行には出現しなかった。元ログを訂正せず、callback時の現在foregroundと配送遅れを診断する版でこの予想外のケースを再試行した。
-- 診断版は29件のfixture自己検査と変更箇所の専用静的レビューに成功（`.tools/validation/window-switch/local-review-diagnostics.txt`）。source hash `59a02f597559dc0200d6f05fd0778a6c612a53685e1cc101c2bf394555f65933`、実行exe hash `2a43599fc54dca7171ac219c9e3fe9d28cce4310077597764452c42aa33eb253`。[診断版session原本](../validation/evidence/window-switch-20261025-diagnostics.jsonl)は10完了試行、session-endあり。終了要求は起動したexeの絶対パスを照合して通常の窓終了で行った。
+- 診断版は29件のfixture自己検査と変更箇所の専用静的レビューに成功（`.tools/validation/window-switch/local-review-diagnostics.txt`）。source hash `59a02f597559dc0200d6f05fd0778a6c612a53685e1cc101c2bf394555f65933`、実行exe hash `2a43599fc54dca7171ac219c9e3fe9d28cce4310077597764452c42aa33eb253`。[診断版session原本](../../validation/evidence/window-switch-20261025-diagnostics.jsonl)は10完了試行、session-endあり。終了要求は起動したexeの絶対パスを照合して通常の窓終了で行った。
 - 診断版試行1：A→B、Tab 7回、最終poll Bとcallback時Bが一致。後着external-6はcallback時にはBで、stale 1件、最大callback lag 16ms。ただし`unsupported-or-competing-key`でunknown。本人は他のkeyを押していないと思うと申告。任意key値は記録していないため、keyの種類や発生原因は特定できない。本人の誤操作ともprobeの誤判定とも断定しない。
 - 本人が「もう一度だけ」を希望した診断版試行2：A→B、Tabの初回down 11回（保持中repeatは別計上しない）、key候補1件、`alt-release-and-final-window`。callback時Bと最終poll Bが一致、後着external-6はstale 1件、最大callback lag 0ms。本人は指定操作以外何もしていないと申告。成功したため同ケースは追加反復しない。Alt+Tab任意対象への単押し到達や通常利用全般の精度の証拠にはしない。
 - 診断版の残る試行は下表。各ケース1回で、成功ケースの反復なし。初期2試行＋診断版10試行の合計12試行には再試行2件を含み、独立12ケースや精度の標本数とは扱わない。

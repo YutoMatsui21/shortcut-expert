@@ -1,10 +1,10 @@
 # 複合ドラッグの技術再審査（#14）
 
-2026-10-28。正本は[現行要件](ui-redesign-requirements.md)の複合ドラッグ契約。開始revisionは`26021f3ff7f74e9614bd85c869bfd07fb9548806`。製品機能#31/#37/#38/#113は実装しない。
+2026-10-28。正本は[現行要件](../ui-redesign-requirements.md)の複合ドラッグ契約。開始revisionは`26021f3ff7f74e9614bd85c869bfd07fb9548806`。製品機能#31/#37/#38/#113は実装しない。
 
 ## 再利用する証拠と不足
 
-[#9の33完了試行](research-eight-operation-validation.md)の原本・失敗・当時の判断は保持する。旧排他的分類は現行仕様ではなく、観測事実だけを再利用する。
+[#9の33完了試行](eight-operation-validation.md)の原本・失敗・当時の判断は保持する。旧排他的分類は現行仕様ではなく、観測事実だけを再利用する。
 
 | ゲート | 再利用する実測 | 今回必要な追加証拠 |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ W12/W01/W04/W06/W11の既存の制約付き着手PASSを再利用し、最終製
 
 本人から自作窓限定の実入力観測の明示同意を得た。UIA・自動キー送出は使用しない。本人は上下2画面のままと回答。設定・配置・registry・通常userDataを変更しない。
 
-既存[研究probe](../validation/probes/EightOperationProbe.cs)に研究用計測のみ追加。手動ケース選択・画面選択→Prepare→ARM→Target Aを前面→入力解放→6秒待機→手動操作→F8/FINISH。試行45秒、session20分上限。各ケース原則1回、異常時のみ原因を区別して再試行する。
+既存[研究probe](../../validation/probes/EightOperationProbe.cs)に研究用計測のみ追加。手動ケース選択・画面選択→Prepare→ARM→Target Aを前面→入力解放→6秒待機→手動操作→F8/FINISH。試行45秒、session20分上限。各ケース原則1回、異常時のみ原因を区別して再試行する。
 
 保存対象は固定カテゴリ・集計・始終状態/shape、monitorのprimary/secondary役割、途中monitor遷移回数、drag開始/終了イベント時の状態、環境・source/exe hash。monitorの実識別子・座標は一時メモリのみ。生キー列・入力時刻列・窓名・URL・座標履歴・画像を保存しない。方向の集計は入力順序の証拠ではなく、複合キーの順次実行は本人の操作確認と別に照合する。
 
@@ -29,7 +29,7 @@ drag終了イベント時の状態とFINISH時の状態を分ける。遅着・�
 
 ## 結果と原本
 
-新規16完了試行（正常予定15ケース、異常trial 6に対する独立再試行16を含む）。[原本](../validation/evidence/compound-drag-20261028-session1.jsonl)・[本人確認](../validation/evidence/compound-drag-20261028-session1-operator.jsonl)・[source bytes](../validation/evidence/eight-operation-sources/b0ba41fab039b5a3c278bee1effaf495935cd6d016b5a290fa18094e11fcef47.cs.txt)。原本SHA-256は`ece0a836b18cca7ab7c32579369a39e2897fc166f824b3ca4aaaa5f2875615c9`、exe SHA-256は`255ad6c9b623d47c007af661c87a501fc7f165bcce85d454ed7e4aed64f68a96`。Windows `10.0.26340`、per-monitor DPI aware、主2880×1800/作業域2880×1704・副2560×1440/作業域2560×1392。本人確認により主=下側、副=上側。scale数値・絶対座標・相対offsetは採取していない。
+新規16完了試行（正常予定15ケース、異常trial 6に対する独立再試行16を含む）。[原本](../../validation/evidence/compound-drag-20261028-session1.jsonl)・[本人確認](../../validation/evidence/compound-drag-20261028-session1-operator.jsonl)・[source bytes](../../validation/evidence/eight-operation-sources/b0ba41fab039b5a3c278bee1effaf495935cd6d016b5a290fa18094e11fcef47.cs.txt)。原本SHA-256は`ece0a836b18cca7ab7c32579369a39e2897fc166f824b3ca4aaaa5f2875615c9`、exe SHA-256は`255ad6c9b623d47c007af661c87a501fc7f165bcce85d454ed7e4aed64f68a96`。Windows `10.0.26340`、per-monitor DPI aware、主2880×1800/作業域2880×1704・副2560×1440/作業域2560×1392。本人確認により主=下側、副=上側。scale数値・絶対座標・相対offsetは採取していない。
 
 | trial | 実測と評価 |
 | --- | --- |
@@ -54,7 +54,7 @@ trial 8/9は旧S2-15/16同様にreleaseZone=top-center。この分類は作業�
 
 ### Session 1・trial 1：同一monitor上端直接drag
 
-本人は上下構成の上側画面を使い、最大化とFINISHEDを確認した。[本人確認](../validation/evidence/compound-drag-20261028-session1-operator.jsonl)。原本ではsecondary-1の通常窓→同じsecondary-1の最大化、caption-drag、releaseZone=top-center、moveStarts/Ends各1、maximizeTransitions=1、monitorTransitions=0。drag開始/終了時の対象状態とFINISH時の結果が整合する。競合/注入/外部click/hookFault/解除失敗は0、movingAtStop=false。上側画面のこの条件で不足していた同一monitor上端経路を取得した。この試行単独ではG-W03全体のキー同等性を証明せず、最終ゲートは他の証拠と合わせて下表で判定する。
+本人は上下構成の上側画面を使い、最大化とFINISHEDを確認した。[本人確認](../../validation/evidence/compound-drag-20261028-session1-operator.jsonl)。原本ではsecondary-1の通常窓→同じsecondary-1の最大化、caption-drag、releaseZone=top-center、moveStarts/Ends各1、maximizeTransitions=1、monitorTransitions=0。drag開始/終了時の対象状態とFINISH時の結果が整合する。競合/注入/外部click/hookFault/解除失敗は0、movingAtStop=false。上側画面のこの条件で不足していた同一monitor上端経路を取得した。この試行単独ではG-W03全体のキー同等性を証明せず、最終ゲートは他の証拠と合わせて下表で判定する。
 
 ## 8ゲートの再判定
 

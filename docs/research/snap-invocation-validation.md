@@ -2,7 +2,7 @@
 
 ## 範囲
 
-製品の検出器・保存・通知は変更しない。Win+Z／最大化ボタンの継続ホバーから呼び出し操作を推定する独立probeである。表示成功の直接検出や、#5／#34の成立条件の変更は行わない。[APIの保証範囲と一次資料](research-snap-invocation-api.md)。
+製品の検出器・保存・通知は変更しない。Win+Z／最大化ボタンの継続ホバーから呼び出し操作を推定する独立probeである。表示成功の直接検出や、#5／#34の成立条件の変更は行わない。[APIの保証範囲と一次資料](snap-invocation-api.md)。
 
 ## 実行と試行の記録
 
@@ -121,7 +121,7 @@ known ONなら候補を採用、known OFFなら不採用、unknownなら計上�
 
 C trial 1でChromeのhit／title query各1回がerror 1460（timeout）となり、最大応答時間36ms。Chrome最小化を58sample正常に識別し、候補は0だった。元のB trial 10はlast error未記録なので同じ原因とは断定しない。
 
-別processの自作message-only窓を250ms応答待ちにするfixtureでは、30ms期限のhit queryがerror 1460で約34〜44ms後に失敗することを確認した。失敗を肯定hitにせず、未計上のpendingをリセットして新しい500msが必要になる。既に計上した滞在は、失敗・timer空白だけでは再armせず、確認できた退出までlatchを保持する。この回帰も最終版のself-testで確認した。error 0／5／1400等もAPIの戻り値0という同じunknown経路に入れる。[APIの失敗分類とbuffer寿命](research-snap-invocation-api.md#追加調査問い合わせ失敗buffer寿命入力の境界)。
+別processの自作message-only窓を250ms応答待ちにするfixtureでは、30ms期限のhit queryがerror 1460で約34〜44ms後に失敗することを確認した。失敗を肯定hitにせず、未計上のpendingをリセットして新しい500msが必要になる。既に計上した滞在は、失敗・timer空白だけでは再armせず、確認できた退出までlatchを保持する。この回帰も最終版のself-testで確認した。error 0／5／1400等もAPIの戻り値0という同じunknown経路に入れる。[APIの失敗分類とbuffer寿命](snap-invocation-api.md#追加調査問い合わせ失敗buffer寿命入力の境界)。
 
 ### ボタンの特定：矩形優先、空の場合だけhit test
 

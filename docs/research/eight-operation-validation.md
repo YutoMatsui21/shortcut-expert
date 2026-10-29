@@ -1,10 +1,10 @@
 # 初回8操作の成立性調査（#9）
 
-**後続の技術再審査**：[複合ドラッグの#14審査結果](research-compound-drag-validation.md)を参照。本書の33試行・当時の5件制約付き/3件未成立という結論は変更せず、追加実測と最新ゲートは別台帳で管理する。
+**後続の技術再審査**：[複合ドラッグの#14審査結果](compound-drag-validation.md)を参照。本書の33試行・当時の5件制約付き/3件未成立という結論は変更せず、追加実測と最新ゲートは別台帳で管理する。
 
 **後続の仕様改訂（2026-10-28、試行原本は不変更）**：本台帳中の「上端別画面dragはW03のみ」「画面跨ぎquarterとW02は未決定」は、#9調査完了時の判断。現行では、drag終了時の別monitorへの移動＋最大化/quarterがともに確定すれば**W02＋W03/W07を各1件**計上し、通知は適格な項目を1Toastにまとめる。これは本人の新しい**仕様決定**であり、下記33試行が複合検出・原子保存・通知を実証したわけではない。新ゲートの検証事項は[#14](https://github.com/YutoMatsui21/shortcut-expert/issues/14)、実装は[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。過去の記録と実測結論は上書きしない。
 
-2026-10-28。[現行要件](ui-redesign-requirements.md)を正本とし、製品検出器の実装着手を判定する調査。製品コード・保存・通知は変更しない。旧11/12操作の件数・受入条件は適用しない。
+2026-10-28。[現行要件](../ui-redesign-requirements.md)を正本とし、製品検出器の実装着手を判定する調査。製品コード・保存・通知は変更しない。旧11/12操作の件数・受入条件は適用しない。
 
 **最終判定：制約付きで可5操作、現行必須範囲で未成立3操作、無条件の実装着手可0操作。** W12/W01は既存成果を再利用した。未成立は実現不可能という意味ではなく、必須経路・同等性・操作間の帰属を現存証拠で確証できないという意味である。#9は調査として終了できるが、#14と初回リリースの合格を意味しない。
 
@@ -27,9 +27,9 @@
 
 調査開始時のローカルrevisionは`ce89f97190223b925a112518e666922fd5364379`。要件の2026-10-28更新を含む`c4f772740f5bd7acd7696b876959fec18f24dfbe`を取得し、その上の研究ブランチで記録した。製品のCandidateTracker/Observer/Coreを調査したが変更していない。
 
-- W12：[既存研究](research-taskbar-input-validation.md)、#6/#28。Windows `10.0.26340.0`、主タスクバー1/2/9/10番、repeat、変動・overflow等の制約と原本hashを再利用。今回の実入力再試行は0。
-- W01：[既存研究](research-window-switch-validation.md)、#7/#29/PR #108。2026-10-25の自作3窓、2026-10-26のChrome・自作窓、W12との非重複・負例の証拠を再利用。通常Edge keyと最終R02は未確認のまま。今回の実入力再試行は0。
-- 初期W03/W02：[研究記録](research.md#measurements)、2026-10-09〜11のManualWindowProbe/ExternalWindowProbe。Windows build `10.0.26300`、PowerShell 7.6.6、Node 24.11.1、本人probeは2画面。シェルAPI-healthの1画面とは合算しない。初期source/exe hashは原本に欠け、当時buildの完全同定は不可。近接入力候補は`causalityConfirmed=false`。
+- W12：[既存研究](taskbar-input-validation.md)、#6/#28。Windows `10.0.26340.0`、主タスクバー1/2/9/10番、repeat、変動・overflow等の制約と原本hashを再利用。今回の実入力再試行は0。
+- W01：[既存研究](window-switch-validation.md)、#7/#29/PR #108。2026-10-25の自作3窓、2026-10-26のChrome・自作窓、W12との非重複・負例の証拠を再利用。通常Edge keyと最終R02は未確認のまま。今回の実入力再試行は0。
+- 初期W03/W02：[研究記録](overview.md#measurements)、2026-10-09〜11のManualWindowProbe/ExternalWindowProbe。Windows build `10.0.26300`、PowerShell 7.6.6、Node 24.11.1、本人probeは2画面。シェルAPI-healthの1画面とは合算しない。初期source/exe hashは原本に欠け、当時buildの完全同定は不可。近接入力候補は`causalityConfirmed=false`。
 - 新規実測：本人が明示承認し、手動ARM→対象窓を前面→入力解放→手動操作→F8/FINISH。Windows `10.0.26340`、自作WinForms窓A/B、主2880×1800（作業域2880×1704）・副2560×1440（作業域2560×1392）の2画面。本人申告は上下配置。per-monitor DPI awarenessとIsWindowArranged取得可を確認。各画面のscale値は採取せず、混在DPIを実証したとは扱わない。
 - Framework64 cscでx64研究exeを生成。通常userData・製品helper/IPC/通知・UIA・キー送出を使用しない。起動・準備中は入力hookなし、ARM後45秒上限・session20分上限。WinEventは自作processに限定。保存は固定カテゴリと集計、始終state/shape、monitor変更bool、環境・hashのみ。タイトル・生キー・入力時刻列・座標履歴・画像は保存しない。
 
@@ -39,11 +39,11 @@
 
 | session | 完了数 | source SHA-256 | exe SHA-256 |
 | --- | --- | --- | --- |
-| [1](../validation/evidence/eight-operation-20261028-session1.jsonl) | 4 | `b4f078bef514c371a34321e96532a37594bbaa1e2f13a57871a367d0449793bd` | `5b37132013ebbd4273d6616c2753375a609acccc6395e5c44af5fd31063960db` |
-| [2](../validation/evidence/eight-operation-20261028-session2.jsonl) | 25 | 同上 | `62dbdcddd774324ead5d0b5dc95dfd231db124a98b3217f40e2ea79290eb31e3` |
-| [3](../validation/evidence/eight-operation-20261028-session3.jsonl) | 4 | `003e5b6ce6908243b1d37b3e77e9cac1f09ff71062abc76ef7b530bbbece4444` | `17944feb794f877c6c23e3972be59dc02e0fef4ec820e655c36fc861dd7a3493` |
+| [1](../../validation/evidence/eight-operation-20261028-session1.jsonl) | 4 | `b4f078bef514c371a34321e96532a37594bbaa1e2f13a57871a367d0449793bd` | `5b37132013ebbd4273d6616c2753375a609acccc6395e5c44af5fd31063960db` |
+| [2](../../validation/evidence/eight-operation-20261028-session2.jsonl) | 25 | 同上 | `62dbdcddd774324ead5d0b5dc95dfd231db124a98b3217f40e2ea79290eb31e3` |
+| [3](../../validation/evidence/eight-operation-20261028-session3.jsonl) | 4 | `003e5b6ce6908243b1d37b3e77e9cac1f09ff71062abc76ef7b530bbbece4444` | `17944feb794f877c6c23e3972be59dc02e0fef4ec820e655c36fc861dd7a3493` |
 
-同sourceでもコンパイルごとのexe hashは異なる。各実測exeはその起動時に自己検査も通過した。測定したsource bytesは[原本保存先](../validation/evidence/eight-operation-sources/)に保持し、Gitの改行正規化を無効にした。[本人確認1](../validation/evidence/eight-operation-20261028-session1-operator.jsonl)・[2](../validation/evidence/eight-operation-20261028-session2-operator.jsonl)・[3](../validation/evidence/eight-operation-20261028-session3-operator.jsonl)は原本を書き換えず補足する。
+同sourceでもコンパイルごとのexe hashは異なる。各実測exeはその起動時に自己検査も通過した。測定したsource bytesは[原本保存先](../../validation/evidence/eight-operation-sources)に保持し、Gitの改行正規化を無効にした。[本人確認1](../../validation/evidence/eight-operation-20261028-session1-operator.jsonl)・[2](../../validation/evidence/eight-operation-20261028-session2-operator.jsonl)・[3](../../validation/evidence/eight-operation-20261028-session3-operator.jsonl)は原本を書き換えず補足する。
 
 ### 新規実測の内訳
 
@@ -91,7 +91,7 @@
 
 ## 再現と検証
 
-[研究source](../validation/probes/EightOperationProbe.cs)・[実行入口](../scripts/eight-operation-probe.mjs)。
+[研究source](../../validation/probes/EightOperationProbe.cs)・[実行入口](../../scripts/eight-operation-probe.mjs)。
 
 ```powershell
 node scripts/eight-operation-probe.mjs --self-test
