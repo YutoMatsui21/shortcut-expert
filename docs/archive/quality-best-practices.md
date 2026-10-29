@@ -1,4 +1,4 @@
-> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-redesign-requirements.md)・[設計](../design.md)・[README](../../README.md)を優先してください。
+> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-requirements.md)・[設計](../design.md)・[README](../../README.md)を優先してください。
 
 # Windowsデスクトップ製品のテスト・CI・品質保証の調査
 
@@ -256,7 +256,7 @@ NISTの組合せテスト研究は、少数の入力因子の相互作用に着�
 
 配布前の優先確認は、開発ツールを入れていないWindows 11通常ユーザーでの導入、初回／2回目起動、helper解決と同梱DLL、トレイ、単一起動、終了、再導入、削除、既存の記録・設定の扱いである。日本語・空白を含む場所、起動時cwdが違う場合、別出力先、起動中exeのlockも対象にする。installer生成成功と導入成功は別の確認とする。
 
-配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../development.md#開発者向け公開準備)に従って別途決める。
+配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../development.md#5-公開前に確認すること)に従って別途決める。
 
 | 場所 | 優先する組合せ | 位置付け |
 | --- | --- | --- |
