@@ -25,5 +25,5 @@
 ## 3. 検証と限界
 
 - `tests/settings-state.test.ts`：古いIPC応答・トレイcommandとの競合。`tests/learning-state.test.ts`：保存保留・停止／再開・世代と通知。
-- 隔離`node scripts/smoke.mjs --settings`（配布版は`--packaged --settings`）：2ページ×4幅、focusと閉じ方、スイッチ状態、保存中の禁止操作、トレイcallbackとの同期を確認する。
+- 隔離`node scripts/test/smoke.mjs --settings`（配布版は`--packaged --settings`）：2ページ×4幅、focusと閉じ方、スイッチ状態、保存中の禁止操作、トレイcallbackとの同期を確認する。
 - **実機で別途必要**：OSトレイのクリック配送、DPI／文字拡大、実入力認識と標準通知。fixture結果はそれらの合格証拠ではない。
