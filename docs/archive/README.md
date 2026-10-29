@@ -13,7 +13,9 @@
 - [10月19日の振り返り](implementation-retro-2026-10-19.md)
 - [10月20日の振り返り](implementation-retro-2026-10-20.md)
 
-観測原本や操作別の検証記録（`docs/research-*.md`など）は参照の継続性を優先して元の場所に保持します。資料中の「CIがない」「未実装」などは**当時の状態**です。
+以前の[価値検証・競合・技術調査](research-overview.md)と、初回対象外の[Snap Layout資料](research-snap-layout-validation.md)・[Snap呼び出し資料](research-snap-invocation-validation.md)・[Task View資料](research-task-view-validation.md)も保管します。現在の調査判断は[research](../research/)を参照してください。
+
+日時付きの受入記録は関連GitHub Issueへ引き継ぎ、実測のJSON／source等の原本はリポジトリ直下の`validation/evidence/`などに保持します。資料中の「CIがない」「未実装」などは**当時の状態**です。
 
 ## 更新ルール
 
