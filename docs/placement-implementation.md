@@ -1,5 +1,8 @@
 # W06・W07の配置検出（#35・#37）
 
+> **2026-10-29 Issue責務の更新：** 本文の「#35/#37はOpen維持」という判断は、PR #116時点の旧Close基準による履歴。#35・#37は単独W06/W07の局所実装として完了・Close済み。W02＋W07の複合確定・原子保存・単一Toastは[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)、実機最終受入は[#47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)に残る。現行Close基準は[#35](https://github.com/YutoMatsui21/shortcut-expert/issues/35)・[#37](https://github.com/YutoMatsui21/shortcut-expert/issues/37)を参照。以下の当時の実装証拠・未確認範囲は変更しない。
+
+
 2026-10-28。開始revision `7b4a2bed0549e792bc04cdc586cf8678d515aeed`。
 正本は[確定要件](ui-redesign-requirements.md)。#9の[8操作調査](research-eight-operation-validation.md)、#14の[複合ドラッグ再審査](research-compound-drag-validation.md)を再利用する。G-W06/G-W07は制約付き着手PASSであり、今回の製品buildの自然入力成功を意味しない。過去の原本・評価は変更しない。
 
