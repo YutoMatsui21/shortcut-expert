@@ -172,6 +172,28 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
   await window.webContents.executeJavaScript(`window.coach.command('start')`);
   await verifyPendingExit?.();
   await verifyNotifications?.(sample);
+  await observer.stop(); coach.stop();
+  const compoundGeneration = await observer.start(); coach.begin(compoundGeneration);
+  for (const [index, terminal] of ['maximized', 'right-bottom'].entries()) {
+    const operation = terminal === 'maximized' ? 'W03' : 'W07';
+    const before: import('../shared/coach').Counts[string] = (await repository.query(today, today)).counts[today];
+    const id = 1200 + index;
+    const value: import('../shared/coach').CandidateV2 = { type: 'candidate', protocolVersion: 2, generation: compoundGeneration,
+      sequence: id, transaction: id, date: today, origin: 'mouse', route: 'compound-caption-drag', injected: false, conflicted: false,
+      evidence: { kind: 'compound-drag', profile: 'compound-drag-v1', terminal: terminal as 'maximized' | 'right-bottom',
+        targetMatched: true, released: true, layoutStable: true, terminalEquivalent: true, inputAgeMs: 100,
+        fromMonitor: { x: -1920, y: 0, width: 1920, height: 1080 }, toMonitor: { x: 0, y: 0, width: 1920, height: 1080 }, moveDirection: 'right' } };
+    await observer.inject(value); await observer.inject(value); await coach.idle();
+    const saved: import('../shared/coach').Counts[string] = (await repository.query(today, today)).counts[today];
+    for (const id of ['W02', operation] as const) {
+      const expected: number = (before[id]?.mouse ?? 0) + 1;
+      assert.equal(saved[id]?.mouse, expected);
+      await selectPage(window, '記録');
+      await waitFor(window, `document.querySelector('[data-operation="${id}"] [data-kind="mouse"]')?.textContent === '${expected}'`, 'compound-records');
+      await selectPage(window, 'ショートカット一覧');
+      await waitForLearning(window, `document.querySelector('[data-learning-operation="${id}"] select')?.value === 'learning'`);
+    }
+  }
   await observer.stop();
   coach.stop(); powerMonitor.emit('suspend'); assert.equal(coach.snapshot().error, null, 'intentional stop stays stopped during sleep');
   await coach.idle(); await repository.close();
@@ -182,8 +204,8 @@ export async function runStorageSmoke({ coach, observer, window, repository, wor
     await fresh.initialize(); assert.equal(fresh.snapshot().error, null); assert.equal(fresh.snapshot().counts[today].W03?.key, 1);
     assert.equal((await reopened.query(oldDay, oldDay)).counts[oldDay].W03?.key, 1);
   } finally { await reopened.close(); }
-  return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: verifyNotifications ? 4 : 1, key: 1, sevenDayRenderer: true, retained120Days: true,
-    standardToastRequests: verifyNotifications ? 3 : 0, osToastDisplayVerified: false,
+  return { fixtureOnly: true, sqliteWorker: true, renderer: true, mouse: verifyNotifications ? 5 : 2, key: 1, sevenDayRenderer: true, retained120Days: true,
+    standardToastRequests: verifyNotifications ? 5 : 2, compoundRecords: true, osToastDisplayVerified: false,
     reopened: true, boundedIpc: true, placementRecords: true, summaryQueryRecovered: true, stoppedSuspendPreserved: true, learningStateFailureRecovered: true,
     saveErrorWidths: [800, 920, 1120, 1360], pendingStartBlocked: true, pendingExitRecovered: !!verifyPendingExit,
     electron: process.versions.electron, node: process.versions.node, naturalInputVerified: false };

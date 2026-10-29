@@ -23,7 +23,7 @@
 - **COMMIT後だけACK**。応答が失われた場合は**同じsession・sequence・payload**を再送し、checkpointによって加算済みを再加算しない。内容違い・sequence飛び・古いsession／epochは拒否する。別IDでの再送は冪等性の保証外。
 - Mainの新しい起動はwriter排他取得後に新sessionをclaimする。Nativeのgenerationとは別に管理する。保存・読戻しエラーでは原本を残し、未確定差分を同じIDのまま保留する。**プロセス強制終了時の未commitメモリ差分は復元保証しない**。
 - 保存には操作の集計・必要な観測metadataのみを含め、入力キー列・操作時刻列・HWND・アプリ名・座標履歴は保存しない。
-- **未実装の複合gesture設計（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）**：同一ドラッグでW02＋W03／W07が独立成立したら、異なる2操作IDを**同じtransactionで原子的に各+1**、同一操作IDは重複加算なし、ACK喪失時は全体を冪等再送する。現行の単一候補経路で実装済みという意味ではない。
+- **複合gesture（[検出契約](../operations/compound-drag.md)）**：同一ドラッグでW02＋W03／W07が独立成立したら、異なる2操作IDを**同じtransactionで原子的に各+1**、同一操作IDは重複加算なし、ACK喪失時は全体を冪等再送する。`RecordMutation.counts`の2件を同じcheckpointに含める。保存するのは日付・操作ID・由来だけで、Nativeの相関情報は含めない。
 
 ## 3. coverageと時計の扱い
 

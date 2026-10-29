@@ -179,8 +179,12 @@ export class StorageStore {
         typeof row.value.capabilityRevision === 'string' && row.value.capabilityRevision.length <= 80 &&
         (row.value.knowledge === 'observed' || row.value.activeMs === 0), 'INVALID_COVERAGE');
     }
-    if (value.count) check(validDate(value.count.day) && value.count.day <= value.today && ids.includes(value.count.operation) &&
-      ['mouse', 'key'].includes(value.count.origin), 'INVALID_COUNT');
+    check(value.counts === undefined || (Array.isArray(value.counts) && value.counts.length === 2 && !value.count &&
+      value.counts[0].day === value.counts[1].day && value.counts.every(c => c.origin === 'mouse') &&
+      value.counts[0].operation === 'W02' && ['W03', 'W07'].includes(value.counts[1].operation)), 'INVALID_COUNTS');
+    const counts = value.counts ?? (value.count ? [value.count] : []);
+    for (const c of counts) check(validDate(c.day) && c.day <= value.today && ids.includes(c.operation) &&
+      ['mouse', 'key'].includes(c.origin), 'INVALID_COUNT');
     check(value.reset === undefined || value.reset === true, 'INVALID_RESET');
     const hash = createHash('sha256').update(JSON.stringify(value)).digest('hex');
     this.transaction(() => {
@@ -202,8 +206,7 @@ export class StorageStore {
         CREATE TABLE IF NOT EXISTS deletion_cleanup (id INTEGER PRIMARY KEY CHECK(id=1), pending INTEGER NOT NULL) STRICT;
         INSERT INTO deletion_cleanup VALUES (1,1) ON CONFLICT(id) DO UPDATE SET pending=1;`);
       else {
-        if (value.count) {
-          const c = value.count;
+        for (const c of counts) {
           this.db.prepare(`INSERT INTO counts VALUES (?,?,?,?) ON CONFLICT(day,operation) DO UPDATE SET
             mouse=mouse+excluded.mouse,key=key+excluded.key`).run(c.day, c.operation, c.origin === 'mouse' ? 1 : 0, c.origin === 'key' ? 1 : 0);
           const saved = this.db.prepare('SELECT mouse,key FROM counts WHERE day=? AND operation=?').get(c.day, c.operation)!;

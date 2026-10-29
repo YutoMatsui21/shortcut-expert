@@ -5,9 +5,9 @@ internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
     MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0);
-// Ephemeral, verified compound terminal for #113. No current protocol/writer emits it.
+// Only verified terminal evidence crosses the protocol; HWND/process stay in the tracker.
 internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMonitor, MonitorBounds ToMonitor,
-    string Terminal, long InputAgeMs);
+    string Terminal, long InputAgeMs, string? MoveDirection = null);
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
@@ -158,16 +158,17 @@ internal sealed class CandidateTracker
             drag.Before.DisplayLayout != after.DisplayLayout || drag.Before.Monitor is null || after.Monitor is null) return null;
         if (after.Arranged == true)
         {
-            // Preserve cross-monitor quarter evidence for #113, without partially committing the gesture.
             var placement = released is { } r ? PlacementGeometry.Drag(drag.Before, after, r.Point, r.Monitor, r.Work,
                 drag.At, foreground == window && drag.Matched && !drag.Injected && !drag.Conflicted) : null;
+            if (placement is { monitorChanged: true })
+                return !placement.shape.EndsWith("-half") && StableMove(drag.Before, after)
+                    ? Compound(drag, after, placement.shape) : null;
             return placement is null ? null : new PlacementResult(drag.Transaction, "mouse", placement);
         }
         if (State(after.Show) == "maximized")
         {
-            // Cross-monitor compound commits/notifications belong to #113. Do not emit
-            // half a compound gesture through the current single-operation writer.
             if (released is null || released.Value.Monitor != after.Monitor ||
+                released.Value.Work != after.Work || after.Arranged != false ||
                 State(drag.Before.Show) != "normal" || drag.Before.Arranged != false || foreground != window) return null;
             var r = released.Value;
             // A narrow edge check is a conservative implementation boundary, not a claim
@@ -176,7 +177,7 @@ internal sealed class CandidateTracker
                 r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
             if (drag.Before.Monitor != after.Monitor)
                 return StableMove(drag.Before, after) && drag.Matched && !drag.Injected && !drag.Conflicted
-                    ? new CompoundMoveResult(drag.Transaction, drag.Before.Monitor, after.Monitor, "maximized", drag.At) : null;
+                    ? Compound(drag, after, "maximized") : null;
             return Build("maximize", drag.Before, after, drag with { Route = "caption-top-drag" }, drag.At, true, false, date, after.Monitor);
         }
         if (drag.Before.Monitor == after.Monitor || released is null || released.Value.Monitor != after.Monitor ||
@@ -185,6 +186,15 @@ internal sealed class CandidateTracker
         // Drag lifetime is bounded by MOVESIZEEND; age is the input-to-start interval, not its duration.
         return Build("monitor-move", drag.Before, after, drag, drag.At, foreground == window, false, date, after.Monitor);
     }
+
+    private static CompoundMoveResult Compound(Input drag, WindowState after, string terminal) =>
+        new(drag.Transaction, drag.Before.Monitor!, after.Monitor!, terminal, drag.At,
+            MoveDirection(drag.Before, after));
+
+    private static string? MoveDirection(WindowState before, WindowState after) =>
+        before.HorizontalPair && after.HorizontalPair && before.Monitor is not null && after.Monitor is not null &&
+        before.Monitor.y == after.Monitor.y && before.Monitor != after.Monitor
+            ? after.Monitor.x < before.Monitor.x ? "left" : "right" : null;
 
     internal object? Close(nint window, WindowState? previous, long now, string date)
     {
@@ -242,9 +252,7 @@ internal sealed class CandidateTracker
         bool target, bool isMoving, string date, MonitorBounds? monitor)
     {
         bool recent = candidate is not null && age is >= 0 and <= InputMatchWindowMs;
-        string? direction = before.HorizontalPair && after.HorizontalPair && before.Monitor is not null && after.Monitor is not null
-            && before.Monitor.y == after.Monitor.y && before.Monitor != after.Monitor
-            ? after.Monitor.x < before.Monitor.x ? "left" : "right" : null;
+        string? direction = MoveDirection(before, after);
         return new WindowCandidate("candidate", 1, generation, checked(++sequence), before.App, operation, date,
             new(State(before.Show), before.Arranged), new(operation == "close" ? "closed" : State(after.Show)), after.Arranged,
             recent ? candidate!.Origin : "unknown", recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",

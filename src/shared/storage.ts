@@ -8,6 +8,7 @@ export type StorageState = RecordRange & { settings: Settings; epoch: number; hi
 export type RecordMutation = {
   epoch: number; writeSession: string; sequence: number; today: string;
   count?: { day: string; operation: OperationId; origin: 'mouse' | 'key' };
+  counts?: { day: string; operation: OperationId; origin: 'mouse' | 'key' }[];
   coverage: { day: string; operation: OperationId; value: Coverage }[];
   reset?: boolean;
 };

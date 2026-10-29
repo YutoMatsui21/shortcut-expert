@@ -223,6 +223,7 @@ internal sealed class Observer : IDisposable
                 if (end is not null) states[window] = end;
                 if (result is WindowCandidate evidence) protocol.Complete(evidence);
                 if (result is PlacementResult placement) protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placement);
+                if (result is CompoundMoveResult compound) protocol.Compound(epoch, DateTime.Now.ToString("yyyy-MM-dd"), compound);
                 return;
             }
             if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&

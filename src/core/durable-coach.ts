@@ -2,7 +2,7 @@ import { defaultRecordsQuery, type RecordsQuery } from '../shared/records.ts';
 import type { ObserverCandidate, ShortcutNotice, OperationId, Settings, Snapshot, SnapshotErrorKind } from '../shared/coach.ts';
 import type { DurableRepository, RecordMutation, StorageState } from '../shared/storage.ts';
 import { daysBefore, recordOperations } from '../shared/storage.ts';
-import { classify } from './detector.ts';
+import { classifyGesture } from './detector.ts';
 import { validDate } from './dates.ts';
 import { SerialQueue } from './serial-queue.ts';
 import { learningOperations, learningState, withLearningState, type LearningState } from '../shared/learning.ts';
@@ -72,7 +72,7 @@ export class DurableCoach {
   }
   pauseNotifications(paused: boolean): void { if (this.observing) { if (paused) this.noticeEpoch++; this.paused = paused; this.publish(); } }
   idle(): Promise<void> { return this.queue.run(async () => {}); }
-  private prepare(count?: RecordMutation['count'], reset?: boolean): RecordMutation | null {
+  private prepare(count?: RecordMutation['count'], reset?: boolean, additional?: RecordMutation['count']): RecordMutation | null {
     const today = this.deps.date();
     if (!validDate(today) || (!reset && (this.data.highWater > today || Object.keys(this.data.counts).some(day => day > today) || (count && count.day > today)))) {
       this.fail('端末の日付が記録より前です。日付を確認してください。', 'clock'); return null;
@@ -88,9 +88,9 @@ export class DurableCoach {
       return { day: today, operation, value: { knowledge: activeMs > 0 ? 'observed' as const : 'not-observed' as const,
         activeMs, gap: !activeMs || !prior || prior.day !== today || !this.data.coverage[today]?.[operation], capabilityRevision: capability?.revision ?? 'unverified' } };
     });
-    if (count && count.day !== today) coverage.push({ day: count.day, operation: count.operation,
+    for (const entry of [count, additional]) if (entry && entry.day !== today) coverage.push({ day: entry.day, operation: entry.operation,
       value: { knowledge: 'not-observed', activeMs: 0, gap: true,
-        capabilityRevision: current.find(c => c.operation === count.operation)?.revision ?? 'unverified' } });
+        capabilityRevision: current.find(c => c.operation === entry.operation)?.revision ?? 'unverified' } });
     this.baseline = { day: today, time, observing: this.observing, capabilities: current };
     const coverageChanged = coverage.some(row => {
       const prior = this.data.coverage[row.day]?.[row.operation];
@@ -98,7 +98,7 @@ export class DurableCoach {
         row.value.capabilityRevision !== prior.capabilityRevision || (row.value.knowledge === 'observed' && prior.knowledge !== 'observed');
     });
     if (!count && !reset && today === this.data.highWater && !coverageChanged) return null;
-    return { epoch: this.data.epoch, writeSession: this.session, sequence: ++this.writeSequence, today, count, coverage, reset };
+    return { epoch: this.data.epoch, writeSession: this.session, sequence: ++this.writeSequence, today, ...(count && additional ? { counts: [count, additional] } : { count }), coverage, reset };
   }
   private async persist(value: RecordMutation): Promise<void> {
     this.pending = value;
@@ -205,18 +205,24 @@ export class DurableCoach {
         this.latestTransaction = Math.max(this.latestTransaction, id); this.transactions.add(id);
         for (const seen of this.transactions) if (seen <= this.latestTransaction - 4096) this.transactions.delete(seen);
       }
-      const observation = classify(candidate); if (!observation) return;
-      const token = { epoch: this.noticeEpoch, operationEpoch: this.operationNoticeEpoch.get(observation.operation) ?? 0,
-        eligible: !this.paused && observation.origin === 'mouse' && !!observation.shortcut && learningState(this.data.settings, observation.operation) === 'learning' };
-      const value = this.prepare({ day: observation.date, operation: observation.operation, origin: observation.origin });
+      const observations = classifyGesture(candidate); if (!observations.length) return;
+      const epoch = this.noticeEpoch;
+      const tokens = observations.map(observation => ({ observation,
+        operationEpoch: this.operationNoticeEpoch.get(observation.operation) ?? 0,
+        eligible: !this.paused && observation.origin === 'mouse' && !!observation.shortcut && learningState(this.data.settings, observation.operation) === 'learning' }));
+      const counts = observations.map(o => ({ day: o.date, operation: o.operation, origin: o.origin }));
+      const value = this.prepare(counts[0], undefined, counts[1]);
       if (!value) return;
       await this.persist(value);
-      if (!token.eligible || token.epoch !== this.noticeEpoch || token.operationEpoch !== (this.operationNoticeEpoch.get(observation.operation) ?? 0) ||
-        this.error || this.pending || !this.observing || candidate.generation !== this.generation || this.paused ||
-        !observation.shortcut || learningState(this.data.settings, observation.operation) !== 'learning') return;
-      const label = learningOperations.find(op => op.id === observation.operation)!.label;
-      // Delivery events must not hold the count writer; the token is consumed once.
-      try { void this.deps.notify({ operation: observation.operation, label, shortcut: observation.shortcut }).catch(() => {}); }
+      if (epoch !== this.noticeEpoch || this.error || this.pending || !this.observing ||
+          candidate.generation !== this.generation || this.paused) return;
+      const items = tokens.filter(token => token.eligible && token.operationEpoch === (this.operationNoticeEpoch.get(token.observation.operation) ?? 0) &&
+        learningState(this.data.settings, token.observation.operation) === 'learning').map(({ observation }) => ({
+          operation: observation.operation, label: learningOperations.find(op => op.id === observation.operation)!.label,
+          shortcut: observation.shortcut! }));
+      if (!items.length) return;
+      // One consumed delivery token per gesture, including unknown OS outcomes.
+      try { void this.deps.notify({ ...items[0], ...(items.length > 1 ? { items } : {}) }).catch(() => {}); }
       catch { /* An unknown delivery result must never trigger an automatic resend. */ }
     });
   }

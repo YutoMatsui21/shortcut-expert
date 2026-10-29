@@ -1,6 +1,25 @@
 import type { Bounds, Candidate, ObserverCandidate, Observation, OperationId } from '../shared/coach.ts';
 import { validDate } from './dates.ts';
 
+// One envelope is one gesture. Never expose one half of an invalid compound result.
+export function classifyGesture(value: ObserverCandidate): Observation[] {
+  if (value.protocolVersion !== 2 || value.evidence.kind !== 'compound-drag') {
+    const single = classify(value); return single ? [single] : [];
+  }
+  const e = value.evidence;
+  if (e.profile !== 'compound-drag-v1' || !validDate(value.date) || value.origin !== 'mouse' ||
+      value.route !== 'compound-caption-drag' || value.injected || value.conflicted || !e.targetMatched || !e.released ||
+      !e.layoutStable || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0 || e.inputAgeMs > 1000 ||
+      sameMonitor(e.fromMonitor, e.toMonitor) || !['maximized', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(e.terminal)) return [];
+  const equivalent = e.moveDirection && e.fromMonitor.y === e.toMonitor.y &&
+    (e.moveDirection === 'left' ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
+  const base = { id: `${value.generation}:t${value.transaction}`, origin: 'mouse' as const, date: value.date, monitor: e.toMonitor };
+  const [side, vertical] = e.terminal.split('-');
+  return [{ ...base, operation: 'W02', shortcut: equivalent ? `Win + Shift + ${e.moveDirection === 'left' ? '←' : '→'}` : null },
+    { ...base, operation: e.terminal === 'maximized' ? 'W03' : 'W07', shortcut: !e.terminalEquivalent ? null :
+      e.terminal === 'maximized' ? 'Win + ↑' : `Winを押したまま ${side === 'left' ? '←' : '→'}、続けて ${vertical === 'top' ? '↑' : '↓'}` }];
+}
+
 export function classify(value: ObserverCandidate): Observation | null {
   if (value.protocolVersion === 1) return classifyWindow(value);
   if (value.evidence.kind === 'window-close') {

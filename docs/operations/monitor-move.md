@@ -21,10 +21,10 @@
 
 ## 3. 複合操作との境界
 
-**未完の統合要件[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)**：同一ドラッグで別モニターへ移動し、最大化W03／四隅配置W07も成立したら各操作IDで1件ずつ、原子的に保存し、適格な通知を1つにまとめる。
+同一ドラッグで別モニターへ移動し、最大化W03／四隅配置W07も成立したら[複合契約](compound-drag.md)で各1件を原子保存し、適格な通知を1つにまとめる。
 
-- 同じ`FinishMove`で保持する同一入力transaction・開始／終了monitorと対象情報を共通gesture証拠に統合する。現行の`CompoundMoveResult`や`PlacementResult.monitorChanged`を**製品への複合候補送信完了の証拠とはしない**。
-- W02＋W06（別画面へのhalf配置）は未検証で、自動的に対応対象へ含めない。単独W02の技術試験成功と、同時2件保存・通知の受入は別に扱う。
+- `FinishMove`が同一入力transaction・開始／終了monitorと対象情報を照合し、`CompoundMoveResult`を`compound-drag-v1`へ送る。単独W02として部分送信しない。
+- W02＋W06（別画面へのhalf配置）は未検証で、自動的に対応対象へ含めない。
 
 ## 4. 検証と限界
 

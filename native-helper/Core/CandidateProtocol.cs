@@ -10,7 +10,11 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(WindowSwitchEvidence), "window-switch")]
 [JsonDerivedType(typeof(PlacementEvidence), "placement")]
 [JsonDerivedType(typeof(WindowCloseEvidence), "window-close")]
+[JsonDerivedType(typeof(CompoundDragEvidence), "compound-drag")]
 internal abstract record Evidence(string profile);
+internal sealed record CompoundDragEvidence(string terminal, bool targetMatched, bool released, bool layoutStable,
+    long inputAgeMs, MonitorBounds fromMonitor, MonitorBounds toMonitor, string? moveDirection,
+    bool terminalEquivalent) : Evidence("compound-drag-v1");
 internal sealed record WindowCloseEvidence(bool targetMatched, bool destroyed, long inputAgeMs,
     MonitorBounds? monitor) : Evidence("window-close-v1");
 internal sealed record PlacementEvidence(string shape, bool targetMatched, long inputAgeMs,
@@ -52,6 +56,16 @@ internal sealed class CandidateProtocol(Action<object> emit)
         lock (gate) { generation = nextGeneration; sequence = 0; version = protocolVersion; }
     }
     internal void Stop() { lock (gate) generation = 0; }
+    internal void Compound(int epoch, string date, CompoundMoveResult result)
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation || version != 2) return;
+            emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), result.Transaction, date,
+                "mouse", "compound-caption-drag", false, false, new CompoundDragEvidence(result.Terminal, true, true, true,
+                    result.InputAgeMs, result.FromMonitor, result.ToMonitor, result.MoveDirection, true)));
+        }
+    }
     internal void Close(int epoch, int transaction, string date, string origin, WindowCloseEvidence evidence)
     {
         lock (gate)
