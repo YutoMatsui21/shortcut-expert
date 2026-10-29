@@ -1,6 +1,6 @@
 # #39 W11の局所検証（2026-10-29）
 
-[判定契約](window-close.md)と[#9/#14のG-W11](../research/eight-operation-validation.md)を前提に、入力・対象・破棄の本番照合と保存/表示の結合を確認した。完成版のR02・一般アプリでの適用範囲・実OS通知・配布受入は#47へ残す。
+[判定契約](../operations/window-close.md)と[#9/#14のG-W11](../research/eight-operation-validation.md)を前提に、入力・対象・破棄の本番照合と保存/表示の結合を確認した。完成版のR02・一般アプリでの適用範囲・実OS通知・配布受入は#47へ残す。
 
 ## 本人の自然入力と自作窓
 
