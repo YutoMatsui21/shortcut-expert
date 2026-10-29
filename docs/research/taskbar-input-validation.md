@@ -1,6 +1,6 @@
 # W12：タスクバー番号と入力操作の技術検証（#6）
 
-2026-10-25。対象は[#6](https://github.com/YutoMatsui21/shortcut-expert/issues/6)の2026-10-24改訂（取得本文hash `c6ff77f575afa07a573b1fd071837d55f4218700f340766d7cdb18d4bb8e91cd`）と[確定要件](../ui-redesign-requirements.md#w12タスクバーのアプリを開く2026-10-24-仕様変更)。製品コードは変更しない。
+2026-10-25。対象は[#6](https://github.com/YutoMatsui21/shortcut-expert/issues/6)の2026-10-24改訂（取得本文hash `c6ff77f575afa07a573b1fd071837d55f4218700f340766d7cdb18d4bb8e91cd`）と[確定要件](../ui-requirements.md#w01-w12)。製品コードは変更しない。
 
 **結論：G-W12は制約付きで実装着手可。** 現行Windowsの主タスクバーでアプリ項目・番号の取得、通常アプリのmouse/key、10番のWin+0、負例除外を実測した。別タスクバー・overflow・変動中・古い照会はunknownにする。これは#28へ進むための技術判定で、製品の対応完了・R02/J04・#47の合格ではない。下記の採用条件を製品経路で成立させる必要がある。
 
@@ -56,7 +56,7 @@ node scripts/taskbar-number-fixtures.mjs 3
 - [物理座標診断版：5完了試行](../../validation/evidence/taskbar-input-20261025-diagnostics.jsonl)
 - [worker再利用版：11完了試行とoverflowのARM拒否](../../validation/evidence/taskbar-input-20261025-worker.jsonl)
 
-3sessionとも未完試行なしで終了。原本の失敗・unknown・期待値取り違えを修正していない。正常ケースは反復せず、予想外の結果の切り分けと本人の操作前のやり直しだけを追加した。単発の機能確認であり95%精度や通常利用性能の実証ではない。製品の自然入力確認は[現行R02](../ui-redesign-requirements.md#r02自然入力の機能確認2026-10-24-試行方針改定)に従う。
+3sessionとも未完試行なしで終了。原本の失敗・unknown・期待値取り違えを修正していない。正常ケースは反復せず、予想外の結果の切り分けと本人の操作前のやり直しだけを追加した。単発の機能確認であり95%精度や通常利用性能の実証ではない。製品の自然入力確認は[現行R02](../ui-requirements.md#release-acceptance)に従う。
 
 ## #28への採用条件と残る確認
 
