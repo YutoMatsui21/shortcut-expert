@@ -16,21 +16,21 @@
 
 | 知りたいこと | 履歴資料 | 使い方 |
 | --- | --- | --- |
-| なぜ作り始めたか、既存製品・Windows APIの初期調査 | [初期の価値・技術検証](research-overview.md) | 当時の課題・代替案・観測根拠の確認 |
-| 昔のMVPをなぜ選んだか | [旧MVPと工程記録](mvp-requirements.md) | 現行仕様には適用しない |
-| 初期アーキテクチャの選択と変更経緯 | [初期の設計・実装記録](design-implementation-history.md) | 現行設計と差分を理解したいときだけ |
-| 2026-10-12時点の品質戦略と資料 | [品質・テストの背景調査](quality-best-practices.md) | 選択肢・一次資料の再利用。採用要否は再判断 |
-| 2026-10-12時点で何が不足していたか | [当時の品質ギャップ](quality-gap-analysis.md) | 不具合の経緯確認。今の不足一覧にはしない |
-| 実装セッション・CIの効率化をどう検討したか | [10月19日](implementation-retro-2026-10-19.md)・[10月20日](implementation-retro-2026-10-20.md) | 再分析時のみ。現在の作業指示にはしない |
+| なぜ作り始めたか、既存製品・Windows APIの初期調査 | [初期の価値・技術検証](research/research-overview.md) | 当時の課題・代替案・観測根拠の確認 |
+| 昔のMVPをなぜ選んだか | [旧MVPと工程記録](requirements/mvp-requirements.md) | 現行仕様には適用しない |
+| 初期アーキテクチャの選択と変更経緯 | [初期の設計・実装記録](design/design-implementation-history.md) | 現行設計と差分を理解したいときだけ |
+| 2026-10-12時点の品質戦略と資料 | [品質・テストの背景調査](quality/quality-best-practices.md) | 選択肢・一次資料の再利用。採用要否は再判断 |
+| 2026-10-12時点で何が不足していたか | [当時の品質ギャップ](quality/quality-gap-analysis.md) | 不具合の経緯確認。今の不足一覧にはしない |
+| 実装セッション・CIの効率化をどう検討したか | [10月19日](retro/implementation-retro-2026-10-19.md)・[10月20日](retro/implementation-retro-2026-10-20.md) | 再分析時のみ。現在の作業指示にはしない |
 
 ## 初回対象外の機能を再検討するときだけ読む資料
 
 | 対象 | 履歴資料 |
 | --- | --- |
-| W08：Snap Layout呼び出しの過去の製品設計・実測 | [呼び出し経路](snap-invocation.md) |
-| Snap Layout表示の技術成立性・試した方式 | [限定検証](research-snap-layout-validation.md)・[API一次資料](research-snap-layout-sources.md) |
-| Win+Z／hoverによる呼び出し推定の根拠・制約 | [限定検証](research-snap-invocation-validation.md)・[API一次資料](research-snap-invocation-api.md) |
-| W10：Task View表示の技術成立性 | [Task View限定検証](research-task-view-validation.md) |
+| W08：Snap Layout呼び出しの過去の製品設計・実測 | [呼び出し経路](design/snap-invocation.md) |
+| Snap Layout表示の技術成立性・試した方式 | [限定検証](research/research-snap-layout-validation.md)・[API一次資料](research/research-snap-layout-sources.md) |
+| Win+Z／hoverによる呼び出し推定の根拠・制約 | [限定検証](research/research-snap-invocation-validation.md)・[API一次資料](research/research-snap-invocation-api.md) |
+| W10：Task View表示の技術成立性 | [Task View限定検証](research/research-task-view-validation.md) |
 
 現在の対象8操作について採用済みの技術方式が破綻した場合は、まず[現行技術調査](../research/README.md)から必要な判断根拠を探してください。初回対象外の機能を再開する場合も、**古い設計の再採用は自動では行わず**、現行の製品要件・実装・Windows環境を再確認します。
 

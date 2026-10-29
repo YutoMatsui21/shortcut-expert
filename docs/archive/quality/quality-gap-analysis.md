@@ -1,10 +1,10 @@
-> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-requirements.md)・[設計](../design.md)・[開発・検証ガイド](../development.md)を優先してください。
+> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../../ui-requirements.md)・[設計](../../design.md)・[開発・検証ガイド](../../development.md)を優先してください。
 
 # 現行リポジトリの品質保証・テスト・CIの不足
 
-調査日：2026-10-12。対象：調査開始時の`2a83b76d2fe30cc979dff0f017d9c5e0b98977ea`と作業ツリー。開始時に未コミット変更なし。一般原則と一次資料は[品質保証のベストプラクティス調査](quality-best-practices.md)、**当時の調査対象となった要件**は[旧MVP](mvp-requirements.md)に残る。**現在の要件の正本**は[確定要件](../ui-requirements.md)、現在の責務分担は[現行アーキテクチャ](../design.md#architecture)を参照する。本書は調査・提案であり、新しい公開条件や実装方針の承認を意味しない。
+調査日：2026-10-12。対象：調査開始時の`2a83b76d2fe30cc979dff0f017d9c5e0b98977ea`と作業ツリー。開始時に未コミット変更なし。一般原則と一次資料は[品質保証のベストプラクティス調査](quality-best-practices.md)、**当時の調査対象となった要件**は[旧MVP](../requirements/mvp-requirements.md)に残る。**現在の要件の正本**は[確定要件](../../ui-requirements.md)、現在の責務分担は[現行アーキテクチャ](../../design.md#architecture)を参照する。本書は調査・提案であり、新しい公開条件や実装方針の承認を意味しない。
 
-後続の依頼で自動試験・回帰修正・CI定義を追加した。以下は調査時点の記録であり、最新の層・責務・確認範囲は[テスト設計](../design.md#test-design)、実行方法は[開発・検証ガイド](../development.md)を参照する。
+後続の依頼で自動試験・回帰修正・CI定義を追加した。以下は調査時点の記録であり、最新の層・責務・確認範囲は[テスト設計](../../design.md#test-design)、実行方法は[開発・検証ガイド](../../development.md)を参照する。
 
 ## 1. 結論
 
@@ -45,7 +45,7 @@ P0は全機能を停止させる緊急度の意味ではなく、次の開発で
 | ローカルCI定義 | `.github`なし。Git追跡ファイルに別CI定義も見当たらない | この作業ツリーで確認した範囲 |
 | リポジトリ情報・rulesets | `main`、private。rulesets照会はプラン要件で403 | rulesets・必須チェックの適用状況は確認できていない。不存在とは断定しない |
 
-Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[global.json](../../global.json)と整合。過去のdesign.mdにある成功記録を今回の成功として転記していない。
+Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[global.json](../../../global.json)と整合。過去のdesign.mdにある成功記録を今回の成功として転記していない。
 
 同梱版・開発server版のsmoke、インストーラー、実画面の全画面判定、実入力認識率、通常作業60分、アクセシビリティ、性能、依存の脆弱性監査は今回実行していない。実入力の観測を伴う試験は、実施時に明示的な同意が必要である。
 
@@ -56,13 +56,13 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 | Coreへの時計・保存・通知の注入 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、[coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 時間境界と失敗を決定的に再現できる。維持すべき |
 | 期限1999/2000/2001ms、頻度10秒/60秒の境界 | [coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 実装の条件式が変わった時に有効 |
 | 世代・sequence・除外候補の消費 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、関連テスト | 重複と停止後の候補を排除する基盤 |
-| 保存文書の厳格な検証と原本保持 | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)、[repository.test.ts](../../tests/repository.test.ts) | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
+| 保存文書の厳格な検証と原本保持 | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)、[repository.test.ts](../../../tests/repository.test.ts) | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
 | 書込み直列化・一時ファイル・sync・rename | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts) | 通常の途中書込みに備える。電源断までの保証は別検証 |
-| SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
-| 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../src/main/index.ts)、[Observer](../../native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
-| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../src/main/coach-app.ts)、[notification.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)、[preload](../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
-| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../development.md)、[research](research-overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
-| lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../package.json)、[build-helper](../../scripts/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
+| SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
+| 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../../src/main/index.ts)、[Observer](https://github.com/YutoMatsui21/shortcut-expert/blob/2a83b76d2fe30cc979dff0f017d9c5e0b98977ea/native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
+| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../../src/main/coach-app.ts)、[notification.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)、[preload](../../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
+| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../../development.md)、[research](../research/research-overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
+| lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../../package.json)、[build-helper](../../../scripts/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
 
 ## 3. 再現できた不具合：設定の再試行が最新操作を取り消す
 
@@ -75,7 +75,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 | 3. W03のmute解除を正常保存する | 最新の正常保存は通知ON。それでも古い通知OFFの保留が残る |
 | 4. 「保存を再試行」に相当する`retrySave()`を呼ぶ | 古い保留が保存され、通知OFFに戻る |
 
-今回の人工repositoryで、手順3後の`settings.muted=[]`、手順4後の`settings.muted=['W03']`をassertして再現した。[UI](../../src/renderer/src/CoachApp.tsx)もmute操作を`pendingSave`だけでは無効化していないため、この操作列を排除している設計ではない。ただし、実UIでディスク障害を起こす試験は未実施。
+今回の人工repositoryで、手順3後の`settings.muted=[]`、手順4後の`settings.muted=['W03']`をassertして再現した。[UI](../../../src/renderer/src/CoachApp.tsx)もmute操作を`pendingSave`だけでは無効化していないため、この操作列を排除している設計ではない。ただし、実UIでディスク障害を起こす試験は未実施。
 
 必要なのは、保留設定と最新の利用者操作の関係を決め、それを試験すること。例として「後の成功を最新値とし、古い保留を消す」か「保留中の変更を保留へ統合して最新意図を保存する」などがある。今回は不具合修正や挙動変更をしていない。
 
@@ -83,9 +83,9 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 ## 4. 本番のC#候補生成が自動テストの外にある
 
-[native.test.ts](../../tests/native.test.ts)は、DisplayPolicyの7例、hook登録・解除、stdin終了、start/stop/再開/shutdownを検証する。一方、`Observer.OnMouse / OnKey / OnEvent`はfixture中に処理を早期終了する。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)も完成済みCandidateをhelperに渡している。従って、**OS入力からそのCandidateを作る本番ロジックは、これらの成功では検証されない**。
+[native.test.ts](../../../tests/native.test.ts)は、DisplayPolicyの7例、hook登録・解除、stdin終了、start/stop/再開/shutdownを検証する。一方、`Observer.OnMouse / OnKey / OnEvent`はfixture中に処理を早期終了する。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)も完成済みCandidateをhelperに渡している。従って、**OS入力からそのCandidateを作る本番ロジックは、これらの成功では検証されない**。
 
-[validation/probes/OriginCandidateTests.cs](../../validation/probes/OriginCandidateTests.cs)は過去のprobe用ロジックの試験で、製品Observerを直接試験しておらず、`npm test`にも入っていない。単にこのprobe試験をCIへ足しても、本番の穴は埋まらない。
+[validation/probes/OriginCandidateTests.cs](../../../validation/probes/OriginCandidateTests.cs)は過去のprobe用ロジックの試験で、製品Observerを直接試験しておらず、`npm test`にも入っていない。単にこのprobe試験をCIへ足しても、本番の穴は埋まらない。
 
 提案は、Win32の読み取り・hook登録はNative helperへ残し、読み取った最小イベントと状態から候補を作る部分だけ、同じ本番コードを人工イベント列で試験できるようにすること。TypeScript側の採用・同等キー判定をC#へ移さず、現行Moduleの責務を守る。巨大な全Win32 APIモックや独立した「テスト専用判定器」は不要。
 
@@ -107,7 +107,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 ## 5. 通信・停止・復旧の契約試験が足りない
 
-[ObserverClient](../../src/main/observer.ts)には候補の型検証、requestId、応答timeout、世代、fault時の停止がある。これらの正常・異常分岐を直接確認するテストはない。現行native.testは実helperへ直接通信するため、TypeScript側ObserverClientの異常処理を通さない。
+[ObserverClient](../../../src/main/observer.ts)には候補の型検証、requestId、応答timeout、世代、fault時の停止がある。これらの正常・異常分岐を直接確認するテストはない。現行native.testは実helperへ直接通信するため、TypeScript側ObserverClientの異常処理を通さない。
 
 テストしやすくする境界は、子プロセスの起動・入出力・終了と時計でよい。候補parserはElectronをimportするファイルに同居しているため、必要なら通信の純粋検証部分をMain内の小さなモジュールへ分ける。SharedをElectronやNode依存にしない。
 
@@ -123,7 +123,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 最後のケースは特に重要である。exit handlerは子プロセスが現在のものか確認して`this.child`を消すが、続く`failed()`呼出しは同じ条件で保護されていない。旧プロセスのexitと新しいstartが競合する列を試験すべきである。これはコードから見つけたリスクで、今回再現済みの不具合とは区別する。
 
-親EOFでhelperが終了する良い試験は既にある。しかし、通常アプリの終了、未保存時の終了取消、Mainの二重quit、helper異常後の手動復帰まで保証するものではない。[coach-app](../../src/main/coach-app.ts)も含むライフサイクル試験が必要。
+親EOFでhelperが終了する良い試験は既にある。しかし、通常アプリの終了、未保存時の終了取消、Mainの二重quit、helper異常後の手動復帰まで保証するものではない。[coach-app](../../../src/main/coach-app.ts)も含むライフサイクル試験が必要。
 
 ## 6. 状態遷移・保存・日付の不足
 
@@ -164,11 +164,11 @@ property/model-based testingは、この状態列と「停止中は新規観測�
 
 現行pollはawait後に通知世代を確認せず`dismiss()`するため、古い照会応答と新しい表示が競合するケースは特に試験する。これは未再現のリスク。
 
-smokeの改善は、固定4200ms待ちの成功確認だけでなく、通知開始／終了eventや有界の条件待機を使うこと。4秒そのものの仕様試験はfake clockで行い、少数の実時間試験で結線を確認する。現在、smokeのcatchは`COACH_SMOKE_FAILED`にまとめられるため、どの段階で失敗したかを特定しづらい。fixture用に段階名・終了コード・秘匿情報を含まない原因分類を出す。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)、[coach-app](../../src/main/coach-app.ts)
+smokeの改善は、固定4200ms待ちの成功確認だけでなく、通知開始／終了eventや有界の条件待機を使うこと。4秒そのものの仕様試験はfake clockで行い、少数の実時間試験で結線を確認する。現在、smokeのcatchは`COACH_SMOKE_FAILED`にまとめられるため、どの段階で失敗したかを特定しづらい。fixture用に段階名・終了コード・秘匿情報を含まない原因分類を出す。[smoke](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/smoke.ts)、[coach-app](../../../src/main/coach-app.ts)
 
 ## 8. CIの具体的な設計案
 
-現在は[package.json](../../package.json)に入口があるが、`test`が毎回helper publishを行う。pure、実helper、Electron、同梱版の粒度を分けて、速い失敗を先に返す。これまでの確認範囲を失わないよう、現行`npm test`相当のまとめ入口を残す。
+現在は[package.json](../../../package.json)に入口があるが、`test`が毎回helper publishを行う。pure、実helper、Electron、同梱版の粒度を分けて、速い失敗を先に返す。これまでの確認範囲を失わないよう、現行`npm test`相当のまとめ入口を残す。
 
 以下は提案する実行段階であり、workflowファイルや新しいnpm scriptはまだ作っていない。
 
@@ -199,11 +199,11 @@ CIで最初から必要な設定は以下。
 
 ## 9. 配布・実機受入を成果物に結び付ける
 
-[electron-builder.yml](../../electron-builder.yml)にはNSISのユーザー単位配布、helper同梱、appData保持が設定されている。入口の`package:dir`／`package:installer`はbuildを前提とするが、script自身でbuildは行わない。このため、単にpackageの成功だけでは最新コードの配布物と判断できない。公開候補はclean checkoutから作り、commit、製品版、helper protocol、SDK/runtime版、SHA-256、検証結果を一つのmanifestで結ぶ。
+[electron-builder.yml](../../../electron-builder.yml)にはNSISのユーザー単位配布、helper同梱、appData保持が設定されている。入口の`package:dir`／`package:installer`はbuildを前提とするが、script自身でbuildは行わない。このため、単にpackageの成功だけでは最新コードの配布物と判断できない。公開候補はclean checkoutから作り、commit、製品版、helper protocol、SDK/runtime版、SHA-256、検証結果を一つのmanifestで結ぶ。
 
 配布試験は、SDK/Node未導入、通常ユーザー、日本語・空白を含むpath、再導入、記録と設定の引継ぎ、削除後の残存データ方針、完全削除、helperが残らない終了、READMEのコマンド導入で確認する。インストーラー成功・同梱smoke成功・SmartScreenの実際の起動経路は別項目である。署名をするかは公開準備の判断であり、署名済みなら警告が絶対にないとしない。[electron-builder NSIS](https://www.electron.build/nsis.html)、[Microsoft SmartScreen](https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/)
 
-公開受入は新しい点数基準を作る必要がない。[既存要件](mvp-requirements.md)にある「採用操作ごとにmouse10/key10で各8以上、誤キー案内・キーへの誤通知0、負例20で誤通知0、通常作業60分」を、実施した条件・成果物版と結び付ける。
+公開受入は新しい点数基準を作る必要がない。[既存要件](../requirements/mvp-requirements.md)にある「採用操作ごとにmouse10/key10で各8以上、誤キー案内・キーへの誤通知0、負例20で誤通知0、通常作業60分」を、実施した条件・成果物版と結び付ける。
 
 受入表には、操作ID、対象app/版、Windows build、通常権限、入力経路、開始・終了状態、画面数・倍率・配置、正解の根拠、正しく認識／unknown／未検出／重複／誤認／誤通知、試験回数、実施日、成果物hashを持つ。正解は利用者の実施操作と目視した結果で付け、検出器の出力から作らない。必要以上のwindow titleや入力内容を含めない。
 
@@ -215,7 +215,7 @@ Electronの基本防御は既にある。追加するのは、未知sender／別
 
 プライバシーは、counts/settingsのschemaが厳格という強みを、通常実行・失敗経路・試験artifactへ広げる。隔離fixtureの正常・保存失敗・helper失敗・終了で書き出された全ファイルを調べ、許可した集計と設定のみか確認する。アプリ自身の通信を確認する際は、OSや他アプリの通信と区別する。自動crash uploadや外部telemetryを新設する案は、外部送信なしの現要件と合わない。
 
-fixtureは起動引数で同梱版にも入っている。現状、通常時に人工候補を受理する経路ではないが、試験モードの保存先が確実に隔離されること、通常モードではfixture命令を拒否することを回帰テストする価値がある。[index.ts](../../src/main/index.ts)、[ObserverHost](../../native-helper/ObserverHost.cs)
+fixtureは起動引数で同梱版にも入っている。現状、通常時に人工候補を受理する経路ではないが、試験モードの保存先が確実に隔離されること、通常モードではfixture命令を拒否することを回帰テストする価値がある。[index.ts](../../../src/main/index.ts)、[ObserverHost](https://github.com/YutoMatsui21/shortcut-expert/blob/2a83b76d2fe30cc979dff0f017d9c5e0b98977ea/native-helper/ObserverHost.cs)
 
 依存監査・定期更新のworkflowは見当たらない。ただし今回、脆弱性があると断定する監査はしていない。npmの実行依存だけを見る監査では、devDependenciesに置かれているが配布に含まれるElectronや、self-containedで同梱する.NET runtimeが抜ける。npm依存、Electron/Chromium/Node runtime、.NET runtime、builder/Actionsを分けて更新・監査し、更新後の配布smokeを行う。現在C#に明示的PackageReferenceはないため、「NuGet lockがない」ことだけを直ちに欠陥とはしない。[Electron versions](https://www.electronjs.org/docs/latest/tutorial/electron-timelines)、[.NET self-contained](https://learn.microsoft.com/en-us/dotnet/core/deploying/)
 

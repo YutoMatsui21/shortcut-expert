@@ -85,4 +85,4 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - コメントには**コードから読み取れない理由・制約**を書く。時系列の実装日誌はここに追加しない。
 - 抽象化は実際の重複・変更需要に合わせる。根拠のない一般化を避ける。
 
-過去の実装経緯は[履歴アーカイブ](archive/design-implementation-history.md)、進捗と未解決事項は[GitHub Issues](https://github.com/YutoMatsui21/shortcut-expert/issues)で追跡する。
+過去の実装経緯は[履歴アーカイブ](archive/design/design-implementation-history.md)、進捗と未解決事項は[GitHub Issues](https://github.com/YutoMatsui21/shortcut-expert/issues)で追跡する。

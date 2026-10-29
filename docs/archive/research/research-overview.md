@@ -1,8 +1,8 @@
 # 調査・検証根拠
 
-> **2026-10-09〜11の履歴資料です。** 本文の操作候補数・設計方針・実施状況・「再調査は不要」などは**当時の判断**であり、現行の作業指示ではありません。現在のプロダクト目的は[product.md](../product.md)、初回対象8操作・受入条件は[確定要件](../ui-requirements.md)を優先してください。
+> **2026-10-09〜11の履歴資料です。** 本文の操作候補数・設計方針・実施状況・「再調査は不要」などは**当時の判断**であり、現行の作業指示ではありません。現在のプロダクト目的は[product.md](../../product.md)、初回対象8操作・受入条件は[確定要件](../../ui-requirements.md)を優先してください。
 
-**2026-10-09〜11の調査・実測の記録**。現在の要件は[確定要件](../ui-requirements.md)、設計は[現行アーキテクチャ](../design.md#architecture)を正本とする。旧MVP要件は[アーカイブ](mvp-requirements.md)へ移動した。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
+**2026-10-09〜11の調査・実測の記録**。現在の要件は[確定要件](../../ui-requirements.md)、設計は[現行アーキテクチャ](../../design.md#architecture)を正本とする。旧MVP要件は[アーカイブ](../requirements/mvp-requirements.md)へ移動した。本書は2026-10-09〜11の判断根拠と原本の案内。各節の未実装／未確認は、その調査時点の状態を指す。ステップ1の再調査は不要。
 
 必要な節だけ読む： [採用理由](#value)・[判断修正](#review)・[KPX](#kpx)・[競合](#tools)・[環境別制約](#platforms)・[11操作の判断](#operations)・[API保証範囲](#apis)・[実測](#measurements)・[probe再現](#probes)。
 
@@ -12,7 +12,7 @@
 
 ## ステップ1：価値検証
 
-2026-10-09承認・完了。当時の要件は[旧MVP要件](mvp-requirements.md)。現在の受入条件は[確定要件](../ui-requirements.md)。
+2026-10-09承認・完了。当時の要件は[旧MVP要件](../requirements/mvp-requirements.md)。現在の受入条件は[確定要件](../../ui-requirements.md)。
 
 ### 目的・採用理由
 
@@ -72,7 +72,7 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 - 事実・提供状況・公開コード：[競合調査](research-overview.md#tools)。
 - IDE内部Action：[KPX参照](research-overview.md#kpx)。コマンド履歴・Windows画面推定：[競合調査](research-overview.md#tools)。API制約：[環境別調査](research-overview.md#platforms)。
 
-ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現在の仕様は[確定要件](../ui-requirements.md)。
+ユーザーはKPX通常通知・右下案内・強制練習なしを選択。日別graphは当時候補で、現在は数値必須／graph後回しに確定。現在の仕様は[確定要件](../../ui-requirements.md)。
 
 <a id="kpx"></a>
 
@@ -91,7 +91,7 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 | 日別・graph | 保存項目に日時なし、確認codeに日別／推移graphなし | 日別保存は別に必要 |
 | 入力判定 | IDE ActionのMouseEvent／KeyEventを実行前に区別。[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java) | 成功数検証ではなく実行観測。Windows全体へ流用できない |
 
-今回の通知・停止・記録契約は[mvp-requirements.md](mvp-requirements.md)、APIの差は[技術調査](research-overview.md#platforms)。
+今回の通知・停止・記録契約は[mvp-requirements.md](../requirements/mvp-requirements.md)、APIの差は[技術調査](research-overview.md#platforms)。
 
 <a id="tools"></a>
 
@@ -151,15 +151,15 @@ Google Docs内の拡張がChrome本体のtabbar・戻るbuttonを扱えるとは
 
 <a id="operations"></a>
 
-W11の本番実装と局所検証は[#39の判定契約](../operations/window-close.md)・[2026-10-29の結果](https://github.com/YutoMatsui21/shortcut-expert/issues/39)を参照。通常閉鎖でもHIDE/前面変更/DESTROY時点の生存が先行する実測を保存し、同一対象の破棄と消滅を照合する。
+W11の本番実装と局所検証は[#39の判定契約](../../operations/window-close.md)・[2026-10-29の結果](https://github.com/YutoMatsui21/shortcut-expert/issues/39)を参照。通常閉鎖でもHIDE/前面変更/DESTROY時点の生存が先行する実測を保存し、同一対象の破棄と消滅を照合する。
 
-> 2026-10-27：初回は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合、W08/W10は関連学習候補も含め対象外。以下の表は判断時点の証拠・仮説を保持し、現在の対象・経路は[確定要件](../ui-requirements.md)を優先する。W03上端直接ドラッグ、W07のWin保持列、W04連続Win+↓は個別ゲートで確認する。
+> 2026-10-27：初回は8操作（W12/W01/W03/統合W04/W06/W07/W02/W11）。W05はW04へ統合、W08/W10は関連学習候補も含め対象外。以下の表は判断時点の証拠・仮説を保持し、現在の対象・経路は[確定要件](../../ui-requirements.md)を優先する。W03上端直接ドラッグ、W07のWin保持列、W04連続Win+↓は個別ゲートで確認する。
 
 > 2026-10-28 #9実測中の本人決定：画面をまたいで上端へ直接ドラッグし最大化した操作はW03だけ、別画面の通常位置で離した移動はW02だけとする。「monitorが変われば常にW02優先」という調査時の仮説はこの境界では採用しない。入力対象・ドラッグ終端・最大化を照合し、Snap Layout選択やprogram最大化を混同しない。移動中の派生復元の非計上は維持する。Win+↑単独と画面移動込みの操作全体との同等性は未成立。左右半分／四隅の画面跨ぎへは優先順位を拡張しない。過去の原本と判断は当時の証拠として保持する。
 
-> **2026-10-28 後続の仕様改訂（調査原本・当時の判断は変更しない）**：上記の「画面跨ぎ上端dragはW03のみ」の排他的ルールを撤回。drag終了時に別monitorへ移動が確定し、同じdragで最大化も確定したら**W02＋W03各1件**、四隅quarterも確定したら**W02＋W07各1件**を記録する。中間monitor変化のみ・派生復元・中間halfは記録しない。操作別記録2件・同一gestureの通知最大1件の契約は[現行要件](../ui-requirements.md)と[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。下記の2026-10-28実測や評価は**当時の証拠と評価**として残し、新方針の技術成立を実証したことにはしない。
+> **2026-10-28 後続の仕様改訂（調査原本・当時の判断は変更しない）**：上記の「画面跨ぎ上端dragはW03のみ」の排他的ルールを撤回。drag終了時に別monitorへ移動が確定し、同じdragで最大化も確定したら**W02＋W03各1件**、四隅quarterも確定したら**W02＋W07各1件**を記録する。中間monitor変化のみ・派生復元・中間halfは記録しない。操作別記録2件・同一gestureの通知最大1件の契約は[現行要件](../../ui-requirements.md)と[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)を参照。下記の2026-10-28実測や評価は**当時の証拠と評価**として残し、新方針の技術成立を実証したことにはしない。
 
-> [2026-10-28の8操作調査結果（#9）](../research/eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、当時はW12/W01/W04/W06/W11が制約付き着手可、W03/W07/W02は未成立。その後の新仕様と16追加試行による[#14の再審査](../research/compound-drag-validation.md)で、全8ゲートを制約付き着手PASSとした。製品完全対応・リリース合格ではない。下表の初期仮説や過去の結論は最新ゲートの代用にしない。
+> [2026-10-28の8操作調査結果（#9）](../../research/eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、当時はW12/W01/W04/W06/W11が制約付き着手可、W03/W07/W02は未成立。その後の新仕様と16追加試行による[#14の再審査](../../research/compound-drag-validation.md)で、全8ゲートを制約付き着手PASSとした。製品完全対応・リリース合格ではない。下表の初期仮説や過去の結論は最新ゲートの代用にしない。
 
 
 ## Windows操作の技術判断（ステップ3結論）
@@ -168,7 +168,7 @@ W11の本番実装と局所検証は[#39の判定契約](../operations/window-cl
 
 2026-10-11完了。11候補は維持し、資料＋既存実測から実装方針を選べる状態。全件の動作・公開品質の合格ではない。資料上の仮説を実装へ持ち越す新方針はユーザー承認済み。実装後に不成立なら条件限定・修正・後回しを相談する。
 
-要件・キー候補：[mvp-requirements.md](mvp-requirements.md)。実測：[技術検証記録](research-overview.md#measurements)。API詳細：[API保証範囲](research-overview.md#apis)。
+要件・キー候補：[mvp-requirements.md](../requirements/mvp-requirements.md)。実測：[技術検証記録](research-overview.md#measurements)。API詳細：[API保証範囲](research-overview.md#apis)。
 
 ### 操作×必要情報×判定仮説
 
@@ -176,8 +176,8 @@ W11の本番実装と局所検証は[#39の判定契約](../operations/window-cl
 
 | ID | 必要情報／API | 判定仮説・同等キーの条件 | 判断・残リスク |
 | --- | --- | --- | --- |
-| W01 切替 | mouse/key hook、直接クリックの候補HWND（WindowFromPhysicalPoint/GetAncestor）、前後foreground HWND、EVENT_SYSTEM_FOREGROUNDとcallback時/settle時poll。SWITCHENDは今回未出現 | 背後の別窓へ直接クリック／Alt+Tabの確定後、入力元と最終foregroundを照合し1候補。案内はAlt+Tabを基本とし、番号対応が確証できた場合だけWin+数字を追加。taskbar click・Win+数字はW12のみ | [#7実測](../research/window-switch-validation.md)：自作通常3窓の基本経路は制約付きで実装着手可。負例とW12入口はW01候補0、後着イベントを現在pollと区別。外部アプリ一般・owner・同時program競合・W12製品との統合は#29/#47へ。Edgeタブは2026-10-26の現行要件でW01対象外。番号対応はunknown、Alt+Tabへfallback。追加案内は#96 |
-| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6/#28：1〜10番の単一Win+数字案内は製品実装済み**。主タスクバーの1/2/9/10番と負例を代表環境で確認（全条件の保証ではない）。**#96で起動済み/未起動判定、起動済み11番目以降のAlt+Tab案内、2候補通知を別途実証・実装**。別タスクバー・overflow・変動はunknownを維持。[原本・限界・採用条件](../research/taskbar-input-validation.md) |
+| W01 切替 | mouse/key hook、直接クリックの候補HWND（WindowFromPhysicalPoint/GetAncestor）、前後foreground HWND、EVENT_SYSTEM_FOREGROUNDとcallback時/settle時poll。SWITCHENDは今回未出現 | 背後の別窓へ直接クリック／Alt+Tabの確定後、入力元と最終foregroundを照合し1候補。案内はAlt+Tabを基本とし、番号対応が確証できた場合だけWin+数字を追加。taskbar click・Win+数字はW12のみ | [#7実測](../../research/window-switch-validation.md)：自作通常3窓の基本経路は制約付きで実装着手可。負例とW12入口はW01候補0、後着イベントを現在pollと区別。外部アプリ一般・owner・同時program競合・W12製品との統合は#29/#47へ。Edgeタブは2026-10-26の現行要件でW01対象外。番号対応はunknown、Alt+Tabへfallback。追加案内は#96 |
+| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6/#28：1〜10番の単一Win+数字案内は製品実装済み**。主タスクバーの1/2/9/10番と負例を代表環境で確認（全条件の保証ではない）。**#96で起動済み/未起動判定、起動済み11番目以降のAlt+Tab案内、2候補通知を別途実証・実装**。別タスクバー・overflow・変動はunknownを維持。[原本・限界・採用条件](../../research/taskbar-input-validation.md) |
 | W02 画面移動 | monitor前後・配置、MOVESIZE開始終了、実入力 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等 | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能 |
 | W03 最大化 | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input | 同一対象の標準経路＋結果。Win+↑、独自全画面除外 | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認 |
 | W04 最小化 | placement・MINIMIZE系event、HTMINBUTTON等、input | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない |
@@ -199,7 +199,7 @@ W11の本番実装と局所検証は[#39の判定契約](../operations/window-cl
 - rectはDPI仮想化・不可視枠、画面は作業領域を考慮して座標系をそろえる。固定pxだけでsnapと断定しない。
 - W08は2026-10-23に呼び出し推定方式へ仕様変更。EVENT_SYSTEM_ARRANGMENTPREVIEWはpreview rectの表示であり、W08の呼び出し証拠にも本体表示成功の証拠にも代用しない。W10のSWITCHSTART/ENDはAlt+Tab用。
 - W09の裸のdesktop表示をIAppVisibilityだけで断定しない。[API](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-iappvisibility)、[値](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/ne-shobjidl_core-monitor_app_visibility)
-- W08〜10の専用APIが存在しないとは断定しない。旧W08の表示成功方式は未成立の調査記録として保持し、現行W08の根拠は[呼び出し推定の実測判断](research-snap-invocation-validation.md)と[確定要件](../ui-requirements.md#excluded-operations)を優先する。
+- W08〜10の専用APIが存在しないとは断定しない。旧W08の表示成功方式は未成立の調査記録として保持し、現行W08の根拠は[呼び出し推定の実測判断](research-snap-invocation-validation.md)と[確定要件](../../ui-requirements.md#excluded-operations)を優先する。
 - UIA tree・提供eventsは固定保証がなく、action eventsにもuser/program両方がある。
 - key押下や中間stateを成功数にしない。観測回数を習得率・全操作成功数としない。常用4アプリへの一般化も未確認。
 
@@ -275,7 +275,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 完了：2026-10-09 19:37:19→10-11 14:31:18 JST。必要情報とAPIから実装方針を判断した。製品実装・公開品質の合格ではない。次は別チャットで最小設計。
 
-要件：[mvp-requirements.md](mvp-requirements.md)。最新判断：[操作別の技術判断](research-overview.md#operations)。API根拠：[API保証範囲](research-overview.md#apis)。再現：[probe再現手順](research-overview.md#probes)。
+要件：[mvp-requirements.md](../requirements/mvp-requirements.md)。最新判断：[操作別の技術判断](research-overview.md#operations)。API根拠：[API保証範囲](research-overview.md#apis)。再現：[probe再現手順](research-overview.md#probes)。
 
 ### 判定と方針
 
@@ -299,11 +299,11 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### API到達性
 
-[native-health-result.json](../../validation/evidence/native-health-result.json)：自分の非表示窓でplacement・monitor取得、programリサイズの矩形変化とLOCATIONCHANGE1件、WinEvent／mouse／key hook登録。入力hookは即時解除、payload未読、自然入力試行0。TypeScriptからexe起動・JSON受信も成功。連続監視・React・配布の実行証拠ではない。
+[native-health-result.json](../../../validation/evidence/native-health-result.json)：自分の非表示窓でplacement・monitor取得、programリサイズの矩形変化とLOCATIONCHANGE1件、WinEvent／mouse／key hook登録。入力hookは即時解除、payload未読、自然入力試行0。TypeScriptからexe起動・JSON受信も成功。連続監視・React・配布の実行証拠ではない。
 
 #### ManualWindowProbe v1
 
-[round1原本](../../validation/evidence/manual-window-observations-round1.jsonl)：10/09 20:28:42保存、20:29:09読取。reset3件を含む11records。
+[round1原本](../../../validation/evidence/manual-window-observations-round1.jsonl)：10/09 20:28:42保存、20:29:09読取。reset3件を含む11records。
 
 | 本人ラベル | 観測／入力候補 | 評価 |
 | --- | --- | --- |
@@ -315,11 +315,11 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 原因：1秒の近接判定が長いdragを切る、途中のmonitor変化を操作扱い、入力競合／hit test／hook欠落。長時間・競合の修正前失敗を自動再現。v2はcaption実押下＋MOVESIZESTART/ENDで入力候補を保持し、終端と開始を比較。途中を数えず、元画面終了0、競合キーはunknown、終了解除。
 
-[OriginCandidateTests.cs](../../validation/probes/OriginCandidateTests.cs)：12件合格。最大化・短いキー・長いdrag・終了解除・注入除外・競合・途中往復・終端比較・重複・元画面復帰を確認した純粋ロジック試験。OS配送・常用アプリ精度の保証ではない。保存はlatest＋UTC時刻付き原本に変更。
+[OriginCandidateTests.cs](../../../validation/probes/OriginCandidateTests.cs)：12件合格。最大化・短いキー・長いdrag・終了解除・注入除外・競合・途中往復・終端比較・重複・元画面復帰を確認した純粋ロジック試験。OS配送・常用アプリ精度の保証ではない。保存はlatest＋UTC時刻付き原本に変更。
 
 #### ManualWindowProbe v2
 
-[原本](../../validation/evidence/manual-window-observations-20261009-113827-828.jsonl)：10/09 20:40:58保存、20:41:15読取、metadata1＋操作3。2画面、4hooks=true。
+[原本](../../../validation/evidence/manual-window-observations-20261009-113827-828.jsonl)：10/09 20:40:58保存、20:41:15読取、metadata1＋操作3。2画面、4hooks=true。
 
 - drag8727ms：move-size-end、monitor0→1、drag-mouse、移動1。
 - 元画面への往復：移動recordなし。本人が実施・元画面で離したと回答し、未実施と区別して0を確認。
@@ -330,7 +330,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### TaskbarProbe
 
-[原本](../../validation/evidence/taskbar-observations-20261009-115509-449.jsonl)：10/09 20:55:28保存、20:55:43以降読取。
+[原本](../../../validation/evidence/taskbar-observations-20261009-115509-449.jsonl)：10/09 20:55:28保存、20:55:43以降読取。
 
 - foreground／mouse／key hooks=true。UIA appButtons6、ownMatches1、slotCandidate6、error=none。
 - mouse切替：taskbar-mouse、67ms、actualTargetMatched=true。
@@ -340,7 +340,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 #### ExternalWindowProbe：Chrome／Obsidian
 
-初回：[原本](../../validation/evidence/external-window-observations-20261011-050724-973.jsonl)、10/11 14:10:43保存。chromeだけ選択。Obsidianの選び直しなしという本人申告のため、Obsidian証拠に使わない。
+初回：[原本](../../../validation/evidence/external-window-observations-20261011-050724-973.jsonl)、10/11 14:10:43保存。chromeだけ選択。Obsidianの選び直しなしという本人申告のため、Obsidian証拠に使わない。
 
 | Chrome初回 | 結果 |
 | --- | --- |
@@ -349,7 +349,7 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 | mouse画面移動 | move-size-end、0→1、drag-mouse、2980ms |
 | key画面移動 | 1→0、nearby-key、Win+Shift+Left、36ms |
 
-再試行：[原本](../../validation/evidence/external-window-observations-20261011-051237-322.jsonl)、14:14:27保存。chrome／obsidianとも選択済み、2画面、4hooks=true。
+再試行：[原本](../../../validation/evidence/external-window-observations-20261011-051237-322.jsonl)、14:14:27保存。chrome／obsidianとも選択済み、2画面、4hooks=true。
 
 | 対象／操作 | 観測 | 判定 |
 | --- | --- | --- |
@@ -372,7 +372,7 @@ ChatGPT・VS Code、配置系、UI識別、日別保存、通知・全画面抑�
 
 ### 作業記録（JST）
 
-終了・総経過・手戻りは[mvp-requirements.md](mvp-requirements.md#工程記録jst)。以下は記録できた区間（終端の応答／保存処理は一部未計測）。
+終了・総経過・手戻りは[mvp-requirements.md](../requirements/mvp-requirements.md#工程記録jst)。以下は記録できた区間（終端の応答／保存処理は一部未計測）。
 
 | 日付 | 作業区間 | 時間 | 内容 |
 | --- | --- | --- | --- |

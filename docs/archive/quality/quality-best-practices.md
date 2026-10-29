@@ -1,16 +1,16 @@
-> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../ui-requirements.md)・[設計](../design.md)・[README](../../README.md)を優先してください。
+> **履歴資料／現行仕様ではありません。** 当時の調査や合意です。現在の[確定要件](../../ui-requirements.md)・[設計](../../design.md)・[README](../../../README.md)を優先してください。
 
 # Windowsデスクトップ製品のテスト・CI・品質保証の調査
 
 調査日：2026-10-12。対象：Electron＋React＋TypeScriptと、C#／.NET／Win32の補助プロセスを持つ個人開発MVP。
 
-本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。**当時の調査対象となった要件**は[旧MVP](mvp-requirements.md)に残っているが、**現在の製品要件の正本**は[確定要件](../ui-requirements.md)。責務は[現行設計](../design.md#architecture)、実行手順は[開発・検証ガイド](../development.md#development-workflow)を参照する。本書はこれらを変更しない。
+本書は一次資料に基づく背景調査である。現在のコード・テスト・CIとの照合結果は[不足分析](quality-gap-analysis.md)へ分ける。**当時の調査対象となった要件**は[旧MVP](../requirements/mvp-requirements.md)に残っているが、**現在の製品要件の正本**は[確定要件](../../ui-requirements.md)。責務は[現行設計](../../design.md#architecture)、実行手順は[開発・検証ガイド](../../development.md#development-workflow)を参照する。本書はこれらを変更しない。
 
 各節の「一次資料」は資料が述べる事実・原則、「適用案」はその原則を本製品へ当てはめた調査者の判断である。「先に必要」は調査当時に想定したリスクに対する推奨であり、新しい公開受け入れ条件の承認を意味しない。操作候補11件、Windows 11・1〜2画面、4アプリの成立範囲、人工試験と実入力精度の区別を維持する。
 
 ## 1. 調査から得た方針
 
-この製品では、判定・集計の正しさ、プロセス境界、Windowsの実際の観測、配布物の動作を別々の証拠で確認する必要がある。純粋関数のテストが通ってもhelperの入力由来は保証できず、人工候補の全経路試験が通ってもChrome等での認識率は保証できない。これは現在の[公開MVPの達成条件](mvp-requirements.md#公開mvpの達成条件)と[設計の検証方針](../design.md#architecture)からの適用判断である。
+この製品では、判定・集計の正しさ、プロセス境界、Windowsの実際の観測、配布物の動作を別々の証拠で確認する必要がある。純粋関数のテストが通ってもhelperの入力由来は保証できず、人工候補の全経路試験が通ってもChrome等での認識率は保証できない。これは現在の[公開MVPの達成条件](../requirements/mvp-requirements.md#公開mvpの達成条件)と[設計の検証方針](../../design.md#architecture)からの適用判断である。
 
 推奨する構成は、速く隔離できるテストを日常の中心に置き、境界の結合テスト、少数のElectron／配布物スモーク、同意のある実機受け入れで補う形である。Googleの原著も、単体だけでは接続の正しさは分からず、結合と少数E2Eが必要とする。掲載された70／20／10は初期の目安で、普遍的な合格比率ではない。[Google Testing Blog：Just Say No to More End-to-End Tests](https://testing.googleblog.com/2015/04/just-say-no-to-more-end-to-end-tests.html)
 
@@ -86,7 +86,7 @@ helper／Main／Preloadは実装言語や実行環境の違う境界なので、
 - 応答の遅延・重複・不一致、停止後のcandidate、helper再起動前の世代が、数値や通知を変えないことを確認する。
 - IPCは不正command、非boolean設定、未定義operation、想定外sender／frameを拒否する。rendererが生の`ipcRenderer`、Node、ファイルI/O、任意のchannelを使えないことを実行環境でも確認する。
 
-互換性を約束していない段階では、未知のschemaを黙って空データ扱いするより、検出して保存・受理を止める方針を確認する。実際に保存形式を変えるときに限り、前版fixture→新版読込み→新版保存の移行試験を追加する。この方針は[現行設計](design-implementation-history.md#design)に従う適用案である。
+互換性を約束していない段階では、未知のschemaを黙って空データ扱いするより、検出して保存・受理を止める方針を確認する。実際に保存形式を変えるときに限り、前版fixture→新版読込み→新版保存の移行試験を追加する。この方針は[現行設計](../design/design-implementation-history.md#design)に従う適用案である。
 
 ## 5. 状態遷移・非同期・プロパティテスト
 
@@ -133,7 +133,7 @@ NodeのwriteFileは、前の書込みがsettleする前に同じファイルへ�
 - 書込み・置換・削除の各失敗、権限拒否、ディスク不足相当、読み取り専用、JSON破損、未知schema、途中までの一時ファイル、複数回のretry、通常終了待ち。
 - fake filesystemの故障注入に加えて、一時ディレクトリ上の実ファイル結合で再起動・置換・削除・settings保持を確認する。全試験で通常userDataを明示的に使わない。
 
-一時ファイル→renameの成功は、電源断までの完全な耐久性の証明ではない。異常終了注入を行う場合も専用fixtureディレクトリ・専用プロセスで行い、「保存前」「一時ファイル書込み後」「置換後」の再起動結果と保証範囲を分ける。永続化方式の変更や保証追加は、[現行保存設計](design-implementation-history.md#design)の更新と相談が必要である。
+一時ファイル→renameの成功は、電源断までの完全な耐久性の証明ではない。異常終了注入を行う場合も専用fixtureディレクトリ・専用プロセスで行い、「保存前」「一時ファイル書込み後」「置換後」の再起動結果と保証範囲を分ける。永続化方式の変更や保証追加は、[現行保存設計](../design/design-implementation-history.md#design)の更新と相談が必要である。
 
 ## 7. Native helperとWindows固有の品質
 
@@ -205,7 +205,7 @@ typescript-eslintのno-floating-promisesは未処理Promiseを検知する。`vo
 
 ### 適用案
 
-型検査はtests・scripts・preloadを含む実際の対象を確認する。runtime検証と型検査は併用する。Core／SharedがNode・Electron・Mainをimportしない等、[現行依存方向](../design.md#architecture)の破壊を小さい自動検査またはlintで検知する。
+型検査はtests・scripts・preloadを含む実際の対象を確認する。runtime検証と型検査は併用する。Core／SharedがNode・Electron・Mainをimportしない等、[現行依存方向](../../design.md#architecture)の破壊を小さい自動検査またはlintで検知する。
 
 lintを追加する場合は、未処理Promise、async callbackの誤用、switchの網羅、unsafe値・不要な抑制等のバグに関係する規則から始める。見た目の一括修正を本調査の推奨と混ぜない。C# warningは重要なものからCIで扱い、既存診断の一覧・抑制理由を確認してからwarnings-as-errorsの範囲を決める。
 
@@ -256,7 +256,7 @@ NISTの組合せテスト研究は、少数の入力因子の相互作用に着�
 
 配布前の優先確認は、開発ツールを入れていないWindows 11通常ユーザーでの導入、初回／2回目起動、helper解決と同梱DLL、トレイ、単一起動、終了、再導入、削除、既存の記録・設定の扱いである。日本語・空白を含む場所、起動時cwdが違う場合、別出力先、起動中exeのlockも対象にする。installer生成成功と導入成功は別の確認とする。
 
-配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../development.md#5-公開前に確認すること)に従って別途決める。
+配布したexe・helper・installerのhash、commit、dependency版、確認結果を紐付ける。テスト後の再buildを未確認のまま公開せず、実際に配るartifactを確認する。SBOMやartifact attestationは公開運用が育った段階の追加候補でよく、初期から複雑なrelease基盤を必須にしない。署名・公開先・OSS licenseは既存の[公開準備](../../development.md#5-公開前に確認すること)に従って別途決める。
 
 | 場所 | 優先する組合せ | 位置付け |
 | --- | --- | --- |

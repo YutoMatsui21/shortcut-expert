@@ -1,6 +1,6 @@
 # 設計・実装の過去の工程記録
 
-> **履歴資料**：当時の設計と実施結果。現在は[現行設計](../design.md)・[確定要件](../ui-requirements.md)を優先してください。
+> **履歴資料**：当時の設計と実施結果。現在は[現行設計](../../design.md)・[確定要件](../../ui-requirements.md)を優先してください。
 
 ## 関数内の整理結果（2026-10-12）
 
@@ -42,7 +42,7 @@
 
 状態：2026-10-11 15:21:06 JST承認・ステップ4完了。Electron＋C# helperと常駐は本人合意。導入はコマンドを希望、追加工数次第で変更可能、npx指定は必須ではない。ステップ5「環境準備」への進行も承認済み。製品の操作計測ロジックは後工程。
 
-要件の正本：[mvp-requirements.md](mvp-requirements.md)。検出の仮説・残リスク：[操作別の技術判断](research-overview.md#operations)。本書は最小設計の決定を記録し、技術検証の詳細を複製しない。
+要件の正本：[mvp-requirements.md](../requirements/mvp-requirements.md)。検出の仮説・残リスク：[操作別の技術判断](../research/research-overview.md#operations)。本書は最小設計の決定を記録し、技術検証の詳細を複製しない。
 
 ### 構成
 
@@ -108,7 +108,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 1. 環境準備後、W03の成立条件で観測→判定→通知→保存→数値表示を縦につなぐ。
 2. 停止・mute・削除・保存失敗・helper終了と復帰を通す。
 3. 状態変更W04/W05/W11、複合移動W02、配置W06/W07へ拡張。
-4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../research/window-switch-validation.md)で自作通常窓の基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象窓・入力・Snap設定から呼び出しを推定する（[W08新仕様](../ui-requirements.md#excluded-operations)、[#83の実測](research-snap-invocation-validation.md)）。製品精度の確認は別途必要。
+4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../../research/window-switch-validation.md)で自作通常窓の基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象窓・入力・Snap設定から呼び出しを推定する（[W08新仕様](../../ui-requirements.md#excluded-operations)、[#83の実測](../research/research-snap-invocation-validation.md)）。製品精度の確認は別途必要。
 5. 要件書の公開前試験・通常利用60分・配布物確認。3日で全候補成立を保証しない。
 
 ### 合意・確認と次工程
@@ -128,7 +128,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 2026-10-11 15:50:23→16:32:03 JST：W03最大化の初回接続区間完了。
 ステップ6全体は継続。11候補を維持し、残る10候補は未実装。公開対応数の確定・要件削減は行っていない。
 
-正本：[mvp-requirements.md](mvp-requirements.md)。設計：[最小設計](design-implementation-history.md#design)。起動：[README.md](../../README.md)。
+正本：[mvp-requirements.md](../requirements/mvp-requirements.md)。設計：[最小設計](design-implementation-history.md#design)。起動：[README.md](../../../README.md)。
 
 ### 実装した動作
 
@@ -222,7 +222,7 @@ helperのhealth応答はprotocolVersion=1、runtime=.NET 10.0.12、architecture=
 
 healthは自分の非表示窓のplacement／rect取得とUIAアセンブリのリンクだけ。全体入力hook・外部窓の観測・ユーザー入力の収集を開始しない。画面2枚は今回の通常権限での実行セッションの結果であり、以前の別実行セッションの1枚と同一条件と扱わない。UIA識別精度・操作判定精度を証明しない。
 
-手順は[README.md](../../README.md)。smokeのElectronデータは`.tools`内。公開アプリの記録形式の実装ではない。ローカルSDK・NuGet／npmキャッシュ・生成物は.gitignoreで除外し、既存probeと観測原本は保持した。
+手順は[README.md](../../../README.md)。smokeのElectronデータは`.tools`内。公開アプリの記録形式の実装ではない。ローカルSDK・NuGet／npmキャッシュ・生成物は.gitignoreで除外し、既存probeと観測原本は保持した。
 
 ### 手戻り・権限
 
