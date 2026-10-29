@@ -61,7 +61,7 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 | SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
 | 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../src/main/index.ts)、[Observer](../../native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
 | Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../src/main/coach-app.ts)、[notification.ts](../../src/main/notification.ts)、[preload](../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
-| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../development.md)、[research](../research/overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
+| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../development.md)、[research](research-overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
 | lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../package.json)、[build-helper](../../scripts/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
 
 ## 3. 再現できた不具合：設定の再試行が最新操作を取り消す

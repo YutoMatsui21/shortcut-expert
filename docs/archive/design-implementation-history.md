@@ -42,7 +42,7 @@
 
 状態：2026-10-11 15:21:06 JST承認・ステップ4完了。Electron＋C# helperと常駐は本人合意。導入はコマンドを希望、追加工数次第で変更可能、npx指定は必須ではない。ステップ5「環境準備」への進行も承認済み。製品の操作計測ロジックは後工程。
 
-要件の正本：[mvp-requirements.md](mvp-requirements.md)。検出の仮説・残リスク：[操作別の技術判断](../research/overview.md#operations)。本書は最小設計の決定を記録し、技術検証の詳細を複製しない。
+要件の正本：[mvp-requirements.md](mvp-requirements.md)。検出の仮説・残リスク：[操作別の技術判断](research-overview.md#operations)。本書は最小設計の決定を記録し、技術検証の詳細を複製しない。
 
 ### 構成
 
@@ -108,7 +108,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 1. 環境準備後、W03の成立条件で観測→判定→通知→保存→数値表示を縦につなぐ。
 2. 停止・mute・削除・保存失敗・helper終了と復帰を通す。
 3. 状態変更W04/W05/W11、複合移動W02、配置W06/W07へ拡張。
-4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../research/window-switch-validation.md)で自作通常窓の基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象窓・入力・Snap設定から呼び出しを推定する（[W08新仕様](../ui-requirements.md#excluded-operations)、[#83の実測](../research/snap-invocation-validation.md)）。製品精度の確認は別途必要。
+4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../research/window-switch-validation.md)で自作通常窓の基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象窓・入力・Snap設定から呼び出しを推定する（[W08新仕様](../ui-requirements.md#excluded-operations)、[#83の実測](research-snap-invocation-validation.md)）。製品精度の確認は別途必要。
 5. 要件書の公開前試験・通常利用60分・配布物確認。3日で全候補成立を保証しない。
 
 ### 合意・確認と次工程
