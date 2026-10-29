@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$setupWorkspace = Split-Path -Parent $PSScriptRoot
+$setupWorkspace = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $setupTools = Join-Path $setupWorkspace '.tools'
 $setupInstaller = Join-Path $setupTools 'dotnet-install.ps1'
 $setupSdkVersion = (Get-Content -LiteralPath (Join-Path $setupWorkspace 'global.json') -Raw | ConvertFrom-Json).sdk.version

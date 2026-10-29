@@ -34,8 +34,8 @@ async function run(name, args) {
 // Both commands read the already-built out/helper. Only packaging writes release/.
 // Wait for both children even if one fails; later hashes and packaged tests must not race packaging.
 const results = await Promise.allSettled([
-  run('smoke', ['scripts/smoke.mjs']),
-  run('package', ['scripts/dev-run.mjs', 'electron-builder', '--dir', '--win', '--x64', '--publish', 'never'])
+  run('smoke', ['scripts/test/smoke.mjs']),
+  run('package', ['scripts/dev/dev-run.mjs', 'electron-builder', '--dir', '--win', '--x64', '--publish', 'never'])
 ]);
 for (const result of results) if (result.status === 'rejected') console.error(result.reason);
 if (!results.every(result => result.status === 'fulfilled' && result.value)) process.exitCode = 1;
