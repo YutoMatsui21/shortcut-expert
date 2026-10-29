@@ -41,4 +41,4 @@
 - **Electron smoke**：実Main／Renderer／IPCでhide・復元・画面状態、保存失敗時の終了取消、helperとWorkerの終了順、外形／content／viewportを確認。
 - **未合格のV03**：自前の最大化ボタンによる標準Snap Layoutのhover表示は未実証。実トレイ操作・別プロセス二重起動・混在DPI／画面着脱・再起動後bounds保持も同一配布buildで検証が必要。CSSのdrag／no-dragや最大化成功だけでOSのSnap UI対応と判断しない。
 
-詳しい16サイズの証拠・未確認条件は[V03 UI受入台帳](../validation/ui-acceptance.md)。実OS操作の試験は本人の明示同意後に実施する。
+詳しい16サイズの証拠・未確認条件は[V03 UI受入台帳](https://github.com/YutoMatsui21/shortcut-expert/issues/46)。実OS操作の試験は本人の明示同意後に実施する。
