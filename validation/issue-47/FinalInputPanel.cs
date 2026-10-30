@@ -35,7 +35,7 @@ class FinalInputPanel {
     [STAThread] static int Main(string[] args) {
         if(args.Length!=2||!Directory.Exists(args[0]))return 2;directory=args[0];
         cases=(object[])Json.DeserializeObject(File.ReadAllText(args[1]));Application.EnableVisualStyles();WriteEnvironment();
-        var form=new ToolPanel {Text="#47 最終受入 - 手動 ARM / FINISH",Width=820,Height=750,ShowInTaskbar=false,MaximizeBox=false,
+        var form=new ToolPanel {Text="#47 最終受入 - 手動 ARM / FINISH",Width=820,Height=750,ShowInTaskbar=false,MaximizeBox=false,TopMost=true,
             StartPosition=FormStartPosition.Manual,Location=new Point(15,15)};
         form.Controls.Add(new Label {Left=15,Top=10,Width=770,Height=100,Text=
             "1. IDLE中に起点の窓を準備し、ケースとアプリ種別を選択。\n2. ARMを押し、4秒以内に対象窓をクリック。その後は全キーを離す。\n3. ARMEDを確認して2秒待ち、指定操作を1回だけ実施。3秒待つ。\n4. 下の実結果・Toast・キー同等性を選びFINISH。未実施はCANCEL。\n1試行45秒、session20分。閉じると観測停止。自動キー送出なし。"});
