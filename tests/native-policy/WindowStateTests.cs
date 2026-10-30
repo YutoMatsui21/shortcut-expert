@@ -104,6 +104,24 @@ internal static partial class Program
             Equal("caption-top-drag", evidence.route); Equal(100L, evidence.inputAgeMs); Sample(evidence, "W03");
         });
 
+        Check("invalid custom title geometry retains explicit root caption and restore hits", () => {
+            var title = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
+            var window = new Rect { Right = 100, Bottom = 100 };
+            title.Bounds[3] = new Rect { Left = 20, Right = 40, Bottom = 20 };
+            foreach (int hit in new[] { HTCAPTION, HTMINBUTTON, HTMAXBUTTON, HTCLOSE })
+                Equal(hit, WindowCaption.Hit(title, window, new Point { X = 25, Y = 10 }, hit));
+            foreach (int hit in new[] { 1, 0, -1, 10, 12 })
+                Equal(-1, WindowCaption.Hit(title, window, new Point { X = 25, Y = 10 }, hit));
+            foreach (bool doubleClick in new[] { false, true }) {
+                var tracker = Tracker();
+                int hit = WindowCaption.Hit(title, window, default, doubleClick ? HTCAPTION : HTMAXBUTTON);
+                tracker.Mouse(11, max, hit, default, 0, 500, 0, false, true);
+                if (doubleClick) tracker.Mouse(11, max, hit, default, 100, 500, 0, false, true);
+                var candidate = (WindowCandidate)tracker.Complete(11, max, start, 150, 11, "2026-10-28", screen)!;
+                Equal("mouse", candidate.origin); Equal(doubleClick ? "caption-double-click" : "max-button", candidate.route);
+                Sample(candidate, "W04");
+            }
+        });
         Check("caption rectangles identify standard buttons even when hit test returns caption", () => {
             var info = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
             var window = new Rect { Left = 0, Top = 0, Right = 100, Bottom = 100 };
@@ -117,7 +135,8 @@ internal static partial class Program
                 Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
             }
             info.Bounds[3] = info.Bounds[2];
-            Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
+            Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, -1));
+            Equal(HTMINBUTTON, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
         });
 
         // State callbacks during the drag are not independent W04/W03 operations.

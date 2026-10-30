@@ -1,0 +1,14 @@
+{
+  "productRevision": "042caa4",
+  "manifestSha256": "4cb8d26d756029750aac31d557c117662b694d97eee3cb24a06874b45a58d6a9",
+  "nativeDiagnostics": true,
+  "participantReport": "All three trials completed",
+  "operatorFields": "Panel confirmations at defaults; no new per-case visual assertion supplied",
+  "failures": {
+    "P04m": "RawMaxButton1 -> TitleGeometryInvalid1 -> FinalOther1; one restore candidate of unknown origin, zero record/notice",
+    "S04double": "RawCaption2 -> TitleGeometryInvalid2 -> FinalOther2; one restore candidate of unknown origin, zero record/notice",
+    "P11m": "RawCloseButton1 and title geometry fallback; close observer GeometryFallback2 with no PendingMouse; zero close candidate/count/notice"
+  },
+  "conclusion": "Malformed title geometry discards explicit root restore/caption hits. Empty title geometry blocks the close-specific rectangle-only input gate. NotReady aggregates cannot be assigned to specific clicks and may still require separate diagnosis after the confirmed geometry blockers are addressed.",
+  "acceptance": "All three remain unmet; this session is diagnosis, not fix verification"
+}

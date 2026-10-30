@@ -4,7 +4,7 @@
 
 ## 候補と証拠
 
-現在の候補は製品revision `b80e645`、`release/issue-47-normal-drag-diag/win-unpacked`。固定manifestは `../evidence/issue-47/normal-drag-diag-build.json`、最新の実測と未解決事項は[上下2画面・session9〜11](two-display-notice-20261030.md)。診断は起動引数でON/OFFを切り替え、通常経路の受入ではOFFを使う。以下のmain／初期同梱先は準備時の履歴であり、現在の候補ではない。
+基本受入の前段候補は製品revision `b80e645`、`release/issue-47-normal-drag-diag/win-unpacked`。固定manifestは `../evidence/issue-47/normal-drag-diag-build.json`、最新の実測と未解決事項は[上下2画面・session9〜11](two-display-notice-20261030.md)。診断は起動引数でON/OFFを切り替え、通常経路の受入ではOFFを使う。以下のmain／初期同梱先は準備時の履歴であり、現在の候補ではない。
 
 - 製品ソース：main `64cdc61`（完全SHAと全同梱ファイルのSHA-256は `.tools/issue-47-candidate.json`）。製品変更後は新しい候補として影響ケースを再確認する。
 - 同梱先：`release/issue-47/win-unpacked`。公開・インストールは行わない。
@@ -105,3 +105,7 @@ Nativeのcaption診断は既定OFFで、`--diagnostics`を追加したランチ�
 ## Chrome未達3件の追加診断
 
 session13では既存診断で復元のヒット判定上書きを確認したが、title geometry理由とW11専用段階が不足。採否を変えない追加診断版は `release/issue-47-chrome-detail/win-unpacked`、固定manifestは `../evidence/issue-47/chrome-detail-diag-build.json`。詳細・検証・未達は[Chrome診断記録](chrome-diagnosis-20261030.md)。現在の追加診断を通常モードの受入成功と扱わない。
+
+## Chromeの原因に対応する修正候補
+
+現在の修正候補は `release/issue-47-chrome-hit-verified/win-unpacked`、固定manifestは `../evidence/issue-47/chrome-hit-fixed-build.json`。session14で不正／空のtitle geometryによる棄却を確認し、明示的root hitとclose対象再照合を追加した。[根拠・修正・検証](chrome-diagnosis-20261030.md)。診断OFFで未達3件とtab×負例を確認する。以前のbuildでの成功を今回の合格へ転記しない。

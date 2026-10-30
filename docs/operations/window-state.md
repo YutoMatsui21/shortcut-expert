@@ -4,7 +4,7 @@
 
 ## 1. 共有する判定
 
-`CandidateTracker`で入力対象・process・入力由来・結果・期限・競合・dragの始終を照合。標準captionのボタン矩形は`WindowCaption`を共用し、有効な`TITLEBARINFOEX`を優先する。全ボタン矩形が空のときのみ既存hit testへ戻し、無効矩形・取得失敗を勝手に推測しない。
+`CandidateTracker`で入力対象・process・入力由来・結果・期限・競合・dragの始終を照合。標準captionのボタン矩形は`WindowCaption`を共用し、有効な`TITLEBARINFOEX`を優先する。全ボタン矩形が空なら既存hit testへ戻す。独自captionの矩形が不整合でも、root自身が明示的に返したHTCAPTION／HTMINBUTTON／HTMAXBUTTON／HTCLOSEは維持する。不整合な矩形から位置を推測せず、client／resize／不明から操作を作らない。有効な矩形の優先・無効状態の棄却と、取得失敗時の扱いは維持する。
 
 通常のNative→Main厳格parse→Core→SQLite→学習・記録画面→保存後通知を使用する。W03/W04の学習状態は別に保持し、旧W05を新W04へ合算しない。
 

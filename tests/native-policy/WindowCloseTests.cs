@@ -108,12 +108,37 @@ internal static class WindowCloseTests
         var title = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
         var rect = new Rect { Right = 300, Bottom = 200 }; var point = new Point { X = 280, Y = 10 };
         Check("hit-test fallback cannot prove window close", !WindowCaption.CloseButton(title, rect, point));
+        Check("explicit identity-verified root HTCLOSE replaces absent custom button geometry",
+            WindowCaption.CloseButton(title, rect, point, rootCloseConfirmed: true));
+        foreach (int hit in new[] { 1, 0, -1, HTCAPTION, HTMAXBUTTON, HTMINBUTTON, 10, 12 })
+            Check("client/tab/resize/unknown cannot prove root close " + hit, !WindowCaption.VerifiedRootClose(hit, true, true, true));
+        foreach (string mismatch in new[] { "root", "process", "thread" })
+            Check("root close rejects changed " + mismatch, !WindowCaption.VerifiedRootClose(HTCLOSE,
+                mismatch != "root", mismatch != "process", mismatch != "thread"));
+        Check("matching root close proof", WindowCaption.VerifiedRootClose(HTCLOSE, true, true, true));
+        foreach (bool missingGeometry in new[] { false, true }) {
+            var custom = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
+            if (!missingGeometry) custom.Bounds[3] = new Rect { Left = 220, Right = 250, Bottom = 30 };
+            foreach (bool proof in new[] { false, true }) {
+                bool button = WindowCaption.CloseButton(custom, rect, point, rootCloseConfirmed: proof);
+                Check("custom geometry requires proof " + missingGeometry + proof, button == proof);
+                var policy = new WindowClosePolicy(); policy.Neutral(true);
+                policy.Mouse(WM_LBUTTONDOWN, a, button, true, false, false, 100, 100);
+                policy.Mouse(WM_LBUTTONUP, a, button, true, false, false, 150, 150);
+                Check("custom close still requires same-target destroy " + missingGeometry + proof,
+                    (policy.Destroy(11, 8, 200, false, 200) is not null) == proof);
+            }
+        }
+
+
         title.Bounds[3] = new Rect { Left = 220, Right = 250, Bottom = 30 };
         title.Bounds[5] = new Rect { Left = 250, Right = 300, Bottom = 30 };
         Check("verified close rectangle", WindowCaption.CloseButton(title, rect, point));
         Check("tab close outside window close", !WindowCaption.CloseButton(title, rect, new Point { X = 200, Y = 50 }));
+        Check("valid geometry cannot be bypassed by root proof", !WindowCaption.CloseButton(title, rect, new Point { X = 200, Y = 50 }, rootCloseConfirmed: true));
         title.State[5] = 1;
         Check("disabled close", !WindowCaption.CloseButton(title, rect, point));
+        Check("valid geometry disabled state retains priority", !WindowCaption.CloseButton(title, rect, point, rootCloseConfirmed: true));
         return samples;
     }
 }

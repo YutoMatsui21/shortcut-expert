@@ -43,3 +43,27 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 fixtureではcaption／closeの診断ON/OFFの戻り同値、geometry原因、CloseReason全件の固定mapping、世代と上限を確認する。追加診断の目的は、同じ未達3件を1バッチで再試行した際に、修正に必要な分岐を特定すること。採否の変更や解決済みの主張はしない。
 
 追加診断の検証：関連unit35件・Native全7件・型検査・helper build成功。C#/TSの固定112カテゴリ一致、caption／close判定のON/OFF同値、CloseReason全件mappingと上限・世代を検証。同梱base smoke・保存受入17件、Native全473ファイル一致。専用ローカルレビューは4観点で指摘なし。NU1900の脆弱性index取得警告は残る。新診断同梱先は `release/issue-47-chrome-detail/win-unpacked`、manifestは `../evidence/issue-47/chrome-detail-diag-build.json`。自然入力は未実施であり、失敗3件は未達のまま。
+
+
+## 原因の判別（session14）
+
+製品revision `042caa4`、hash `4cb8d26d756029750aac31d557c117662b694d97eee3cb24a06874b45a58d6a9`、Chromeカテゴリ・追加診断ON。原本 `../evidence/issue-47/session14-*.json`。3件とも有効・期限内、記録・通知0。本人は完了を報告したが、今回は目視の個別結果を追加申告していない。
+
+- P04m：RawMaxButton1、TitleGeometryInvalid1、FinalOther1。1つのrestore候補はorigin/route不明。Chromeの明示的max/restoreヒットが矩形不整合で捨てられた。
+- S04-double：RawCaption2、TitleGeometryInvalid2、FinalOther2。1つのrestore候補はorigin/route不明。同じ矩形不整合が明示的captionヒットを捨てた。
+- P11m：RawCloseButton1、TitleGeometryFallback1、FinalButton1。閉鎖側もW11GeometryFallback2で、CloseRectangle／PendingMouseが0。全ボタン矩形が空で、rootのHTCLOSEをMain側windowルートは保持する一方、close専用ルートは代替証拠を受け付けなかった。
+- W11NotReady等も含む集計には複数clickが入るため、どのclickのReadyかは断定しない。ただし矩形fallbackは、Readyとは独立にclose候補を作れない必須条件の不成立だった。修正後にも残る場合はその新しい証拠を使う。
+
+## 観測に対応する修正
+
+矩形の取得に成功しても内容が不正な独自captionについて、root自身の明示的caption／min／max／closeヒットを捨てない。client／resize／不明から操作を作らず、有効な矩形では従来の位置・無効状態チェックを維持する。子captionのroot/process条件も変更しない。
+
+close専用ルートは、矩形が空／不整合のときだけrootへ10ms上限でWM_NCHITTESTを問い合わせ、HTCLOSEを返し、照会後にもroot・実ヒット先のroot・process・threadが同じと確認できた場合を代替証拠とする。押下／解放の双方で照合し、既存の同一対象DESTROY・native tick・HWND消滅・1000ms・停止／取消／非再通知を保持する。有効な閉じる矩形がある場合は無効状態や範囲外を迂回しない。画面位置の推測やtabの×の採用ではない。[WM_NCHITTESTの一次資料](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest)。
+
+修正前の回帰試験は、captionヒット2が-1に捨てられるassertで失敗した。修正後は不正矩形＋明示的root判定を実CandidateTrackerのrestore2経路へ通し、Main／Core／SQLiteにも接続してW04を確認する。空／不正close矩形のroot証拠有無、client/tab/resize/不明、root/process/thread不一致、有効矩形の無効状態・範囲外を回帰試験にする。旧「不正矩形＋root min」棄却の期待は、今回確証した明示的hit保持へ変更し、root不明時の棄却を別途維持する。受入期待値を実装都合で弱めたものではない。
+
+修正後の自然入力は未実施。3件の再確認に加え、窓が残る複数タブのtab×でW11誤計上0を同じバッチで確認する。
+
+修正のローカル検証：関連unit34件、Native全7件、型検査、helper buildが成功。専用ローカルレビューは4観点で指摘なし。Nativeの新診断キーは114個でC#/TS一致。初回の同梱先 `release/issue-47-chrome-hit-fixed` はelectron展開後のフォルダーrenameでEPERMとなり、未完成のため受入に使わない。ACL等を変えず、別出力先で同じコードを同梱する。
+
+同梱結果：別出力先 `release/issue-47-chrome-hit-verified/win-unpacked` で成功。全473 Nativeファイル一致、base／settings／activation／migration／comparisonの5種smoke、保存受入17件成功。固定manifestは `../evidence/issue-47/chrome-hit-fixed-build.json`。初回失敗の出力先は使わず、Windows権限設定は変更していない。次の4件はこの同じbinary・通常observer（診断OFF）で行う。修正後の自然入力はまだ未確認。
