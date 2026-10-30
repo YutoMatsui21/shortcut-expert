@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { Snapshot, LearningState, OperationId, ObserverCandidate, ShortcutNoticeItem } from '../shared/coach.ts';
 import { classify } from '../core/detector.ts';
 import { learningState } from '../shared/learning.ts';
+import type { WindowDiagnosticCounts } from '../shared/window-diagnostics.ts';
 
 type Plan = { kind: 'mouse' | 'key' | 'negative'; application: 'standard' | 'chrome'; state: LearningState; paused: boolean; slot?: number; scenario?: string };
 type NaturalOperation = 'W01' | 'W08' | 'W12';
@@ -91,6 +92,7 @@ export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: (
 type ManualTrials = Omit<Pick<NaturalInputTrials, 'armed' | 'results' | 'candidate' | 'observe' | 'expire' | 'arm'>, 'results'> & {
   readonly results: object[]; finish(completed: boolean, confirmation?: unknown): Promise<void>;
   noticeRequested(operation: OperationId, shortcut?: string, items?: ShortcutNoticeItem[]): void;
+  nativeDiagnostics?(counts: WindowDiagnosticCounts): void;
 };
 export function runTrialControl(directory: string, deps: Pick<Deps, 'start' | 'stop'>, quit: () => Promise<void>, name: string,
   create: (start: Deps['start']) => ManualTrials, countdown = false) {
@@ -153,5 +155,6 @@ export function runTrialControl(directory: string, deps: Pick<Deps, 'start' | 's
   void status();
   console.log(name + '_NATURAL_READY observation stopped; arm in operator panel; 45s trial deadline');
   return { candidate: (value: ObserverCandidate) => trials.candidate(value), observe: (snapshot: Snapshot) => trials.observe(snapshot), noticeRequested: (operation: OperationId, shortcut?: string, items?: ShortcutNoticeItem[]) => trials.noticeRequested(operation, shortcut, items),
+    nativeDiagnostics: (counts: WindowDiagnosticCounts) => trials.nativeDiagnostics?.(counts),
     dispose: () => { clearInterval(timer); clearTimeout(deadline); clearTimeout(trialRetry); clearTimeout(shutdownRetry); clearTimeout(sessionDeadline); } };
 }

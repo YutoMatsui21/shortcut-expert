@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { Snapshot } from '../src/shared/coach.ts';
 import { FinalInputTrials } from '../src/main/final-input-trials.ts';
 import { learningOperations } from '../src/shared/learning.ts';
+import { windowDiagnosticKeys, type WindowDiagnosticCounts } from '../src/shared/window-diagnostics.ts';
 
 function harness() {
   const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: false, notificationsPaused: false, error: null, pendingSave: false };
@@ -15,6 +16,19 @@ function harness() {
 }
 const plan = { caseId: 'C03-right', application: 'standard', state: 'learning', secondaryState: 'learning', paused: false, stopped: false, slot: 1 };
 const confirmation = { result: 'matched', notification: 'matched', equivalence: 'not-tested' };
+
+test('native counters are copied into the active trial without changing its acceptance result', async () => {
+  const h = harness(); await h.trials.arm({ ...plan, caseId: 'N08' });
+  const counts = Object.fromEntries(windowDiagnosticKeys.map(key => [key, 0])) as WindowDiagnosticCounts;
+  counts.RawClient = 2; h.trials.nativeDiagnostics(counts); counts.RawClient = 5;
+  await h.trials.finish(true, confirmation);
+  assert.equal(h.trials.results[0].nativeDiagnostics?.RawClient, 2);
+  assert.equal(h.trials.results[0].recordsPassed, true);
+  h.trials.nativeDiagnostics(counts); assert.equal(h.trials.results[0].nativeDiagnostics?.RawClient, 2);
+  await h.trials.arm({ ...plan, caseId: 'N08', stopped: true });
+  h.trials.nativeDiagnostics(counts); await h.trials.finish(true, confirmation);
+  assert.equal(h.trials.results[1].nativeDiagnostics, null, 'a stopped trial cannot inherit counters from any observed generation');
+});
 
 test('W12 validates the candidate slot even without a notification; midnight invalidates the trial', async () => {
   const { taskbarFixture } = await import('./support/fixtures.ts');

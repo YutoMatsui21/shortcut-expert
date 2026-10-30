@@ -2,6 +2,8 @@ import type { Snapshot, OperationId, LearningState, ObserverCandidate, ShortcutN
 import { learningOperations, learningState, isLearningState } from '../shared/learning.ts';
 import { classifyGesture } from '../core/detector.ts';
 import { finalInputCases, type FinalCase } from './final-input-cases.ts';
+import { finalCandidateDiagnostics, type FinalDiagnosticKey } from './final-input-diagnostics.ts';
+import type { WindowDiagnosticCounts } from '../shared/window-diagnostics.ts';
 
 type Plan = { caseId: string; application: 'standard' | 'chrome' | 'edge' | 'external'; state: LearningState; secondaryState: LearningState;
   paused: boolean; stopped: boolean; slot: number };
@@ -11,6 +13,8 @@ type Deps = { snapshot(): Snapshot; start(paused: boolean): Promise<void>; stop(
   configure(states: Partial<Record<OperationId, LearningState>>): Promise<void>; date(): string; now?(): number };
 type Result = Plan & { trial: number; valid: boolean; completed: boolean; expired: boolean; interrupted: boolean; counts: Counts;
   slotMatched: boolean; dateChanged: boolean;
+  diagnostics: Partial<Record<FinalDiagnosticKey, number>>;
+  nativeDiagnostics: WindowDiagnosticCounts | null;
   recordsPassed: boolean; notificationRequests: number; notificationRequestPassed: boolean; notificationOperations: Partial<Record<OperationId, number>>;
   candidates: number; classified: Partial<Record<OperationId, number>>; equivalence: Confirmation['equivalence'];
   operatorResult: Confirmation['result']; visibleNotification: Confirmation['notification'] };
@@ -41,14 +45,17 @@ export class FinalInputTrials {
   private active: { plan: Plan; definition: FinalCase; before: Counts; day: string; expires: number; expired: boolean;
     interrupted: boolean; tracking: boolean; states: Partial<Record<OperationId, LearningState>>;
     requests: number; noticeMatch: boolean; notificationOperations: Partial<Record<OperationId, number>>;
-    candidates: number; slotMatched: boolean; classified: Partial<Record<OperationId, number>> } | null = null;
+    candidates: number; slotMatched: boolean; classified: Partial<Record<OperationId, number>>;
+    diagnostics: Partial<Record<FinalDiagnosticKey, number>>; nativeDiagnostics: WindowDiagnosticCounts | null } | null = null;
   constructor(deps: Deps) { this.deps = deps; }
   get armed() { return this.active !== null; }
   private now() { return this.deps.now?.() ?? performance.now(); }
   expire() { if (this.active) this.active.expired = true; }
+  nativeDiagnostics(counts: WindowDiagnosticCounts) { if (this.active && !this.active.plan.stopped) this.active.nativeDiagnostics = { ...counts }; }
   candidate(value: ObserverCandidate) {
     const trial = this.active; if (!trial?.tracking) return;
     trial.candidates = Math.min(1000, trial.candidates + 1);
+    for (const key of finalCandidateDiagnostics(value)) trial.diagnostics[key] = Math.min(1000, (trial.diagnostics[key] ?? 0) + 1);
     for (const item of classifyGesture(value)) {
       trial.classified[item.operation] = Math.min(1000, (trial.classified[item.operation] ?? 0) + 1);
       if (item.operation === 'W12' && trial.definition.records.includes('W12') &&
@@ -90,7 +97,7 @@ export class FinalInputTrials {
     const snapshot = this.deps.snapshot();
     if (snapshot.error || snapshot.pendingSave || snapshot.observing) throw new Error('product-error');
     this.active = { plan, definition, before: structuredClone(snapshot.counts), day: this.deps.date(), expires: 0, expired: false,
-      interrupted: false, tracking: false, states, requests: 0, noticeMatch: true, notificationOperations: {}, candidates: 0, slotMatched: true, classified: {} };
+      interrupted: false, tracking: false, states, requests: 0, noticeMatch: true, notificationOperations: {}, candidates: 0, slotMatched: true, classified: {}, diagnostics: {}, nativeDiagnostics: null };
     try {
       if (!plan.stopped) await this.deps.start(plan.paused);
       if (this.deps.snapshot().observing === plan.stopped || this.deps.snapshot().error) throw new Error('observation-state');
@@ -117,6 +124,8 @@ export class FinalInputTrials {
       recordsPassed: valid && recordMatch && slotMatched, notificationRequests: trial.requests,
       notificationRequestPassed: valid && trial.noticeMatch && trial.requests === (this.expectedNotices(trial).length ? 1 : 0),
       notificationOperations: trial.notificationOperations, candidates: trial.candidates, classified: trial.classified,
+      diagnostics: trial.diagnostics,
+      nativeDiagnostics: trial.nativeDiagnostics,
       equivalence: confirmation?.equivalence ?? 'not-tested', operatorResult: confirmation?.result ?? 'not-observed', visibleNotification: confirmation?.notification ?? 'not-seen' });
     this.active = null;
   }

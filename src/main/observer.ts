@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { app } from 'electron';
 import type { Bounds, CandidateV2, Evidence, ObserverCandidate, WindowEvidenceResult } from '../shared/coach';
+import { parseWindowDiagnostics, type WindowDiagnosticCounts } from '../shared/window-diagnostics.ts';
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function protocolId(value: unknown): value is number {
@@ -133,20 +134,22 @@ export class ObserverClient {
   private fixture: boolean;
   private onCandidate: (candidate: ObserverCandidate) => void;
   private onFault: () => void;
+  private onWindowDiagnostics?: (counts: WindowDiagnosticCounts) => void;
   private ready: { resolve(): void; reject(error: Error): void; timer: NodeJS.Timeout } | null = null;
   private active = false;
   private closing = false;
   private arrangedAvailable = false;
   private pending = new Map<number, { type: string; resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: NodeJS.Timeout }>();
-  constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false) {
-    this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture;
+  constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false,
+    onWindowDiagnostics?: (counts: WindowDiagnosticCounts) => void) {
+    this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture; this.onWindowDiagnostics = onWindowDiagnostics;
   }
   async start(): Promise<number> {
     if (!this.child) {
       this.closing = false;
       const path = app.isPackaged ? join(process.resourcesPath, 'native-helper', 'WindowObserver.exe')
         : join(app.getAppPath(), 'resources', 'native-helper', 'WindowObserver.exe');
-      const mode = this.fixture ? '--fixture' : '--observe';
+      const mode = this.fixture ? '--fixture' : this.onWindowDiagnostics ? '--window-validation-consented' : '--observe';
       this.child = spawn(path, [mode], { cwd: dirname(path), windowsHide: true, stdio: 'pipe' });
       const child = this.child;
       // A failed transport retires a child, but kill() alone does not confirm its exit.
@@ -252,6 +255,12 @@ export class ObserverClient {
         const value = candidateV2(message);
         if (!value) throw new Error('candidate');
         if (this.active && value.generation === this.generation) this.onCandidate(value);
+        return;
+      }
+      if (message.type === 'window-diagnostics' && this.onWindowDiagnostics) {
+        const counts = parseWindowDiagnostics(message.counts);
+        if (!counts || !protocolId(message.generation)) throw new Error('window-diagnostics');
+        if (message.generation === this.generation) this.onWindowDiagnostics(counts);
         return;
       }
       const pending = this.pending.get(message.requestId as number);
