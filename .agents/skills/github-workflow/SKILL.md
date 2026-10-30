@@ -80,7 +80,7 @@ GitHub操作はこのSkillに従う。[AGENTS.md](../../../AGENTS.md)と対象Is
 ### 2.6. PRをmergeする
 
 1. 最新headのCI成功、ローカルレビューの実施・必要な再レビューの対応（または省略理由）を確認する。
-3. 未解決thread・競合・branch protection等のMerge条件を確認し、すべて満たしたらmainへmergeする。
+2. 未解決thread・競合・branch protection等のMerge条件を確認し、すべて満たしたらmainへmergeする。
 
 **制約**
 - CI失敗、必要なローカルレビュー未完了、重大指摘未解決、権限不足ではmergeしない。
