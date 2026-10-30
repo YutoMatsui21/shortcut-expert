@@ -4,6 +4,9 @@ using Point = NativeMethods.Point;
 
 internal static class WindowCaption
 {
+    // A validated root button/resize/unknown result wins. Only an explicit child caption can refine HTCLIENT.
+    internal static int ResolveChildCaption(int rootHit, int childHit, bool sameRoot, bool sameProcess) =>
+        rootHit == 1 && childHit == HTCAPTION && sameRoot && sameProcess ? HTCAPTION : rootHit;
     internal static bool CloseButton(TitleInfo title, Rect window, Point point) =>
         SnapGeometry.Source(title.Bounds[2], title.Bounds[3], title.Bounds[5], window) == "title-rect" &&
         (title.State[5] & 0x18001) == 0 && SnapGeometry.Contains(title.Bounds[5], point);

@@ -147,34 +147,48 @@ internal sealed class Observer : IDisposable
             long packed = (uint)((mouse.Point.Y & 0xffff) << 16) | (uint)(mouse.Point.X & 0xffff);
             int hit = -1;
             if (SendMessageTimeoutW(target, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint result) != 0) hit = unchecked((int)result);
-            if (windowDiagnostic is not null)
-            {
-                // Probe the actual hit child separately. Never substitute its result into production hit testing here.
-                nint hitWindow = WindowFromPhysicalPoint(mouse.Point);
-                if (hitWindow == target) windowDiagnostic(WindowDiagnosticReason.HitRoot);
-                else if (hitWindow == 0 || GetAncestor(hitWindow, GA_ROOT) != target ||
-                    GetWindowThreadProcessId(hitWindow, out uint childProcess) == 0 || childProcess != before.Process)
-                    windowDiagnostic(WindowDiagnosticReason.HitChildUnmatched);
-                else
-                {
-                    windowDiagnostic(WindowDiagnosticReason.HitChildSameProcess);
-                    if (SendMessageTimeoutW(hitWindow, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint childHit) != 0)
-                        windowDiagnostic(unchecked((int)childHit) == HTCAPTION ? WindowDiagnosticReason.ChildCaption : unchecked((int)childHit) == 1 ? WindowDiagnosticReason.ChildClient : WindowDiagnosticReason.ChildOther);
-                    else windowDiagnostic(WindowDiagnosticReason.ChildHitFailed);
-                    if (WindowCaption.Read(hitWindow, out TitleInfo childTitle))
-                        windowDiagnostic(SnapGeometry.Contains(childTitle.Bar, mouse.Point) ? WindowDiagnosticReason.ChildTitleContainsPoint : WindowDiagnosticReason.ChildTitleOutsidePoint);
-                    else windowDiagnostic(WindowDiagnosticReason.ChildTitleReadFail);
-                }
-            }
             windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.RawCaption : hit == 1 ? WindowDiagnosticReason.RawClient :
                 hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.RawButton : WindowDiagnosticReason.RawOther);
+            bool rootCaptionRead = false;
             if (GetWindowRect(target, out Rect rect) && WindowCaption.Read(target, out TitleInfo title))
             {
+                rootCaptionRead = true;
                 windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadOk);
                 windowDiagnostic?.Invoke(SnapGeometry.Contains(title.Bar, mouse.Point) ? WindowDiagnosticReason.TitleContainsPoint : WindowDiagnosticReason.TitleOutsidePoint);
                 hit = WindowCaption.Hit(title, rect, mouse.Point, hit);
             }
             else windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadFail);
+            if (hit == 1 && rootCaptionRead || windowDiagnostic is not null)
+            {
+                nint hitWindow = WindowFromPhysicalPoint(mouse.Point);
+                if (hitWindow == target) windowDiagnostic?.Invoke(WindowDiagnosticReason.HitRoot);
+                else if (hitWindow == 0 || GetAncestor(hitWindow, GA_ROOT) != target ||
+                    GetWindowThreadProcessId(hitWindow, out uint childProcess) == 0 || childProcess != before.Process)
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
+                else
+                {
+                    int childHit = -1;
+                    bool known = SendMessageTimeoutW(hitWindow, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint value) != 0;
+                    if (known) childHit = unchecked((int)value);
+                    // Revalidate after the bounded cross-window query; never use another process or a reparented child.
+                    bool sameRoot = GetAncestor(hitWindow, GA_ROOT) == target;
+                    bool sameProcess = GetWindowThreadProcessId(hitWindow, out uint checkedProcess) != 0 && checkedProcess == before.Process;
+                    if (sameRoot && sameProcess)
+                    {
+                        windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildSameProcess);
+                        if (known) windowDiagnostic?.Invoke(childHit == HTCAPTION ? WindowDiagnosticReason.ChildCaption : childHit == 1 ? WindowDiagnosticReason.ChildClient : WindowDiagnosticReason.ChildOther);
+                        else windowDiagnostic?.Invoke(WindowDiagnosticReason.ChildHitFailed);
+                        if (windowDiagnostic is not null)
+                        {
+                            if (WindowCaption.Read(hitWindow, out TitleInfo childTitle))
+                                windowDiagnostic(SnapGeometry.Contains(childTitle.Bar, mouse.Point) ? WindowDiagnosticReason.ChildTitleContainsPoint : WindowDiagnosticReason.ChildTitleOutsidePoint);
+                            else windowDiagnostic(WindowDiagnosticReason.ChildTitleReadFail);
+                        }
+                    }
+                    else windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
+                    if (rootCaptionRead) hit = WindowCaption.ResolveChildCaption(hit, childHit, sameRoot, sameProcess);
+                }
+            }
             windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.FinalCaption : hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.FinalButton : WindowDiagnosticReason.FinalOther);
             windowDiagnostic?.Invoke(GetForegroundWindow() == target ? WindowDiagnosticReason.ForegroundMatched : WindowDiagnosticReason.ForegroundOther);
             tracker.Mouse(target, before, hit, mouse.Point, clock.ElapsedMilliseconds, GetDoubleClickTime(), mouse.Flags,

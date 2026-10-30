@@ -29,3 +29,13 @@ session3の10ケース中、P03m／P04m／P03k／P04k／S04-min-max／S04-min-no
 API根拠：[WM_NCHITTEST](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest)は送信先のWindowProcが返す領域分類で、HTCAPTIONとHTCLIENTを区別する。[Windowsのタイトルバー仕様](https://learn.microsoft.com/en-us/windows/apps/develop/title-bar)ではcaptionボタンを維持しつつ独自のドラッグ領域を定義できる。Explorerがどちらの実装を使うかは未確認で、公式の一般仕様だけで個別挙動を断定しない。
 
 session4終了はCLOSED/error=trueとなり、ランチャーの終了結果がSIGTERMだった。原本の3試行は期限内・中断なしの結果として別保存しているが、session全体の正常終了とは扱わない。[終了原本](../evidence/issue-47/session4-exit.json)。その後、この同梱版のWindowObserver残存0を確認した。終了理由は未確定で、#47の終了条件を合格へ置き換えない。
+
+## session5で確証した原因と製品修正
+
+[status原本](../evidence/issue-47/session5-status.json)では、S03-doubleの2回の押下とも、rootがHTCLIENT、同一root祖先・同一processの実ヒット先の子窓がHTCAPTIONを返した。照会失敗・対象不一致は0。製品はrootだけのhitを使っていたため、同じ入力にorigin／route unknownを付け、Coreは記録・通知しなかった。[本人申告](../evidence/issue-47/session5-participant.json)、[build](../evidence/issue-47/session5-build.json)、[正常終了](../evidence/issue-47/session5-exit.json)、[SQLite整合性・build不変](../evidence/issue-47/session5-integrity.json)。前sessionの終了異常が繰り返されなかったことは確認したが、原因解決の証拠とはしない。
+
+rootのTITLEBARINFOEX読取とボタン照合の後にHTCLIENTが残った場合だけ、子窓の明示的なHTCAPTIONでcaption入力へ補完する。同じroot祖先・processを10ms上限の照会前後で確認し、rootのボタン／resize／不明を上書きしない。失敗・子窓client／unknown／別root／別processは採用しない。childの情報から状態結果を推測せず、これまでどおりrootに対する入力→同一対象／process→最終結果をtrackerで照合する。子窓情報を通信・保存へ追加しない。
+
+修正前に本番C#回帰試験でexpected HTCAPTION(2)／actual HTCLIENT(1)の失敗を確認。修正後はC# policy551検証とCore／SQLite結合が成功した。child-captionのdouble-click最大化／復元、上端dragの正例と、client／unknown／別対象／別process・ボタン優先の負例を追加した。結合試験のW03 mouse期待値2→4は新しい2正例の追加に対応し、既存期待値を緩めたものではない。製品修正後の自然入力は未実施であり、成功したとはしない。
+
+修正後のNative全7件、型検査、同梱helper hash一致、通常/settings/activation/migration/comparisonの5種類の隔離同梱smoke、保存受入17件が成功した。専用ローカルCodexレビューでも指摘なし。helper publish後のrenameがEPERMとなったため、別のpublish出力をworkspace内の生成物フォルダーへコピーして同梱した。Windows設定やACLは変更していない。次はこの修正版で残る3ケースを各1回まとめて確認する。

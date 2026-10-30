@@ -84,7 +84,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   }
   assert.deepEqual((await repository.query('2026-10-28', '2026-10-28')).counts['2026-10-28'], totals);
   assert.equal(notices, expectedNotices);
-  assert.equal(totals.W03.mouse, 2); assert.ok(totals.W04.key > 0); assert.ok(totals.W04.mouse > 0);
+  assert.equal(totals.W03.mouse, 4, 'existing top-drag cases plus child-caption double-click and drag'); assert.ok(totals.W04.key > 0); assert.ok(totals.W04.mouse > 0);
   assert.equal(totals.W05, undefined);
   assert.deepEqual(totals.W06, { mouse: 2, key: 3 });
   assert.deepEqual(totals.W07, { mouse: 4, key: 6 });

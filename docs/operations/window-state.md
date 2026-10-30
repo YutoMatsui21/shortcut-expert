@@ -10,6 +10,8 @@
 
 対象は実行ファイル名の許可リストではなく、通常の可視root窓・caption・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。この同じ対象読取はW02／W06／W07と複合dragにも使う。
 
+rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実際のヒット先の子窓を10ms上限で照会する。同じroot祖先・同じprocessを照会前後で確認し、子窓が明示的に`HTCAPTION`を返した場合だけcaptionとして扱う。rootのボタン／resize／不明判定を上書きせず、子窓のclient・不明・別対象・別processも採用しない。子窓のHWND・process・座標は一時照合だけで、通信・保存へ追加しない。W03/W04以外のcaption dragも同じ入力照合を使う。
+
 ## 2. W03：最大化
 
 | 入力 | 成立条件 |

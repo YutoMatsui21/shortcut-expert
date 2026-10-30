@@ -9,6 +9,13 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        Check("child caption requires explicit HTCAPTION and same root/process; buttons retain priority", () => {
+            Equal(HTCAPTION, WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true));
+            Equal(1, WindowCaption.ResolveChildCaption(1, HTCAPTION, false, true));
+            Equal(1, WindowCaption.ResolveChildCaption(1, HTCAPTION, true, false));
+            foreach (int child in new[] { 1, -1, 0, HTMAXBUTTON, HTMINBUTTON, HTCLOSE }) Equal(1, WindowCaption.ResolveChildCaption(1, child, true, true));
+            foreach (int root in new[] { HTCAPTION, HTMAXBUTTON, HTMINBUTTON, HTCLOSE, -1, 0 }) Equal(root, WindowCaption.ResolveChildCaption(root, HTCAPTION, true, true));
+        });
         Check("diagnostic stop summary is consumed once and cannot leak into a stopped trial", () => {
             var counters = new WindowDiagnosticAccumulator();
             counters.Record(WindowDiagnosticReason.RawClient); Equal(true, counters.Take() is null);
@@ -35,6 +42,27 @@ internal static partial class Program
         });
         void Sample(WindowCandidate candidate, string? expected) => samples.Add(new {
             candidate = CandidateProtocol.V2(candidate, samples.Count + 1, samples.Count + 1), expected });
+
+        foreach (bool restore in new[] { false, true })
+            foreach (string source in new[] { "caption", "client", "unknown", "other-root", "other-process" })
+                Check($"child titlebar double-click: restore={restore}, {source}", () => {
+                    var tracker = Tracker(); var before = restore ? max : start; var after = restore ? start : max;
+                    int child = source == "client" ? 1 : source == "unknown" ? -1 : HTCAPTION;
+                    int hit = WindowCaption.ResolveChildCaption(1, child, source != "other-root", source != "other-process");
+                    tracker.Mouse(11, before, hit, default, 0, 500, 0, false, true);
+                    tracker.Mouse(11, before, hit, default, 100, 500, 0, false, true);
+                    var evidence = (WindowCandidate)tracker.Complete(11, before, after, 150, 11, "2026-10-28", screen)!;
+                    Equal(source == "caption" ? "mouse" : "unknown", evidence.origin);
+                    Sample(evidence, source == "caption" ? restore ? "W04" : "W03" : null);
+                });
+        Check("child caption starts the same bounded top-drag transaction", () => {
+            var tracker = Tracker(); int hit = WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true);
+            tracker.Mouse(11, start, hit, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+            Equal<object?>(null, tracker.Complete(11, start, max, 200, 11, "2026-10-28", screen));
+            tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+            var evidence = (WindowCandidate)tracker.FinishMove(11, max, 5000, 11, "2026-10-28")!;
+            Equal("caption-top-drag", evidence.route); Equal(100L, evidence.inputAgeMs); Sample(evidence, "W03");
+        });
 
         Check("caption rectangles identify standard buttons even when hit test returns caption", () => {
             var info = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
