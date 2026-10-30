@@ -20,9 +20,13 @@
 node scripts/acceptance/final-natural-acceptance.mjs --package-dir release/issue-47-final --compile-only
 # 本人同意後の手動試験。起動時はhooks OFF
 node scripts/acceptance/final-natural-acceptance.mjs --package-dir release/issue-47-final --observe-consented
+# Nativeの固定カテゴリ診断が必要な場合だけ追加。通常の受入は追加しない。
+node scripts/acceptance/final-natural-acceptance.mjs --package-dir release/issue-47-final --observe-consented --diagnostics
 ~~~
 
 専用の `--final-natural-acceptance` は同梱版・新規の空の隔離保存先を必須にする。パネルは固定ケースIDと固定カテゴリだけ送る。ARM後4秒の準備時間、45秒の試行上限、20分のsession上限がある。終了操作やパネル異常終了では停止を要求し、終了不能時はランチャーの期限で打ち切る。通常起動では専用制御を読み込まない。
+
+Nativeのcaption診断は既定OFFで、`--diagnostics`を追加したランチャーが製品の`--caption-diagnostics`を選ぶ場合だけ有効。通常の受入は製品と同じ`--observe`のhelper経路を使う。集計の有無はsessionのbuild.jsonにも記録する。同じ同梱ファイルを使えても、診断ありの実測と診断なしの実測は区別する。
 
 実結果は `matched`（想定どおり）／`different`／`not-observed`、Toastは `matched`／`different`／`not-seen`／`not-expected`、キー同等性は `matched`／`different`／`not-tested` を本人が選ぶ。初期値は未確認。`recordsPassed` と `notificationRequestPassed` は件数・要求の機械照合だけであり、本人確認・同等性・環境条件まで含む総合PASSではない。日付変更・期限切れ・停止／保存異常は試行を無効にし、製品の精度失敗と区別する。
 

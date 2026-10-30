@@ -39,3 +39,5 @@ rootのTITLEBARINFOEX読取とボタン照合の後にHTCLIENTが残った場合
 修正前に本番C#回帰試験でexpected HTCAPTION(2)／actual HTCLIENT(1)の失敗を確認。修正後はC# policy551検証とCore／SQLite結合が成功した。child-captionのdouble-click最大化／復元、上端dragの正例と、client／unknown／別対象／別process・ボタン優先の負例を追加した。結合試験のW03 mouse期待値2→4は新しい2正例の追加に対応し、既存期待値を緩めたものではない。製品修正後の自然入力は未実施であり、成功したとはしない。
 
 修正後のNative全7件、型検査、同梱helper hash一致、通常/settings/activation/migration/comparisonの5種類の隔離同梱smoke、保存受入17件が成功した。専用ローカルCodexレビューでも指摘なし。helper publish後のrenameがEPERMとなったため、別のpublish出力をworkspace内の生成物フォルダーへコピーして同梱した。Windows設定やACLは変更していない。次はこの修正版で残る3ケースを各1回まとめて確認する。
+
+以後の受入ではNative診断を既定OFFにする。`--diagnostics`の明示追加時だけ`--caption-diagnostics`→`--window-validation-consented`を選び、それ以外は同じ同梱版の通常`--observe`経路で確認する。session1〜5のbuild.jsonに新しいnativeDiagnostics項目はないが、session1〜3はNative診断追加前、session4〜5は追加後の診断モードだったことをrevisionと原本で区別する。

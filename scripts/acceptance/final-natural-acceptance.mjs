@@ -10,6 +10,7 @@ import { finalInputCases } from '../../src/main/final-input-cases.ts';
 const option = process.argv.indexOf('--package-dir');
 if (option < 0 || !process.argv[option + 1]) throw new Error('Pass --package-dir release/<build>');
 const compileOnly = process.argv.includes('--compile-only');
+const nativeDiagnostics = process.argv.includes('--diagnostics');
 if (!compileOnly && !process.argv.includes('--observe-consented')) throw new Error('Explicit natural-input consent required');
 const root = resolve('.tools/validation/issue-47'); await mkdir(root, { recursive: true });
 const directory = await mkdtemp(join(root, 'session-'));
@@ -23,10 +24,10 @@ const packageRoot = resolve(process.argv[option + 1], 'win-unpacked');
 if (!(await readFile(join(packageRoot, 'resources/app.asar'))).includes(Buffer.from('--final-natural-acceptance'))) throw new Error('Rebuild/package first');
 const files = packageManifest(packageRoot), sha = value => createHash('sha256').update(value).digest('hex');
 await writeFile(join(directory, 'build.json'), JSON.stringify({ manifestSha256: sha(JSON.stringify(files)), files,
-  panelSourceSha256: sha(await readFile(source)), input: 'manual physical input only', consent: 'explicit user consent; --observe-consented' }, null, 2));
+  panelSourceSha256: sha(await readFile(source)), nativeDiagnostics, input: 'manual physical input only', consent: 'explicit user consent; --observe-consented' }, null, 2));
 const env = { ...developmentEnvironment(), COACH_TEST_DATA_DIR: data };
 delete env.ELECTRON_RUN_AS_NODE; delete env.ELECTRON_RENDERER_URL;
-const product = spawn(join(packageRoot, 'Window Shortcut Coach.exe'), ['--final-natural-acceptance'], { env, windowsHide: false, stdio: ['ignore', 'pipe', 'pipe'] });
+const product = spawn(join(packageRoot, 'Window Shortcut Coach.exe'), ['--final-natural-acceptance', ...(nativeDiagnostics ? ['--caption-diagnostics'] : [])], { env, windowsHide: false, stdio: ['ignore', 'pipe', 'pipe'] });
 console.log('FINAL_SESSION ' + directory);
 let panel, stopTimer, ready = false, ending = false;
 const stop = async () => {

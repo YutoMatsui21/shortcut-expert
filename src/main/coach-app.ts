@@ -30,7 +30,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   const control = new SerialQueue();
   const observer = new ObserverClient((candidate) => { validation?.naturalControl?.candidate(candidate); void coach.accept(candidate); }, () => {
     coach.fault('Windowsの観測が停止しました。再開してください。');
-  }, fixture, mode.naturalOperation === 'ALL' ? counts => validation?.naturalControl?.nativeDiagnostics(counts) : undefined);
+  }, fixture, mode.windowDiagnostics ? counts => validation?.naturalControl?.nativeDiagnostics(counts) : undefined);
   const standardNotices = new StandardNotifications(() => { validation?.activated(); showCoach(); }, result => {
     validation?.notificationResult(result);
     if (result.status === 'failed' || result.status === 'unknown') console.error('COACH_NOTIFICATION_' + result.status.toUpperCase());
