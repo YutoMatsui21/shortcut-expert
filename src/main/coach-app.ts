@@ -56,7 +56,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     });
     const coach = new DurableCoach({ ...common, repository, session: repository.session,
       notify: value => {
-        validation?.naturalControl?.noticeRequested(value.operation, value.shortcut);
+        validation?.naturalControl?.noticeRequested(value.operation, value.shortcut, value.items);
         return standardNotices.show(value);
       },
       capabilities: () => validation?.capabilities() ?? [] });
