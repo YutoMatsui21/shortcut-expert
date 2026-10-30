@@ -67,3 +67,19 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 修正のローカル検証：関連unit34件、Native全7件、型検査、helper buildが成功。専用ローカルレビューは4観点で指摘なし。Nativeの新診断キーは114個でC#/TS一致。初回の同梱先 `release/issue-47-chrome-hit-fixed` はelectron展開後のフォルダーrenameでEPERMとなり、未完成のため受入に使わない。ACL等を変えず、別出力先で同じコードを同梱する。
 
 同梱結果：別出力先 `release/issue-47-chrome-hit-verified/win-unpacked` で成功。全473 Nativeファイル一致、base／settings／activation／migration／comparisonの5種smoke、保存受入17件成功。固定manifestは `../evidence/issue-47/chrome-hit-fixed-build.json`。初回失敗の出力先は使わず、Windows権限設定は変更していない。次の4件はこの同じbinary・通常observer（診断OFF）で行う。修正後の自然入力はまだ未確認。
+
+
+## 修正後・通常モードの結果（session15）
+
+製品revision `2ec7520`、hash `4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb`、Chrome・Native診断OFF。原本は `../evidence/issue-47/session15-*.json`。4件とも有効・期限内。
+
+- P04m：max-button/mouseのrestore候補1、W04 mouse+1、対応する通知要求1。
+- S04-double：caption-double-click/mouseのrestore候補1、W04 mouse+1、対応する通知要求1。
+- P11m：window-close候補1、W11 mouse+1、対応する通知要求1。
+- N11-tab原本：window-close候補1、W11 mouse+1、通知1で、負例の期待値はfalse。本人は「2つのChrome窓を開き、1つの窓の右上×で窓自体を閉じた」と明示。これは予定したtab-only操作と異なるため、原本を変えず別添で実操作W11の正しい反応と区別する。誤通知バグとして通知を抑制せず、N11-tabの負例成功にも付け替えない。
+- 本人は全件完了とtrial4の通知表示を報告。trial1〜3の目視確認は新たな個別申告として補完しない。
+- 終了code0、read-only integrity_check=ok、hash不変、起動した同梱プロセス残存0。最新製品headのwindows-quality／change-scopeは成功。
+
+根拠は製品要件W11の「閉じるボタンと対象窓の破棄」と、学習中の確証済みmouse操作の保存後通知。Chrome窓がもう1つ開いていても、閉じた対象窓のW11成立は変わらない。N11-tabで意図した操作は、**1つのChrome窓にCtrl+Tで2つ以上のタブを作り、ページ名の横の小さい×を押して1タブだけ閉じ、窓は残す**こと。窓右上の×は使わない。窓破棄が起きないのでW11を記録・通知しない負例である。
+
+次は同じ製品build・診断OFFで、N11-tabと、タブ切替／同窓click／Alt+Tab取消・元窓／配置drag取消／Win+Z／Win+Tabの8負例をまとめて行う。成功した修正3件は繰り返さない。この追記は文書・証拠のみなのでSkillの例外で追加コードレビュー・再build・製品自動試験は省略する。

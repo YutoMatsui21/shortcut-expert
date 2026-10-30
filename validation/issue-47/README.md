@@ -109,3 +109,7 @@ session13では既存診断で復元のヒット判定上書きを確認した�
 ## Chromeの原因に対応する修正候補
 
 現在の修正候補は `release/issue-47-chrome-hit-verified/win-unpacked`、固定manifestは `../evidence/issue-47/chrome-hit-fixed-build.json`。session14で不正／空のtitle geometryによる棄却を確認し、明示的root hitとclose対象再照合を追加した。[根拠・修正・検証](chrome-diagnosis-20261030.md)。診断OFFで未達3件とtab×負例を確認する。以前のbuildでの成功を今回の合格へ転記しない。
+
+## Chrome修正の通常モード確認
+
+[session15](chrome-diagnosis-20261030.md)で復元2件・mouse閉鎖1件の記録／通知要求は成立。N11-tabは本人が窓自体を閉じたため実操作W11の正しい通知と区別し、tab-only負例は未確認で保持する。次は同じbinaryで重要負例をまとめて確認する。
