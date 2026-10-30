@@ -1,17 +1,17 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { dotnet, dotnetEnvironment } from '../scripts/dev/dotnet.mjs';
-import { classify, classifyGesture } from '../src/core/detector.ts';
+import { dotnet, dotnetEnvironment } from '../../scripts/dev/dotnet.mjs';
+import { classify, classifyGesture } from '../../src/core/detector.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { v2Fixture, type Candidate } from './support/fixtures.ts';
+import { DurableCoach } from '../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../src/main/sqlite-repository.ts';
+import { v2Fixture, type Candidate } from '../support/fixtures.ts';
 
 mock.module('electron', { namedExports: { app: {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../../src/main/observer.ts');
 
 test('本番のC#候補生成と全画面分類を人工イベント列で検証する', { timeout: 60_000 }, async (t) => {
   const result = spawnSync(dotnet, ['run', '--project', 'tests/native-policy/WindowObserver.PolicyTests.csproj',

@@ -1,8 +1,8 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
+import { classify } from '../../../src/core/detector.ts';
 mock.module('electron', { namedExports: { app: {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../../../src/main/observer.ts');
 const input = () => ({ type: 'candidate', protocolVersion: 2, generation: 1, sequence: 1, transaction: 7,
   date: '2026-10-29', origin: 'mouse', route: 'close-button', injected: false, conflicted: false,
   evidence: { kind: 'window-close', profile: 'window-close-v1', targetMatched: true, destroyed: true,

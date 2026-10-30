@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NaturalInputTrials } from '../src/main/natural-input-acceptance.ts';
-import type { Snapshot } from '../src/shared/coach.ts';
+import { NaturalInputTrials } from '../../../src/main/natural-input-acceptance.ts';
+import type { Snapshot } from '../../../src/shared/coach.ts';
 
 test('W01 manual trial enforces scenario, Alt+Tab guidance and W12 coexistence independently', async () => {
   for (const scenario of ['direct', 'alt-tab', 'multi-tab', 'escape', 'taskbar-click', 'win-digit']) {

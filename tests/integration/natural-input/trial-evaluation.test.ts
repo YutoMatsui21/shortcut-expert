@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NaturalInputTrials } from '../src/main/natural-input-acceptance.ts';
-import type { Snapshot } from '../src/shared/coach.ts';
+import { NaturalInputTrials } from '../../../src/main/natural-input-acceptance.ts';
+import type { Snapshot } from '../../../src/shared/coach.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { taskbarFixture, snapFixture, candidateFixture, v2Fixture } from './support/fixtures.ts';
+import { DurableCoach } from '../../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
+import { taskbarFixture, snapFixture, candidateFixture, v2Fixture } from '../../support/fixtures.ts';
 
 function harness() {
   const snapshot: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: false,

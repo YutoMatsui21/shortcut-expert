@@ -4,7 +4,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
-import { candidateFixture, v2Fixture } from './support/fixtures.ts';
+import { candidateFixture, v2Fixture } from '../support/fixtures.ts';
 
 test('Windows helperはhookを登録・解除でき、テスト中は入力payloadを読まない', () => {
   const result = spawnSync(resolve('resources/native-helper/WindowObserver.exe'), ['--self-test'], {

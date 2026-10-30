@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { learningOperations } from '../src/shared/learning.ts';
-import { learningReadModel } from '../src/core/learning.ts';
-import { recordsReadModel } from '../src/core/records.ts';
-import { defaultRecordsQuery } from '../src/shared/records.ts';
-import { classify as classifyV2 } from '../src/core/detector.ts';
-import { snapFixture, v2Fixture } from './support/fixtures.ts';
-import type { Candidate } from './support/fixtures.ts';
+import { learningOperations } from '../../src/shared/learning.ts';
+import { learningReadModel } from '../../src/core/learning.ts';
+import { recordsReadModel } from '../../src/core/records.ts';
+import { defaultRecordsQuery } from '../../src/shared/records.ts';
+import { classify as classifyV2 } from '../../src/core/detector.ts';
+import { snapFixture, v2Fixture } from '../support/fixtures.ts';
+import type { Candidate } from '../support/fixtures.ts';
 
 const classify = (value: Parameters<typeof v2Fixture>[0]) => classifyV2(v2Fixture(value));
 
