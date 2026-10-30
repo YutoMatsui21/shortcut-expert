@@ -121,3 +121,7 @@ session13では既存診断で復元のヒット判定上書きを確認した�
 ## session17の未達
 
 [状態混在の実測](chrome-diagnosis-20261030.md)：C03の4状態組と確認取消は期待一致、C07は全4組で候補・記録0。通知適格性より前の未達として保持し、同じbinaryの既存診断でChrome／ExplorerのL/L各1回だけを切り分ける。
+
+## C07の解放イベント比較
+
+[session18と解放位置の診断](corner-release-diagnosis-20261030.md)。Chromeはquarter形状が成立していてもside解放が32px超で棄却、Explorerは2px以内で成立。本人はカーソルを左上端に当てたと明示したため、採否を変えずイベント・物理カーソル・一時的なmotion extremaを比較する。追加診断同梱先は `release/issue-47-release-probe/win-unpacked`、固定manifestは `../evidence/issue-47/release-probe-build.json`。

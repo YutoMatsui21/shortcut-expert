@@ -6,6 +6,8 @@
   "C03": "One initial trial was incomplete/invalid but not expired or interrupted, reason not supplied. Subsequent four valid state pairs each atomically record W02/W03 mouse+1; notifications show both/move-only/max-only/none as expected",
   "C07": "Four valid trials, all zero candidates/counts/notification requests. Learning/learning, learning/excluded and excluded/learning miss expected notifications; excluded/mastered correctly requests no notice but still misses both required records. All four remain unmet",
   "N11dialog": "Valid standard-app trial, zero candidate/count/notification; participant reports other operations expected",
-  "openQuestions": "Actual quarter placement and preparation before each C07 trial requested asynchronously; do not assume a cause",
-  "next": "Inspect native candidate-rejection reasons before changing adoption conditions; do not repeat successful C03/state trials"
+  "openQuestions": "Both preparation questions answered; do not attribute failure to a preparation mistake. Native rejection condition remains unknown.",
+  "next": "Inspect native candidate-rejection reasons before changing adoption conditions; do not repeat successful C03/state trials",
+  "C07ActualResult": "Participant explicitly confirms all four trials placed the window in the other monitors upper-left quarter",
+  "C07Preparation": "Participant explicitly confirms every trial started from normal/unarranged with the whole window inside the source monitor, prepared while IDLE"
 }

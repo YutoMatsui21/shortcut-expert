@@ -17,7 +17,7 @@ internal sealed class CandidateTracker
     private const int CaptionDoubleClickDistancePx = 4;
     private const long NoCaptionClickAt = -10000;
     private sealed record Input(nint Window, WindowState Before, string Origin, string Route,
-        long At, bool Injected, bool Conflicted, bool Matched, int Transaction);
+        long At, bool Injected, bool Conflicted, bool Matched, int Transaction, WindowDragReleaseProbe? Probe = null);
     private readonly HashSet<nint> moving = new();
     private readonly Dictionary<nint, Input> drags = new();
     private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
@@ -32,6 +32,8 @@ internal sealed class CandidateTracker
     private int generation, sequence, transaction;
     internal PlacementPolicy Placement { get; } = new();
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
+    internal bool HasDrag => drags.Count == 1;
+    internal void MouseMoved(Point point, uint flags) { foreach (var drag in drags.Values) drag.Probe?.Sample(point, flags); }
     internal int NextTransaction() => checked(++transaction);
     internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
     {
@@ -80,14 +82,16 @@ internal sealed class CandidateTracker
         release = null;
         moving.Add(window);
         if (input is { Route: "caption-press" } && input.Window == window && now - input.At is >= 0 and <= InputMatchWindowMs)
-            drags[window] = input with { Origin = "mouse", Route = "caption-drag", At = now - input.At };
+            drags[window] = input with { Origin = "mouse", Route = "caption-drag", At = now - input.At, Probe = Diagnostic is null ? null : new() };
         if (input?.Window == window) input = input with { Conflicted = true };
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
     internal void MoveEnd(nint window) => Forget(window);
-    internal void MouseReleased(Point point, MonitorBounds? monitor, MonitorBounds? work, uint flags)
+    internal void MouseReleased(Point point, MonitorBounds? monitor, MonitorBounds? work, uint flags, Point? physicalBefore = null, Point? physicalAfter = null)
     {
         if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0) { ClearInput(); return; }
+        if (drags.Count == 1 && monitor is not null && work is not null && Diagnostic is { } diagnostic)
+            drags.Values.First().Probe?.Record(point, monitor, work, physicalBefore, physicalAfter, diagnostic);
         release = drags.Count == 1 && monitor is not null && work is not null ? (monitor, work, point) : null;
     }
     internal static bool IsModifier(uint key) => key is VK_LWIN or VK_RWIN or VK_SHIFT or VK_CONTROL or VK_MENU or

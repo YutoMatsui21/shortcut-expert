@@ -121,9 +121,12 @@ internal sealed class Observer : IDisposable
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
+            bool probeRelease = windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
+            Point? physicalBefore = probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             closing.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
+            if (windowDiagnostic is not null && message == 0x200) tracker.MouseMoved(taskbarMouse.Point, taskbarMouse.Flags);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message == WM_LBUTTONUP)
@@ -132,8 +135,9 @@ internal sealed class Observer : IDisposable
                     var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
                     bool known = GetMonitorInfoW(MonitorFromPoint(taskbarMouse.Point, MONITOR_DEFAULTTONULL), ref info);
                     static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+                    Point? physicalAfter = probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
                     tracker.MouseReleased(taskbarMouse.Point, known ? Bounds(info.Monitor) : null,
-                        known ? Bounds(info.Work) : null, taskbarMouse.Flags);
+                        known ? Bounds(info.Work) : null, taskbarMouse.Flags, physicalBefore, physicalAfter);
                 }
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
                 return CallNextHookEx(0, code, message, data);
