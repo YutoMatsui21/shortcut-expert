@@ -20,6 +20,24 @@ internal static partial class Program
             output.Add(new { candidate = new CandidateEnvelope("candidate", 2, 1, id, id, "2026-10-28", result.Origin,
                 result.Origin == "mouse" ? "caption-edge-drag" : "win-held-arrows", false, false, result.Evidence), expected });
         }
+        Check("natural direct side-edge release accepts observed 3..8px while preserving interior/start guards", () => {
+            foreach (string side in new[] { "left", "right" }) foreach (string vertical in new[] { "half", "top", "bottom" }) {
+                var after = Placed(side, vertical);
+                int y = vertical == "bottom" ? work.y + work.height / 2 : work.y;
+                int edge = side == "left" ? work.x : work.x + work.width - 1;
+                foreach (int distance in new[] { 3, 8, 9, 100 }) {
+                    var point = new Point { X = edge + (side == "left" ? distance : -distance), Y = y };
+                    var evidence = PlacementGeometry.Drag(start, after, point, monitor, work, 100, true);
+                    Equal(distance <= 8, evidence is not null);
+                    if (evidence is not null) Equal(side + "-" + vertical, evidence.shape);
+                }
+                var release = new Point { X = edge + (side == "left" ? 8 : -8), Y = y };
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start with { Arranged = true }, after, release, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start with { Arranged = null }, after, release, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start, after, release, monitor, work, 100, false));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start, after, release, monitor, work, 1001, true));
+            }
+        });
         Check("placement diagnostics preserve outcomes and categorize bounded rejection reasons", () => {
             foreach (string mode in new[] { "valid", "side3", "side12", "side64", "outside-y", "shape", "age", "unmatched" }) {
                 var after = Placed("left", "top");

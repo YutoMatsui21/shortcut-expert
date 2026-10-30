@@ -21,3 +21,17 @@
 次の自然入力は診断ONの隔離sessionで、P07m-left-top／P07m-left-bottomを各1回まとめて行う。成功10件はこの切り分けで繰り返さない。新しい理由集計を得てから製品修正を判断する。
 
 専用ローカルCodexレビューで、早期return分割の同値性、判定・状態遷移の不変、固定カテゴリだけの集計、62理由のC#/TS同期、訂正原本の扱いを確認し、指摘なし。同梱helper hash一致と隔離同梱smokeも成功した。fixtureの成功を左側の自然入力成功として扱わない。
+
+## session8で確証した反例
+
+[診断原本](../evidence/issue-47/session8-status.json)では、左上はcaption・drag始終・同一対象・構成・monitor/work・通常起点・厳密なquarter形状・物理解放が成立し、解放点と側端の距離が3〜8pxの区分だった。旧2px制限だけで採用されなかった。
+
+左下はquarter形状とdragは成立したが`PlacementStartInvalid`で終了した。本人は配置済みの状態から直接左下へdragしたと明示したため、予定した非arranged通常起点のケースを満たしていない。元の失敗と申告を保持し、配置済み起点の現行制約として残す。未知のキー同等性を推測して起点制限を取り除かない。[本人申告](../evidence/issue-47/session8-participant.json)、[build](../evidence/issue-47/session8-build.json)、[正常終了](../evidence/issue-47/session8-exit.json)、[SQLite整合性・hash不変](../evidence/issue-47/session8-integrity.json)。
+
+## 側端上限の修正
+
+実装上限を2→8物理pxへ変更する。8は観測した区分の上限を採った値であり、WindowsのSnap領域を実測した閾値でも、一般環境全体の保証でもない。caption由来、同一対象、配置結果の厳密な形状、解放先、上下側、構成・DPI、入力期限、非arranged起点は維持する。9px以上や内部Snap Layout選択を自動的に許可しない。W06/W07と複合quarterの共通境界だけを変更し、W03最大化の上端2pxは変えない。
+
+修正前に本番policyで3pxの正例がexpected True／actual Falseになることを確認した。左右half／四隅に対する3／8pxの正例・9pxと内部100px・不明／arranged起点・入力不一致・期限超過の負例を追加した。複合quarterでは8pxは2操作のCompoundMoveResult、9pxは全体棄却でありW02だけを部分送信しないことを確認する。次の自然入力はNative診断OFFの同一修正版で、2件ともIDLE中に非配置の通常状態へ戻してから確認する。配置済み起点の制約を解決したとは扱わない。
+
+Native全7件（本番C# policy554検証とCore／SQLite結合）、helper全473ファイルの同梱一致、同じ候補で5種類の隔離同梱smoke・保存受入17件が成功。専用ローカルCodexレビューで側端上限だけの変更、他のguardとW03上端制限の維持、起点制約・実装上限とOS実測の区別を確認し、指摘なし。修正版の自然入力成功はまだ主張しない。

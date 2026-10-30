@@ -7,6 +7,17 @@ internal static partial class Program
     {
         var start = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "pair", HorizontalPair = true };
+        Check("compound quarter shares the side tolerance without emitting a partial monitor move", () => {
+            var monitor = new MonitorBounds(0, 0, 1920, 1080); var work = new MonitorBounds(0, 0, 1920, 1040);
+            var after = start with { Monitor = monitor, Work = work, Arranged = true, Frame = new(0, 0, 960, 520) };
+            foreach (int distance in new[] { 8, 9 }) {
+                var tracker = Tracker(); tracker.Mouse(11, start, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = distance, Y = 0 }, monitor, work, 0);
+                var result = tracker.FinishMove(11, after, 5000, 11, "2026-10-28");
+                Equal(distance == 8, result is CompoundMoveResult);
+                if (distance == 9) Equal<object?>(null, result);
+            }
+        });
         foreach (string terminal in new[] { "maximized", "left-top", "right-bottom" })
         foreach (string mode in new[] { "valid", "direction-unknown", "no-release", "injected", "release-injected", "conflict", "cancel", "process", "layout",
             "window", "foreground", "return", "interior", "program", "stop", "destroy" })

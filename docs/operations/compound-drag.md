@@ -5,7 +5,7 @@
 ## 検出と一時的な通信
 
 - `CandidateTracker`のcaption押下→MOVESIZESTART→物理解放→MOVESIZEENDを使用する。同一HWND・process、観測generation、入力transaction、foreground、始終monitor、安定した画面構成・作業域・DPI、終端結果をNative内で相関づける。HWND・process・入力列・解放座標は通信／保存へ渡さない。
-- 最大化は通常・非arranged起点と上端2px以内の解放、quarterは通常／最大化・非arranged起点と最終shapeに対応した側端2px以内の解放を要求する。既存の[W03](window-state.md)／[W07](window-placement.md)の保守的な解放範囲を引き継ぐ。WindowsのSnap領域や一般環境での精度を保証する境界ではない。
+- 最大化は通常・非arranged起点と上端2px以内の解放、quarterは通常／最大化・非arranged起点と最終shapeに対応した側端8px以内の解放を要求する。[W03](window-state.md)の上端制限は維持し、quarterだけ[W07](window-placement.md)の自然入力反例に対応した側端上限を共有する。WindowsのSnap領域や一般環境での精度を保証する境界ではない。
 - `compound-drag-v1`をprotocol v2の追加variantとする。envelopeのgeneration／transactionがgestureを識別する。証拠は終端shape、対象一致・物理解放・画面構成の照合結果、押下→移動開始の経過、始終monitor、確証された左右方向、終端キーの同等性だけ。Mainは必須型・許可値を検査し、許可fieldのみをCoreへ渡す。
 - Coreはmouse由来・専用route・注入／競合なし・全照合成立・異なる始終monitor・入力経過0〜1000msを再確認する。不正な複合証拠は全体を棄却し、一方だけ採用しない。
 - 途中の復元W04／half W06、元画面へ戻した移動、取消・別窓・program変更・Snap Layout内部選択は複合として採用しない。cross-monitor half（W02＋W06）は対象外。

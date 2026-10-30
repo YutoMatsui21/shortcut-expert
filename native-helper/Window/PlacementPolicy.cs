@@ -6,6 +6,9 @@ internal sealed record PlacementResult(int Transaction, string Origin, Placement
 // Physical DWM frame and monitor work area; never serialize window rectangles or input sequences.
 internal static class PlacementGeometry
 {
+    // Bounded implementation tolerance, informed by the observed 3..8px natural-input counterexample.
+    // This is not a measurement or guarantee of Windows' complete Snap activation region.
+    internal const int DirectSideReleaseTolerancePx = 8;
     internal static string? Shape(WindowState state, Action<WindowDiagnosticReason>? diagnostic = null)
     {
         if (state.Show != SW_SHOWNORMAL || state.Arranged != true || state.Frame is not { } f ||
@@ -55,7 +58,7 @@ internal static class PlacementGeometry
         long distance = Math.Abs((long)point.X - edge);
         diagnostic?.Invoke(distance <= 2 ? WindowDiagnosticReason.PlacementSideWithin2 : distance <= 8 ? WindowDiagnosticReason.PlacementSide3To8 :
             distance <= 32 ? WindowDiagnosticReason.PlacementSide9To32 : WindowDiagnosticReason.PlacementSideAbove32);
-        if (distance > 2) return null;
+        if (distance > DirectSideReleaseTolerancePx) return null;
         if (point.Y < work.y || (long)point.Y >= (long)work.y + work.height) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementYOutside); return null; }
         long mid = (long)work.y + work.height / 2;
         if (shape.EndsWith("-top") && point.Y >= mid || shape.EndsWith("-bottom") && point.Y < mid)
