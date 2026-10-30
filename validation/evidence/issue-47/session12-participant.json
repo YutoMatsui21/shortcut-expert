@@ -1,0 +1,19 @@
+{
+  "productRevision": "b80e645",
+  "manifestSha256": "8fdefa1d6dbff47436f132e1b4d76fa8868af9e0287bcd5df8b083d49df5dd4f",
+  "nativeDiagnostics": false,
+  "participantReport": "20 trials completed; notices absent for P04m, P11m and S04-double; all three windows changed as intended",
+  "trial1and2": "P12m/P12k standard as instructed, each W12+1 and slotMatched=true",
+  "trial9": "P06m-left: participant missed grabbing the window twice; machine recorded exactly one W06 mouse count and one notification, no extra operation",
+  "trial17": "Additional P12m chrome after window-close trials; participant confirms clicking the visible Chrome window directly, not the taskbar icon. Machine W01 mouse+1 and W01 notification match that action. Original P12m case ID remains unchanged; this is a procedure mismatch, not a W12 acceptance success",
+  "trial18": "Additional P12k chrome: W12 key+1, no notification, selected panel slot1 mismatched. Actual key number was not supplied; preserve unresolved additional trial, not product failure or acceptance pass",
+  "failures": {
+    "trial7": "P04m: one restore candidate with unknown origin/route; zero W04 count and notice",
+    "trial15": "P11m: zero candidate, count and notice",
+    "trial20": "S04-double: one restore candidate with unknown origin/route; zero W04 count and notice"
+  },
+  "machineExpectedMatches": 15,
+  "totalTrials": 20,
+  "panelFields": "Raw confirmation defaults retained; participant statements stored separately",
+  "next": "Same binary with existing opt-in diagnostics for only the three mouse failures; no speculative product change"
+}
