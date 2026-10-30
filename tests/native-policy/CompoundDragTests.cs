@@ -66,6 +66,18 @@ internal static partial class Program
                 Equal(proven, ((CompoundDragEvidence)((CandidateEnvelope)emitted[0]).evidence).twoDisplayLayoutConfirmed);
             }
         });
+        Check("OS docking preview remains one compound result or rejects both operations", () => {
+            var monitor = new MonitorBounds(0, 0, 1920, 1080); var work = new MonitorBounds(0, 0, 1920, 1040);
+            var before = start with { MouseDockThresholdPx = 64 };
+            var after = before with { Monitor = monitor, Work = work, Arranged = true, Frame = new(0, 0, 960, 520) };
+            foreach (int distance in new[] { 33, 64, 65, 500 }) {
+                var tracker = Tracker(); tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = distance, Y = 0 }, monitor, work, 0);
+                var result = tracker.FinishMove(11, after, 5000, 11, "2026-10-28");
+                Equal(distance <= 64, result is CompoundMoveResult);
+                if (distance > 64) Equal<object?>(null, result);
+            }
+        });
         Check("compound quarter shares the side tolerance without emitting a partial monitor move", () => {
             var monitor = new MonitorBounds(0, 0, 1920, 1080); var work = new MonitorBounds(0, 0, 1920, 1040);
             var after = start with { Monitor = monitor, Work = work, Arranged = true, Frame = new(0, 0, 960, 520) };

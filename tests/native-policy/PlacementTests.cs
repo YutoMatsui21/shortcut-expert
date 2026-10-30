@@ -20,6 +20,42 @@ internal static partial class Program
             output.Add(new { candidate = new CandidateEnvelope("candidate", 2, 1, id, id, "2026-10-28", result.Origin,
                 result.Origin == "mouse" ? "caption-edge-drag" : "win-held-arrows", false, false, result.Evidence), expected });
         }
+        Check("dock settings reads are isolated and restore DPI context even on failure", () => {
+            foreach (int? value in new int?[] { null, -1, 0, 1, 8, 64, 256, 257, int.MaxValue }) {
+                var calls = new List<nint>();
+                var read = WindowDockSettings.Read(context => { calls.Add(context); return -4; }, () => value);
+                Equal(value is >= 1 and <= 256 ? value : null, read);
+                Equal(2, calls.Count); Equal((nint)(-2), calls[0]); Equal((nint)(-4), calls[1]);
+            }
+            int queries = 0;
+            Equal<int?>(null, WindowDockSettings.Read(_ => 0, () => { queries++; return 64; })); Equal(0, queries);
+            var restored = new List<nint>(); bool threw = false;
+            try { WindowDockSettings.Read(context => { restored.Add(context); return -4; }, () => throw new InvalidOperationException("fixture")); }
+            catch (InvalidOperationException) { threw = true; }
+            Equal(true, threw); Equal(2, restored.Count); Equal((nint)(-4), restored[1]);
+        });
+        Check("OS docking threshold admits early side/corner previews while rejecting its outside", () => {
+            foreach (string side in new[] { "left", "right" }) foreach (string vertical in new[] { "half", "top", "bottom" }) {
+                var before = start with { MouseDockThresholdPx = 64 };
+                var after = Placed(side, vertical) with { MouseDockThresholdPx = 64 };
+                int edge = side == "left" ? work.x : work.x + work.width - 1;
+                int y = vertical == "bottom" ? work.y + work.height - 1 : work.y;
+                foreach (int distance in new[] { 8, 33, 64, 65, 500 }) {
+                    var point = new Point { X = edge + (side == "left" ? distance : -distance), Y = y };
+                    var evidence = PlacementGeometry.Drag(before, after, point, monitor, work, 100, true);
+                    Equal(distance <= 64, evidence is not null);
+                }
+                var preview = new Point { X = edge + (side == "left" ? 60 : -60), Y = y };
+                foreach (int? raw in new int?[] { null, 0, -1, 257, int.MaxValue })
+                    Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before with { MouseDockThresholdPx = raw },
+                        after with { MouseDockThresholdPx = raw }, preview, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after with { MouseDockThresholdPx = 8 },
+                    new Point { X = edge, Y = y }, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before with { Arranged = true }, after, preview, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after, preview, monitor, work, 100, false));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after, preview, monitor, work, 1001, true));
+            }
+        });
         Check("natural direct side-edge release accepts observed 3..8px while preserving interior/start guards", () => {
             foreach (string side in new[] { "left", "right" }) foreach (string vertical in new[] { "half", "top", "bottom" }) {
                 var after = Placed(side, vertical);

@@ -4,7 +4,7 @@ using Point = NativeMethods.Point;
 internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
-    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false);
+    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false, int? MouseDockThresholdPx = null);
 // Only verified terminal evidence crosses the protocol; HWND/process stay in the tracker.
 internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMonitor, MonitorBounds ToMonitor,
     string Terminal, long InputAgeMs, string? MoveDirection = null, bool TwoDisplayLayoutConfirmed = false);

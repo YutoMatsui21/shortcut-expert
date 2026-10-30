@@ -26,3 +26,39 @@ Input.Probeは診断ONのMoveStartだけで作り、既存のForget／Clear／Fo
 fixtureで、角に触れた後の異なるevent／物理位置、monitor/work inset、注入motion・snapshot失敗を区別し、probe ON/OFFでcompound採否が同じこと、80px解放が両方とも拒否されること、drag終了後に集計が増えないことを確認する。自然入力は同じC07のL/LをChromeとExplorer各1回に絞る。修正前の根拠が揃うまで採用条件を緩和しない。
 
 検証結果：関連unit35件、Native全7件、型検査、helper build、同梱base smoke・保存受入17件が成功。専用ローカルレビューは4観点で指摘なし。Native全473ファイル一致。固定manifestは `../evidence/issue-47/release-probe-build.json`、同梱先は `release/issue-47-release-probe/win-unpacked`。新しい診断を使った自然入力は未実施。NU1900警告は残る。
+
+
+## 解放位置を変えた比較（session19）
+
+診断revision `0d4618f`（採否は`2ec7520`と同じ8px）、hash `678aab19055b2ce0b8323ab3378164c7bdef7bfb0c978808f818dd08aa47fdad`。原本 `../evidence/issue-47/session19-*.json`。
+
+- 最初のExplorerは本人がcursorを端まで持っていき、通知あり。eventと前後の物理cursorは等しく、monitor/work左端も同じ。途中と最後の端接触を観測し、W02/W07各1・通知1。
+- 次のChromeは本人が意図的に端まで持っていかず、quarter previewが出た時点で解放した。33〜64pxの区分でeventと前後の物理cursorは等しく、monitor/work左端も同じ。quarter形状・入力・対象等は成立するが8px gateで棄却。
+- 今回は解放操作が異なるため、アプリ固有の座標変換不具合とは結論しない。今回のsnapshotに座標差・途中の位置移動は観測されなかった。以前の明示的な「端まで当てた」という申告は原本のまま別に残す。
+- 本人はMicrosoft一次情報による境界取得を優先し、なければ緩和する方針を指示。設定や画面配置は変更しない。
+
+## Microsoft一次情報と公開パラメーター
+
+[Snap Your Windows](https://support.microsoft.com/en-us/windows/experience/snap-your-windows)は、端までドラッグしなくてもSnapできる設定を明記している。[SystemParametersInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)の`SPI_GETMOUSEDOCKTHRESHOLD`（0x007E）はmouseでmonitor端へdragするときのdocking閾値をpixelで取得する公開API。現在環境のgetter値は64、WinArranging/DockMovingは有効だった。`snap-system-parameters-20261030.json`／`snap-dpi-parameters-20261030.json`はread-onlyで採取し、setterは使っていない。
+
+これはWindows11のcorner preview全体のpolygon・hysteresisを返すAPIではない。公開ドキュメントの確認範囲でその領域全体を取得するAPIは確認できなかった。dock閾値を、厳密な終端形状と入力照合を併用する保守的な解放許容値として使い、完全なOS hit regionと一致するとは主張しない。
+
+同APIはper-monitor DPI aware threadから使うべきでないという注意があるため、取得中だけ自分のthreadをSYSTEM_AWAREへ切り替え、finallyで元に戻す。[ForDpi版](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfofordpi)は当actionをサポートしないため使わず、未文書の追加倍率計算も行わない。別のWin11設定値やDPI構成での一般化は自然入力とは分ける。
+
+## OS値を使う最小修正
+
+固定8pxを下限兼取得失敗時fallbackとして維持し、validatedなOS値（1〜256）と大きい方を採用。範囲外／取得失敗は8に戻す。256は異常に広い設定を無制限に受け入れないための実装上限で、Microsoftが公開した最大値ではない。before/afterの値が変わったgestureは採用しない。既存の終端1px一致、対象／構成／monitor/work/DPI、release、入力年齢、方向の照合を維持し、中央のlayout選択を無条件に許可しない。W03のtop2pxは今回変更しない。
+
+getterはhook内で繰り返さず、非fixtureの観測開始時に読む。設定変更前は既存候補と値を無効化し、設定変更後に再取得する。fixtureはWindows設定を読まず、delegateとWindowState値で隔離する。読み取り値は候補通信や日別保存へ追加しない。
+
+64設定で33／64を正例、65／500を負例として左右half／quarterを確認する。null／負値／0／過大値、設定変更、既配置起点、入力不一致、期限切れの負例を維持する。compoundは2件まとめて成立するか全体棄却であり、W02だけに分割しない。DPI context復元は正常・取得不可・例外のfixtureで確認する。
+
+## 作業ツリーの分離
+
+共有checkoutが別Issue137ブランチへ変わり、その未コミット作業を検出したため、一切変更せず `.tools/worktrees/issue-47` に既存acceptance branchの専用worktreeを作成した。Node/SDK/cacheを参照するが、source／native生成物／同梱先／試験データは分離する。新しいsession19原本と静的getter証拠だけをhash照合して専用treeへ移し、別Issueのindex・変更には触れない。
+
+session19の終了はcode=null／SIGTERM、最終Main statusはCLOSED/error=true。原因は未確定で正常終了とは扱わない。read-only integrity=ok、hash不変、当該同梱app/helper残存0を別に確認し、異常なexit原本を保持する。
+
+回帰試験は修正前に33〜64pxの拒否をassertで再現し、OS値64なら33/64を採用・65/500を拒否するようになった。関連unit57件、型検査、Native全7件、helper build成功。取得失敗／不正値のfallbackと設定変更時の棄却、DPI context復元、compoundの全体確定／全体棄却を検証済み。修正後の自然入力は未実施。
+
+同梱確認：Native 473ファイル全一致、package全550ファイルを固定。manifest `../evidence/issue-47/os-dock-build.json`、SHA256 `26418e6053b6d677bed245f4b2f49c57cb4fcadb39a4cd47afa04fb735598cf7`。同梱base/settings/activation/migration/comparison smoke、保存受入17件も成功（fixtureの結果）。0d4618f以降の全変更を専用reviewerが4観点で確認し、対応が必要な指摘なし。OS設定値を使った修正後の自然入力・mixed-DPIは未確認。NU1900警告あり。

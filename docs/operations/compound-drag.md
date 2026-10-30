@@ -23,3 +23,5 @@
 - `tests/compound-drag.test.ts`：最大化／quarter、方向不明／キー不明、学習状態混在、保存中の状態変更、pause／stop、保存失敗、ACK喪失、2件目INSERT失敗のrollback、再送・再試行、通知adapterの単一発行とunknown、一覧／記録read model。
 - 隔離storage smoke：helper fixture→Main→実SQLite→IPC→両画面。通常buildと同梱buildで同じfixtureを使用する。
 - 一般アプリの実入力、混在monitor・DPI、実OS Toastの表示、NSIS、同一最終buildのR02／J04は[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)へ残す。fixture成功を自然入力PASSと扱わない。
+
+W02＋W07のdirect side解放も[配置側のOS docking閾値](window-placement.md#osの早期スナップ閾値)を共用する。設定が安定し厳密なquarter終端が成立したときだけ2件を確定し、距離条件や他条件が失敗したgestureを単独W02へ分割しない。

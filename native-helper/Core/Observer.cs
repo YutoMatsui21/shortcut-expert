@@ -22,6 +22,7 @@ internal sealed class Observer : IDisposable
     private readonly List<nint> eventHooks = new();
     private nint mouseHook, keyHook;
     private int epoch;
+    private int? mouseDockThresholdPx;
     private static readonly Arranged? isArranged = LoadArranged();
 
     internal Observer(Action<object> emit, bool fixture = false, Action<CloseReason>? closeDiagnostic = null,
@@ -35,7 +36,11 @@ internal sealed class Observer : IDisposable
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
-    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); }
+    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); mouseDockThresholdPx = null; }
+    internal void RefreshDockThreshold() {
+        InvalidateDisplay();
+        mouseDockThresholdPx = !fixture && Active ? WindowDockSettings.ReadMouseDockThreshold() : null;
+    }
     internal static bool ArrangedAvailable => isArranged is not null;
     internal static string ForegroundToken => GetForegroundWindow().ToString();
     private static Arranged? LoadArranged()
@@ -50,6 +55,7 @@ internal sealed class Observer : IDisposable
         epoch = newGeneration;
         protocol.Start(newGeneration, protocolVersion);
         if (!fixture && GetSystemMetrics(SM_REMOTESESSION) != 0) throw new InvalidOperationException("remote-session-unsupported");
+        mouseDockThresholdPx = fixture ? null : WindowDockSettings.ReadMouseDockThreshold();
         if (!fixture) EnumWindows((window, _) => { Remember(window); return true; }, 0);
         nint module = GetModuleHandleW(null);
         mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
@@ -77,7 +83,7 @@ internal sealed class Observer : IDisposable
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
         foreach (nint hook in eventHooks) released &= UnhookWinEvent(hook);
-        mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0);
+        mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0); mouseDockThresholdPx = null;
         if (!released) throw new InvalidOperationException("hook-release-failed");
     }
     private WindowState? Read(nint window, WindowState? cached = null)
@@ -99,7 +105,7 @@ internal sealed class Observer : IDisposable
         static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
         return new WindowState(pid, WindowTargetPolicy.ApplicationCategory, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
-            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair());
+            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair(), mouseDockThresholdPx);
     }
     internal static bool OrdinaryProcess(uint pid)
     {

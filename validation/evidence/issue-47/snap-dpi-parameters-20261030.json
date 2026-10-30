@@ -1,0 +1,9 @@
+{
+  "kind": "system-aware-read-only-docking-threshold",
+  "contextSet": true,
+  "thresholdRead": true,
+  "mouseDockThreshold": 64,
+  "systemDpi": 192,
+  "windowsSettingsChanged": false,
+  "limitation": "Dock threshold is not a full Windows11 corner-preview region"
+}

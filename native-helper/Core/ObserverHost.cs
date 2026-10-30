@@ -28,7 +28,12 @@ internal static class ObserverHost
         void DisplayChanged(object? sender, EventArgs args) {
             try { dispatcher.BeginInvoke(() => observer.InvalidateDisplay()); } catch (InvalidOperationException) { }
         }
+        void SettingsChanged(object? sender, EventArgs args) {
+            try { dispatcher.BeginInvoke(() => observer.RefreshDockThreshold()); } catch (InvalidOperationException) { }
+        }
         Microsoft.Win32.SystemEvents.DisplaySettingsChanging += DisplayChanged;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += SettingsChanged;
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += SettingsChanged;
         Microsoft.Win32.SystemEvents.UserPreferenceChanging += DisplayChanged;
         Emit(new { type = "ready", protocolVersion = 2, arrangedAvailable = Observer.ArrangedAvailable });
         _ = Task.Run(() =>
@@ -80,6 +85,8 @@ internal static class ObserverHost
         try { Application.Run(context); observer.Stop(); return 0; }
         finally {
             Microsoft.Win32.SystemEvents.DisplaySettingsChanging -= DisplayChanged;
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= SettingsChanged;
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged -= SettingsChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanging -= DisplayChanged;
         }
     }

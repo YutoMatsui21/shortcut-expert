@@ -30,3 +30,12 @@ Nativeの`placement-v1`証拠へ終端shape・対象一致・入力の経過・m
 - `tests/native-policy/PlacementTests.cs`：DPI・作業域・負座標・形状・サイズ制限、同一Win列と独立操作、取消・途中状態・注入・重複の人工列。
 - `tests/placement.test.ts`、`tests/native-policy.test.ts`、`tests/fixture-integration.test.ts`：v2 parse→Core→SQLite、mouse／keyと3学習状態、保存後通知、停止・ACK喪失・再配送、一覧／記録の整合。隔離smokeで本番Rendererへ接続する。
 - **未確認**：側端8pxの上限で一般Windowsの自然ドラッグを十分に扱えるか、実機の結果遅着／混在DPI／画面構成変更、実OS通知、最終buildのR02／J04。配置済み起点は現在のmouse判定で除外される制約として残し、通常サイズ起点の受入と混同しない。単独W06/W07の局所実装と[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)を区別する。
+
+
+## OSの早期スナップ閾値
+
+Windowsは端まで運ばなくてもSnapできる設定を持つ。[公式説明](https://support.microsoft.com/en-us/windows/experience/snap-your-windows)。W06/W07のdirect side解放は、従来8 physical pxを下限／fallbackとし、[SPI_GETMOUSEDOCKTHRESHOLD](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)で取得した有効値1〜256と大きい方を使う。現在の環境は64。これはdocking距離を使う保守的なstripであり、Windows11の四隅preview全体のpolygonやhysteresisを取得した意味ではない。256は実装上の妥当値上限で、公式の最大値ではない。
+
+getterはSYSTEM_AWAREのthread contextで呼び、finallyで元へ戻す。ForDpi版はこのactionをサポートしないため使わない。Native起動時にcacheし、設定変更前は候補とcacheを無効化、変更後に再取得。fixtureではgetterを呼ばない。gesture前後で設定値が異なる場合は採用しない。window/frame形状1px、対象・構成・monitor/work・DPI・入力・release・期限のチェックは維持する。W03 top2pxは別条件で今回変更しない。
+
+実測・取得値・回帰と未確認範囲は[session19の調査](../../validation/issue-47/corner-release-diagnosis-20261030.md)。中央のSnap bar選択を無条件に受け入れず、新buildの自然入力では早期quarterとbar選択の負例を別々に確認する。

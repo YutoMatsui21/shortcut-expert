@@ -1,0 +1,12 @@
+{
+  "diagnosticRevision": "0d4618f",
+  "admissionPolicyRevision": "2ec7520",
+  "manifestSha256": "678aab19055b2ce0b8323ab3378164c7bdef7bfb0c978808f818dd08aa47fdad",
+  "participantReport": "Explorer first: cursor reached edge and a notification appeared. Chrome second: deliberately released before the edge when the quarter preview appeared, no notification",
+  "trial1": "Explorer standard; within8px, hook/physical before/physical after equal; corner contact seen; W02/W07 mouse+1, one notification with both items",
+  "trial2": "Chrome; 33..64px release, hook/physical before/physical after equal, no observed corner extrema; valid quarter shape but rejected by8px gate, no count/notice",
+  "interpretation": "Different release procedures, so this comparison does not establish an app-specific bug. No coordinate or cursor-shift discrepancy observed in this session. Earlier explicit edge-contact report remains as its original statement and is not rewritten",
+  "userDirection": "Prefer Microsoft primary-source boundary/API; otherwise allow a more permissive bounded release region",
+  "research": "Microsoft documents near-edge snapping and SPI_GETMOUSEDOCKTHRESHOLD. Read-only current value64 in both initial and scoped SYSTEM_AWARE query. Full Windows11 corner-preview polygon is not established by this API",
+  "shutdown": "Abnormal launcher exit: code null, signal SIGTERM, ready true. Cause unknown; do not classify as normal exit. Read-only integrity and package hash checks passed."
+}
