@@ -8,6 +8,30 @@ internal static partial class Program
         var source = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "stable-pair", HorizontalPair = true };
         var to = source with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040) };
+        foreach (string mode in new[] { "accepted", "same-monitor", "no-release", "release-monitor", "release-work",
+            "end-state", "unstable", "injected", "unmatched", "foreground" })
+            Check($"normal monitor drag diagnostics preserve decision: {mode}", () => {
+                var after = mode switch { "same-monitor" => source, "end-state" => to with { Arranged = null },
+                    "unstable" => to with { Dpi = 0 }, _ => to };
+                object? Run(Action<WindowDiagnosticReason>? diagnostic) {
+                    var tracker = Tracker(); tracker.Diagnostic = diagnostic;
+                    tracker.Mouse(11, source, HTCAPTION, default, 0, 500,
+                        mode == "injected" ? LLMHF_INJECTED : 0, false, mode != "unmatched");
+                    tracker.MoveStart(11, 100);
+                    if (mode != "no-release") tracker.MouseReleased(default,
+                        mode == "release-monitor" ? source.Monitor : after.Monitor,
+                        mode == "release-work" ? source.Work : after.Work, 0);
+                    return tracker.FinishMove(11, after, 500, mode == "foreground" ? 12 : 11, "2026-10-28");
+                }
+                var reasons = new List<string>(); var expected = Run(null); var actual = Run(r => reasons.Add(r.ToString()));
+                Equal(expected, actual);
+                Equal(mode == "accepted", actual is WindowCandidate);
+                string reason = mode switch { "accepted" => "MoveAccepted", "same-monitor" => "MoveSameMonitor",
+                    "no-release" => "DragReleaseUnknown", "release-monitor" => "MoveReleaseMonitorMismatch",
+                    "release-work" => "MoveReleaseWorkMismatch", "end-state" => "MoveEndStateInvalid",
+                    "unstable" => "MoveUnstable", "foreground" => "MoveForegroundMismatch", _ => "MoveInputInvalid" };
+                Equal(true, reasons.Contains(reason));
+            });
         Check("two-display proof excludes incomplete, overlapping and three-display layouts", () => {
             var upper = new MonitorBounds(-1920, -1440, 2560, 1440);
             Equal(true, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, upper }));

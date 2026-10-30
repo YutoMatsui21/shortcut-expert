@@ -173,6 +173,7 @@ internal sealed class CandidateTracker
         }
         if (State(after.Show) == "maximized")
         {
+            Diagnostic?.Invoke(WindowDiagnosticReason.DragMaximizedResult);
             if (released is null || released.Value.Monitor != after.Monitor ||
                 released.Value.Work != after.Work || after.Arranged != false ||
                 State(drag.Before.Show) != "normal" || drag.Before.Arranged != false || foreground != window) return null;
@@ -186,9 +187,15 @@ internal sealed class CandidateTracker
                     ? Compound(drag, after, "maximized") : null;
             return Build("maximize", drag.Before, after, drag with { Route = "caption-top-drag" }, drag.At, true, false, date, after.Monitor);
         }
-        if (drag.Before.Monitor == after.Monitor || released is null || released.Value.Monitor != after.Monitor ||
-            released.Value.Work != after.Work || State(after.Show) != "normal" || after.Arranged != false ||
-            !StableMove(drag.Before, after) || drag.Injected || drag.Conflicted || !drag.Matched || foreground != window) return null;
+        if (drag.Before.Monitor == after.Monitor) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveSameMonitor); return null; }
+        if (released is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragReleaseUnknown); return null; }
+        if (released.Value.Monitor != after.Monitor) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveReleaseMonitorMismatch); return null; }
+        if (released.Value.Work != after.Work) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveReleaseWorkMismatch); return null; }
+        if (State(after.Show) != "normal" || after.Arranged != false) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveEndStateInvalid); return null; }
+        if (!StableMove(drag.Before, after)) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveUnstable); return null; }
+        if (drag.Injected || drag.Conflicted || !drag.Matched) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveInputInvalid); return null; }
+        if (foreground != window) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveForegroundMismatch); return null; }
+        Diagnostic?.Invoke(WindowDiagnosticReason.MoveAccepted);
         // Drag lifetime is bounded by MOVESIZEEND; age is the input-to-start interval, not its duration.
         return Build("monitor-move", drag.Before, after, drag, drag.At, foreground == window, false, date, after.Monitor);
     }

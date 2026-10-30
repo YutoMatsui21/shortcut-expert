@@ -10,7 +10,8 @@ export const windowDiagnosticKeys = ['MouseDown', 'MouseUp', 'TargetMissing', 'T
   'PlacementSideWithin2', 'PlacementSide3To8', 'PlacementSide9To32', 'PlacementSideAbove32', 'PlacementYOutside',
   'PlacementVerticalMismatch', 'PlacementAccepted',
   'ShapeInputInvalid', 'ShapeLeftEdge', 'ShapeRightEdge', 'ShapeLeftEndAtMid', 'ShapeRightStartAtMid',
-  'ShapeTop', 'ShapeBottom', 'ShapeMidStart', 'ShapeMidEnd'] as const;
+  'ShapeTop', 'ShapeBottom', 'ShapeMidStart', 'ShapeMidEnd',
+  'DragMaximizedResult', 'MoveSameMonitor', 'MoveReleaseMonitorMismatch', 'MoveReleaseWorkMismatch', 'MoveEndStateInvalid', 'MoveUnstable', 'MoveInputInvalid', 'MoveForegroundMismatch', 'MoveAccepted'] as const;
 export type WindowDiagnosticCounts = Record<typeof windowDiagnosticKeys[number], number>;
 export function parseWindowDiagnostics(value: unknown): WindowDiagnosticCounts | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

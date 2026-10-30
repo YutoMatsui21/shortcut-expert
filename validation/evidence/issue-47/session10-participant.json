@@ -1,0 +1,13 @@
+{
+  "revision": "b47e75b",
+  "nativeDiagnostics": false,
+  "participantReport": "Both cases completed and behaved as expected",
+  "cases": [
+    "C03-two-displays",
+    "C07-two-displays"
+  ],
+  "machineEvidence": "Each trial: one compound candidate; W02 and terminal operation mouse+1 each; one notification request with both operation items; count and shortcut expectations passed",
+  "operatorFields": "Panel confirmations remain unobserved/not-seen/not-tested in raw status; participant report is stored separately",
+  "acceptanceLimit": "No claim of all issue47 conditions or compound key sequence equivalence; standalone mouse move remains unresolved",
+  "manifestSha256": "1c8fab6922d8d772cad5db491fc755adbd2afd680196c161193f8ead0a284129"
+}

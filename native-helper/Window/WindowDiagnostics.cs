@@ -12,7 +12,8 @@ internal enum WindowDiagnosticReason
     PlacementSideWithin2, PlacementSide3To8, PlacementSide9To32, PlacementSideAbove32, PlacementYOutside,
     PlacementVerticalMismatch, PlacementAccepted,
     ShapeInputInvalid, ShapeLeftEdge, ShapeRightEdge, ShapeLeftEndAtMid, ShapeRightStartAtMid,
-    ShapeTop, ShapeBottom, ShapeMidStart, ShapeMidEnd
+    ShapeTop, ShapeBottom, ShapeMidStart, ShapeMidEnd,
+    DragMaximizedResult, MoveSameMonitor, MoveReleaseMonitorMismatch, MoveReleaseWorkMismatch, MoveEndStateInvalid, MoveUnstable, MoveInputInvalid, MoveForegroundMismatch, MoveAccepted
 }
 
 internal sealed record WindowDiagnosticSummary(int Generation, Dictionary<string, int> Counts);
