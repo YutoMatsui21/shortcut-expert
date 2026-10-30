@@ -35,8 +35,12 @@ internal sealed class WindowCloseObserver(CandidateProtocol protocol, Func<int> 
         diagnostic?.Invoke(CloseReason.TargetEligible);
         return new(window, pid, thread, DisplayContext.Monitor(window));
     }
-    private static bool CloseButton(nint window, Point point) => GetWindowRect(window, out Rect rect) &&
-        WindowCaption.Read(window, out TitleInfo title) && WindowCaption.CloseButton(title, rect, point);
+    private static bool CloseButton(nint window, Point point, Action<CloseReason>? diagnostic)
+    {
+        if (!GetWindowRect(window, out Rect rect) || !WindowCaption.Read(window, out TitleInfo title))
+        { diagnostic?.Invoke(CloseReason.GeometryReadFailed); return false; }
+        return WindowCaption.CloseButton(title, rect, point, diagnostic);
+    }
     private void Capture(CloseWindow? previous)
     { if (previous is null && policy.Target is not null) pendingTransaction = transaction(); }
     internal void Mouse(nint message, Point point, uint flags, uint tick)
@@ -50,7 +54,7 @@ internal sealed class WindowCloseObserver(CandidateProtocol protocol, Func<int> 
         bool click = message is WM_LBUTTONDOWN or WM_LBUTTONUP;
         nint window = click ? GetAncestor(WindowFromPhysicalPoint(point), GA_ROOT) : 0;
         var hit = click ? Read(window) : null;
-        bool button = hit is not null && CloseButton(window, point);
+        bool button = hit is not null && CloseButton(window, point, diagnostic);
         if (button) diagnostic?.Invoke(CloseReason.CloseRectangle);
         policy.Mouse(message, hit, button, GetForegroundWindow() == window,
             (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,

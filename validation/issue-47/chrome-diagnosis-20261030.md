@@ -21,3 +21,25 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 同じbinaryに既存 `--diagnostics` を指定し、P04m／S04-double／P11mの3件だけ再試行する。Root/childのhit、title読み取り、最終caption/button分類の固定集計で入力層を切り分ける。W11のclose専用policy診断まではこのwindow診断に含まれないので、入力層が正常だった場合は次にその境界を調べる。新しい根拠なしに採用条件を変更しない。成功済みの基本操作とつかみ損ねのP06は繰り返さない。
 
 今回は文書と実測原本の追加のみ。本番の採否・型・試験設定を変更しないため、GitHub操作Skillの例外で追加コードレビュー・再build・自動製品試験を省略する。診断ON試行を通常モードの合格へ転記しない。Issue #47は未達3件と残る受入条件があるためOpen／Draftを維持する。
+
+
+## 既存診断の結果（session13）
+
+同じ製品revision `b80e645`・同じhash、Native診断ON。原本は `../evidence/issue-47/session13-*.json`。panelは全件standardだが、本人は3件ともChrome窓を操作したと明示。`application`は手動結果の分類メタデータで、検出器選択には使っていない。原本は変更せず、別添でChromeとして区別する。ラベルの誤りだけを理由に操作を繰り返さない。
+
+- P04m：RawButton1→FinalOther1、TitleReadOk1／TitleOutsidePoint1。対象はforeground一致。復元候補1だが由来・route不明、件数・通知0。本人の無駄なクリックは別添で注記し、MouseDown3／TargetMissing2のどれだったかは推測しない。余分な計上は0。
+- S04-double：RawCaption2→FinalOther2、TitleReadOk2／TitleOutsidePoint2、HitRoot2。復元候補1だが由来・route不明、件数・通知0。
+- P11m：RawButton1→FinalButton1、TitleReadOk1、HitRoot1。window側のbutton分類は通るがclose候補0。close専用policyの内部段階はこの診断に含まれていない。
+- 3件とも有効・期限内。終了code0、read-only integrity_check=ok、build hash不変。今回の申告は操作完了とラベル／クリック補足であり、原本の未選択欄を成功へ書き換えない。
+
+復元の失敗は、Chromeが返すcaption／buttonヒットを、その後のWindowCaption.Hitが棄却する境界まで絞れた。現行Hitは全ボタン矩形不整合、無効状態、buttonヒットと矩形の不一致をいずれも-1にするため、旧集計だけでは区別できない。閉鎖は別経路のCloseButton矩形照合やReady／release／DESTROY確認があり、window最終buttonだけで原因を断定しない。
+
+## 追加する診断と次の仮説判別
+
+新しい根拠なく採否を緩和しない。WindowCaption.Hitの各戻りを変えず、title geometryのvalid／fallback／invalid、無効状態、ヒットと矩形の不一致を固定集計する。rootのmin/max/closeも固定分類する。閉鎖側は既存CloseReasonとgeometryの固定理由を同じ世代付きwindow診断へW11 prefixで投影する。Root/closeのWindows読取り回数・順序は維持し、座標・矩形・状態値・HWND・窓名・時刻列は保存しない。
+
+通常--observeでは新しいclose診断callbackも設定しない。既存のclose専用validationモードは保持。すべて1カテゴリ上限1000・start世代reset・Takeで退役する集計へ入り、停止後や次の試行へ流用しない。
+
+fixtureではcaption／closeの診断ON/OFFの戻り同値、geometry原因、CloseReason全件の固定mapping、世代と上限を確認する。追加診断の目的は、同じ未達3件を1バッチで再試行した際に、修正に必要な分岐を特定すること。採否の変更や解決済みの主張はしない。
+
+追加診断の検証：関連unit35件・Native全7件・型検査・helper build成功。C#/TSの固定112カテゴリ一致、caption／close判定のON/OFF同値、CloseReason全件mappingと上限・世代を検証。同梱base smoke・保存受入17件、Native全473ファイル一致。専用ローカルレビューは4観点で指摘なし。NU1900の脆弱性index取得警告は残る。新診断同梱先は `release/issue-47-chrome-detail/win-unpacked`、manifestは `../evidence/issue-47/chrome-detail-diag-build.json`。自然入力は未実施であり、失敗3件は未達のまま。

@@ -6,7 +6,7 @@ internal sealed record CloseCompletion(string Origin, long Age, MonitorBounds? M
 internal enum CloseReason { MouseDown, MouseUp, KeyF4, TargetEligible, TargetAbsent, TargetStyle, TargetCloaked,
     TargetClass, TargetProcess, CloseRectangle, NotReady, PendingMouse, PendingKey, ReleasedMouse,
     ForegroundCancel, PollCancel, DestroyTarget, DestroyAlive, DestroyThread, DestroyTick, DestroyAge,
-    DestroyUnreleased, HideObserved, RecreatedCancel, ForegroundDeparture, Completed, Exception }
+    DestroyUnreleased, HideObserved, RecreatedCancel, ForegroundDeparture, Completed, Exception, GeometryValid, GeometryFallback, GeometryInvalid, GeometryDisabled, GeometryOutside, GeometryReadFailed }
 internal sealed class WindowClosePolicy
 {
     private readonly HashSet<uint> held = new();

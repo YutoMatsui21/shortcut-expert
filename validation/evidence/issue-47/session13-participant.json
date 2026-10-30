@@ -1,0 +1,17 @@
+{
+  "productRevision": "b80e645",
+  "manifestSha256": "8fdefa1d6dbff47436f132e1b4d76fa8868af9e0287bcd5df8b083d49df5dd4f",
+  "nativeDiagnostics": true,
+  "participantReport": "All three trials completed on Chrome windows, although panel application was accidentally standard; P04m included one unintended click",
+  "applicationCorrection": {
+    "original": "standard",
+    "participantReported": "chrome",
+    "rawUnchanged": true
+  },
+  "P04m": "One restore result, no record or notification; RawButton1 becomes FinalOther1 after title-bar validation. MouseDown3 includes two missing-target clicks; do not assign which click to the mistake without evidence",
+  "S04double": "RawCaption2 becomes FinalOther2 after title-bar validation; one restore result with unknown origin/route; no record or notice",
+  "P11m": "RawButton1 and FinalButton1; no close candidate, count or notification. Window diagnostics do not yet expose the close-policy stage",
+  "noise": "No extra recorded operation in P04m; all three trials have zero counts. The unintended click remains annotated; raw diagnostics unchanged",
+  "limits": "Participant stated completion, not a new per-case result/notice confirmation. App category is manual evidence metadata, not detector selection. No product failure is blamed on the category mistake.",
+  "next": "More precise fixed title-geometry and close-phase diagnostic categories; no adoption-condition change"
+}

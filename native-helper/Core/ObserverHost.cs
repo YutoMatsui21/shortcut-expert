@@ -17,12 +17,13 @@ internal static class ObserverHost
         using var dispatcher = new Control(); _ = dispatcher.Handle;
         using var context = new ApplicationContext();
         var closeCounts = closeValidation ? Enum.GetValues<CloseReason>().ToDictionary(k => k.ToString(), _ => 0) : null;
+        var windowCounts = windowValidation ? new WindowDiagnosticAccumulator() : null;
         void CloseDiagnostic(CloseReason reason) {
+            windowCounts?.RecordClose(reason);
             if (closeCounts is not null) closeCounts[reason.ToString()] = Math.Min(1000, closeCounts[reason.ToString()] + 1);
         }
-        var windowCounts = windowValidation ? new WindowDiagnosticAccumulator() : null;
         void WindowDiagnostic(WindowDiagnosticReason reason) => windowCounts?.Record(reason);
-        using var observer = new Observer(Emit, fixture, closeValidation ? CloseDiagnostic : null, windowValidation ? WindowDiagnostic : null);
+        using var observer = new Observer(Emit, fixture, closeValidation || windowValidation ? CloseDiagnostic : null, windowValidation ? WindowDiagnostic : null);
         // Marshal display/settings invalidation to the same thread as input and WinEvent callbacks.
         void DisplayChanged(object? sender, EventArgs args) {
             try { dispatcher.BeginInvoke(() => observer.InvalidateDisplay()); } catch (InvalidOperationException) { }

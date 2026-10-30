@@ -11,7 +11,8 @@ export const windowDiagnosticKeys = ['MouseDown', 'MouseUp', 'TargetMissing', 'T
   'PlacementVerticalMismatch', 'PlacementAccepted',
   'ShapeInputInvalid', 'ShapeLeftEdge', 'ShapeRightEdge', 'ShapeLeftEndAtMid', 'ShapeRightStartAtMid',
   'ShapeTop', 'ShapeBottom', 'ShapeMidStart', 'ShapeMidEnd',
-  'DragMaximizedResult', 'MoveSameMonitor', 'MoveReleaseMonitorMismatch', 'MoveReleaseWorkMismatch', 'MoveEndStateInvalid', 'MoveUnstable', 'MoveInputInvalid', 'MoveForegroundMismatch', 'MoveAccepted'] as const;
+  'DragMaximizedResult', 'MoveSameMonitor', 'MoveReleaseMonitorMismatch', 'MoveReleaseWorkMismatch', 'MoveEndStateInvalid', 'MoveUnstable', 'MoveInputInvalid', 'MoveForegroundMismatch', 'MoveAccepted',
+  'TitleGeometryValid', 'TitleGeometryFallback', 'TitleGeometryInvalid', 'TitleButtonDisabled', 'TitleButtonMismatch', 'RawMinButton', 'RawMaxButton', 'RawCloseButton', 'W11MouseDown', 'W11MouseUp', 'W11KeyF4', 'W11TargetEligible', 'W11TargetAbsent', 'W11TargetStyle', 'W11TargetCloaked', 'W11TargetClass', 'W11TargetProcess', 'W11CloseRectangle', 'W11NotReady', 'W11PendingMouse', 'W11PendingKey', 'W11ReleasedMouse', 'W11ForegroundCancel', 'W11PollCancel', 'W11DestroyTarget', 'W11DestroyAlive', 'W11DestroyThread', 'W11DestroyTick', 'W11DestroyAge', 'W11DestroyUnreleased', 'W11HideObserved', 'W11RecreatedCancel', 'W11ForegroundDeparture', 'W11Completed', 'W11Exception', 'W11GeometryValid', 'W11GeometryFallback', 'W11GeometryInvalid', 'W11GeometryDisabled', 'W11GeometryOutside', 'W11GeometryReadFailed'] as const;
 export type WindowDiagnosticCounts = Record<typeof windowDiagnosticKeys[number], number>;
 export function parseWindowDiagnostics(value: unknown): WindowDiagnosticCounts | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

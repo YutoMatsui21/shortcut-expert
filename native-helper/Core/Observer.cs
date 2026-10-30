@@ -150,13 +150,16 @@ internal sealed class Observer : IDisposable
             if (SendMessageTimeoutW(target, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint result) != 0) hit = unchecked((int)result);
             windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.RawCaption : hit == 1 ? WindowDiagnosticReason.RawClient :
                 hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.RawButton : WindowDiagnosticReason.RawOther);
+            if (hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE)
+                windowDiagnostic?.Invoke(hit == HTMINBUTTON ? WindowDiagnosticReason.RawMinButton :
+                    hit == HTMAXBUTTON ? WindowDiagnosticReason.RawMaxButton : WindowDiagnosticReason.RawCloseButton);
             bool rootCaptionRead = false;
             if (GetWindowRect(target, out Rect rect) && WindowCaption.Read(target, out TitleInfo title))
             {
                 rootCaptionRead = true;
                 windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadOk);
                 windowDiagnostic?.Invoke(SnapGeometry.Contains(title.Bar, mouse.Point) ? WindowDiagnosticReason.TitleContainsPoint : WindowDiagnosticReason.TitleOutsidePoint);
-                hit = WindowCaption.Hit(title, rect, mouse.Point, hit);
+                hit = WindowCaption.Hit(title, rect, mouse.Point, hit, windowDiagnostic);
             }
             else windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadFail);
             if (hit == 1 && rootCaptionRead || windowDiagnostic is not null)

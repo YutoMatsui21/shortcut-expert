@@ -16,6 +16,46 @@ internal static partial class Program
             foreach (int child in new[] { 1, -1, 0, HTMAXBUTTON, HTMINBUTTON, HTCLOSE }) Equal(1, WindowCaption.ResolveChildCaption(1, child, true, true));
             foreach (int root in new[] { HTCAPTION, HTMAXBUTTON, HTMINBUTTON, HTCLOSE, -1, 0 }) Equal(root, WindowCaption.ResolveChildCaption(root, HTCAPTION, true, true));
         });
+        Check("caption diagnostics distinguish geometry without changing hit decisions", () => {
+            var window = new Rect { Left = 0, Top = 0, Right = 100, Bottom = 100 };
+            foreach (string mode in new[] { "fallback", "invalid", "valid", "disabled", "mismatch" }) {
+                var title = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
+                if (mode != "fallback") {
+                    title.Bounds[2] = new Rect { Left = 10, Top = 0, Right = 20, Bottom = 20 };
+                    title.Bounds[3] = new Rect { Left = 20, Top = 0, Right = 30, Bottom = 20 };
+                    title.Bounds[5] = new Rect { Left = 30, Top = 0, Right = 40, Bottom = 20 };
+                }
+                if (mode == "invalid") title.Bounds[3] = title.Bounds[2];
+                if (mode == "disabled") title.State[3] = 1;
+                var point = new Point { X = mode == "mismatch" ? 50 : 25, Y = 10 };
+                var reasons = new List<string>();
+                Equal(WindowCaption.Hit(title, window, point, HTMAXBUTTON),
+                    WindowCaption.Hit(title, window, point, HTMAXBUTTON, r => reasons.Add(r.ToString())));
+                string expected = mode switch { "fallback" => "TitleGeometryFallback", "invalid" => "TitleGeometryInvalid",
+                    "disabled" => "TitleButtonDisabled", "mismatch" => "TitleButtonMismatch", _ => "TitleGeometryValid" };
+                Equal(true, reasons.Contains(expected));
+                var closeReasons = new List<CloseReason>();
+                Equal(WindowCaption.CloseButton(title, window, point), WindowCaption.CloseButton(title, window, point, closeReasons.Add));
+                Equal(true, closeReasons.Contains(mode == "fallback" ? CloseReason.GeometryFallback :
+                    mode == "invalid" ? CloseReason.GeometryInvalid : CloseReason.GeometryValid));
+                if (mode == "valid") Equal(true, closeReasons.Contains(CloseReason.GeometryOutside));
+                title.State[5] = 1; closeReasons.Clear();
+                if (mode == "valid") {
+                    Equal(false, WindowCaption.CloseButton(title, window, new Point { X = 35, Y = 10 }, closeReasons.Add));
+                    Equal(true, closeReasons.Contains(CloseReason.GeometryDisabled));
+                }
+            }
+        });
+        Check("all close reasons map into bounded generation-scoped window diagnostics", () => {
+            var counters = new WindowDiagnosticAccumulator(); counters.Start(7);
+            foreach (var reason in Enum.GetValues<CloseReason>()) counters.RecordClose(reason);
+            var result = counters.Take()!;
+            foreach (var reason in Enum.GetValues<CloseReason>()) Equal(1, result.Counts["W11" + reason]);
+            counters.RecordClose(CloseReason.Completed); Equal(true, counters.Take() is null);
+            counters.Start(8);
+            for (int i = 0; i < 1005; i++) counters.RecordClose(CloseReason.Completed);
+            Equal(1000, counters.Take()!.Counts["W11Completed"]);
+        });
         Check("diagnostic stop summary is consumed once and cannot leak into a stopped trial", () => {
             var counters = new WindowDiagnosticAccumulator();
             counters.Record(WindowDiagnosticReason.RawClient); Equal(true, counters.Take() is null);

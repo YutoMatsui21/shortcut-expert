@@ -101,3 +101,7 @@ Nativeのcaption診断は既定OFFで、`--diagnostics`を追加したランチ�
 ## Chromeの同一build基本試験
 
 [session12の20試行と未達3件](chrome-diagnosis-20261030.md)。標準W12は成立、Chromeの復元2件とmouse閉鎖1件は未達。追加W12は実操作・番号の相違を原本と別添で区別する。成功済みは維持し、既存診断で未達3件だけ切り分ける。
+
+## Chrome未達3件の追加診断
+
+session13では既存診断で復元のヒット判定上書きを確認したが、title geometry理由とW11専用段階が不足。採否を変えない追加診断版は `release/issue-47-chrome-detail/win-unpacked`、固定manifestは `../evidence/issue-47/chrome-detail-diag-build.json`。詳細・検証・未達は[Chrome診断記録](chrome-diagnosis-20261030.md)。現在の追加診断を通常モードの受入成功と扱わない。
