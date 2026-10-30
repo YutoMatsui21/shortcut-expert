@@ -1,0 +1,12 @@
+{
+ "session":"session6",
+ "revision":"e8b6752518aa427990600142566009dabc32ef25",
+ "nativeDiagnostics":false,
+ "cases":["S03-double","S04-double","S03-drag"],
+ "participantReport":"All three notifications appeared; participant reports no problems",
+ "machineResult":"Each trial valid, intended operation mouse+1 only, notificationRequests=1, recordsPassed and notificationRequestPassed=true",
+ "osToastVisible":"confirmed for all three",
+ "windowResults":"participant reports no problems after stated maximize/restore/maximize operations",
+ "shortcutEquivalence":"not separately tested; do not promote to full equivalence or final acceptance",
+ "acceptanceScope":"This candidate build, these three Explorer caption cases only"
+}

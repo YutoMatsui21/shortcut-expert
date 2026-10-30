@@ -31,6 +31,7 @@ internal sealed class CandidateTracker
     private Point lastCaptionPoint;
     private int generation, sequence, transaction;
     internal PlacementPolicy Placement { get; } = new();
+    internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal int NextTransaction() => checked(++transaction);
     internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
     {
@@ -53,7 +54,7 @@ internal sealed class CandidateTracker
     internal void ForegroundChanged(nint window) {
         Placement.Foreground(window);
         if (input is { Route: "win-shift-left" or "win-shift-right" } && input.Window != window) input = null;
-        if (drags.Keys.Any(target => target != window)) { drags.Clear(); release = null; }
+        if (drags.Keys.Any(target => target != window)) { Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled); drags.Clear(); release = null; }
         if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
     }
 
@@ -64,7 +65,7 @@ internal sealed class CandidateTracker
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
         Placement.Reset();
     }
-    internal void ClearInput() { Placement.Cancel(); input = null; drags.Clear(); completedWinDown = null; release = null; }
+    internal void ClearInput() { if (drags.Count > 0) Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled); Placement.Cancel(); input = null; drags.Clear(); completedWinDown = null; release = null; }
     internal void Forget(nint window)
     {
         Placement.Forget(window);
@@ -154,12 +155,17 @@ internal sealed class CandidateTracker
         drags.TryGetValue(window, out Input? drag);
         var released = release; release = null;
         Forget(window);
-        if (drag is null || after is null || drag.Before.Process != after.Process ||
-            drag.Before.DisplayLayout != after.DisplayLayout || drag.Before.Monitor is null || after.Monitor is null) return null;
+        if (drag is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragNoSource); return null; }
+        if (after is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragNoResult); return null; }
+        if (drag.Before.Process != after.Process) { Diagnostic?.Invoke(WindowDiagnosticReason.DragTargetChanged); return null; }
+        if (drag.Before.DisplayLayout != after.DisplayLayout) { Diagnostic?.Invoke(WindowDiagnosticReason.DragLayoutChanged); return null; }
+        if (drag.Before.Monitor is null || after.Monitor is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragMonitorUnknown); return null; }
         if (after.Arranged == true)
         {
+            Diagnostic?.Invoke(WindowDiagnosticReason.DragArrangedResult);
+            if (released is null) Diagnostic?.Invoke(WindowDiagnosticReason.DragReleaseUnknown);
             var placement = released is { } r ? PlacementGeometry.Drag(drag.Before, after, r.Point, r.Monitor, r.Work,
-                drag.At, foreground == window && drag.Matched && !drag.Injected && !drag.Conflicted) : null;
+                drag.At, foreground == window && drag.Matched && !drag.Injected && !drag.Conflicted, Diagnostic) : null;
             if (placement is { monitorChanged: true })
                 return !placement.shape.EndsWith("-half") && StableMove(drag.Before, after)
                     ? Compound(drag, after, placement.shape) : null;

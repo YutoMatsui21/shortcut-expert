@@ -2,7 +2,15 @@ export const windowDiagnosticKeys = ['MouseDown', 'MouseUp', 'TargetMissing', 'T
   'TitleReadOk', 'TitleReadFail', 'TitleContainsPoint', 'TitleOutsidePoint', 'FinalCaption', 'FinalButton', 'FinalOther',
   'ForegroundMatched', 'ForegroundOther', 'MoveStart', 'MoveEnd',
   'HitRoot', 'HitChildSameProcess', 'HitChildUnmatched', 'ChildCaption', 'ChildClient', 'ChildOther', 'ChildHitFailed',
-  'ChildTitleContainsPoint', 'ChildTitleOutsidePoint', 'ChildTitleReadFail'] as const;
+  'ChildTitleContainsPoint', 'ChildTitleOutsidePoint', 'ChildTitleReadFail',
+  'DragNoSource', 'DragNoResult', 'DragTargetChanged', 'DragLayoutChanged', 'DragMonitorUnknown', 'DragReleaseUnknown', 'DragArrangedResult',
+  'DragForegroundCancelled', 'DragInputCancelled',
+  'PlacementInputUnmatched', 'PlacementIncompatible', 'PlacementStartInvalid', 'PlacementShapeUnknown',
+  'PlacementReleaseMonitorMismatch', 'PlacementReleaseWorkMismatch', 'PlacementStartAgeInvalid', 'PlacementGeometryChanged',
+  'PlacementSideWithin2', 'PlacementSide3To8', 'PlacementSide9To32', 'PlacementSideAbove32', 'PlacementYOutside',
+  'PlacementVerticalMismatch', 'PlacementAccepted',
+  'ShapeInputInvalid', 'ShapeLeftEdge', 'ShapeRightEdge', 'ShapeLeftEndAtMid', 'ShapeRightStartAtMid',
+  'ShapeTop', 'ShapeBottom', 'ShapeMidStart', 'ShapeMidEnd'] as const;
 export type WindowDiagnosticCounts = Record<typeof windowDiagnosticKeys[number], number>;
 export function parseWindowDiagnostics(value: unknown): WindowDiagnosticCounts | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

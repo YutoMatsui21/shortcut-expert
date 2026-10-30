@@ -20,6 +20,33 @@ internal static partial class Program
             output.Add(new { candidate = new CandidateEnvelope("candidate", 2, 1, id, id, "2026-10-28", result.Origin,
                 result.Origin == "mouse" ? "caption-edge-drag" : "win-held-arrows", false, false, result.Evidence), expected });
         }
+        Check("placement diagnostics preserve outcomes and categorize bounded rejection reasons", () => {
+            foreach (string mode in new[] { "valid", "side3", "side12", "side64", "outside-y", "shape", "age", "unmatched" }) {
+                var after = Placed("left", "top");
+                int offset = mode == "side3" ? 3 : mode == "side12" ? 12 : mode == "side64" ? 64 : 0;
+                var point = new Point { X = work.x + offset, Y = mode == "outside-y" ? work.y - 1 : work.y };
+                if (mode == "shape") after = after with { Frame = after.Frame! with { x = after.Frame!.x + 3 } };
+                long age = mode == "age" ? 1001 : 100; bool matched = mode != "unmatched";
+                var expected = PlacementGeometry.Drag(start, after, point, monitor, work, age, matched);
+                var reasons = new List<WindowDiagnosticReason>();
+                var actual = PlacementGeometry.Drag(start, after, point, monitor, work, age, matched, reasons.Add);
+                Equal(expected, actual); Equal(true, reasons.Count > 0);
+                var reason = mode switch {
+                    "valid" => WindowDiagnosticReason.PlacementAccepted, "side3" => WindowDiagnosticReason.PlacementSide3To8,
+                    "side12" => WindowDiagnosticReason.PlacementSide9To32, "side64" => WindowDiagnosticReason.PlacementSideAbove32,
+                    "outside-y" => WindowDiagnosticReason.PlacementYOutside, "shape" => WindowDiagnosticReason.PlacementShapeUnknown,
+                    "age" => WindowDiagnosticReason.PlacementStartAgeInvalid, _ => WindowDiagnosticReason.PlacementInputUnmatched };
+                Equal(true, reasons.Contains(reason));
+            }
+            foreach (bool foreground in new[] { true, false }) {
+                var tracker = Tracker(); var reasons = new List<WindowDiagnosticReason>(); tracker.Diagnostic = reasons.Add;
+                tracker.Mouse(11, start, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                if (foreground) tracker.ForegroundChanged(12); else tracker.ClearInput();
+                Equal<object?>(null, tracker.FinishMove(11, Placed("left", "top"), 300, 11, "2026-10-28"));
+                Equal(true, reasons.Contains(foreground ? WindowDiagnosticReason.DragForegroundCancelled : WindowDiagnosticReason.DragInputCancelled));
+                Equal(true, reasons.Contains(WindowDiagnosticReason.DragNoSource));
+            }
+        });
         foreach (uint dpi in new uint[] { 96, 144, 192 }) foreach (uint show in new uint[] { SW_SHOWNORMAL, SW_SHOWMAXIMIZED })
             Check($"placement geometry physical units/start {show}/DPI {dpi}", () => {
                 var after = Placed("right", "top") with { Dpi = dpi };
