@@ -100,3 +100,20 @@ Nativeへ学習状態は送らず、状態による保存・通知適格性は�
 製品コード・同梱binaryは変更しない。追加の共通状態fixtureを含むcompound suite49件と型検査が成功。追加試験は既存の成立する契約の網羅であり、修正前の失敗を作るテストファーストの対象ではない。保存失敗・再送・停止等の既存ケースは維持する。
 
 状態マトリクスの専用ローカルレビューは4観点で指摘なし。製品コード・binaryの再buildは行っていない。環境の補助記録 `../evidence/issue-47/environment-versions-20261030.json` はmanifest-aware PowerShellのWindows version 10.0.26340.0と、既知のchrome processのProductVersion集合156.0.8078.74だけを取得した。process ID・path・窓情報は保存せず、個別試行窓と実行ファイルの対応を確証したとは扱わない。旧WinForms panelのosBuild9200はlegacy manifest値として実OS buildの根拠に使わない。
+
+
+## 状態混在と閉鎖取消の自然入力（session17）
+
+製品revision `2ec7520`・同じhash、診断OFF。`../evidence/issue-47/session17-*.json`。
+
+- 最初のC03 L/L試行はcompleted=false／valid=false、expired=false／interrupted=false、候補・件数・通知0。理由は未申告で原本に保持。これを成功や期限切れへ付け替えない。
+- 続くC03のL/L、L/M、M/L、M/Eは各1compound候補、W02/W03各mouse+1。通知は順に2行／移動だけ／最大化だけ／0で期待一致。本人も「他は期待どおり」と報告。
+- C07のL/L、L/E、E/L、E/Mは全4件で候補・件数・通知要求0。最初3組は通知未達。E/Mは通知0だけ期待一致するが、全状態で必要な2件の記録がなく、4件とも未達。
+- N11-dialogはstandardカテゴリ、候補・件数・通知要求0。本人も期待どおりと報告。保存確認取消の負例として区別して保持。
+- 終了code0、read-only integrity_check=ok、hash不変、同梱プロセス残存0。
+
+C03が全状態で正常な一方、C07はCoreの学習状態判定以前に候補がない。保存／通知適格性の変更では直らない。Native診断OFFなので、起点、入力対応、終端形状、解放位置、構成整合のどの条件が失敗したかは未確定。本人へ、実際のquarter成立と各試行前の準備を質問中。回答前にどちらかを原因と断定しない。
+
+次の試行は同じbinary・既存診断ONで、C07-two-displaysのL/LだけをChrome／Explorer各1回とする。開始は毎回通常・非配置、移動元画面内へ窓全体を収め、もう一方の画面左上へ1回で直接dragする。異なるappの比較と棄却理由で、同じ未達4組の反復を避ける。自然入力の全9組を再試行せず、成功済みC03や取消負例も繰り返さない。コード変更・新buildはない。
+
+この追加は文書・証拠だけであり、Skillの例外で追加コードレビュー・再build・製品自動試験は省略する。Issue #47はC07の未成立と残りの受入を未達のまま保持する。

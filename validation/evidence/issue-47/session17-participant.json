@@ -1,0 +1,11 @@
+{
+  "productRevision": "2ec7520",
+  "manifestSha256": "4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb",
+  "nativeDiagnostics": false,
+  "participantReport": "All operations completed; no notifications on any C07-two-displays trials; all other operations behaved as expected",
+  "C03": "One initial trial was incomplete/invalid but not expired or interrupted, reason not supplied. Subsequent four valid state pairs each atomically record W02/W03 mouse+1; notifications show both/move-only/max-only/none as expected",
+  "C07": "Four valid trials, all zero candidates/counts/notification requests. Learning/learning, learning/excluded and excluded/learning miss expected notifications; excluded/mastered correctly requests no notice but still misses both required records. All four remain unmet",
+  "N11dialog": "Valid standard-app trial, zero candidate/count/notification; participant reports other operations expected",
+  "openQuestions": "Actual quarter placement and preparation before each C07 trial requested asynchronously; do not assume a cause",
+  "next": "Inspect native candidate-rejection reasons before changing adoption conditions; do not repeat successful C03/state trials"
+}
