@@ -1,14 +1,14 @@
-import { v2Fixture } from './support/fixtures.ts';
+import { v2Fixture } from '../../support/fixtures.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { learningState } from '../src/shared/learning.ts';
-import type { ShortcutNotice } from '../src/shared/coach.ts';
-import { candidateFixture, deferred } from './support/fixtures.ts';
+import { DurableCoach } from '../../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
+import { learningState } from '../../../src/shared/learning.ts';
+import type { ShortcutNotice } from '../../../src/shared/coach.ts';
+import { candidateFixture, deferred } from '../../support/fixtures.ts';
 
 test('three states: real worker persistence, restart, unchanged history and notification eligibility', async t => {
   const root = await mkdtemp(join(tmpdir(), 'coach-learning-'));

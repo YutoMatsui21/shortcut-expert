@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { learningReadModel } from '../src/core/learning.ts';
-import { learningOperations } from '../src/shared/learning.ts';
-import type { RecordRange } from '../src/shared/storage.ts';
+import { learningReadModel } from '../../../src/core/learning.ts';
+import { learningOperations } from '../../../src/shared/learning.ts';
+import type { RecordRange } from '../../../src/shared/storage.ts';
 
 test('正式8操作は旧IDの対応を保ち、2/2/3/1で準備中。旧mutedは独立した対象外表示', () => {
   assert.deepEqual(learningOperations.map(op => op.id), ['W12', 'W01', 'W03', 'W04', 'W06', 'W07', 'W02', 'W11']);

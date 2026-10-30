@@ -4,16 +4,16 @@ import { EventEmitter } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import type { OperationId } from '../src/shared/coach.ts';
-import type { Candidate } from './support/fixtures.ts';
-import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, placementFixture, closeFixture, deferred } from './support/fixtures.ts';
+import { DurableCoach } from '../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../src/main/sqlite-repository.ts';
+import type { OperationId } from '../../src/shared/coach.ts';
+import type { Candidate } from '../support/fixtures.ts';
+import { candidateFixture, v2Fixture, snapFixture, taskbarFixture, switchFixture, placementFixture, closeFixture, deferred } from '../support/fixtures.ts';
 
 // Only Electron/OS boundaries are fake. Parse, classification, writer and models are real.
 mock.module('electron', { namedExports: { app: {}, Notification: class {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
-const { StandardNotifications } = await import('../src/main/standard-notification.ts');
+const { candidateV2 } = await import('../../src/main/observer.ts');
+const { StandardNotifications } = await import('../../src/main/standard-notification.ts');
 const today = '2026-10-21';
 const cases: { id: OperationId; mouse: Partial<Candidate>; key: string; shortcut: string | null }[] = [
   { id: 'W01', mouse: {}, key: 'alt-tab', shortcut: 'Alt + Tab' },

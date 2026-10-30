@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SerialQueue } from '../src/core/serial-queue.ts';
+import { SerialQueue } from '../../src/core/serial-queue.ts';
 
 test('直列キューは先の処理が完了するまで次を開始せず、各結果を返す', async () => {
   const queue = new SerialQueue();

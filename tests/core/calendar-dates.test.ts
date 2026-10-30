@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validDate, localDate } from '../src/core/dates.ts';
+import { validDate, localDate } from '../../src/core/dates.ts';
 
 test('日付形式と実在する閏日・月境界を区別する', () => {
   for (const date of ['2024-02-29', '2000-02-29', '2026-12-31']) assert.equal(validDate(date), true, date);

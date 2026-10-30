@@ -1,15 +1,15 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers/promises';
-import { deferred } from './support/fixtures.ts';
-import type { Snapshot } from '../src/shared/coach.ts';
+import { deferred } from '../../support/fixtures.ts';
+import type { Snapshot } from '../../../src/shared/coach.ts';
 
 let readNext: () => Promise<string>;
 let lastStatus: { results: { valid: boolean }[] };
 mock.module('node:fs/promises', { namedExports: {
   readFile: () => readNext(), writeFile: async (_path: string, text: string) => { lastStatus = JSON.parse(text); }, rename: async () => {}
 } });
-const { runNaturalInputAcceptance } = await import('../src/main/natural-input-acceptance.ts');
+const { runNaturalInputAcceptance } = await import('../../../src/main/natural-input-acceptance.ts');
 
 test('blocked file reads cannot allow late FINISH or cancel the session shutdown retry', async t => {
   for (const sessionExpiry of [false, true]) {

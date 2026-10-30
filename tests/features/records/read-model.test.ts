@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { recordsReadModel } from '../src/core/records.ts';
-import type { RecordRange } from '../src/shared/storage.ts';
+import { recordsReadModel } from '../../../src/core/records.ts';
+import type { RecordRange } from '../../../src/shared/storage.ts';
 
 const settings = { muted: [], opened: true };
 test('7 local calendar days: weighted KPI, eleven rows, legacy values, no synthetic zeros', () => {
@@ -44,11 +44,11 @@ test('BigInt rounding, unrounded bar and aggregate overflow across operations', 
   records.counts['2026-01-01'].W01 = { mouse: 1, key: 0 };
   assert.throws(() => recordsReadModel(records, settings, '2026-01-01'), /安全/);
 });
-import { recordRanges } from '../src/core/records.ts';
-import { defaultRecordsQuery, type RecordsQuery } from '../src/shared/records.ts';
-import { learningOperations } from '../src/shared/learning.ts';
-import { daysBefore } from '../src/shared/storage.ts';
-import type { Settings } from '../src/shared/coach.ts';
+import { recordRanges } from '../../../src/core/records.ts';
+import { defaultRecordsQuery, type RecordsQuery } from '../../../src/shared/records.ts';
+import { learningOperations } from '../../../src/shared/learning.ts';
+import { daysBefore } from '../../../src/shared/storage.ts';
+import type { Settings } from '../../../src/shared/coach.ts';
 const empty = (): RecordRange => ({counts: {}, coverage: {}, revision: 3});
 const query = (value: Partial<RecordsQuery>): RecordsQuery => ({...defaultRecordsQuery, ...value});
 

@@ -1,13 +1,13 @@
-import { v2Fixture } from './support/fixtures.ts';
+import { v2Fixture } from '../../support/fixtures.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { DurableCoach } from '../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
+import { DurableCoach } from '../../../src/core/durable-coach.ts';
 import { mock } from 'node:test';
-import { candidateFixture } from './support/fixtures.ts';
+import { candidateFixture } from '../../support/fixtures.ts';
 
 test('record summary queries real Worker for seven days and serializes counts/settings/revision', async t => {
   const root = await mkdtemp(join(tmpdir(), 'coach-records-'));

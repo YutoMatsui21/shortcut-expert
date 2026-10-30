@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { coachTrayMenu } from '../src/main/coach-tray.ts';
-import { newestSnapshot } from '../src/renderer/src/coach-snapshot.ts';
-import type { Snapshot } from '../src/shared/coach.ts';
+import { coachTrayMenu } from '../../../src/main/coach-tray.ts';
+import { newestSnapshot } from '../../../src/renderer/src/coach-snapshot.ts';
+import type { Snapshot } from '../../../src/shared/coach.ts';
 
 const state: Snapshot = { counts: {}, settings: { muted: [], opened: true }, observing: true,
   notificationsPaused: false, error: null, pendingSave: false, stateVersion: 1 };
