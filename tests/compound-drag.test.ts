@@ -161,3 +161,35 @@ for (const terminal of ['maximized', 'left-top']) test(`two-display vertical com
     assert.equal(candidateV2(raw), null, 'new evidence must be a boolean');
   }
 });
+
+for (const terminal of ['maximized', 'left-top'])
+for (const moveState of ['learning', 'mastered', 'excluded'] as const)
+for (const terminalState of ['learning', 'mastered', 'excluded'] as const)
+  test(`compound state matrix ${terminal}: W02=${moveState}, terminal=${terminalState}`, async t => {
+    const h = await harness(t), operation = terminal === 'maximized' ? 'W03' : 'W07';
+    await h.coach.setLearningState('W02', moveState);
+    await h.coach.setLearningState(operation, terminalState);
+    const raw = input(terminal);
+    Object.assign(raw.evidence, { moveDirection: null, twoDisplayLayoutConfirmed: true,
+      toMonitor: { x: -1920, y: -1440, width: 2560, height: 1440 } });
+    const candidate = candidateV2(raw); assert.ok(candidate);
+    const revision = h.coach.snapshot().revision!;
+    await h.coach.accept(candidate);
+    const saved = await h.repository.query(today, today);
+    assert.deepEqual(saved.counts[today], { W02: { mouse: 1, key: 0 }, [operation]: { mouse: 1, key: 0 } });
+    assert.equal(saved.revision, revision + 1, 'all learning states retain both counts atomically');
+    const expectedKeys = [moveState === 'learning' ? 'Win + Shift + ←' : null,
+      terminalState === 'learning' ? terminal === 'maximized' ? 'Win + ↑' : 'Winを押したまま ←、続けて ↑' : null]
+      .filter((key): key is string => key !== null);
+    assert.equal(h.requests.length, expectedKeys.length ? 1 : 0);
+    if (expectedKeys.length === 1) assert.equal(h.requests[0].title, expectedKeys[0]);
+    if (expectedKeys.length === 2) for (const key of expectedKeys) assert.ok(h.requests[0].body!.includes(key));
+    for (const [id, state] of [['W02', moveState], [operation, terminalState]]) {
+      const row = (await h.coach.getLearning(today)).rows.find(r => r.id === id)!;
+      assert.equal(row.state, state); assert.equal(row.mouse, 1);
+    }
+    await h.coach.accept({ ...candidate, sequence: 2 });
+    assert.equal(h.requests.length, expectedKeys.length ? 1 : 0, 'duplicate transaction never re-notifies');
+    const replayed = await h.repository.query(today, today);
+    assert.deepEqual(replayed.counts, saved.counts); assert.equal(replayed.revision, saved.revision);
+  });

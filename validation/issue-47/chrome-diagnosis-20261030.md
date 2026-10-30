@@ -83,3 +83,20 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 根拠は製品要件W11の「閉じるボタンと対象窓の破棄」と、学習中の確証済みmouse操作の保存後通知。Chrome窓がもう1つ開いていても、閉じた対象窓のW11成立は変わらない。N11-tabで意図した操作は、**1つのChrome窓にCtrl+Tで2つ以上のタブを作り、ページ名の横の小さい×を押して1タブだけ閉じ、窓は残す**こと。窓右上の×は使わない。窓破棄が起きないのでW11を記録・通知しない負例である。
 
 次は同じ製品build・診断OFFで、N11-tabと、タブ切替／同窓click／Alt+Tab取消・元窓／配置drag取消／Win+Z／Win+Tabの8負例をまとめて行う。成功した修正3件は繰り返さない。この追記は文書・証拠のみなのでSkillの例外で追加コードレビュー・再build・製品自動試験は省略する。
+
+
+## 重要負例の結果（session16）
+
+同じ製品revision `2ec7520`・同じhash、Native診断OFF、Chrome。`../evidence/issue-47/session16-*.json`。N11-tab／N01-tab／N01-same／N01-escape／N01-return／N67-cancel／N08／N10の8件すべて有効・期限内完了。全件で候補0・日別件数差分なし・通知要求0となり、tab-only閉鎖の負例も今回は成立した。本人は全操作の完了を報告。原本確認欄は変更せず、個別のOS目視申告を補完しない。終了code0・read-only integrity_check=ok・hash不変・同梱プロセス残存0。
+
+## 学習状態の組合せと検証層
+
+複合の9組を検証する要件は維持する。既存のfault／eligibility試験は代表状態の組合せだけだったため、同じ本番Main strict parser→Core→実SQLite→通知adapterで、移動＋最大化／四隅それぞれの3×3全組合せを追加fixtureで確認する。状態に関係なく2件を1revisionで保存し、学習中の適格操作だけを1通知へ含め、状態read modelと同一transaction再送の非再通知を照合する。これは隔離された自動試験であり、自然入力の精度やOS表示の証拠ではない。
+
+Nativeへ学習状態は送らず、状態による保存・通知適格性は共通Coreの責務である。自然入力では同じbuildで、最大化4組（L/L、L/M、M/L、M/E）、四隅4組（L/L、L/E、E/L、E/M）を代表として行い、両操作・全3状態が混ざった際の2行／片方／通知なしと、保存2件を確認する。L=learning、M=mastered、E=excluded。全9組の自然入力を行ったという主張にはしない。全9組のfixtureと代表自然入力の根拠を区別して受入へ渡す。
+
+本人は後続の保存確認取消用の保存不要窓を用意できると回答した。上記8組とN11-dialog（例：新規ペイント画像に線を描いてから、ARM後Alt+F4→保存確認をキャンセル）を次の1バッチで確認する。準備の描画は観測停止中に行い、画像や文字を観測データへ保存しない。窓は残り、N11-dialogでは記録・通知0が期待値。pause／全停止と最終基本マトリクスは別途残す。
+
+製品コード・同梱binaryは変更しない。追加の共通状態fixtureを含むcompound suite49件と型検査が成功。追加試験は既存の成立する契約の網羅であり、修正前の失敗を作るテストファーストの対象ではない。保存失敗・再送・停止等の既存ケースは維持する。
+
+状態マトリクスの専用ローカルレビューは4観点で指摘なし。製品コード・binaryの再buildは行っていない。環境の補助記録 `../evidence/issue-47/environment-versions-20261030.json` はmanifest-aware PowerShellのWindows version 10.0.26340.0と、既知のchrome processのProductVersion集合156.0.8078.74だけを取得した。process ID・path・窓情報は保存せず、個別試行窓と実行ファイルの対応を確証したとは扱わない。旧WinForms panelのosBuild9200はlegacy manifest値として実OS buildの根拠に使わない。

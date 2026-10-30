@@ -1,0 +1,19 @@
+{
+  "productRevision": "2ec7520",
+  "manifestSha256": "4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb",
+  "nativeDiagnostics": false,
+  "participantReport": "All eight operations completed",
+  "cases": [
+    "N11-tab",
+    "N01-tab",
+    "N01-same",
+    "N01-escape",
+    "N01-return",
+    "N67-cancel",
+    "N08",
+    "N10"
+  ],
+  "machineEvidence": "All eight trials valid and within deadline; zero candidates, zero record delta and zero notification requests for all cases",
+  "operatorFields": "Raw confirmation defaults retained; participant reported completion without extra per-case OS assertion",
+  "acceptance": "Real-input exclusions verified for this build/environment; no full issue47 completion or precision estimate claimed"
+}

@@ -1,0 +1,9 @@
+{
+  "windowsVersionFromManifestAwarePowerShell": "10.0.26340.0",
+  "declaredBrowser": "chrome",
+  "runningChromeProductVersions": [
+    "156.0.8078.74"
+  ],
+  "association": "Version metadata only; individual trial window was not linked to an executable",
+  "windowsSettingsChanged": false
+}
