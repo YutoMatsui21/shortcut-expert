@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -79,16 +80,13 @@ internal sealed class Observer : IDisposable
     private WindowState? Read(nint window, WindowState? cached = null)
     {
         if (window == 0 || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window)) return null;
-        GetWindowThreadProcessId(window, out uint pid);
-        string app;
-        if (cached is not null && cached.Process == pid) app = cached.App;
-        else
-        {
-            try { using var process = Process.GetProcessById((int)pid); app = process.ProcessName.ToLowerInvariant(); }
-            catch { return null; }
-            if (app is not ("chrome" or "obsidian" or "code" or "chatgpt")) return null;
-            if (!OrdinaryProcess(pid)) return null;
-        }
+        if (window == GetDesktopWindow() || window == GetShellWindow()) return null;
+        if (GetWindowThreadProcessId(window, out uint pid) == 0) return null;
+        var cls = new StringBuilder(256);
+        string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
+        bool? cloaked = DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0 ? cloak != 0 : null;
+        if (!WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
+            GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))) return null;
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
@@ -96,7 +94,7 @@ internal sealed class Observer : IDisposable
         bool frameKnown = DwmGetWindowAttribute(window, DWMWA_EXTENDED_FRAME_BOUNDS, out Rect frame,
             (uint)Marshal.SizeOf<Rect>()) == 0;
         static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
-        return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0,
+        return new WindowState(pid, WindowTargetPolicy.ApplicationCategory, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
             frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window));
     }

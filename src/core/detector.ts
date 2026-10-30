@@ -74,7 +74,7 @@ export function classify(value: ObserverCandidate): Observation | null {
 
 function classifyWindow(candidate: WindowEvidenceResult & Pick<ObserverCandidate, 'generation' | 'sequence' | 'date' | 'origin' | 'route' | 'injected' | 'conflicted'>): Observation | null {
   if (!validDate(candidate.date) || !Number.isSafeInteger(candidate.sequence) || candidate.sequence < 1 ||
-      !['chrome', 'obsidian', 'code', 'chatgpt'].includes(candidate.app) ||
+      !['ordinary-window', 'chrome', 'obsidian', 'code', 'chatgpt'].includes(candidate.app) ||
       candidate.elevated !== false || candidate.injected || candidate.conflicted || candidate.moving || !candidate.targetMatched ||
       candidate.inputAgeMs < 0 || candidate.inputAgeMs > 1000 ||
       !['mouse', 'key'].includes(candidate.origin)) return null;

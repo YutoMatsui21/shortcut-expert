@@ -8,6 +8,8 @@
 
 通常のNative→Main厳格parse→Core→SQLite→学習・記録画面→保存後通知を使用する。W03/W04の学習状態は別に保持し、旧W05を新W04へ合算しない。
 
+対象は実行ファイル名の許可リストではなく、通常の可視root窓・caption・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。この同じ対象読取はW02／W06／W07と複合dragにも使う。
+
 ## 2. W03：最大化
 
 | 入力 | 成立条件 |

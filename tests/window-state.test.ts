@@ -5,6 +5,17 @@ import { candidateFixture, v2Fixture, type Candidate } from './support/fixtures.
 
 const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
+test('ordinary-window category supports general-app W03/W04 while preserving input/result checks', () => {
+  const max = candidateFixture({ app: 'ordinary-window' });
+  assert.equal(classify(max)?.operation, 'W03');
+  assert.equal(classify({ ...max, origin: 'key', route: 'win-up' })?.operation, 'W03');
+  const restore = { ...max, operation: 'restore', before: { state: 'maximized', arranged: false }, after: { state: 'normal' }, afterArranged: false };
+  assert.equal(classify(restore)?.operation, 'W04');
+  assert.equal(classify({ ...restore, origin: 'key', route: 'win-down' })?.operation, 'W04');
+  for (const overrides of [{ elevated: true }, { targetMatched: false }, { injected: true }, { route: 'unknown' }, { app: 'private-process-name' }])
+    assert.equal(classify({ ...max, ...overrides }), null);
+});
+
 test('W03 top drag requires a confirmed same-monitor terminal result', () => {
   const screen = { x: 0, y: -1080, width: 1920, height: 1080 };
   const drag = candidateFixture({ route: 'caption-top-drag', fromMonitor: screen, toMonitor: screen });

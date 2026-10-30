@@ -6,9 +6,22 @@ internal static partial class Program
     {
         var samples = new List<object>();
         var screen = new MonitorBounds(0, 0, 1920, 1080);
-        var start = normal with { Monitor = screen, Work = screen, DisplayLayout = "stable" };
+        var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        Check("general target eligibility is independent of process names and excludes nonordinary windows", () => {
+            bool Allowed(uint process = 42, long style = WS_CAPTION, long extended = 0, bool owned = false,
+                bool? cloaked = false, string? windowClass = "CabinetWClass", bool ordinary = true) =>
+                WindowTargetPolicy.Allows(process, 7, style, extended, owned, cloaked, windowClass, ordinary);
+            foreach (string cls in new[] { "CabinetWClass", "Notepad", "Chrome_WidgetWin_1", "custom-standard-caption" }) Equal(true, Allowed(windowClass: cls));
+            Equal(false, Allowed(process: 0)); Equal(false, Allowed(process: 7)); Equal(false, Allowed(ordinary: false));
+            Equal(false, Allowed(style: 0)); Equal(false, Allowed(style: WS_CAPTION | 0x40000000));
+            Equal(false, Allowed(extended: 0x80)); Equal(false, Allowed(extended: 0x08000000));
+            Equal(false, Allowed(owned: true)); Equal(false, Allowed(cloaked: true)); Equal(false, Allowed(cloaked: null));
+            Equal(false, Allowed(windowClass: null)); Equal(false, Allowed(windowClass: ""));
+            foreach (string cls in new[] { "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Progman", "WorkerW", "XamlExplorerHostIslandWindow", "MultitaskingViewFrame" })
+                Equal(false, Allowed(windowClass: cls));
+        });
         void Sample(WindowCandidate candidate, string? expected) => samples.Add(new {
             candidate = CandidateProtocol.V2(candidate, samples.Count + 1, samples.Count + 1), expected });
 
