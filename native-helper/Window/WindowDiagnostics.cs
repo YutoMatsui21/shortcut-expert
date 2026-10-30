@@ -2,7 +2,9 @@ internal enum WindowDiagnosticReason
 {
     MouseDown, MouseUp, TargetMissing, TargetRejected, RawCaption, RawClient, RawButton, RawOther,
     TitleReadOk, TitleReadFail, TitleContainsPoint, TitleOutsidePoint, FinalCaption, FinalButton, FinalOther,
-    ForegroundMatched, ForegroundOther, MoveStart, MoveEnd
+    ForegroundMatched, ForegroundOther, MoveStart, MoveEnd,
+    HitRoot, HitChildSameProcess, HitChildUnmatched, ChildCaption, ChildClient, ChildOther, ChildHitFailed,
+    ChildTitleContainsPoint, ChildTitleOutsidePoint, ChildTitleReadFail
 }
 
 internal sealed record WindowDiagnosticSummary(int Generation, Dictionary<string, int> Counts);

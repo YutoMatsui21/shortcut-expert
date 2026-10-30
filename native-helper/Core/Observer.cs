@@ -147,6 +147,25 @@ internal sealed class Observer : IDisposable
             long packed = (uint)((mouse.Point.Y & 0xffff) << 16) | (uint)(mouse.Point.X & 0xffff);
             int hit = -1;
             if (SendMessageTimeoutW(target, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint result) != 0) hit = unchecked((int)result);
+            if (windowDiagnostic is not null)
+            {
+                // Probe the actual hit child separately. Never substitute its result into production hit testing here.
+                nint hitWindow = WindowFromPhysicalPoint(mouse.Point);
+                if (hitWindow == target) windowDiagnostic(WindowDiagnosticReason.HitRoot);
+                else if (hitWindow == 0 || GetAncestor(hitWindow, GA_ROOT) != target ||
+                    GetWindowThreadProcessId(hitWindow, out uint childProcess) == 0 || childProcess != before.Process)
+                    windowDiagnostic(WindowDiagnosticReason.HitChildUnmatched);
+                else
+                {
+                    windowDiagnostic(WindowDiagnosticReason.HitChildSameProcess);
+                    if (SendMessageTimeoutW(hitWindow, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint childHit) != 0)
+                        windowDiagnostic(unchecked((int)childHit) == HTCAPTION ? WindowDiagnosticReason.ChildCaption : unchecked((int)childHit) == 1 ? WindowDiagnosticReason.ChildClient : WindowDiagnosticReason.ChildOther);
+                    else windowDiagnostic(WindowDiagnosticReason.ChildHitFailed);
+                    if (WindowCaption.Read(hitWindow, out TitleInfo childTitle))
+                        windowDiagnostic(SnapGeometry.Contains(childTitle.Bar, mouse.Point) ? WindowDiagnosticReason.ChildTitleContainsPoint : WindowDiagnosticReason.ChildTitleOutsidePoint);
+                    else windowDiagnostic(WindowDiagnosticReason.ChildTitleReadFail);
+                }
+            }
             windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.RawCaption : hit == 1 ? WindowDiagnosticReason.RawClient :
                 hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.RawButton : WindowDiagnosticReason.RawOther);
             if (GetWindowRect(target, out Rect rect) && WindowCaption.Read(target, out TitleInfo title))

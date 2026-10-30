@@ -19,3 +19,13 @@ session3の10ケース中、P03m／P04m／P03k／P04k／S04-min-max／S04-min-no
 次の自然入力は、同じ代表窓で失敗した3ケースだけ各1回まとめて行う。新しい診断結果で仮説を区別してから製品修正を判断する。診断版の成功や、旧buildでの7件成功を同一最終buildの#47全面合格とはしない。
 
 診断追加の関連unit34件、型検査、C# policy539検証とtaxonomy／Core／SQLite結合、helper buildが成功。専用レビューのP2（全停止試行への前件集計混入）を修正し再レビューで指摘なし。修正後の同梱helper hash一致、隔離smoke、保存受入17件も成功した。正常系の採用判定の変更ではなく、原因調査の準備完了である。
+
+## session4の診断結果
+
+3件とも親のroot HWNDへの`WM_NCHITTEST`は`HTCLIENT`、TITLEBARINFOEX取得は成功したが押下点はBar矩形の外だった。前面・通常窓の照合は成立し、Coreにはorigin／route unknownの状態変化候補が届いた。double-click2件は入力の期限内であり、経過超過だけでは説明できない。dragではMOVESIZESTART／ENDも届いたがcaption押下が確認できていない。
+
+[診断原本](../evidence/issue-47/session4-status.json)、[本人申告](../evidence/issue-47/session4-participant.json)、[build](../evidence/issue-47/session4-build.json)。この時点で製品の採用条件を緩和しない。親窓に照会していることが原因なのか、独自ドラッグ領域なのかを区別するため、実際のヒット先の子窓にも照会する診断を追加する。rootと同じ祖先・同じprocessを一時照合し、結果はcaption/client/other等の集計だけに落とす。子窓の戻り値をまだ本番のhit判定へ代入しない。3件は同じ親caption不成立を示すため、次は代表のS03-doubleを1回だけ確認する。
+
+API根拠：[WM_NCHITTEST](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest)は送信先のWindowProcが返す領域分類で、HTCAPTIONとHTCLIENTを区別する。[Windowsのタイトルバー仕様](https://learn.microsoft.com/en-us/windows/apps/develop/title-bar)ではcaptionボタンを維持しつつ独自のドラッグ領域を定義できる。Explorerがどちらの実装を使うかは未確認で、公式の一般仕様だけで個別挙動を断定しない。
+
+session4終了はCLOSED/error=trueとなり、ランチャーの終了結果がSIGTERMだった。原本の3試行は期限内・中断なしの結果として別保存しているが、session全体の正常終了とは扱わない。[終了原本](../evidence/issue-47/session4-exit.json)。その後、この同梱版のWindowObserver残存0を確認した。終了理由は未確定で、#47の終了条件を合格へ置き換えない。

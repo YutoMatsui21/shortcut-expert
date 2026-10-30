@@ -1,6 +1,8 @@
 export const windowDiagnosticKeys = ['MouseDown', 'MouseUp', 'TargetMissing', 'TargetRejected', 'RawCaption', 'RawClient', 'RawButton', 'RawOther',
   'TitleReadOk', 'TitleReadFail', 'TitleContainsPoint', 'TitleOutsidePoint', 'FinalCaption', 'FinalButton', 'FinalOther',
-  'ForegroundMatched', 'ForegroundOther', 'MoveStart', 'MoveEnd'] as const;
+  'ForegroundMatched', 'ForegroundOther', 'MoveStart', 'MoveEnd',
+  'HitRoot', 'HitChildSameProcess', 'HitChildUnmatched', 'ChildCaption', 'ChildClient', 'ChildOther', 'ChildHitFailed',
+  'ChildTitleContainsPoint', 'ChildTitleOutsidePoint', 'ChildTitleReadFail'] as const;
 export type WindowDiagnosticCounts = Record<typeof windowDiagnosticKeys[number], number>;
 export function parseWindowDiagnostics(value: unknown): WindowDiagnosticCounts | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
