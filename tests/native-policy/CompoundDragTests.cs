@@ -7,6 +7,24 @@ internal static partial class Program
     {
         var start = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "pair", HorizontalPair = true };
+        Check("vertical compound carries stable two-display proof without a spatial left/right direction", () => {
+            var upper = new MonitorBounds(-1920, -1440, 2560, 1440);
+            foreach (bool proven in new[] { false, true }) {
+                var before = start with { TwoDisplayPair = proven };
+                var after = before with { Monitor = upper, Work = upper with { height = 1400 },
+                    Show = SW_SHOWMAXIMIZED, HorizontalPair = false, TwoDisplayPair = true };
+                var tracker = Tracker();
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
+                tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = upper.x + 500, Y = upper.y }, upper, after.Work, 0);
+                var result = tracker.FinishMove(11, after, 500, 11, "2026-10-28") as CompoundMoveResult;
+                Equal(true, result is not null); Equal(proven, result!.TwoDisplayLayoutConfirmed);
+                Equal<string?>(null, result.MoveDirection);
+                var emitted = new List<object>(); var protocol = new CandidateProtocol(emitted.Add); protocol.Start(1, 2);
+                protocol.Compound(1, "2026-10-28", result);
+                Equal(proven, ((CompoundDragEvidence)((CandidateEnvelope)emitted[0]).evidence).twoDisplayLayoutConfirmed);
+            }
+        });
         Check("compound quarter shares the side tolerance without emitting a partial monitor move", () => {
             var monitor = new MonitorBounds(0, 0, 1920, 1080); var work = new MonitorBounds(0, 0, 1920, 1040);
             var after = start with { Monitor = monitor, Work = work, Arranged = true, Frame = new(0, 0, 960, 520) };

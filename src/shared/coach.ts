@@ -10,12 +10,12 @@ export type WindowEvidenceResult = {
   app: string; operation: string; before: { state: string; arranged: boolean | null }; after: { state: string };
   moving: boolean; elevated: boolean; targetMatched: boolean; inputAgeMs: number; monitor: Bounds | null;
   afterArranged: boolean | null; fromMonitor: Bounds | null; toMonitor: Bounds | null;
-  moveDirection: 'left' | 'right' | null; moveConfirmed?: boolean;
+  moveDirection: 'left' | 'right' | null; moveConfirmed?: boolean; twoDisplayLayoutConfirmed?: boolean;
 };
 export type Evidence =
   | { kind: 'compound-drag'; profile: 'compound-drag-v1'; terminal: 'maximized' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';
       targetMatched: boolean; released: boolean; layoutStable: boolean; inputAgeMs: number;
-      fromMonitor: Bounds; toMonitor: Bounds; moveDirection: 'left' | 'right' | null; terminalEquivalent: boolean }
+      fromMonitor: Bounds; toMonitor: Bounds; moveDirection: 'left' | 'right' | null; terminalEquivalent: boolean; twoDisplayLayoutConfirmed?: boolean }
   | { kind: 'window-close'; profile: 'window-close-v1'; targetMatched: boolean; destroyed: boolean;
       inputAgeMs: number; monitor: Bounds | null }
   | { kind: 'placement'; profile: 'placement-v1'; shape: 'left-half' | 'right-half' | 'left-top' | 'right-top' | 'left-bottom' | 'right-bottom';

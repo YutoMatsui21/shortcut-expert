@@ -99,7 +99,7 @@ internal sealed class Observer : IDisposable
         static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
         return new WindowState(pid, WindowTargetPolicy.ApplicationCategory, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
-            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window));
+            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair());
     }
     internal static bool OrdinaryProcess(uint pid)
     {

@@ -17,5 +17,6 @@
     <Compile Include="../../native-helper/Window/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
     <Compile Include="../../native-helper/Window/WindowTargetPolicy.cs" Link="WindowTargetPolicy.cs" />
     <Compile Include="../../native-helper/Window/WindowDiagnostics.cs" Link="WindowDiagnostics.cs" />
+    <Compile Include="../../native-helper/Window/MonitorMovePolicy.cs" Link="MonitorMovePolicy.cs" />
   </ItemGroup>
 </Project>

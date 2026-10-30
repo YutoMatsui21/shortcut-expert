@@ -13,7 +13,7 @@
 ## 原子保存と通知
 
 - `classifyGesture`はW02とW03／W07の異なる2操作を返す。`DurableCoach`は同一generation／transactionの再送を除外し、`RecordMutation.counts`の2件を同じSQLite transaction・checkpointでmouse各+1する。2件目の失敗では件数・coverage・revision・checkpointを全てrollbackする。ACK喪失時は同じpayloadを再試行する。[保存契約](../storage/durable-storage.md)を参照。
-- W02は左右の横並び・上端一致・非重複と確証された方向の一致でだけキーを案内する。不明でも記録し、W03／W07の適格性は独立に扱う。各キーはその操作の案内であり、順に押せばドラッグの最終結果を再現するという意味ではない。
+- W02は左右方向の確証、または安定した非重複の2画面構成の確証でキーを案内する（[詳細](monitor-move.md#2-キー案内と通信)）。不明でも記録し、W03／W07の適格性は独立に扱う。各キーはその操作の案内であり、順に押せばドラッグの最終結果を再現するという意味ではない。
 - 保存後、操作ごとの学習状態・キー確証・通知取消tokenを再確認する。適格2件は1Toastの別行、1件は既存のキーtitle／操作名body、0件なら通知しない。別gestureは別通知とする。
 - pause→resume、stop、保存失敗／ACK喪失後のretry、学習状態変更中の保存、OS結果unknownは通知を復活させない。OS結果はアプリの発行要求成功と区別し、自動再送しない。
 

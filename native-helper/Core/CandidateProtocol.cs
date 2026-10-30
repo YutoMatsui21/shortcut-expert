@@ -14,7 +14,7 @@ using System.Text.Json.Serialization;
 internal abstract record Evidence(string profile);
 internal sealed record CompoundDragEvidence(string terminal, bool targetMatched, bool released, bool layoutStable,
     long inputAgeMs, MonitorBounds fromMonitor, MonitorBounds toMonitor, string? moveDirection,
-    bool terminalEquivalent) : Evidence("compound-drag-v1");
+    bool terminalEquivalent, bool twoDisplayLayoutConfirmed = false) : Evidence("compound-drag-v1");
 internal sealed record WindowCloseEvidence(bool targetMatched, bool destroyed, long inputAgeMs,
     MonitorBounds? monitor) : Evidence("window-close-v1");
 internal sealed record PlacementEvidence(string shape, bool targetMatched, long inputAgeMs,
@@ -27,7 +27,7 @@ internal sealed record SnapInvocationEvidence(bool targetMatched, bool eligible,
     string? buttonSource, long dwellMs, long inputAgeMs, MonitorBounds? monitor) : Evidence("snap-invocation-v1");
 internal sealed record WindowResult(string app, string operation, CandidateState before, CandidateState after,
     bool? afterArranged, bool moving, bool elevated, bool targetMatched, long inputAgeMs, MonitorBounds? monitor,
-    MonitorBounds? fromMonitor, MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false);
+    MonitorBounds? fromMonitor, MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false, bool twoDisplayLayoutConfirmed = false);
 internal sealed record WindowEvidence(WindowResult result) : Evidence("legacy-window-v1");
 internal sealed record ShellDisplayEvidence(string feature, bool? wasVisible, bool? visible, bool? targetMatched) : Evidence("unverified");
 internal sealed record ActivationEvidence(int? slot, bool? appMatched, bool? targetMatched, bool? individualEquivalent, string result) : Evidence("unverified");
@@ -40,7 +40,7 @@ internal sealed record WindowCandidate(string type, int protocolVersion, int gen
     string app, string operation, string date, CandidateState before, CandidateState after, bool? afterArranged,
     string origin, string route, bool injected, bool conflicted, bool moving, bool elevated,
     bool targetMatched, long inputAgeMs, MonitorBounds? monitor, MonitorBounds? fromMonitor,
-    MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false)
+    MonitorBounds? toMonitor, string? moveDirection, bool moveConfirmed = false, bool twoDisplayLayoutConfirmed = false)
 {
     [JsonIgnore] internal int Transaction { get; init; }
 }
@@ -63,7 +63,7 @@ internal sealed class CandidateProtocol(Action<object> emit)
             if (generation == 0 || epoch != generation) return;
             emit(new CandidateEnvelope("candidate", 2, generation, checked(++sequence), result.Transaction, date,
                 "mouse", "compound-caption-drag", false, false, new CompoundDragEvidence(result.Terminal, true, true, true,
-                    result.InputAgeMs, result.FromMonitor, result.ToMonitor, result.MoveDirection, true)));
+                    result.InputAgeMs, result.FromMonitor, result.ToMonitor, result.MoveDirection, true, result.TwoDisplayLayoutConfirmed)));
         }
     }
     internal void Close(int epoch, int transaction, string date, string origin, WindowCloseEvidence evidence)
@@ -126,5 +126,5 @@ internal sealed class CandidateProtocol(Action<object> emit)
     internal static CandidateEnvelope V2(WindowCandidate c, int sequence, int transaction) => new(
         "candidate", 2, c.generation, sequence, transaction, c.date, c.origin, c.route, c.injected, c.conflicted,
         new WindowEvidence(new(c.app, c.operation, c.before, c.after, c.afterArranged, c.moving, c.elevated,
-            c.targetMatched, c.inputAgeMs, c.monitor, c.fromMonitor, c.toMonitor, c.moveDirection, c.moveConfirmed)));
+            c.targetMatched, c.inputAgeMs, c.monitor, c.fromMonitor, c.toMonitor, c.moveDirection, c.moveConfirmed, c.twoDisplayLayoutConfirmed)));
 }

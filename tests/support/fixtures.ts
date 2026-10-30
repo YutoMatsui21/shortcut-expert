@@ -13,6 +13,7 @@ export type Candidate = {
   toMonitor?: Bounds | null;
   moveDirection?: 'left' | 'right' | null;
   moveConfirmed?: boolean;
+  twoDisplayLayoutConfirmed?: boolean;
 };
 
 export function closeFixture(origin: 'mouse' | 'key' = 'mouse', sequence = 1): CandidateV2 {

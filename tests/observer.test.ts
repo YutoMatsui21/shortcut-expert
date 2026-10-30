@@ -88,7 +88,7 @@ test('window証拠は必須項目・有限値を確認し余分な内容を転�
   if (value.evidence.kind !== 'window') throw new Error('fixture');
   const result = value.evidence.result;
   for (const invalid of [{ before: null }, { inputAgeMs: Infinity }, { inputAgeMs: NaN },
-    { afterArranged: 'false' }, { fromMonitor: [] }, { moveDirection: 'up' }, { moveConfirmed: 'true' },
+    { afterArranged: 'false' }, { fromMonitor: [] }, { moveDirection: 'up' }, { moveConfirmed: 'true' }, { twoDisplayLayoutConfirmed: 'true' },
     { monitor: { x: 0, y: 0, width: 0, height: 10 } }, { toMonitor: { x: 0, y: Infinity, width: 10, height: 10 } }])
     assert.equal(candidateV2({ ...value, evidence: { ...value.evidence, result: { ...result, ...invalid } } }), null);
   const parsed = candidateV2({ ...value, title: 'fixture-sensitive', keys: ['fixture-key'],

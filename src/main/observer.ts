@@ -27,13 +27,15 @@ function windowResult(value: unknown): WindowEvidenceResult | null {
       !(value.afterArranged === null || typeof value.afterArranged === 'boolean') ||
       !['monitor', 'fromMonitor', 'toMonitor'].every(key => value[key] === null || bounds(value[key])) ||
       !(value.moveDirection === null || value.moveDirection === 'left' || value.moveDirection === 'right') ||
-      ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean')) return null;
+      ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean') ||
+      ('twoDisplayLayoutConfirmed' in value && typeof value.twoDisplayLayoutConfirmed !== 'boolean')) return null;
   return { app: value.app, operation: value.operation,
     before: { state: value.before.state, arranged: value.before.arranged }, after: { state: value.after.state },
     afterArranged: value.afterArranged, moving: value.moving as boolean, elevated: value.elevated as boolean,
     targetMatched: value.targetMatched as boolean, inputAgeMs: value.inputAgeMs, monitor: bounds(value.monitor),
     fromMonitor: bounds(value.fromMonitor), toMonitor: bounds(value.toMonitor), moveDirection: value.moveDirection,
-    ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}) };
+    ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}),
+    ...('twoDisplayLayoutConfirmed' in value ? { twoDisplayLayoutConfirmed: value.twoDisplayLayoutConfirmed as boolean } : {}) };
 }
 
 function nullableBoolean(value: unknown): value is boolean | null { return value === null || typeof value === 'boolean'; }
@@ -51,10 +53,12 @@ export function candidateV2(value: unknown): CandidateV2 | null {
       if (raw.profile !== 'compound-drag-v1' || !['maximized', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(raw.terminal as string) ||
           !['targetMatched', 'released', 'layoutStable', 'terminalEquivalent'].every(key => typeof raw[key] === 'boolean') ||
           typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 || !fromMonitor || !toMonitor ||
-          !(raw.moveDirection === null || raw.moveDirection === 'left' || raw.moveDirection === 'right')) return null;
+          !(raw.moveDirection === null || raw.moveDirection === 'left' || raw.moveDirection === 'right') ||
+          ('twoDisplayLayoutConfirmed' in raw && typeof raw.twoDisplayLayoutConfirmed !== 'boolean')) return null;
       evidence = { kind: raw.kind, profile: raw.profile, terminal: raw.terminal as Extract<Evidence, { kind: 'compound-drag' }>['terminal'],
         targetMatched: raw.targetMatched as boolean, released: raw.released as boolean, layoutStable: raw.layoutStable as boolean,
-        terminalEquivalent: raw.terminalEquivalent as boolean, inputAgeMs: raw.inputAgeMs, fromMonitor, toMonitor, moveDirection: raw.moveDirection }; break;
+        terminalEquivalent: raw.terminalEquivalent as boolean, inputAgeMs: raw.inputAgeMs, fromMonitor, toMonitor, moveDirection: raw.moveDirection,
+        ...('twoDisplayLayoutConfirmed' in raw ? { twoDisplayLayoutConfirmed: raw.twoDisplayLayoutConfirmed as boolean } : {}) }; break;
     }
     case 'window-close':
       if (raw.profile !== 'window-close-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.destroyed !== 'boolean' ||

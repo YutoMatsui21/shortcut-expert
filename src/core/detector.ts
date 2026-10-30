@@ -15,7 +15,8 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
     (e.moveDirection === 'left' ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
   const base = { id: `${value.generation}:t${value.transaction}`, origin: 'mouse' as const, date: value.date, monitor: e.toMonitor };
   const [side, vertical] = e.terminal.split('-');
-  return [{ ...base, operation: 'W02', shortcut: equivalent ? `Win + Shift + ${e.moveDirection === 'left' ? '←' : '→'}` : null },
+  return [{ ...base, operation: 'W02', shortcut: equivalent ? `Win + Shift + ${e.moveDirection === 'left' ? '←' : '→'}` :
+      e.twoDisplayLayoutConfirmed === true && separateMonitors(e.fromMonitor, e.toMonitor) ? 'Win + Shift + ←' : null },
     { ...base, operation: e.terminal === 'maximized' ? 'W03' : 'W07', shortcut: !e.terminalEquivalent ? null :
       e.terminal === 'maximized' ? 'Win + ↑' : `Winを押したまま ${side === 'left' ? '←' : '→'}、続けて ${vertical === 'top' ? '↑' : '↓'}` }];
 }
@@ -114,7 +115,9 @@ function classifyWindow(candidate: WindowEvidenceResult & Pick<ObserverCandidate
       if (direction !== undefined && direction !== null && direction !== 'left' && direction !== 'right') return null;
       const equivalent = direction && from.y === to.y && (direction === 'left' ? to.x + to.width <= from.x : from.x + from.width <= to.x) &&
         (candidate.origin !== 'key' || candidate.route === `win-shift-${direction}`);
-      operation = 'W02'; shortcut = equivalent ? `Win + Shift + ${direction === 'left' ? '←' : '→'}` : null;
+      operation = 'W02'; shortcut = equivalent ? `Win + Shift + ${direction === 'left' ? '←' : '→'}` :
+        candidate.twoDisplayLayoutConfirmed === true && separateMonitors(from, to)
+          ? `Win + Shift + ${candidate.origin === 'key' && candidate.route === 'win-shift-right' ? '→' : '←'}` : null;
       break;
     }
     default: return null;
@@ -128,4 +131,10 @@ function classifyWindow(candidate: WindowEvidenceResult & Pick<ObserverCandidate
 
 function sameMonitor(a: Bounds, b: Bounds): boolean {
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+// Two endpoint bounds alone do not prove a complete two-display layout.
+function separateMonitors(a: Bounds, b: Bounds): boolean {
+  return [a, b].every(r => [r.x, r.y, r.width, r.height].every(Number.isFinite) && r.width > 0 && r.height > 0) &&
+    (a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
 }

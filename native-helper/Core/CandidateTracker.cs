@@ -4,10 +4,10 @@ using Point = NativeMethods.Point;
 internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
-    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0);
+    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false);
 // Only verified terminal evidence crosses the protocol; HWND/process stay in the tracker.
 internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMonitor, MonitorBounds ToMonitor,
-    string Terminal, long InputAgeMs, string? MoveDirection = null);
+    string Terminal, long InputAgeMs, string? MoveDirection = null, bool TwoDisplayLayoutConfirmed = false);
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
@@ -195,7 +195,7 @@ internal sealed class CandidateTracker
 
     private static CompoundMoveResult Compound(Input drag, WindowState after, string terminal) =>
         new(drag.Transaction, drag.Before.Monitor!, after.Monitor!, terminal, drag.At,
-            MoveDirection(drag.Before, after));
+            MoveDirection(drag.Before, after), TwoDisplayLayout(drag.Before, after));
 
     private static string? MoveDirection(WindowState before, WindowState after) =>
         before.HorizontalPair && after.HorizontalPair && before.Monitor is not null && after.Monitor is not null &&
@@ -264,9 +264,13 @@ internal sealed class CandidateTracker
             recent ? candidate!.Origin : "unknown", recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",
             candidate?.Injected ?? false, candidate?.Conflicted ?? false, isMoving, false,
             recent && candidate!.Matched && target, age, monitor, before.Monitor, after.Monitor, direction,
-            operation == "monitor-move" && StableMove(before, after))
+            operation == "monitor-move" && StableMove(before, after),
+            operation == "monitor-move" && TwoDisplayLayout(before, after))
             { Transaction = candidate?.Transaction ?? checked(++transaction) };
     }
+    private static bool TwoDisplayLayout(WindowState before, WindowState after) =>
+        before.TwoDisplayPair && after.TwoDisplayPair && StableMove(before, after) &&
+        MonitorMovePolicy.Separate(before.Monitor!, after.Monitor!);
     private static bool StableMove(WindowState before, WindowState after) =>
         before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
         before.Monitor is not null && after.Monitor is not null && before.Work is not null && after.Work is not null &&

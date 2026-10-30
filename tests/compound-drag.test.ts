@@ -136,3 +136,28 @@ for (const terminal of ['maximized', 'right-bottom']) test(`compound ${terminal}
   assert.equal(h.requests.length, 0, 'recovery never delivers old notices');
   } finally { db.close(); }
 });
+
+for (const terminal of ['maximized', 'left-top']) test(`two-display vertical compound ${terminal} includes both operation lines`, async t => {
+  const h = await harness(t);
+  const raw = input(terminal);
+  Object.assign(raw.evidence, { moveDirection: null, twoDisplayLayoutConfirmed: true,
+    toMonitor: { x: -1920, y: -1440, width: 2560, height: 1440 } });
+  const candidate = candidateV2(raw); assert.ok(candidate);
+  const observations = classifyGesture(candidate);
+  assert.equal(observations[0].shortcut, 'Win + Shift + ←');
+  await h.coach.accept(candidate);
+  assert.equal(h.requests.length, 1);
+  assert.match(h.requests[0].body!, /別画面に移動する.*Win \+ Shift \+ ←/);
+  assert.match(h.requests[0].body!, terminal === 'maximized' ? /最大化.*Win \+ ↑/ : /四隅.*Winを押したまま/);
+  for (const proof of [false, undefined]) {
+    Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: proof });
+    if (proof === undefined) delete (raw.evidence as Record<string, unknown>).twoDisplayLayoutConfirmed;
+    assert.equal(classifyGesture(candidateV2(raw)!)[0].shortcut, null);
+  }
+  Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: true, toMonitor: { ...fromMonitor, y: -100 } });
+  assert.equal(classifyGesture(candidateV2(raw)!)[0].shortcut, null, 'overlapping monitors cannot prove a unique destination');
+  for (const proof of [null, 1, 'true']) {
+    Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: proof });
+    assert.equal(candidateV2(raw), null, 'new evidence must be a boolean');
+  }
+});
