@@ -1,7 +1,7 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { startupMode } from '../src/main/startup-mode.ts';
+import { startupMode } from '../../../src/main/startup-mode.ts';
 
 test('bootstrap preserves normal storage and requires isolated packaged natural acceptance', async () => {
   const previous = process.env.COACH_TEST_DATA_DIR;
@@ -19,7 +19,7 @@ test('bootstrap preserves normal storage and requires isolated packaged natural 
     mkdirSync: (path: string) => created.push(path),
     mkdtempSync: () => `isolated-${++temporary}`, readdirSync: () => contents
   } });
-  const { configureStartupData } = await import('../src/main/startup-data.ts');
+  const { configureStartupData } = await import('../../../src/main/startup-data.ts');
   try {
     process.env.COACH_TEST_DATA_DIR = 'test-override';
     configureStartupData(startupMode([]));

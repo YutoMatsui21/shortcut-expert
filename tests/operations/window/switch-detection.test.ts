@@ -1,14 +1,14 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
-import { switchFixture } from './support/fixtures.ts';
+import { classify } from '../../../src/core/detector.ts';
+import { switchFixture } from '../../support/fixtures.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
+import { DurableCoach } from '../../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
 mock.module('electron', { namedExports: { app: {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../../../src/main/observer.ts');
 
 test('W01 requires matched input, different eligible windows and current foreground; only Alt+Tab guidance', () => {
   for (const origin of ['mouse', 'key'] as const) {

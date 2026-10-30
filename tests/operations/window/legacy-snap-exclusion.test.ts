@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { classify } from '../src/core/detector.ts';
-import { DurableCoach } from '../src/core/durable-coach.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { snapFixture, taskbarFixture } from './support/fixtures.ts';
+import { classify } from '../../../src/core/detector.ts';
+import { DurableCoach } from '../../../src/core/durable-coach.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
+import { snapFixture, taskbarFixture } from '../../support/fixtures.ts';
 mock.module('electron', { namedExports: { app: {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../../../src/main/observer.ts');
 
 test('W08 strict schema, meaning, unknowns and negative evidence', () => {
   for (const origin of ['mouse', 'key'] as const) {

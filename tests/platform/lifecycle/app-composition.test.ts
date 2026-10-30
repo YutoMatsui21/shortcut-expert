@@ -1,16 +1,16 @@
-import { v2Fixture } from './support/fixtures.ts';
+import { v2Fixture } from '../../support/fixtures.ts';
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
-import type { registerCoachIpc } from '../src/main/coach-ipc.ts';
-import type { ObserverCandidate, Snapshot } from '../src/shared/coach.ts';
-import { candidateFixture } from './support/fixtures.ts';
-import { localDate } from '../src/core/dates.ts';
-import { SqliteRepository } from '../src/main/sqlite-repository.ts';
-import { startupMode } from '../src/main/startup-mode.ts';
+import type { registerCoachIpc } from '../../../src/main/coach-ipc.ts';
+import type { ObserverCandidate, Snapshot } from '../../../src/shared/coach.ts';
+import { candidateFixture } from '../../support/fixtures.ts';
+import { localDate } from '../../../src/core/dates.ts';
+import { SqliteRepository } from '../../../src/main/sqlite-repository.ts';
+import { startupMode } from '../../../src/main/startup-mode.ts';
 
 test('normal composition migrates without pruning, records via SQLite IPC, recovers stopped and closes the writer', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'coach-composition-'));
@@ -30,24 +30,24 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
     screen: new EventEmitter(), powerMonitor: new EventEmitter(), Tray: class {
       on() {} setToolTip() {} setContextMenu() {} destroy() {}
     } } });
-  mock.module('../src/main/coach-window.ts', { namedExports: { CoachWindow: class {
+  mock.module('../../../src/main/coach-window.ts', { namedExports: { CoachWindow: class {
     current = window;
     show() {} publish() {} command() {} resumeBounds() {} correctBounds() {}
     withWindowState(value: Snapshot) { return value; }
     async flush() {} async create() { return window; }
   } } });
-  mock.module('../src/main/coach-ipc.ts', { namedExports: { registerCoachIpc: (_window: unknown, requests: typeof api) => { api = requests; } } });
-  mock.module('../src/main/observer.ts', { namedExports: { ObserverClient: class {
+  mock.module('../../../src/main/coach-ipc.ts', { namedExports: { registerCoachIpc: (_window: unknown, requests: typeof api) => { api = requests; } } });
+  mock.module('../../../src/main/observer.ts', { namedExports: { ObserverClient: class {
     constructor(candidate: typeof deliver, _fault: unknown, fixture: boolean) { assert.equal(fixture, false); deliver = candidate; }
     async start() { return ++generation; } async stop() {} async shutdown() {}
   } } });
-  mock.module('../src/main/standard-notification.ts', { namedExports: { StandardNotifications: class {
+  mock.module('../../../src/main/standard-notification.ts', { namedExports: { StandardNotifications: class {
     async show() { notices++; return true; } dispose() {}
   } } });
-  mock.module('../src/main/validation-runtime.ts', { namedExports: { ValidationRuntime: class {
+  mock.module('../../../src/main/validation-runtime.ts', { namedExports: { ValidationRuntime: class {
     constructor() { assert.fail('normal startup must not load fixtures'); }
   } } });
-  const { runCoach } = await import('../src/main/coach-app.ts');
+  const { runCoach } = await import('../../../src/main/coach-app.ts');
   t.after(async () => {
     if (api && !quits) await api.command('quit');
     await rm(root, { recursive: true, force: true });

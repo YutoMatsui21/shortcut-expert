@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify as classifyV2 } from '../src/core/detector.ts';
-import { v2Fixture, type Candidate } from './support/fixtures.ts';
+import { classify as classifyV2 } from '../../../src/core/detector.ts';
+import { v2Fixture, type Candidate } from '../../support/fixtures.ts';
 
 const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 

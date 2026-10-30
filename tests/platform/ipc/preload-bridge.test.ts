@@ -1,7 +1,7 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import type { CoachBridge, Snapshot } from '../src/shared/coach.ts';
+import type { CoachBridge, Snapshot } from '../../../src/shared/coach.ts';
 
 const renderer = new EventEmitter();
 const invoke = mock.fn(async (..._args: unknown[]) => {});
@@ -10,7 +10,7 @@ mock.module('electron', { namedExports: {
   ipcRenderer: Object.assign(renderer, { invoke }),
   contextBridge: { exposeInMainWorld: (name: string, value: CoachBridge) => { assert.equal(name, 'coach'); bridge = value; } }
 } });
-await import('../src/preload/index.ts');
+await import('../../../src/preload/index.ts');
 test('delete confirmation has dedicated request, cancellation and token-only commit channels', async () => {
   await bridge.requestDelete();
   assert.deepEqual(invoke.mock.calls.at(-1)?.arguments, ['coach:request-delete']);

@@ -1,8 +1,8 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify } from '../src/core/detector.ts';
+import { classify } from '../../../src/core/detector.ts';
 mock.module('electron', { namedExports: { app: {} } });
-const { candidateV2 } = await import('../src/main/observer.ts');
+const { candidateV2 } = await import('../../../src/main/observer.ts');
 
 export function placement(origin = 'mouse', shape = 'left-half') {
   return { type: 'candidate', protocolVersion: 2, generation: 1, sequence: 1, transaction: 1,

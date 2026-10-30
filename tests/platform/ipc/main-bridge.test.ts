@@ -1,14 +1,14 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import type { CoachBridge, Snapshot } from '../src/shared/coach.ts';
+import type { CoachBridge, Snapshot } from '../../../src/shared/coach.ts';
 
 type Handler = (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 const handlers = new Map<string, Handler>();
 mock.module('electron', { namedExports: { ipcMain: { handle: (channel: string, handler: Handler) => {
   assert.equal(handlers.has(channel), false); handlers.set(channel, handler);
 } } } });
-const { registerCoachIpc } = await import('../src/main/coach-ipc.ts');
+const { registerCoachIpc } = await import('../../../src/main/coach-ipc.ts');
 
 test('正規の要求だけ実行し、別窓・子frame・不正な引数を副作用の前に拒否する', async () => {
   // Only Electron's identity boundary is faked; registration and validation are production code.
