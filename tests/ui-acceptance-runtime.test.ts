@@ -34,7 +34,7 @@ test('matrix deadline stops a stalled child and reports failure', async () => {
 test('package identity changes when an Electron runtime resource changes', () => {
   const root = mkdtempSync(join(tmpdir(),'ui-manifest-'));
   mkdirSync(join(root,'resources/native-helper'),{recursive:true});
-  for (const path of ['Window Shortcut Coach.exe','resources/app.asar','resources/native-helper/WindowObserver.exe','resources/runtime.pak']) {
+  for (const path of ['Shortcut Expert.exe','resources/app.asar','resources/native-helper/WindowObserver.exe','resources/runtime.pak']) {
     writeFileSync(join(root,path),'fixture');
   }
   const before = packageManifest(root);

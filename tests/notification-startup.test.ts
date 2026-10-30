@@ -23,7 +23,7 @@ test('identity and global activation precede initialization; cold and second-ins
   mock.module('electron', { namedExports: { app, Notification, dialog: {} } });
   mock.module('node:fs', { namedExports: { mkdirSync: () => {}, mkdtempSync: () => 'fixture', readdirSync: () => [] } });
   mock.module('../src/main/coach-app.ts', { namedExports: {
-    runCoach: async () => { calls.push('run'); assert.equal(displays, 1, 'early cold request reaches the shared display function'); started.resolve(); await initialized.promise; },
+    runCoach: async () => { calls.push('run'); assert.equal(displays, 2, 'early cold request reaches the shared display function'); started.resolve(); await initialized.promise; },
     showCoach: () => displays++
   } });
   await import('../src/main/index.ts');
@@ -31,11 +31,11 @@ test('identity and global activation precede initialization; cold and second-ins
   ready.resolve(); await started.promise;
   assert.deepEqual(calls, ['local.window-shortcut-coach', 'activation', 'presenter', 'run']);
   activate?.(); app.emit('second-instance');
-  assert.equal(displays, 3);
+  assert.equal(displays, 4);
   assert.equal(calls.filter(value => value === 'run').length, 1, 'callbacks cannot start another helper or observation');
   initialized.resolve(); await Promise.resolve();
   activate?.(); app.emit('second-instance');
-  assert.equal(displays, 5, 'late COM activation still shows the existing window');
+  assert.equal(displays, 6, 'late COM activation still shows the existing window');
   assert.equal(calls.filter(value => value === 'run').length, 1);
   app.emit('will-quit');
   assert.equal(calls.at(-1), 'release');

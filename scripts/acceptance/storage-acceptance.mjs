@@ -27,7 +27,7 @@ for (const file of files('out/main')) {
 }
 mkdirSync('.tools/validation', { recursive: true });
 const output = mkdtempSync(resolve('.tools/validation/v02-'));
-const executable = join(directory, 'Window Shortcut Coach.exe');
+const executable = join(directory, 'Shortcut Expert.exe');
 const environment = { ...developmentEnvironment(), ELECTRON_RUN_AS_NODE: '1', COACH_V02_OUTPUT: output,
   COACH_V02_ENTRY: join(asar, 'out/main/storage-acceptance.cjs'),
   COACH_V02_WORKER: join(directory, 'resources/app.asar.unpacked/out/main/storage-worker.cjs'),

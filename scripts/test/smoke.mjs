@@ -11,7 +11,7 @@ if (!packageDir) throw new Error('--package-dir needs a folder');
 // Electron can install its binary during module loading, before the app is spawned.
 const environment = developmentEnvironment();
 Object.assign(process.env, environment);
-const executable = packaged ? resolve(packageDir, 'win-unpacked/Window Shortcut Coach.exe') : (await import('electron')).default;
+const executable = packaged ? resolve(packageDir, 'win-unpacked/Shortcut Expert.exe') : (await import('electron')).default;
 const migration = process.argv.includes('--migration');
 const comparison = process.argv.includes('--comparison');
 const settings = process.argv.includes('--settings');
