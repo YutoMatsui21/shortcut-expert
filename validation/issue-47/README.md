@@ -4,6 +4,8 @@
 
 ## 候補と証拠
 
+現在の候補は製品revision `b80e645`、`release/issue-47-normal-drag-diag/win-unpacked`。固定manifestは `../evidence/issue-47/normal-drag-diag-build.json`、最新の実測と未解決事項は[上下2画面・session9〜11](two-display-notice-20261030.md)。診断は起動引数でON/OFFを切り替え、通常経路の受入ではOFFを使う。以下のmain／初期同梱先は準備時の履歴であり、現在の候補ではない。
+
 - 製品ソース：main `64cdc61`（完全SHAと全同梱ファイルのSHA-256は `.tools/issue-47-candidate.json`）。製品変更後は新しい候補として影響ケースを再確認する。
 - 同梱先：`release/issue-47/win-unpacked`。公開・インストールは行わない。
 - 人工回帰：同じ同梱先で `node scripts/test/smoke.mjs --packaged --package-dir release/issue-47`。settings／activation／migration／comparisonも別結果として残す。

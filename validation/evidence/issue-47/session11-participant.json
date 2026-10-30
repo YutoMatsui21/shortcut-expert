@@ -1,0 +1,16 @@
+{
+  "revision": "b80e645",
+  "manifestSha256": "8fdefa1d6dbff47436f132e1b4d76fa8868af9e0287bcd5df8b083d49df5dd4f",
+  "nativeDiagnostics": true,
+  "participantReport": "All four cases completed and behaved as expected",
+  "trialPlan": [
+    "P02m-two-displays upper to lower",
+    "P02m-two-displays lower to upper",
+    "N02-return",
+    "N02-cancel"
+  ],
+  "machineEvidence": "Trials1/2: W02 mouse+1 and one notification each, MoveAccepted=1. Trial3: zero candidate/count/notice, MoveSameMonitor=1. Trial4: zero candidate/count/notice, DragNoSource=1 following cancellation.",
+  "originalFailure": "Session9 trial3 remains an unexplained non-reproduced zero-candidate failure. No adoption condition was changed by the diagnostic patch.",
+  "operatorFields": "Raw panel confirmations remain at defaults; this report is stored separately",
+  "acceptanceLimit": "Diagnostic-enabled real input only; not a full issue47 acceptance or an accuracy estimate"
+}

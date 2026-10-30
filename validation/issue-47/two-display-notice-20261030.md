@@ -39,3 +39,19 @@ session9 trial3はNative候補0件で原因不明。複合通知の修正で直�
 診断追加前に、採用自体は成立するが理由カテゴリがないためassertが失敗する回帰試験を確認。10条件で診断ON/OFFの候補同値と期待理由を照合する。新たな自然入力はこの診断を有効にした隔離試行で行い、通常移動の往復方向・戻し・Esc取消をまとめて切り分ける。原因確認前に採用条件を緩和しない。
 
 診断版検証：関連unit35件、Native全7件、型検査、helper build、同梱base smoke、保存受入17件が成功。新71カテゴリはC#/TS一致、診断ON/OFFの10条件採否同値を確認。専用ローカルレビューは4観点で追加指摘なし。manifestは `../evidence/issue-47/normal-drag-diag-build.json`。settings等の動作変更はなく、b47e75bでの5種smokeを履歴として保持するが新buildの全自然入力合格へ転記しない。
+
+
+## 単独mouse移動の再確認（session11）
+
+`b80e645`、固定hash `8fdefa1d6dbff47436f132e1b4d76fa8868af9e0287bcd5df8b083d49df5dd4f`、診断ON。4件すべて有効・期限内で完了。`../evidence/issue-47/session11-*.json`。
+
+- 上→下／下→上の通常drag：各1候補、W02 mouse+1、通知各1、`MoveAccepted=1`。本人も期待どおりと報告。
+- 同じdragで元画面へ戻す：候補・件数・通知0、`MoveSameMonitor=1`。
+- Esc取消：候補・件数・通知0、終端は`DragNoSource=1`。取消後の候補を採用しない。
+- 終了code0、read-only integrity_check=ok、hash不変、起動した同梱アプリ／helper残存0。
+
+session9 trial3の未記録は今回は再現しなかった。元のtrialにはNative診断がないため、原因を操作不足・不具合のどちらとも断定しない。診断追加による採用条件の変更はなく、修正で直ったとは扱わない。今回の診断ON成功を通常モードの全受入へ転記しない。
+
+次は同じ同梱build・診断OFFで8操作mouse/keyの16件と、ブラウザーのcaption double-click最大化／復元2件をまとめて確認する。W12は目視で番号を確認できる同じアプリ、他は保存不要のChromeまたはEdgeの通常窓を使い、panelのアプリカテゴリも対応させる。状態learning・pause/stopなし。各準備はIDLE中、ARM後の操作は各1回。窓全体が移動先に入った通常位置でW02を確認する。browserの1操作成功を全アプリ一般の精度へ一般化しない。
+
+この追記は実測原本・計画の文書のみ。本番動作変更がないためSkillの例外で追加コードレビュー・製品再buildは省略する。
