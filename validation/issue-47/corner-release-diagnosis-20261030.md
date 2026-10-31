@@ -93,3 +93,25 @@ session21と同じ製品revision `6d82358`／同じpackage manifest、通常obse
 - 正常終了code0、Main CLOSED/error=false、read-only SQLite integrity=ok、build hash不変、自身のapp/helper/panel残存0を確認。製品コード・buildを変更せず、同じ20件の再試行はしない。P03起点の回答に応じ、必要な2件だけを残る境界・負例とまとめる。
 
 本人の追加回答：P03mの直前の配置状態は覚えていない。起点はunknownのまま残し、準備ミスともarranged誤判定とも断定しない。次のバッチで未配置を明確に準備したP03m/P03kの2件だけを再確認する。本人はIssue Closeまで必要な作業を継続するよう指示した。未確認条件を成功へ付け替える承認ではなく、製品buildを変えず残る境界・負例・UI/環境受入を続ける。
+
+## 境界・負例20件（2026-10-31、session23）
+
+同じ製品6d82358・同じpackage hash、診断OFF。`../evidence/issue-47/session23-status.json` 等に原本を保持。20件全てvalid/completed、記録照合18/20、通知要求照合19/20。
+
+- P03m/P03kの明確な未配置起点での再試行は各W03 mouse/key1、mouse通知1／key通知0。本人も今回この2件の相違を報告しておらず、他は期待どおりと報告。以前の起点unknown・余分操作の原本は書き換えない。
+- S03-double、S04-double、通常／最大化起点の最小化、連続Win+Downは各1件で期待一致。11負例（Alt+Tab取消／元窓／同窓／tab切替、追加修飾、移動戻り／取消、配置取消、tab閉鎖、Win+Z、Win+Tab）は全て候補・記録・通知0。
+- S03-dragは候補0・記録0・通知要求0。本人は通知なしと報告。実際の最大化結果と解放位置は質問中であり、上端2px条件だけが原因と推測して変更しない。
+- S01-multiも候補0・記録0・通知0。本人の「それ以外は期待どおり」は窓の実結果の報告と分け、機械上の記録未達を隠さない。終了時に開始と異なる通常窓が前面になったか質問中。
+- 正常終了code0、Main CLOSED/error=false、read-only DB integrity=ok、hash不変、自身のapp/helper/panel残存0。パネルの初期確認欄は変更せず、一括本人報告はparticipant別添へ残す。
+
+この時点で製品修正・再buildをしない。2件の実操作条件を確認し、既存診断で区別できる失敗は同じbinaryの診断ONで確認する。既存診断だけで区別できないときだけ、必要な失敗境界の有界カテゴリを追加する。
+
+本人の追加回答：S03-dragは上端より手前の最大化previewで解放し、窓自体は最大化した。S01-multiも開始時と異なる通常窓が最後に前面になった。両方とも実結果に対する記録未達であり、操作結果不明や同窓戻りへ付け替えない。
+
+Microsoft SystemParametersInfoWのSPI_GETMOUSEDOCKTHRESHOLDはmouseのmonitor端docking閾値、SPI_GETDOCKMOVINGは上端・左右端を対象とする。上端にも公開getterの利用根拠がある一方、完全なWin11 preview領域やhysteresisを返すものではない。今回は先に採否を変えない診断を追加し、2px gate以外の起点／release／foreground不整合を区別する。
+
+session22を保存した3618b00以降の診断変更：上端最大化のrelease有無・monitor/work・起点・foreground・X範囲・上端距離の固定区分と、W01のAlt開始・Tab・解放・前面確認・取消／期限／最終結果・ターゲット適格性の固定理由を追加。既存の明示的診断起動だけで有効、通常起動はdelegate=null。判定・timeout・対象照合・allowlistは変更しない。HWND/PID/座標/窓名/キー列/時刻列を新たに保存しない。Native enumとMain allowlistを同期し、1000上限を維持する。
+
+診断追加の検証：型検査、関連unit32件、Native全7件（C#本番policy assertions626）、helper build、同梱base smoke、保存受入17件が成功。専用レビューは3618b00以降の全tracked/untracked差分を4観点で確認し、対応が必要な指摘なし。保存受入は初回にCLI引数形式を誤り既定pathのENOENTで起動前失敗、正しい `--package-dir=.../win-unpacked` で同一packageを再実行して成功した。これを製品の保存障害とは扱わない。NU1900警告は継続。
+
+Native全473ファイル一致、package全550ファイルを `../evidence/issue-47/max-switch-diag-build.json` に固定。同梱先 `release/issue-47-max-switch-diag/win-unpacked`。固定診断キーは185種類、0〜1000の厳格parseを維持。次は同一binaryの診断ONでChrome／Explorer各1回のS03-dragとS01-multi、計4件のみを比較する。現時点で未達2件は未解決。

@@ -1,0 +1,17 @@
+{
+  "source": "explicit user report after twenty trials",
+  "completedAll": true,
+  "panelInitialValuesPreserved": true,
+  "s03drag": {
+    "trial": 5,
+    "visibleNotification": "none",
+    "actualMaximizationAndRelease": "user confirms maximized; released when preview appeared before reaching edge"
+  },
+  "s01multi": {
+    "trial": 9,
+    "machineCounts": "zero",
+    "actualFinalWindow": "user confirms a different ordinary window became foreground"
+  },
+  "otherResults": "user reports expected for all cases other than S03-drag; this does not override S01 zero-record mismatch",
+  "keyEquivalence": "not separately confirmed"
+}

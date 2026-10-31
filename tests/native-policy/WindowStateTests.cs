@@ -9,6 +9,22 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (int gap in new[] { -1, 0, 2, 3, 8, 9, 32, 33, 64, 65 })
+            Check($"top release diagnostic is observational at {gap}", () => {
+                object? Run(bool diagnostics, List<WindowDiagnosticReason> reasons) {
+                    var tracker = Tracker(); if (diagnostics) tracker.Diagnostic = reasons.Add;
+                    tracker.Mouse(11, start, HTCAPTION, default, 0, 500, 0, false, true);
+                    tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                    return tracker.FinishMove(11, max, 5000, 11, "2026-10-31");
+                }
+                var reasons = new List<WindowDiagnosticReason>();
+                Equal(gap >= 0 && gap <= 2, Run(false, reasons) is WindowCandidate);
+                Equal(gap >= 0 && gap <= 2, Run(true, reasons) is WindowCandidate);
+                var bucket = gap < 0 ? WindowDiagnosticReason.MaxReleaseYBeforeTop : gap <= 2 ? WindowDiagnosticReason.MaxReleaseTopWithin2 :
+                    gap <= 8 ? WindowDiagnosticReason.MaxReleaseTop3To8 : gap <= 32 ? WindowDiagnosticReason.MaxReleaseTop9To32 :
+                    gap <= 64 ? WindowDiagnosticReason.MaxReleaseTop33To64 : WindowDiagnosticReason.MaxReleaseTopAbove64;
+                Equal(true, reasons.Contains(bucket));
+            });
         Check("child caption requires explicit HTCAPTION and same root/process; buttons retain priority", () => {
             Equal(HTCAPTION, WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true));
             Equal(1, WindowCaption.ResolveChildCaption(1, HTCAPTION, false, true));

@@ -6,7 +6,7 @@ using static NativeMethods;
 using Point = NativeMethods.Point;
 
 // Uses the existing message-thread hooks. No window identity or raw input crosses the protocol.
-internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int> transaction, Func<long> now) : IDisposable
+internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int> transaction, Func<long> now, Action<WindowDiagnosticReason>? diagnostic = null) : IDisposable
 {
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 50 };
     private WindowSwitchPolicy policy = new();
@@ -23,28 +23,29 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         Stop(); generation = epoch; Neutral(); timer.Tick += Tick; timer.Start();
     }
     internal void Stop()
-    { timer.Stop(); timer.Tick -= Tick; generation = 0; pendingTransaction = 0; shellProcess = 0; policy = new(); mouseDown = null; }
+    { timer.Stop(); timer.Tick -= Tick; generation = 0; pendingTransaction = 0; shellProcess = 0; policy = new() { Diagnostic = diagnostic }; mouseDown = null; }
     internal void Cancel() { policy.Cancel(); mouseDown = null; }
     private void Neutral() => policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
-    private static SwitchWindow? Read(nint window)
+    private static SwitchWindow? Read(nint window, Action<WindowDiagnosticReason>? note = null)
     {
         if (window == 0 || window == GetDesktopWindow() || window == GetShellWindow() ||
-            GetAncestor(window, GA_ROOT) != window || GetWindow(window, 4) != 0 || !IsWindowVisible(window) || IsIconic(window)) return null;
+            GetAncestor(window, GA_ROOT) != window || GetWindow(window, 4) != 0 || !IsWindowVisible(window) || IsIconic(window)) { note?.Invoke(WindowDiagnosticReason.W01ReadWindowRejected); return null; }
         var cls = new StringBuilder(256);
         if (GetClassNameW(window, cls, cls.Capacity) == 0 || cls.ToString() is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd" or
-            "Progman" or "WorkerW" or "XamlExplorerHostIslandWindow" or "MultitaskingViewFrame") return null;
+            "Progman" or "WorkerW" or "XamlExplorerHostIslandWindow" or "MultitaskingViewFrame") { note?.Invoke(WindowDiagnosticReason.W01ReadClassRejected); return null; }
         long style = GetWindowStyle(window, GWL_STYLE).ToInt64(), extended = GetWindowStyle(window, -20).ToInt64();
         if ((style & 0x40000000) != 0 || (style & WS_CAPTION) != WS_CAPTION || (extended & (0x80 | 0x08000000)) != 0 ||
-            DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked != 0) return null;
+            DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0 || cloaked != 0) { note?.Invoke(WindowDiagnosticReason.W01ReadStyleRejected); return null; }
         GetWindowThreadProcessId(window, out uint pid);
-        if (pid == 0 || pid == Environment.ProcessId || !Observer.OrdinaryProcess(pid)) return null;
+        if (pid == 0 || pid == Environment.ProcessId || !Observer.OrdinaryProcess(pid)) { note?.Invoke(WindowDiagnosticReason.W01ReadProcessRejected); return null; }
         try
         {
             using var process = Process.GetProcessById((int)pid);
             // Edge can expose tabs to Alt+Tab; HWND alone does not prove a window-level switch.
+            note?.Invoke(WindowDiagnosticReason.W01ReadAccepted);
             return new(window, pid, !process.ProcessName.Equals("msedge", StringComparison.OrdinalIgnoreCase));
         }
-        catch { return null; }
+        catch { note?.Invoke(WindowDiagnosticReason.W01ReadFailed); return null; }
     }
     private void Capture(bool wasPending, uint tick)
     {
@@ -55,7 +56,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         if (generation == 0) return;
         bool pending = policy.Pending;
         policy.Key(key, down, (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
-            key is 0x12 or 0xa4 or 0xa5 ? Read(GetForegroundWindow()) : null, now());
+            key is 0x12 or 0xa4 or 0xa5 ? Read(GetForegroundWindow(), diagnostic) : null, now());
         Capture(pending, tick);
     }
     internal void Mouse(nint message, Point point, uint flags, uint tick)
@@ -83,7 +84,7 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
 
         nint current = GetForegroundWindow();
         long at = now();
-        policy.NativeForeground(window, current, window == current ? Read(current) : null, inputTick, eventTime, at,
+        policy.NativeForeground(window, current, window == current ? Read(current, diagnostic) : null, inputTick, eventTime, at,
             window == current && KnownSwitcher(current), window == current && KnownSwitcher(current, staging: true));
     }
     private bool KnownSwitcher(nint window, bool staging = false)
@@ -93,10 +94,12 @@ internal sealed class WindowSwitchObserver(CandidateProtocol protocol, Func<int>
         if (GetClassNameW(window, cls, cls.Capacity) == 0) return false;
         GetWindowThreadProcessId(window, out uint pid);
         GetWindowThreadProcessId(GetShellWindow(), out uint shellPid);
-        if (!WindowSwitchPolicy.ShellHostUnchanged(shellProcess, shellPid)) { return false; }
-        return staging ? WindowSwitchPolicy.KnownStagingType(cls.ToString(), pid, shellPid) ||
+        if (!WindowSwitchPolicy.ShellHostUnchanged(shellProcess, shellPid)) { diagnostic?.Invoke(WindowDiagnosticReason.W01ShellHostChanged); return false; }
+        bool known = staging ? WindowSwitchPolicy.KnownStagingType(cls.ToString(), pid, shellPid) ||
             WindowSwitchPolicy.KnownHiddenSwitcherType(cls.ToString(), pid, shellPid, IsWindowVisible(window)) :
             WindowSwitchPolicy.KnownSwitcherType(cls.ToString(), pid, shellPid, IsWindowVisible(window));
+        if (!known) diagnostic?.Invoke(WindowDiagnosticReason.W01SwitcherUnknownType);
+        return known;
     }
     private void Tick(object? sender, EventArgs args)
     {

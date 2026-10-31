@@ -14,6 +14,33 @@ internal static class WindowSwitchTests
             p.Key(9, true, false, null, 10); p.Key(9, false, false, null, 20); return p;
         }
         void Foreground(WindowSwitchPolicy p, SwitchWindow? w, long at = 30) => p.Foreground(w?.Handle ?? 99, w?.Handle ?? 99, w, at, at);
+        foreach (string mode in new[] { "deadline", "unknown", "old-event", "same", "extra-key", "no-neutral" }) {
+            var reasons = new List<WindowDiagnosticReason>();
+            SwitchCompletion? Run(bool diagnostics) {
+                var p = new WindowSwitchPolicy(); if (diagnostics) p.Diagnostic = reasons.Add;
+                p.Neutral(mode != "no-neutral"); p.Key(0xa4, true, false, a, 0);
+                p.Key(9, true, false, null, 10); p.Key(9, false, false, null, 20);
+                p.Key(9, true, false, null, 25); p.Key(9, false, false, null, 26);
+                if (mode == "extra-key") p.Key(0x41, true, false, null, 27);
+                var target = mode == "same" ? a : b;
+                if (mode == "unknown") p.Foreground(99, 99, null, 30, 30);
+                else p.NativeForeground(target.Handle, target.Handle, target, 10, mode == "old-event" ? 9u : 30u, 30);
+                p.Key(0xa4, false, false, target, 40);
+                return p.Poll(target, 3500);
+            }
+            // The long poll exercises failure reasons; the next loop covers actual completion.
+            Check("diagnostic failure parity " + mode, Run(false) == Run(true));
+            Check("diagnostic reason observed " + mode, reasons.Contains(WindowDiagnosticReason.W01AltDown));
+            if (mode == "unknown") Check("unknown focus reason", reasons.Contains(WindowDiagnosticReason.W01ForegroundUnknown));
+            if (mode == "old-event") Check("old native focus reason", reasons.Contains(WindowDiagnosticReason.W01NativeEventOld));
+            if (mode == "no-neutral") Check("not ready reason", reasons.Contains(WindowDiagnosticReason.W01NotReady));
+        }
+        foreach (bool diagnostics in new[] { false, true }) {
+            var reasons = new List<WindowDiagnosticReason>(); var p = Key(); if (diagnostics) p.Diagnostic = reasons.Add;
+            Foreground(p, b); p.Key(0xa4, false, false, b, 40);
+            Check("diagnostic completed switch unchanged " + diagnostics, p.Poll(b, 340)?.Target == b);
+            Check("completion reason only opt-in " + diagnostics, reasons.Contains(WindowDiagnosticReason.W01Completed) == diagnostics);
+        }
         var mouse = Mouse(); Foreground(mouse, b); mouse.Mouse(0x202, b, null, false, false, 40);
         var result = mouse.Poll(b, 100); Check("direct click", result?.Origin == "mouse" && result.Target == b);
         Check("once", mouse.Poll(b, 150) is null);

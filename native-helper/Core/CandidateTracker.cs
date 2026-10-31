@@ -178,14 +178,23 @@ internal sealed class CandidateTracker
         if (State(after.Show) == "maximized")
         {
             Diagnostic?.Invoke(WindowDiagnosticReason.DragMaximizedResult);
-            if (released is null || released.Value.Monitor != after.Monitor ||
-                released.Value.Work != after.Work || after.Arranged != false ||
-                State(drag.Before.Show) != "normal" || drag.Before.Arranged != false || foreground != window) return null;
+            if (released is null) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseMissing); return null; }
             var r = released.Value;
+            if (r.Monitor != after.Monitor) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseMonitorMismatch); return null; }
+            if (r.Work != after.Work) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseWorkMismatch); return null; }
+            if (after.Arranged != false || State(drag.Before.Show) != "normal" || drag.Before.Arranged != false)
+                { Diagnostic?.Invoke(WindowDiagnosticReason.MaxStartInvalid); return null; }
+            if (foreground != window) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxForegroundMismatch); return null; }
+            long topGap = (long)r.Point.Y - r.Work.y;
+            Diagnostic?.Invoke(topGap < 0 ? WindowDiagnosticReason.MaxReleaseYBeforeTop : topGap <= 2 ? WindowDiagnosticReason.MaxReleaseTopWithin2 :
+                topGap <= 8 ? WindowDiagnosticReason.MaxReleaseTop3To8 : topGap <= 32 ? WindowDiagnosticReason.MaxReleaseTop9To32 :
+                topGap <= 64 ? WindowDiagnosticReason.MaxReleaseTop33To64 : WindowDiagnosticReason.MaxReleaseTopAbove64);
             // A narrow edge check is a conservative implementation boundary, not a claim
             // about Windows' Snap hit regions. Interior layout selections are excluded.
-            if (r.Point.X < r.Work.x || (long)r.Point.X >= (long)r.Work.x + r.Work.width ||
-                r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
+            if (r.Point.X < r.Work.x || (long)r.Point.X >= (long)r.Work.x + r.Work.width)
+                { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseXOutside); return null; }
+            if (r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
+            Diagnostic?.Invoke(WindowDiagnosticReason.MaxAccepted);
             if (drag.Before.Monitor != after.Monitor)
                 return StableMove(drag.Before, after) && drag.Matched && !drag.Injected && !drag.Conflicted
                     ? Compound(drag, after, "maximized") : null;

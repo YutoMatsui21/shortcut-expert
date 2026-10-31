@@ -31,7 +31,7 @@ internal sealed class Observer : IDisposable
         protocol = new CandidateProtocol(emit); this.fixture = fixture; this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
         taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
-        switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
+        switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, windowDiagnostic);
         closing = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
