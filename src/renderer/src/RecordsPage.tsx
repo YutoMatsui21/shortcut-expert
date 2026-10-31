@@ -4,18 +4,17 @@ import { learningOperations } from '../../shared/learning';
 import { localDate } from '../../core/dates';
 import { useCoach } from './useCoach';
 import { Icon } from './icons';
-import { MissingCoverageInfo } from './MissingCoverageInfo';
 import { learningState } from '../../shared/learning';
 import { SaveErrorBanner } from './SaveErrorBanner';
 
-const count = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP') + '回';
-const rate = (value: number | null | undefined) => value == null ? '—' : value.toFixed(1) + '%';
-const difference = (value: number | null | undefined, points = false) => value == null ? '—' :
+const count = (value: number | null | undefined) => value == null ? 'ー' : value.toLocaleString('ja-JP') + '回';
+const rate = (value: number | null | undefined) => value == null ? 'ー' : value.toFixed(1) + '%';
+const difference = (value: number | null | undefined, points = false) => value == null ? 'ー' :
   (value > 0 ? '+' : '') + (points ? value.toFixed(1) + 'pt' : value.toLocaleString('ja-JP'));
-function Comparison({ value, missing, label, points = false }: { value: number | null; missing: boolean; label: string; points?: boolean }) {
+function Comparison({ value, label, points = false }: { value: number | null; missing: boolean; label: string; points?: boolean }) {
   return <span className="comparison-value" aria-label={label}>
     <span data-comparison={points ? 'improvement' : 'count'} data-direction={points && value !== null ? Math.sign(value) : undefined}>{difference(value, points)}</span>
-    {missing && <MissingCoverageInfo label={label} />}
+
   </span>;
 }
 function RateBar({ value, primary = false }: { value: number | null; primary?: boolean }) {
@@ -71,7 +70,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
           <option value="rate">キー率が低い順</option><option value="mouse">マウス操作が多い順</option><option value="improvement">改善が大きい順</option><option value="key">キー操作が多い順</option><option value="total">操作回数が多い順</option>
         </select></label><span className="record-period">{model ? model.from + ' 〜 ' + model.to : '読み込み中'}</span></div>
       {model?.summary.total === null && <p className="records-empty" role="status">{model.rows.length === 0 ? '集計対象の操作はありません。' : 'この期間の記録はありません。'}</p>}
-      <table className="record-table"><thead><tr><th>操作</th><th>ショートカット</th><th>キー率 <RateHelp /></th><th>前期間比</th></tr></thead>
+      <table className="record-table"><thead><tr><th>操作</th><th>ショートカット</th><th>キー率 <RateHelp /></th><th>前期間比 <span className="help" tabIndex={0} role="note" aria-label="前期間比について"><Icon name="imgInfoIcon" /><span className="tooltip">直前の7日間との差です。</span></span></th></tr></thead>
         <tbody>{model?.rows.map(row => {
           const operation = learningOperations.find(operation => operation.id === row.id)!;
           return <tr key={operation.id} data-operation={operation.id}>
@@ -82,13 +81,12 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
             <td className="record-rate"><span className="compact-rate-label">キー率 </span><span>{row.total === 0 ? '記録なし' : rate(row.rate)}</span>
               {row.total !== null && row.total > 0 && <span className="record-fraction">（{row.key}/{row.total}）</span>}
               <RateBar value={row?.barRate ?? null} />
-              <span className="visually-hidden">マウス <span data-kind="mouse">{row?.mouse ?? '—'}</span>回、キー <span data-kind="key">{row?.key ?? '—'}</span>回</span>
+              <span className="visually-hidden">マウス <span data-kind="mouse">{row?.mouse ?? 'ー'}</span>回、キー <span data-kind="key">{row?.key ?? 'ー'}</span>回</span>
             </td>
             <td className="record-comparison"><Comparison value={row.comparison.improvement} missing={row.comparison.hasMissingCoverage} label={operation.label + 'の前期間比'} points /></td>
           </tr>;
         })}</tbody>
       </table>
-      <p className="footnote">取得した記録を表示しています。観測の根拠がない項目と率の分母が0の比較は「—」です。前期間比は直前の{query.period}日間との差です。欠測の0埋めや時間補正は行いません。11操作とも検出精度は未検証です。</p>
     </main>
   </div>;
 }

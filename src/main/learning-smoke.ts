@@ -67,7 +67,7 @@ export async function runLearningSmoke(window: BrowserWindow) {
         background: getComputedStyle(document.querySelector('.learning-row')).backgroundColor };
     })()`);
     assert.equal(geometry.title.height, 32); assert.equal(geometry.nav.width, 48);
-    assert.deepEqual(geometry.groups, [2, 2, 3, 1]); assert.equal(geometry.ready, 8);
+    assert.deepEqual(geometry.groups, [2, 2, 3, 1]); assert.equal(geometry.ready, 0);
     assert.deepEqual(geometry.assets, []); assert.ok(geometry.fonts.noto && geometry.fonts.inter, JSON.stringify(geometry.fonts)); assert.equal(geometry.overflow, false);
     assert.equal(Math.round(geometry.content.width), Math.min(width - 248, 872));
     assert.equal(Math.round(geometry.content.x), width < 1360 ? 148 : 268);

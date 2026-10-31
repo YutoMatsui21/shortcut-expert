@@ -33,9 +33,9 @@ export async function runMigrationSmoke({ coach, window, repository }: {
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'all');
     select.dispatchEvent(new Event('change', {bubbles:true}));
   })()`);
-  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='—' &&
+  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='ー' &&
     document.querySelector('[data-operation="W09"]')===null &&
-    document.querySelector('[data-kpi="key"]')?.textContent==='—'`, 'migration-renderer');
+    document.querySelector('[data-kpi="key"]')?.textContent==='ー'`, 'migration-renderer');
   assert.equal(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'),
     '  {"schemaVersion":1,"days":{"2020-01-02":{"W03":{"mouse":7,"key":5},"W09":{"mouse":100,"key":100}}}}\n');
   return { fixtureOnly: true, migratedRows: true, legacyUnknown: true, excludedRetained: true,

@@ -11,7 +11,7 @@ const states: { value: LearningState; label: string; icon: IconName }[] = [
 ];
 export function LearningSummary({ model }: { model?: LearningReadModel }) {
   return <div className="learning-summary">{states.map(state => <span key={state.value} className={'status ' + state.value}>
-    <Icon name={state.icon} />{state.label} <span>{model ? model.rows.filter(row => row.state === state.value).length : '—'}</span>
+    <Icon name={state.icon} />{state.label} <span>{model ? model.rows.filter(row => row.state === state.value).length : 'ー'}</span>
   </span>)}</div>;
 }
 export function LearningPage({ model, collapsed, toggle, busy, change }: { model?: LearningReadModel; collapsed: number[]; toggle(group: number): void;
@@ -26,15 +26,14 @@ export function LearningPage({ model, collapsed, toggle, busy, change }: { model
         const state = states.find(state => state.value === row?.state) ?? states[0];
         return <div className="learning-row" key={operation.id} data-learning-operation={operation.id}>
           <div className="operation-copy"><div className="operation-label">{operation.label}</div><div className="rate-line">
-            <span className="key-rate">キー率：{row?.rate == null ? '—' : row.rate.toFixed(1) + '%'} {row?.total == null ? '記録なし' : `（${row.key}/${row.total}）`}</span>
-            <span className="help" tabIndex={0} role="note" aria-label="キー率の計算方法"><Icon name="imgHelpIconHover" /><span className="tooltip">直近7日間のキー操作回数 ÷（キー操作回数＋マウス操作回数）。記録なしと0%は区別します。</span></span>
-            <span className="availability">準備中</span>
+            <span className="key-rate">キー率：{row?.rate == null ? 'ー' : row.rate.toFixed(1) + '%'} {row?.total == null ? '記録なし' : `（${row.key}/${row.total}）`}</span>
+
           </div></div>
           <div className="shortcut-keys" aria-label={operation.hint ?? operation.keys.join(' + ')} title={operation.hint}>
             {operation.keys.map((key, i) => <Fragment key={key}>{i > 0 && <span className="key-plus">+</span>}<kbd>{key}</kbd></Fragment>)}
           </div>
           <span className={'status row-status ' + state.value}>
-            <Icon name={state.icon} /><span>{row ? state.label : '—'}</span><Icon name="imgChevronVector1" />
+            <Icon name={state.icon} /><span>{row ? state.label : 'ー'}</span><Icon name="imgChevronVector1" />
             <select aria-label={operation.label + 'の学習状態'} value={state.value} disabled={busy || !row} onChange={event => {
               const value = event.target.value; if (isLearningState(value)) void change(operation.id, value);
             }}>{states.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
