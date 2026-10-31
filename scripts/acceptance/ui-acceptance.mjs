@@ -8,7 +8,7 @@ import { packageManifest, waitForUiAcceptance } from './ui-acceptance-runtime.mj
 const option = process.argv.indexOf('--package-dir');
 if (option < 0 || !process.argv[option + 1]) throw new Error('Pass --package-dir release/<build>');
 const packageDirectory = resolve(process.argv[option + 1], 'win-unpacked');
-const executable = join(packageDirectory, 'Window Shortcut Coach.exe');
+const executable = join(packageDirectory, 'Shortcut Expert.exe');
 const environment = developmentEnvironment();
 mkdirSync(resolve('.tools/tests'), { recursive: true });
 const directory = mkdtempSync(join(resolve('.tools/tests'), 'ui-acceptance-'));

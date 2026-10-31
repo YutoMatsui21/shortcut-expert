@@ -1,5 +1,5 @@
 appId: local.window-shortcut-coach
-productName: Window Shortcut Coach
+productName: Shortcut Expert
 directories:
   output: release
 files:
@@ -23,4 +23,4 @@ nsis:
   runAfterFinish: false
   deleteAppDataOnUninstall: false
   createStartMenuShortcut: true
-  shortcutName: Window Shortcut Coach
+  shortcutName: Shortcut Expert

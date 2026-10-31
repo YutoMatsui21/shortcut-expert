@@ -8,6 +8,8 @@
 - 最小化はタスクバー、最大化ボタンは最大化／復元、`×`は**hideのみ**でバックグラウンド計測を継続する。最大化状態は非永続のsnapshotで表示へ通知する。
 - トレイ／通知／`second-instance`は共通`showCoach`で**同じ窓**を復元→位置補正→表示→前面化する。初期化中の表示要求は窓の準備完了後に反映する。
 
+- 手動cold起動では保存済み`settings.opened`にかかわらず毎回一覧を表示する。表示要求は初期化前に共通`showCoach`へ渡し、初期化完了後に反映する。表示／非表示で計測状態を変えない。サインイン時の非表示自動起動は別Issueで扱う。
+
 ## 2. 位置・サイズの永続化
 
 | 状況 | 設計上の約束 |
@@ -42,3 +44,9 @@
 - **未合格のV03**：自前の最大化ボタンによる標準Snap Layoutのhover表示は未実証。実トレイ操作・別プロセス二重起動・混在DPI／画面着脱・再起動後bounds保持も同一配布buildで検証が必要。CSSのdrag／no-dragや最大化成功だけでOSのSnap UI対応と判断しない。
 
 詳しい16サイズの証拠・未確認条件は[V03 UI受入台帳](https://github.com/YutoMatsui21/shortcut-expert/issues/46)。実OS操作の試験は本人の明示同意後に実施する。
+
+## 5. 配布名と互換性
+
+- NSISインストーラー、exe、スタートメニュー、インストール済みアプリの表示名は`Shortcut Expert`。`runAfterFinish: false`は維持する。
+- `package.json`の`name: window-shortcut-coach`、`appId`／AUMID `local.window-shortcut-coach`を維持する。ElectronのuserDataはpackage name由来の既存保存先を使い、表示名変更で移動・削除しない。NSISの識別も同じappIdを使う。
+- 自動fixtureは起動要求・同一窓復元・隔離保存先を検証する。Windows 11のインストール済みNSIS版で、旧版からの再導入、表示名、初回／再cold起動、×後の別プロセス起動、通知センターからの起動、既存記録・学習設定の保全を別途確認する。未実施を自動試験成功で代替しない。
