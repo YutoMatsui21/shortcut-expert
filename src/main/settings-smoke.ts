@@ -73,6 +73,19 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
     assert.deepEqual({pendingFocusGear,navFocusRetained,maximizeFocusRetained},
       {pendingFocusGear:true,navFocusRetained:true,maximizeFocusRetained:true});
   } finally { repository.saveSettings = saveSettings; }
+  await open();
+  await state('Windowsへのサインイン時に起動', false);
+  await js(`${control('Windowsへのサインイン時に起動')}.focus()`); await key('Space');
+  await state('Windowsへのサインイン時に起動', true);
+  await waitForLearning(window, `document.activeElement === ${control('Windowsへのサインイン時に起動')}`);
+  assert.equal(snapshot().observing, true, 'login preference does not change measurement');
+  await key('Enter'); await state('Windowsへのサインイン時に起動', false);
+  await command('stop');
+  assert.equal((await js('window.coach.getSnapshot()')).loginStartup.available, true);
+  assert.equal((await js("window.coach.setLearningState('W12', 'mastered')")).loginStartup.available, true);
+  await js("window.coach.setLearningState('W12', 'learning')");
+  await command('start');
+  await key('Escape'); await closed();
   const sizes = [];
   for (const width of [800, 920, 1120, 1360]) {
     window.setContentSize(width, 600);
@@ -88,11 +101,13 @@ export async function runSettingsSmoke(window: BrowserWindow, snapshot: () => Sn
         const panel = document.querySelector('.settings-popover').getBoundingClientRect();
         const gear = ${gear}.getBoundingClientRect();
         const img = ${control('通知')}.querySelector('img');
-        return {x:panel.x,y:panel.y,width:panel.width,height:panel.height,right:panel.right,
+        const deletion = document.querySelector('.settings-delete').getBoundingClientRect();
+        return {x:panel.x,y:panel.y,width:panel.width,height:panel.height,right:panel.right,bottom:panel.bottom,deleteBottom:deletion.bottom,
           gearRight:gear.right, viewport:innerWidth, image:img.complete && img.naturalWidth > 0,
           switchWidth:img.getBoundingClientRect().width, switchHeight:img.getBoundingClientRect().height};
       })()`);
-      assert.equal(geometry.width, 330); assert.equal(geometry.height, 262); assert.equal(geometry.y, 39);
+      assert.equal(geometry.width, 330); assert.ok(geometry.height >= 330); assert.equal(geometry.y, 39);
+      assert.ok(geometry.bottom <= 600 && geometry.deleteBottom <= geometry.bottom, 'all settings fit in the minimum viewport');
       assert.equal(geometry.right, geometry.gearRight); assert.ok(geometry.x >= 0 && geometry.right <= width);
       assert.ok(geometry.image); assert.equal(geometry.switchWidth, 38); assert.equal(geometry.switchHeight, 22);
       sizes.push({ requestedWidth: width, page, ...geometry });

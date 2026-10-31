@@ -17,6 +17,7 @@ import { runNotificationAcceptance } from './notification-acceptance';
 import { runUiAcceptance } from './ui-acceptance';
 import { runNaturalInputAcceptance, runTrialControl } from './natural-input-acceptance';
 import { FinalInputTrials } from './final-input-trials';
+import { loginItemName } from './login-startup';
 
 type ValidationContext = {
   coach: DurableCoach; observer: ObserverClient;
@@ -37,6 +38,15 @@ export class ValidationRuntime {
   private noticeEvents: EventEmitter[] = [];
   private mode: StartupMode;
   constructor(mode: StartupMode) { this.mode = mode; }
+  get loginApi() {
+    if (!this.mode.fixture) return undefined;
+    // Replace only the Windows registration boundary; never touch the real Run key.
+    let enabled = false;
+    return {
+      getLoginItemSettings: (options: { path: string; args: string[] }) => ({ openAtLogin: false, launchItems: enabled ? [{ name: loginItemName, scope: 'user', enabled, ...options }] : [] }),
+      setLoginItemSettings: (value: { openAtLogin: boolean }) => { enabled = value.openAtLogin; }
+    };
+  }
   get canStartObservation() { return this.mode.naturalOperation === null || this.naturalArming; }
   capabilities(): Capability[] { return this.mode.fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : []; }
   activated() { if (this.mode.osAcceptance) console.log('V01_ACTIVATION instance'); }
@@ -103,7 +113,7 @@ export class ValidationRuntime {
       try {
         report = await Promise.race([
           activation ? runActivationSmoke({ window, snapshot: () => coach.snapshot(), command, activate: showCoach,
-          failed: activationFailure, notifications: standardNotices, notificationEvents: this.noticeEvents }) : mode.settings ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparison ? runRecordsComparisonSmoke(window) : migration ? runMigrationSmoke({ coach, window, repository }) : runStorageSmoke({ coach, observer, window, repository, workerPath: context.workerPath,
+          failed: activationFailure, stopped: mode.activationStopped, background: mode.background, notifications: standardNotices, notificationEvents: this.noticeEvents }) : mode.settings ? runSettingsSmoke(window, () => coach.snapshot(), command, repository, coach) : comparison ? runRecordsComparisonSmoke(window) : migration ? runMigrationSmoke({ coach, window, repository }) : runStorageSmoke({ coach, observer, window, repository, workerPath: context.workerPath,
             verifyNotifications: async sample => {
               await stopObservation();
               const generation = await observer.start(); coach.begin(generation); coach.pauseNotifications(false);

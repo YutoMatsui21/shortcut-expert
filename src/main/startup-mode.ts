@@ -9,15 +9,17 @@ export function startupMode(argv: readonly string[]) {
   const naturalOperation = naturalInputOperation(argv);
   const activation = fixture && argv.includes('--activation-smoke');
   return {
+    background: !fixture ? argv.includes('--login-startup') : activation && argv.includes('--login-startup-smoke'),
     fixture, osAcceptance, uiAcceptance, naturalOperation,
     windowDiagnostics: !fixture && naturalOperation === 'ALL' && argv.includes('--caption-diagnostics'),
     validation: fixture || naturalOperation !== null,
     migration, activation,
     activationFailure: activation && argv.includes('--activation-failure-smoke'),
+    activationStopped: activation && argv.includes('--activation-stopped-smoke'),
     comparison: fixture && argv.includes('--comparison-smoke'),
     settings: argv.includes('--settings-smoke'),
     uiExit: argv.includes('--ui-acceptance-exit'),
-    get showTray() { return !fixture || osAcceptance || uiAcceptance; },
+    get showTray() { return !fixture || osAcceptance || uiAcceptance || (activation && argv.includes('--login-startup-smoke')); },
     get systemNotifications() { return !fixture || osAcceptance; }
   };
 }

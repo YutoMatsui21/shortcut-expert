@@ -17,6 +17,7 @@ win:
       arch:
         - x64
 nsis:
+  include: build/installer.nsh
   oneClick: true
   perMachine: false
   allowElevation: false

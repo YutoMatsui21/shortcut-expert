@@ -39,7 +39,8 @@ export type CandidateV2 = {
 export type ObserverCandidate = CandidateV2;
 export type Counts = Record<string, Partial<Record<OperationId, { mouse: number; key: number }>>>;
 export type LearningState = 'learning' | 'mastered' | 'excluded';
-export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>>; normalBounds?: Bounds };
+export type Settings = { muted: OperationId[]; opened: boolean; states?: Partial<Record<OperationId, LearningState>>; normalBounds?: Bounds; recordingEnabled?: boolean };
+export type LoginStartupState = { available: boolean; enabled: boolean; error: string | null };
 export type SnapshotErrorKind = 'record-save' | 'settings-save' | 'storage' | 'clock' | 'observer';
 export type Snapshot = {
   counts: Counts; settings: Settings;
@@ -47,6 +48,7 @@ export type Snapshot = {
   observing: boolean; notificationsPaused: boolean;
   error: string | null; errorKind?: SnapshotErrorKind | null; pendingSave: boolean; canRetrySave?: boolean;
   windowMaximized?: boolean;
+  loginStartup?: LoginStartupState;
   stateVersion?: number;
 };
 export type ShortcutNoticeItem = { operation: OperationId; label: string; shortcut: string };
@@ -57,7 +59,7 @@ export type CoachBridge = {
   windowCommand(command: 'minimize' | 'maximize' | 'hide'): Promise<void>;
   getRecords?(from: string, to: string): Promise<import('./storage.ts').RecordRange>;
   getSnapshot(): Promise<Snapshot>;
-  command(command: 'pause-notifications' | 'resume-notifications' | 'stop' | 'start' | 'retry-save' | 'quit'): Promise<Snapshot>;
+  command(command: 'pause-notifications' | 'resume-notifications' | 'stop' | 'start' | 'retry-save' | 'quit' | 'enable-startup' | 'disable-startup'): Promise<Snapshot>;
   setLearningState(operation: OperationId, state: LearningState): Promise<Snapshot>;
   requestDelete(): Promise<string>;
   cancelDelete(token: string): Promise<void>;

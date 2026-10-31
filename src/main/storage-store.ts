@@ -16,7 +16,8 @@ const integer = (n: number) => Number.isSafeInteger(n) && n >= 0;
 function validateSettings(settings: Settings): void {
   check(settings && typeof settings === 'object' && !Array.isArray(settings) && typeof settings.opened === 'boolean' &&
     Array.isArray(settings.muted) && settings.muted.every(id => ids.includes(id)) &&
-    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened', 'states', 'normalBounds'].includes(k)) &&
+    new Set(settings.muted).size === settings.muted.length && Object.keys(settings).every(k => ['muted', 'opened', 'states', 'normalBounds', 'recordingEnabled'].includes(k)) &&
+    (settings.recordingEnabled === undefined || typeof settings.recordingEnabled === 'boolean') &&
     (settings.normalBounds === undefined || isNormalBounds(settings.normalBounds)), 'INVALID_SETTINGS');
   if (settings.states !== undefined) check(settings.states && typeof settings.states === 'object' && !Array.isArray(settings.states) &&
     Object.entries(settings.states).every(([id, state]) => ids.includes(id) && ['learning', 'mastered', 'excluded'].includes(state)), 'INVALID_STATES');

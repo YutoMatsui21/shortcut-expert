@@ -30,11 +30,11 @@ test('identity and global activation precede initialization; cold and second-ins
   assert.deepEqual(calls, []);
   ready.resolve(); await started.promise;
   assert.deepEqual(calls, ['local.window-shortcut-coach', 'activation', 'presenter', 'run']);
-  activate?.(); app.emit('second-instance');
+  activate?.(); app.emit('second-instance', {}, [], '');
   assert.equal(displays, 4);
   assert.equal(calls.filter(value => value === 'run').length, 1, 'callbacks cannot start another helper or observation');
   initialized.resolve(); await Promise.resolve();
-  activate?.(); app.emit('second-instance');
+  activate?.(); app.emit('second-instance', {}, [], '');
   assert.equal(displays, 6, 'late COM activation still shows the existing window');
   assert.equal(calls.filter(value => value === 'run').length, 1);
   app.emit('will-quit');

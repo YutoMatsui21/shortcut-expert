@@ -2,6 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startupMode } from '../src/main/startup-mode.ts';
 
+test('sign-in startup is an explicit background route; fixture and manual entries remain separate', () => {
+  assert.equal(startupMode([]).background, false);
+  assert.equal(startupMode(['--login-startup']).background, true);
+  assert.equal(startupMode(['--coach-smoke', '--login-startup']).background, false);
+});
+
 test('native caption diagnostics are separately opt-in; final acceptance defaults to the normal observer', () => {
   for (const argv of [[], ['--caption-diagnostics'], ['--final-natural-acceptance'], ['--w01-natural-acceptance', '--caption-diagnostics'],
     ['--coach-smoke', '--final-natural-acceptance', '--caption-diagnostics']]) assert.equal(startupMode(argv).windowDiagnostics, false);

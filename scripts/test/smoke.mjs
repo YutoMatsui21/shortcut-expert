@@ -41,8 +41,10 @@ if (comparison) {
     [day(7)]:{W04:{mouse:2,key:0},W07:{mouse:1,key:0},W11:{mouse:1,key:1}}
   }}));
 }
-for (let boot = 0; boot < (activation ? 3 : migration ? 2 : 1); boot++) {
-const result = spawnSync(executable, activation && boot === 2 ? [...args, '--activation-failure-smoke'] : args, {
+for (let boot = 0; boot < (activation ? 5 : migration ? 2 : 1); boot++) {
+const bootArgs = !activation || boot === 0 ? args : boot === 4 ? [...args, '--activation-failure-smoke'] : boot === 3 ? [...args, '--login-startup-smoke'] :
+  [...args, '--activation-stopped-smoke', ...(boot === 2 ? ['--login-startup-smoke'] : [])];
+const result = spawnSync(executable, bootArgs, {
   // STARTUPINFO's hidden show state overrides the first ShowWindow on Windows.
   // Activation checks must observe the app's actual initial display request.
   encoding: 'utf8', windowsHide: !activation, timeout: 30_000,

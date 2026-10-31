@@ -14,6 +14,41 @@ import type { Candidate } from './support/fixtures.ts';
 import { v2Fixture } from './support/fixtures.ts';
 
 const worker = resolve('src/main/storage-worker.ts');
+test('explicit measurement preference survives reopen and deletion independently of notification pause', async t => {
+  const h = await fixture(t);
+  h.coach.pauseNotifications(true);
+  await h.coach.setRecordingEnabled(false);
+  assert.equal(h.coach.snapshot().observing, false);
+  await h.coach.deleteCounts(); await h.coach.opened();
+  await h.coach.initialize(); h.coach.begin(2);
+  assert.equal(h.coach.snapshot().observing, false, 'saved stop blocks automatic observation');
+  assert.equal((await h.repository.load('2026-10-19')).settings.recordingEnabled, false);
+  await h.coach.setRecordingEnabled(true); h.coach.begin(3);
+  assert.equal(h.coach.snapshot().observing, true);
+  assert.equal(h.coach.snapshot().notificationsPaused, true);
+  await h.repository.close();
+  const reopened = new SqliteRepository(h.root, worker);
+  try {
+    const state = await reopened.load('2026-10-19');
+    assert.equal(state.settings.recordingEnabled, true);
+    await assert.rejects(reopened.saveSettings({ ...state.settings, recordingEnabled: 'yes' } as never));
+    assert.equal((await reopened.load('2026-10-19')).settings.recordingEnabled, true);
+  } finally { await reopened.close(); }
+});
+test('failed stop save stops immediately, keeps pending preference and retry never restarts measurement', async t => {
+  const h = await fixture(t), save = h.repository.saveSettings.bind(h.repository);
+  h.repository.saveSettings = async () => { throw new Error('fixture save failure'); };
+  await h.coach.setRecordingEnabled(false);
+  assert.equal(h.coach.snapshot().observing, false);
+  assert.equal(h.coach.snapshot().pendingSave, true);
+  assert.equal(h.coach.snapshot().errorKind, 'settings-save');
+  h.coach.begin(2); assert.equal(h.coach.snapshot().observing, false);
+  h.repository.saveSettings = save; await h.coach.retrySave();
+  assert.equal(h.coach.snapshot().error, null);
+  assert.equal(h.coach.snapshot().observing, false);
+  await h.coach.initialize(); h.coach.begin(3);
+  assert.equal(h.coach.snapshot().observing, false);
+});
 test('normal bounds persist via the real worker, preserve learning settings and survive delete/reopen', async t => {
   const h = await fixture(t);
   const bounds = { x: -1200, y: 80, width: 1000, height: 650 };
