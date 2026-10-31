@@ -9,7 +9,7 @@ export function startupMode(argv: readonly string[]) {
   const naturalOperation = naturalInputOperation(argv);
   const activation = fixture && argv.includes('--activation-smoke');
   return {
-    background: !fixture ? argv.includes('--login-startup') : activation && argv.includes('--login-startup-smoke'),
+    background: !fixture ? argv.includes('shortcut-expert-login-startup') || argv.includes('--login-startup') : activation && argv.includes('--login-startup-smoke'),
     fixture, osAcceptance, uiAcceptance, naturalOperation,
     windowDiagnostics: !fixture && naturalOperation === 'ALL' && argv.includes('--caption-diagnostics'),
     validation: fixture || naturalOperation !== null,

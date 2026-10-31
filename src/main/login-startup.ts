@@ -2,7 +2,9 @@ import type { LoginStartupState } from '../shared/coach.ts';
 
 // Stable registry value, shared with the NSIS uninstall hook.
 export const loginItemName = 'Shortcut Expert';
-export const loginItemArgs = ['--login-startup'];
+// Electron's launchItems.args excludes switches; use a positional marker so
+// readback can verify the background route rather than assuming it.
+export const loginItemArgs = ['shortcut-expert-login-startup'];
 type LoginApi = {
   getLoginItemSettings(options: { path: string; args: string[] }): { launchItems: { name: string; scope: string; enabled: boolean; path: string; args: string[] }[] };
   setLoginItemSettings(options: { openAtLogin: boolean; name: string; path: string; args: string[]; enabled: boolean }): void;

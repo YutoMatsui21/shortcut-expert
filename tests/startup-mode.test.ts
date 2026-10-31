@@ -5,6 +5,7 @@ import { startupMode } from '../src/main/startup-mode.ts';
 test('sign-in startup is an explicit background route; fixture and manual entries remain separate', () => {
   assert.equal(startupMode([]).background, false);
   assert.equal(startupMode(['--login-startup']).background, true);
+  assert.equal(startupMode(['shortcut-expert-login-startup']).background, true);
   assert.equal(startupMode(['--coach-smoke', '--login-startup']).background, false);
 });
 

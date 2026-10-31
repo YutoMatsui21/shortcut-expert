@@ -2,6 +2,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LoginStartup, loginItemName, loginItemArgs } from '../src/main/login-startup.ts';
 
+test('Electron readback retains the login marker and excludes command-line switches', () => {
+  let stored: string[] = [];
+  const path = 'C:\\Program Files\\Shortcut Expert\\Shortcut Expert.exe';
+  const startup = new LoginStartup({
+    getLoginItemSettings() {
+      return { launchItems: stored.length ? [{ name: loginItemName, scope: 'user', enabled: true, path,
+        args: stored.filter(value => !value.startsWith('--')) }] : [] };
+    },
+    setLoginItemSettings(options) { stored = options.openAtLogin ? options.args : []; }
+  }, path);
+  assert.equal(startup.set(true).enabled, true);
+  assert.equal(startup.read().enabled, true);
+  assert.deepEqual(stored, ['shortcut-expert-login-startup']);
+});
+
 test('reads a registered executable in a path containing spaces and preserves OS-disabled approval', () => {
   const path = 'C:\\Program Files\\Shortcut Expert\\Shortcut Expert.exe';
   let registered = false, approved = true, writes = 0;
