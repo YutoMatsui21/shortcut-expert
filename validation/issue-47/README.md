@@ -125,3 +125,7 @@ session13では既存診断で復元のヒット判定上書きを確認した�
 ## C07の解放イベント比較
 
 [session18と解放位置の診断](corner-release-diagnosis-20261030.md)。Chromeはquarter形状が成立していてもside解放が32px超で棄却、Explorerは2px以内で成立。本人はカーソルを左上端に当てたと明示したため、採否を変えずイベント・物理カーソル・一時的なmotion extremaを比較する。追加診断同梱先は `release/issue-47-release-probe/win-unpacked`、固定manifestは `../evidence/issue-47/release-probe-build.json`。
+
+## OS閾値修正後の四隅受入
+
+現在の製品候補は `6d82358`、同梱先 `release/issue-47-os-dock/win-unpacked`。固定manifestは `../evidence/issue-47/os-dock-build.json`。前掲のb80e645等は過去の候補であり、現在の候補へ成功を転記しない。[session21の6件](corner-release-diagnosis-20261030.md)では、Chrome早期preview解放4状態、Explorer実端解放、中央Snap Layout負例の記録・通知要求と本人報告が全て期待一致。正常終了・DB整合性・hash不変を確認。全体の同一最終build受入は引き続き未完了。

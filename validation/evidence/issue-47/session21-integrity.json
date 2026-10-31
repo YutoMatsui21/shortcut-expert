@@ -1,0 +1,11 @@
+{
+  "readOnly": true,
+  "integrity": [
+    {
+      "integrity_check": "ok"
+    }
+  ],
+  "buildHashUnchanged": true,
+  "nativeDiagnostics": false,
+  "ownProcessesRemaining": 0
+}

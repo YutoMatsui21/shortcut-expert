@@ -62,3 +62,22 @@ session19の終了はcode=null／SIGTERM、最終Main statusはCLOSED/error=true
 回帰試験は修正前に33〜64pxの拒否をassertで再現し、OS値64なら33/64を採用・65/500を拒否するようになった。関連unit57件、型検査、Native全7件、helper build成功。取得失敗／不正値のfallbackと設定変更時の棄却、DPI context復元、compoundの全体確定／全体棄却を検証済み。修正後の自然入力は未実施。
 
 同梱確認：Native 473ファイル全一致、package全550ファイルを固定。manifest `../evidence/issue-47/os-dock-build.json`、SHA256 `26418e6053b6d677bed245f4b2f49c57cb4fcadb39a4cd47afa04fb735598cf7`。同梱base/settings/activation/migration/comparison smoke、保存受入17件も成功（fixtureの結果）。0d4618f以降の全変更を専用reviewerが4観点で確認し、対応が必要な指摘なし。OS設定値を使った修正後の自然入力・mixed-DPIは未確認。NU1900警告あり。
+
+## 修正後の自然入力（2026-10-31、session21）
+
+製品revision `6d82358`、通常observer（Native診断OFF）、OS閾値64を使う同梱版。manifestは `../evidence/issue-47/os-dock-build.json` と一致。前日に開いたsession20は試行0で正常終了し、受入結果には数えない。
+
+本人が6件全て期待どおりだったと報告。session21原本は `../evidence/issue-47/session21-status.json` 等に保持し、パネルの未選択初期値（not-observed／not-seen）は書き換えず、後の本人確認をparticipant別添へ保存した。代替キー同等性は今回未試験。
+
+| 試行 | 入力／状態（W02／W07） | 記録 | 通知要求 |
+| --- | --- | --- | --- |
+| 1 | Chrome早期preview解放、learning／learning | W02/W07各mouse1 | 1件、2行 |
+| 2 | 同、learning／excluded | 同 | 1件、W02のみ |
+| 3 | 同、excluded／learning | 同 | 1件、W07のみ |
+| 4 | 同、excluded／mastered | 同 | 0 |
+| 5 | Explorer実端解放、learning／learning | 同 | 1件、2行 |
+| 6 | Chrome上部中央のSnap Layout選択 | 0 | 0 |
+
+全6件valid/completed、期限切れ・中断・日付変更なし。通知可視結果と窓の結果は本人の一括報告で期待一致。Main CLOSED/error=false、exit code0、read-only SQLite integrity=ok、build hash不変。停止後の当該app／helper／panelの残存0も確認した。session19の異常終了原本は消さず、今回の正常終了で以前の原因が判明したとは扱わない。
+
+今回で早期preview解放と代表状態混在の未達は解消したが、#47全体の同一最終buildによる基本16操作・重要境界・pause/stop・UI/環境条件は未完了。以前のbuildの成功を転記せず、必要な影響範囲と残る受入を次にまとめて整理する。6d82358のwindows-qualityはSUCCESS。今回の文書・証拠のみの追記は本番動作変更がなく、専用再レビューとbuild再作成を省略する。
