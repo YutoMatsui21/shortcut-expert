@@ -43,7 +43,7 @@ export class ValidationRuntime {
     // Replace only the Windows registration boundary; never touch the real Run key.
     let enabled = false;
     return {
-      getLoginItemSettings: (options: { path: string; args: string[] }) => ({ openAtLogin: false, launchItems: enabled ? [{ name: loginItemName, scope: 'user', enabled, ...options }] : [] }),
+      getLoginItemSettings: (options: { path: string; args: string[] }) => ({ openAtLogin: false, launchItems: enabled ? [{ name: loginItemName, scope: 'user', enabled, path: options.path.replace(/^"|"$/g, ''), args: options.args }] : [] }),
       setLoginItemSettings: (value: { openAtLogin: boolean }) => { enabled = value.openAtLogin; }
     };
   }

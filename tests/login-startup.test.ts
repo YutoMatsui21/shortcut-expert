@@ -2,6 +2,26 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LoginStartup, loginItemName, loginItemArgs } from '../src/main/login-startup.ts';
 
+test('reads a registered executable in a path containing spaces and preserves OS-disabled approval', () => {
+  const path = 'C:\\Program Files\\Shortcut Expert\\Shortcut Expert.exe';
+  let registered = false, approved = true, writes = 0;
+  const startup = new LoginStartup({
+    getLoginItemSettings(options) {
+      // Electron parses the supplied path as a command line before matching the Run entry.
+      const lookup = options.path.startsWith('"') ? options.path.slice(1, options.path.indexOf('"', 1)) : options.path.split(' ')[0];
+      return { launchItems: registered && lookup === path ? [{ name: loginItemName, scope: 'user', enabled: approved, path, args: loginItemArgs }] : [] };
+    },
+    setLoginItemSettings(options) { assert.equal(options.path, path); registered = options.openAtLogin; writes++; }
+  }, path);
+  assert.equal(startup.set(true).enabled, true);
+  assert.equal(startup.read().enabled, true);
+  approved = false;
+  assert.equal(startup.read().enabled, false);
+  assert.ok(startup.set(true).error);
+  assert.equal(writes, 1, 'must not overwrite Windows-disabled approval');
+  assert.equal(startup.set(false).enabled, false);
+});
+
 test('login registration is opt-in, reads Windows approval and writes only on explicit commands', () => {
   let registered = false, enabled = true, writes = 0;
   const api = {
