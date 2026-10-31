@@ -66,7 +66,7 @@ export async function runRecordsSmoke(window: BrowserWindow) {
         assets: [...document.querySelectorAll('.records-page img')].every(img => img.complete && img.naturalWidth > 0)
       };
     })()`);
-    assert.equal(geometry.rows, 8); assert.equal(geometry.preparing, 8);
+    assert.equal(geometry.rows, 8); assert.equal(geometry.preparing, 0);
     assert.equal(geometry.unknown, true); assert.equal(geometry.assets, true); assert.equal(geometry.overflow, false);
     assert.equal(Math.round(geometry.content.width), Math.min(width - 248, 872));
     assert.equal(Math.round(geometry.content.x), width === 1360 ? 268 : 148);
