@@ -36,7 +36,7 @@ export async function runRecordsSmoke(window: BrowserWindow) {
   await selectPage(window,'ショートカット一覧'); await selectPage(window,'記録');
   assert.deepEqual(await window.webContents.executeJavaScript(`[...document.querySelectorAll('.records-page select')].map(s=>s.value)`),['30','all','total']);
   await choose('集計対象','learning');
-  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '—' && document.querySelectorAll('.record-table tbody tr').length === 7`);
+  await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === 'ー' && document.querySelectorAll('.record-table tbody tr').length === 7`);
   await window.webContents.executeJavaScript(`window.coach.setLearningState('W03','mastered')`);
   await choose('集計対象','learning-mastered');
   await waitForLearning(window, `document.querySelector('[data-kpi="rate"]').textContent === '50.0%' && document.querySelectorAll('.record-table tbody tr').length === 8`);
@@ -62,7 +62,7 @@ export async function runRecordsSmoke(window: BrowserWindow) {
         overflow: document.querySelector('.records-scroll').scrollWidth > document.querySelector('.records-scroll').clientWidth,
         rows: document.querySelectorAll('.record-table tbody tr').length,
         preparing: document.querySelectorAll('.record-table .availability').length,
-        unknown: document.querySelector('[data-operation="W07"] .record-rate').textContent.includes('—'),
+        unknown: document.querySelector('[data-operation="W07"] .record-rate').textContent.includes('ー'),
         assets: [...document.querySelectorAll('.records-page img')].every(img => img.complete && img.naturalWidth > 0)
       };
     })()`);

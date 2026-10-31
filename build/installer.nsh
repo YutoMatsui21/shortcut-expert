@@ -6,3 +6,5 @@
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" "Shortcut Expert"
   ${endIf}
 !macroend
+
+BrandingText "Shortcut Expert"
