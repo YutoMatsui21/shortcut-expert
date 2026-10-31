@@ -1,0 +1,18 @@
+{
+  "source": "explicit user report after twenty trials",
+  "completedAll": true,
+  "panelInitialValuesPreserved": true,
+  "p03m": {
+    "trial": 5,
+    "visibleNotification": "none",
+    "startingArrangement": "user does not remember; remains unknown"
+  },
+  "p03k": {
+    "trial": 6,
+    "extraOperationBeforeWinUp": true,
+    "operation": "unspecified",
+    "machineCounts": "W03 key1 only; not a clean prescribed trial"
+  },
+  "otherVisibleResults": "not individually confirmed",
+  "keyEquivalence": "not-tested"
+}

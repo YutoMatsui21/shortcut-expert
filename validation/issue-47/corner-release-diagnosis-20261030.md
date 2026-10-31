@@ -81,3 +81,15 @@ session19の終了はcode=null／SIGTERM、最終Main statusはCLOSED/error=true
 全6件valid/completed、期限切れ・中断・日付変更なし。通知可視結果と窓の結果は本人の一括報告で期待一致。Main CLOSED/error=false、exit code0、read-only SQLite integrity=ok、build hash不変。停止後の当該app／helper／panelの残存0も確認した。session19の異常終了原本は消さず、今回の正常終了で以前の原因が判明したとは扱わない。
 
 今回で早期preview解放と代表状態混在の未達は解消したが、#47全体の同一最終buildによる基本16操作・重要境界・pause/stop・UI/環境条件は未完了。以前のbuildの成功を転記せず、必要な影響範囲と残る受入を次にまとめて整理する。6d82358のwindows-qualityはSUCCESS。今回の文書・証拠のみの追記は本番動作変更がなく、専用再レビューとbuild再作成を省略する。
+
+## 最終buildの基本・停止条件20件（2026-10-31、session22）
+
+session21と同じ製品revision `6d82358`／同じpackage manifest、通常observer（診断OFF）。原本は `../evidence/issue-47/session22-status.json` 等。全20件valid/completed、日付変更・期限切れ・中断なし。記録の機械照合は20/20、通知要求の機械照合は19/20。
+
+- P03m（trial5）はChrome、normal→maximized、mouse/max-button、W03 mouse1を保存。before-arranged-true、通知要求0で、予定した未配置起点の通知期待とは不一致。入力検出・分類・保存は通過し、Coreのarranged起点ではshortcut=nullとする既存条件で通知されなかった。実際の起点状態は本人へ確認中であり、誤操作とも誤判定とも確定しない。
+- P03k（trial6）は本人がWin+Upの前に別操作を行ったと申告。機械結果はbefore-arranged-false、W03 key1のみ、通知0で一致するが、指定操作だけの清浄な試行として受入済みにしない。追加操作の内容・結果を推測しない。
+- その他18件は記録と通知要求が期待一致。pause中のC03はW02/W03各mouse1・通知0、全停止中C03は候補・記録・通知0。P12番号の機械照合も成功。
+- パネルのoperatorResult/visibleNotification/equivalenceは全て初期値のまま保持。本人は全件完了、P03m通知なし、P03k追加操作を報告。残りの個別OS可視結果やキー同等性を補完して断定しない。
+- 正常終了code0、Main CLOSED/error=false、read-only SQLite integrity=ok、build hash不変、自身のapp/helper/panel残存0を確認。製品コード・buildを変更せず、同じ20件の再試行はしない。P03起点の回答に応じ、必要な2件だけを残る境界・負例とまとめる。
+
+本人の追加回答：P03mの直前の配置状態は覚えていない。起点はunknownのまま残し、準備ミスともarranged誤判定とも断定しない。次のバッチで未配置を明確に準備したP03m/P03kの2件だけを再確認する。本人はIssue Closeまで必要な作業を継続するよう指示した。未確認条件を成功へ付け替える承認ではなく、製品buildを変えず残る境界・負例・UI/環境受入を続ける。
