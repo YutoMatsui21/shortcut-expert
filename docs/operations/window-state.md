@@ -19,9 +19,9 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 | マウス | 最大化ボタン、captionダブルクリック、**上端への直接ドラッグ**と通常→最大化の結果 |
 | キー | `Win+↑`と対象窓の最大化結果 |
 
-上端ドラッグはcaption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEEND／最大化を確認し、**終端だけ**1件計上。解放位置は作業域上端から2物理px以内・作業域内のX、解放先monitorと結果monitorが一致することを必要とする。
+上端ドラッグはcaption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEEND／最大化を確認し、**終端だけ**1件計上。解放位置は作業域上端から公開API `SPI_GETMOUSEDOCKTHRESHOLD` の検証済み値（1〜256px）と2pxの大きい方以内・作業域内のX、解放先monitorと結果monitorが一致することを必要とする。取得不能／範囲外は従来の2pxへfallbackし、gesture前後で値が変わった場合は採用しない。
 
-**2pxは保守的な実装境界**で、Windows標準のSnap許容範囲を実測して保証した値ではない。Snap Layoutの内部選択、解放不明・取消・注入・対象変更・構成変更・重複・遅着の未検証結果は採用しない。
+[SystemParametersInfoWの公開仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)は、mouse dockingの距離と上端・左右端のdocking設定を定義する。getterのDPI context／cache lifecycleは[配置設計](window-placement.md#osの早期スナップ閾値)と共通。これは完全なWindows 11 preview領域を返すAPIではなく、256pxは実装上限でMicrosoftの公表上限ではない。Snap Layoutの内部選択、解放不明・取消・注入・対象変更・構成変更・重複・遅着の未検証結果は採用しない。
 
 ## 3. W04：最大化解除・最小化
 

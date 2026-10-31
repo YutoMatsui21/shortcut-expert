@@ -115,3 +115,21 @@ session22を保存した3618b00以降の診断変更：上端最大化のrelease
 診断追加の検証：型検査、関連unit32件、Native全7件（C#本番policy assertions626）、helper build、同梱base smoke、保存受入17件が成功。専用レビューは3618b00以降の全tracked/untracked差分を4観点で確認し、対応が必要な指摘なし。保存受入は初回にCLI引数形式を誤り既定pathのENOENTで起動前失敗、正しい `--package-dir=.../win-unpacked` で同一packageを再実行して成功した。これを製品の保存障害とは扱わない。NU1900警告は継続。
 
 Native全473ファイル一致、package全550ファイルを `../evidence/issue-47/max-switch-diag-build.json` に固定。同梱先 `release/issue-47-max-switch-diag/win-unpacked`。固定診断キーは185種類、0〜1000の厳格parseを維持。次は同一binaryの診断ONでChrome／Explorer各1回のS03-dragとS01-multi、計4件のみを比較する。現時点で未達2件は未解決。
+
+## 診断4ケース・実際5行（2026-10-31、session24）
+
+1dc4481、診断ON、`../evidence/issue-47/session24-status.json` 等。最初のChrome S03-dragはcompleted=false/valid=false、maximized分岐に入らずMoveSameMonitorで候補0。未完了の理由を推測しない。次の完了ChromeはMaxReleaseTopWithin2／MaxAccepted各1、W03 mouse1・通知要求1。完了standardはDragMaximizedResult／MaxReleaseTop3To8各1、W03記録・通知要求0で、上端3〜8pxの解放を固定2px gateが棄却した。
+
+本人は「Chromeは通知なし・Explorerは通知あり」と再回答し、Chromeは端、Explorerは手前previewで離したと思うと報告。機械の通知要求の行対応とは逆で、理由未確定。application欄・原本・本人報告を入れ替えず保持する。本人申告を機械要求の表示確認に自動対応させず、OS Toastの成功はこの比較では確定しない。
+
+複数TabはChrome（TabDown4）／standard（TabDown2）ともW01 key1・通知0。KnownStagingを通過しForegroundConfirmed／Completedを各1観測。直前session23の別窓への実切替で候補0となった原因は今回再現せず、診断追加だけで修正されたとは扱わない。
+
+本人完了報告後もパネルはIDLEだったため、観測停止を確認して既存end制御を送った。正常終了code0／Main CLOSED/error=false、read-only DB integrityとhash不変を確認する。試行・診断・確認欄の原本は変更しない。
+
+## 上端のOS docking閾値修正
+
+3pxのpreview解放をOS値64のsnapshotでも拒否するassertでRedを確認。W03 top dragにもW06/W07と同じ公開getterを利用し、valid raw1〜256と上端fallback2pxの大きい方を採用する。側端のfallback8pxは変えない。設定変更中のgestureは棄却し、注入／取消／対象／release／monitor/work／起点／layout／最終最大化の照合とcompound全体確定は維持する。W01判定は変更しない。
+
+回帰は同monitorおよび別monitor最大化の3/8/33/64を正例、65/500・負のY・無効getter・設定変更を負例とした。追加テストを既存集計サンプルへ混ぜたことで最初のGreen実行はfixture集計の期待と不一致となり、集計サンプルを増やさず直接policy結果をassertする形に修正して成功。既存の期待値は変更していない。
+
+上端修正後の検証：型検査、関連unit60件、Native全7件（policy assertions651）、helper build、同梱base/settings/activation/migration/comparison、保存受入17件が成功。専用reviewerが1dc4481以降の全tracked/untracked差分を4観点で確認し、対応が必要な指摘なし。Native473ファイル全一致、package550ファイルのmanifestは `../evidence/issue-47/top-threshold-build.json`。同梱先は `release/issue-47-top-threshold/win-unpacked`。現在の実機確認はこの修正後buildでは未実施であり、session24の診断結果と混同しない。記録回収時に一度別packageを指定してhash mismatchとなった準備エラーは、実際の診断packageを指定して解消し、session24のhash不変・DB整合性・残存0を確認済み。Native strict診断キーは186。NU1900警告あり。

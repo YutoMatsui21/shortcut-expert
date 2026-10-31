@@ -10,9 +10,9 @@ internal static class PlacementGeometry
     // This is not a measurement or guarantee of Windows' complete Snap activation region.
     internal const int DirectSideReleaseTolerancePx = 8;
     internal static int? NormalizeMouseDockThreshold(int? raw) => raw is >= 1 and <= 256 ? raw : null;
-    private static int? ReleaseTolerance(WindowState before, WindowState after) =>
+    internal static int? ReleaseTolerance(WindowState before, WindowState after, int fallback = DirectSideReleaseTolerancePx) =>
         before.MouseDockThresholdPx != after.MouseDockThresholdPx ? null :
-            Math.Max(DirectSideReleaseTolerancePx, NormalizeMouseDockThreshold(before.MouseDockThresholdPx) ?? DirectSideReleaseTolerancePx);
+            Math.Max(fallback, NormalizeMouseDockThreshold(before.MouseDockThresholdPx) ?? fallback);
     internal static string? Shape(WindowState state, Action<WindowDiagnosticReason>? diagnostic = null)
     {
         if (state.Show != SW_SHOWNORMAL || state.Arranged != true || state.Frame is not { } f ||

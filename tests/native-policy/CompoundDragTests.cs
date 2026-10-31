@@ -7,6 +7,17 @@ internal static partial class Program
     {
         var start = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "pair", HorizontalPair = true };
+        foreach (int gap in new[] { 3, 8, 33, 64, 65, 500 })
+            Check($"cross-monitor top preview is atomic within OS threshold {gap}", () => {
+                var before = start with { MouseDockThresholdPx = 64 };
+                var destination = new MonitorBounds(0, 0, 1920, 1080); var work = destination with { height = 1040 };
+                var after = before with { Monitor = destination, Work = work, Show = SW_SHOWMAXIMIZED };
+                var tracker = Tracker(); tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
+                tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = gap }, destination, work, 0);
+                var result = tracker.FinishMove(11, after, 5000, 11, "2026-10-31");
+                Equal(gap <= 64, result is CompoundMoveResult);
+                if (gap > 64) Equal<object?>(null, result); // no partial W02 fallback
+            });
         Check("release diagnostic distinguishes event, physical cursor and prior corner contact", () => {
             var probe = new WindowDragReleaseProbe(); var reasons = new List<WindowDiagnosticReason>();
             var monitor = new MonitorBounds(0, -1440, 2560, 1440); var work = monitor with { height = 1392 };

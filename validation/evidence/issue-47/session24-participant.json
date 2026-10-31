@@ -1,0 +1,14 @@
+{
+  "source": "explicit user reports after four planned diagnostics",
+  "plannedCases": 4,
+  "actualRows": 5,
+  "firstRowIncomplete": true,
+  "panelInitialValuesPreserved": true,
+  "reportedChromeNotification": "none",
+  "reportedExplorerNotification": "seen",
+  "reportedRelease": "user thinks Chrome reached edge and Explorer released at preview before edge",
+  "machineCorrelation": "completed chrome row requests1/topWithin2, standard row requests0/top3To8; conflicts with participant mapping; do not swap labels or observations",
+  "switches": "both machine-count W01 key1; earlier session23 zero remains unexplained",
+  "shutdown": "agent requested documented end control from IDLE after participant reported completion",
+  "keyEquivalence": "not separately tested"
+}

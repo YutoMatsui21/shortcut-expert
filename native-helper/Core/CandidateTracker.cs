@@ -189,11 +189,13 @@ internal sealed class CandidateTracker
             Diagnostic?.Invoke(topGap < 0 ? WindowDiagnosticReason.MaxReleaseYBeforeTop : topGap <= 2 ? WindowDiagnosticReason.MaxReleaseTopWithin2 :
                 topGap <= 8 ? WindowDiagnosticReason.MaxReleaseTop3To8 : topGap <= 32 ? WindowDiagnosticReason.MaxReleaseTop9To32 :
                 topGap <= 64 ? WindowDiagnosticReason.MaxReleaseTop33To64 : WindowDiagnosticReason.MaxReleaseTopAbove64);
-            // A narrow edge check is a conservative implementation boundary, not a claim
-            // about Windows' Snap hit regions. Interior layout selections are excluded.
+            // The published docking setting is a bounded tolerance, not the full Snap hit region.
+            // Retain the historical two-pixel fallback when the setting cannot be read.
+            int? tolerance = PlacementGeometry.ReleaseTolerance(drag.Before, after, 2);
+            if (tolerance is null) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxDockThresholdChanged); return null; }
             if (r.Point.X < r.Work.x || (long)r.Point.X >= (long)r.Work.x + r.Work.width)
                 { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseXOutside); return null; }
-            if (r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + 2) return null;
+            if (r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + tolerance.Value) return null;
             Diagnostic?.Invoke(WindowDiagnosticReason.MaxAccepted);
             if (drag.Before.Monitor != after.Monitor)
                 return StableMove(drag.Before, after) && drag.Matched && !drag.Injected && !drag.Conflicted

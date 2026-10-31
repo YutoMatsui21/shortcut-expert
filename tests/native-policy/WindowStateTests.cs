@@ -9,6 +9,29 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (int gap in new[] { -1, 2, 3, 8, 33, 64, 65, 500 })
+            Check($"OS docking threshold governs top preview release {gap}", () => {
+                var tracker = Tracker(); var before = start with { MouseDockThresholdPx = 64 };
+                var after = max with { MouseDockThresholdPx = 64 };
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                var result = tracker.FinishMove(11, after, 5000, 11, "2026-10-31");
+                Equal(gap >= 0 && gap <= 64, result is WindowCandidate);
+                if (result is WindowCandidate value) { Equal("caption-top-drag", value.route); Equal("maximize", value.operation); }
+            });
+        foreach (int? threshold in new int?[] { null, 0, -1, 257, int.MaxValue })
+            foreach (int gap in new[] { 2, 3 })
+                Check($"top fallback threshold {threshold}/{gap}", () => {
+                    var tracker = Tracker(); var before = start with { MouseDockThresholdPx = threshold };
+                    tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                    tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                    Equal(gap == 2, tracker.FinishMove(11, max with { MouseDockThresholdPx = threshold }, 5000, 11, "2026-10-31") is WindowCandidate);
+                });
+        Check("top gesture rejects changed docking setting even at edge", () => {
+            var tracker = Tracker(); tracker.Mouse(11, start with { MouseDockThresholdPx = 64 }, HTCAPTION, default, 0, 500, 0, false, true);
+            tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+            Equal<object?>(null, tracker.FinishMove(11, max with { MouseDockThresholdPx = 8 }, 5000, 11, "2026-10-31"));
+        });
         foreach (int gap in new[] { -1, 0, 2, 3, 8, 9, 32, 33, 64, 65 })
             Check($"top release diagnostic is observational at {gap}", () => {
                 object? Run(bool diagnostics, List<WindowDiagnosticReason> reasons) {
