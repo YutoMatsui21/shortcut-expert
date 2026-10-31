@@ -11,7 +11,7 @@ type Command = Parameters<CoachBridge['command']>[0];
 
 function isCommand(value: unknown): value is Command {
   return value === 'pause-notifications' || value === 'resume-notifications' || value === 'stop' ||
-    value === 'start' || value === 'retry-save' || value === 'quit';
+    value === 'start' || value === 'retry-save' || value === 'quit' || value === 'enable-startup' || value === 'disable-startup';
 }
 
 export function registerCoachIpc(getWindow: () => BrowserWindow | null, requests: Requests): void {

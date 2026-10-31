@@ -57,7 +57,7 @@ export class DurableCoach {
     this.stop();
   }
   begin(generation: number): void {
-    if (!this.loaded || this.error || this.clockError || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
+    if (!this.loaded || this.data.settings.recordingEnabled === false || this.error || this.clockError || this.observerError || this.pending || this.pendingSettings || this.deleting) return;
     this.generation = generation; this.candidateSequence = 0; this.observing = true;
     this.transactions.clear(); this.latestTransaction = 0;
     this.baseline = { day: this.deps.date(), time: this.deps.now(), observing: true, capabilities: this.deps.capabilities() };
@@ -173,6 +173,10 @@ export class DurableCoach {
     });
   }
   opened(): Promise<void> { return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), opened: true })); }
+  setRecordingEnabled(recordingEnabled: boolean): Promise<void> {
+    if (!recordingEnabled) this.stop();
+    return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), recordingEnabled }));
+  }
   setNormalBounds(normalBounds: import('../shared/coach.ts').Bounds): Promise<void> {
     return this.queue.run(() => this.settings({ ...(this.pendingSettings ?? this.data.settings), normalBounds: { ...normalBounds } }, false));
   }

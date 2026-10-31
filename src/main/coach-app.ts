@@ -11,6 +11,7 @@ import { CoachWindow } from './coach-window.ts';
 import { registerCoachIpc } from './coach-ipc.ts';
 import { coachTrayMenu } from './coach-tray.ts';
 import type { StartupMode } from './startup-mode.ts';
+import { LoginStartup } from './login-startup.ts';
 
 const coachWindow = new CoachWindow();
 let quitting = false;
@@ -21,6 +22,9 @@ export function showCoach(): void {
 export async function runCoach(load: (window: BrowserWindow, mode: string) => Promise<void>, mode: StartupMode): Promise<void> {
   const { fixture } = mode;
   const validation = mode.validation ? new (await import('./validation-runtime.ts')).ValidationRuntime(mode) : undefined;
+  const loginStartup = new LoginStartup(validation?.loginApi ?? (process.platform === 'win32' && app.isPackaged && !mode.validation ? app : null), process.execPath);
+  const withStartup = (snapshot: Snapshot): Snapshot => ({ ...snapshot, loginStartup: loginStartup.read() });
+  const currentSnapshot = () => coachWindow.withWindowState(withStartup(coach.snapshot()));
   let tray: Tray | null = null;
   let ticker: NodeJS.Timeout | undefined;
   let errorStop = false;
@@ -38,7 +42,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
   app.once('will-quit', () => standardNotices.dispose());
   const publish = (snapshot: Snapshot) => {
     validation?.naturalControl?.observe(snapshot);
-    coachWindow.publish(snapshot);
+    coachWindow.publish(withStartup(snapshot));
     if (tray) {
       tray.setToolTip(snapshot.error ? '確認が必要です' : snapshot.observing ? snapshot.notificationsPaused ? '記録中・通知停止' : '記録中' : '全停止');
       tray.setContextMenu(Menu.buildFromTemplate(coachTrayMenu(snapshot, command, showCoach, quit)));
@@ -68,9 +72,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     if (validation && !validation.canStartObservation) return;
     if (exitRequested) return;
     const snapshot = coach.snapshot();
-    if (snapshot.observing || snapshot.pendingSave) return;
-    if (snapshot.error) await coach.initialize();
-    if (coach.snapshot().error) return;
+    if (snapshot.observing || snapshot.pendingSave || snapshot.error || snapshot.settings.recordingEnabled === false) return;
     try { const generation = await observer.start(); errorStop = false; coach.begin(generation); publish(coach.snapshot()); }
     catch (error) {
       validation?.startFailed(error);
@@ -84,12 +86,19 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     catch { coach.fault('観測の解除を確認できませんでした。再開時に初期化します。'); }
   };
   const command = (value: string) => control.run(async () => {
-    if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
+    if (exitRequested) return currentSnapshot();
     switch (value) {
       case 'pause-notifications': coach.pauseNotifications(true); break;
       case 'resume-notifications': coach.pauseNotifications(false); break;
-      case 'stop': await stopObservation(); break;
-      case 'start': await startObservation(); break;
+      case 'stop':
+        await stopObservation(); await coach.setRecordingEnabled(false); break;
+      case 'start':
+        if (coach.snapshot().pendingSave) break;
+        if (coach.snapshot().error) await coach.initialize();
+        if (coach.snapshot().error) break;
+        await coach.setRecordingEnabled(true); await startObservation(); break;
+      case 'enable-startup': case 'disable-startup':
+        loginStartup.set(value === 'enable-startup'); publish(coach.snapshot()); break;
       case 'retry-save':
         await coach.retrySave();
         if (deleteResume !== null && !coach.snapshot().error && !coach.snapshot().pendingSave) {
@@ -100,7 +109,7 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
       case 'quit': break;
       default: throw new Error('Unknown command.');
     }
-    return coachWindow.withWindowState(coach.snapshot());
+    return currentSnapshot();
   });
   const performQuit = async () => {
     exitRequested = true;
@@ -127,14 +136,14 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     return exiting;
   };
   const deleteCounts = () => control.run(async () => {
-    if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
+    if (exitRequested) return currentSnapshot();
     deleteResume ??= coach.snapshot().observing;
     await stopObservation(); await coach.deleteCounts();
     if (!coach.snapshot().error && !coach.snapshot().pendingSave) {
       const resume = deleteResume; deleteResume = null;
       if (resume) await startObservation();
     }
-    return coachWindow.withWindowState(coach.snapshot());
+    return currentSnapshot();
   });
   registerCoachIpc(() => coachWindow.current, {
     getRecordSummary: (query) => control.run(async () => {
@@ -161,12 +170,12 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
         return await repository.query(from, to);
       } catch { coach.storageFault('保存データを読み込めません。元のデータは保持しています。'); throw new Error('記録を読み込めません。'); }
     },
-    getSnapshot: async () => { if (!exitRequested) await coach.tick(); return coachWindow.withWindowState(coach.snapshot()); },
-    command: value => value === 'quit' ? quit().then(() => coachWindow.withWindowState(coach.snapshot())) : command(value),
+    getSnapshot: async () => { if (!exitRequested) await coach.tick(); return currentSnapshot(); },
+    command: value => value === 'quit' ? quit().then(() => currentSnapshot()) : command(value),
     setLearningState: (operation, state) => control.run(async () => {
-      if (exitRequested) return coachWindow.withWindowState(coach.snapshot());
+      if (exitRequested) return currentSnapshot();
       await coach.setLearningState(operation, state);
-      return coachWindow.withWindowState(coach.snapshot());
+      return currentSnapshot();
     }),
     deleteCounts
   });
@@ -185,8 +194,9 @@ export async function runCoach(load: (window: BrowserWindow, mode: string) => Pr
     tray = new Tray(nativeImage.createFromBitmap(pixels, { width: 16, height: 16 }));
     tray.on('double-click', showCoach);
     const snapshot = coach.snapshot();
-    if (!snapshot.settings.opened || snapshot.error) { showCoach(); if (!snapshot.error) await coach.opened(); }
+    if (!mode.background && (!snapshot.settings.opened || snapshot.error)) { showCoach(); if (!snapshot.error) await coach.opened(); }
   }
+  window.on('focus', () => publish(coach.snapshot()));
   if (mode.naturalOperation === null) await startObservation();
   publish(coach.snapshot());
   ticker = setInterval(() => {

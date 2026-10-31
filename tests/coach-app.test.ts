@@ -11,6 +11,7 @@ import { candidateFixture } from './support/fixtures.ts';
 import { localDate } from '../src/core/dates.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import { startupMode } from '../src/main/startup-mode.ts';
+import { loginItemName, loginItemArgs } from '../src/main/login-startup.ts';
 
 test('normal composition migrates without pruning, records via SQLite IPC, recovers stopped and closes the writer', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'coach-composition-'));
@@ -23,8 +24,13 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   let api!: Required<Parameters<typeof registerCoachIpc>[1]>;
   let deliver!: (candidate: ObserverCandidate) => void;
   let generation = 0, quits = 0, notices = 0;
-  const app = Object.assign(new EventEmitter(), { getPath: () => root, quit: () => { quits++; app.emit('will-quit'); } });
-  const window = {};
+  let startupEnabled = false;
+  let published: Snapshot | undefined;
+  const app = Object.assign(new EventEmitter(), { isPackaged: true, getPath: () => root, quit: () => { quits++; app.emit('will-quit'); },
+    getLoginItemSettings: () => ({ openAtLogin: false, launchItems: [{ name: loginItemName, scope: 'user', enabled: startupEnabled, path: process.execPath, args: loginItemArgs }] }),
+    setLoginItemSettings: (value: { openAtLogin: boolean }) => { startupEnabled = value.openAtLogin; }
+  });
+  const window = new EventEmitter();
   mock.module('electron', { namedExports: { app, dialog: { showMessageBox: () => assert.fail('unexpected dialog') },
     Menu: { buildFromTemplate: (value: unknown) => value }, nativeImage: { createFromBitmap: () => ({}) },
     screen: new EventEmitter(), powerMonitor: new EventEmitter(), Tray: class {
@@ -32,7 +38,7 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
     } } });
   mock.module('../src/main/coach-window.ts', { namedExports: { CoachWindow: class {
     current = window;
-    show() {} publish() {} command() {} resumeBounds() {} correctBounds() {}
+    show() {} publish(value: Snapshot) { published = value; } command() {} resumeBounds() {} correctBounds() {}
     withWindowState(value: Snapshot) { return value; }
     async flush() {} async create() { return window; }
   } } });
@@ -62,6 +68,13 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   assert.ok((await api.getLearning()).revision > 0);
   assert.ok((await api.getRecordSummary()).revision > 0);
   await api.command('stop');
+  startupEnabled = true;
+  window.emit('focus');
+  assert.equal(published?.loginStartup?.enabled, true, 'OS state refreshes on window focus while measurement is stopped');
+  assert.equal((await api.getSnapshot()).loginStartup?.enabled, true);
+  assert.equal((await api.setLearningState('W03', 'mastered')).loginStartup?.enabled, true);
+  startupEnabled = false; window.emit('focus');
+  assert.equal(published?.loginStartup?.enabled, false);
   const query = mock.method(SqliteRepository.prototype, 'query', async () => { throw new Error('fixture unreadable'); });
   await assert.rejects(api.getRecords(localDate(), localDate()));
   assert.equal((await api.getSnapshot()).canRetrySave, true);
@@ -74,6 +87,7 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   const reopened = new SqliteRepository(root, path.resolve('src/main/storage-worker.ts'));
   try {
     await reopened.load(localDate());
+    assert.equal((await reopened.load(localDate())).settings.recordingEnabled, true, 'explicit resume survives process restart');
     assert.equal((await reopened.query(localDate(), localDate())).counts[localDate()]?.W03?.mouse, 1);
     assert.equal((await reopened.query('2020-01-02', '2020-01-02')).counts['2020-01-02']?.W03?.mouse, 7);
     assert.equal(await readFile(path.join(root, 'counts.json'), 'utf8'), source, 'legacy source stays byte-identical');

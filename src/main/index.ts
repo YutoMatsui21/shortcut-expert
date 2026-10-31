@@ -24,13 +24,11 @@ else {
       Notification.handleActivation(() => { if (mode.osAcceptance) console.log('V01_ACTIVATION global'); showCoach(); });
       activationPresenter = new Notification();
     }
-    // Manual launches display independently of saved settings.opened.
-    // Sign-in startup requires a separate, explicit background entry.
-    if (!mode.fixture || mode.activation) showCoach();
+    if (!mode.background && (!mode.fixture || mode.activation)) showCoach();
     return runCoach(loadWindow, mode);
   }).catch(() => {
     if (!mode.fixture) dialog.showErrorBox('起動できません', '安全に初期化できませんでした。アプリを終了します。保存先とWindowsの状態を確認して再起動してください。');
     console.error('COACH_START_FAILED'); app.exit(1);
   });
-  app.on('second-instance', showCoach);
+  app.on('second-instance', (_event, argv) => { if (!startupMode(argv).background) showCoach(); });
 }

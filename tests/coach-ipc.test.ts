@@ -79,4 +79,7 @@ test('正規の要求だけ実行し、別窓・子frame・不正な引数を副
   assert.deepEqual(requests.setLearningState.mock.calls[0].arguments, ['W04', 'mastered']);
   assert.equal(requests.setLearningState.mock.callCount(), 1);
   assert.deepEqual(requests.command.mock.calls[0].arguments, ['stop']);
+  await invoke('coach:command', event, 'enable-startup');
+  await invoke('coach:command', event, 'disable-startup');
+  assert.deepEqual(requests.command.mock.calls.slice(-2).map(call => call.arguments), [['enable-startup'], ['disable-startup']]);
 });

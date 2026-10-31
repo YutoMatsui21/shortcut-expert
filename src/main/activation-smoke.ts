@@ -8,9 +8,9 @@ import { selectPage, waitForLearning } from './learning-smoke';
 
 // OS notification delivery is replaced at the boundary; all window, IPC, Core,
 // helper lifecycle and SQLite behavior below belongs to the packaged app.
-export async function runActivationSmoke({ window, snapshot, command, activate, failed, notifications, notificationEvents }: {
+export async function runActivationSmoke({ window, snapshot, command, activate, failed, stopped, background, notifications, notificationEvents }: {
   window: BrowserWindow; snapshot(): Snapshot; command(value: string): Promise<Snapshot>;
-  activate(): void; failed: boolean; notifications: StandardNotifications; notificationEvents: EventEmitter[];
+  activate(): void; failed: boolean; stopped: boolean; background: boolean; notifications: StandardNotifications; notificationEvents: EventEmitter[];
 }) {
   await waitForLearning(window, `document.querySelector('nav button[aria-label="ショートカット一覧"]')?.getAttribute('aria-current') === 'page'`);
   const waitForWindow = async () => {
@@ -19,6 +19,12 @@ export async function runActivationSmoke({ window, snapshot, command, activate, 
     assert.equal(window.isVisible(), true);
     assert.equal(window.isMinimized(), false);
   };
+  if (background) {
+    assert.equal(window.isVisible(), false, 'sign-in startup does not display the window');
+    app.emit('second-instance', {}, ['--login-startup'], '');
+    assert.equal(window.isVisible(), false, 'duplicate sign-in entry stays hidden');
+    app.emit('second-instance', {}, [], '');
+  }
   await waitForWindow();
   assert.equal(window.isVisible(), true, 'cold activation displays the list even when opened was saved');
   if (failed) {
@@ -31,7 +37,12 @@ export async function runActivationSmoke({ window, snapshot, command, activate, 
     return { activationInitializationFailure: true };
   }
   assert.equal(snapshot().settings.opened, true);
-  assert.equal(snapshot().observing, true, 'cold initialization starts observation normally');
+  assert.equal(snapshot().observing, !stopped, 'cold initialization respects saved measurement permission');
+  assert.equal(snapshot().notificationsPaused, false, 'notification pause remains session-only');
+  if (stopped) {
+    assert.equal(snapshot().settings.recordingEnabled, false);
+    await command('start'); assert.equal(snapshot().observing, true);
+  }
   await selectPage(window, '記録');
   await command('pause-notifications');
   await command('stop');
@@ -52,7 +63,8 @@ export async function runActivationSmoke({ window, snapshot, command, activate, 
   assert.deepEqual(snapshot().counts, before.counts);
   assert.deepEqual(snapshot().settings, before.settings);
   await waitForLearning(window, `document.querySelector('nav button[aria-label="記録"]')?.getAttribute('aria-current') === 'page'`);
-  // Leave stop/pause active until process exit. The next fixture boot must start
-  // observation and display the list without inheriting runtime controls.
-  return { activationColdOpened: true, activationExistingWindow: true, activationPreservesStopPause: true };
+  // The next process must retain measurement stop, while resetting notification pause.
+  if (background && stopped) await command('start'); // Next boot covers background startup with permission enabled.
+  return { activationColdOpened: true, activationExistingWindow: true, activationPreservesStopPause: true,
+    savedMeasurementStop: stopped, backgroundStartup: background };
 }
