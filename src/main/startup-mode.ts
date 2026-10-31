@@ -10,6 +10,7 @@ export function startupMode(argv: readonly string[]) {
   const activation = fixture && argv.includes('--activation-smoke');
   return {
     fixture, osAcceptance, uiAcceptance, naturalOperation,
+    windowDiagnostics: !fixture && naturalOperation === 'ALL' && argv.includes('--caption-diagnostics'),
     validation: fixture || naturalOperation !== null,
     migration, activation,
     activationFailure: activation && argv.includes('--activation-failure-smoke'),

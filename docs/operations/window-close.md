@@ -6,11 +6,11 @@
 
 | 入力 | 採用する条件 |
 | --- | --- |
-| マウス | 前面の同一窓で左押下と解放を確認し、双方で有効な`TITLEBARINFOEX`の閉じるボタン矩形と一致 |
+| マウス | 前面の同一窓で左押下と解放を確認し、双方で有効な`TITLEBARINFOEX`閉じる矩形と一致、または矩形が使えない独自captionで同一root／process／threadを再確認した明示的`HTCLOSE` |
 | キー | 中立状態からの`Alt+F4`。追加修飾・注入・repeat・競合を除外 |
 
 - `WindowCloseObserver`が既存hookとWinEventを受け、`WindowClosePolicy`が同一対象を一時照合。desktop／Shell、owned／tool／child、最小化・非表示・cloaked、自己process・昇格／不明な窓は除外する。アプリ名のallowlistへ依存しない。
-- タブの×、独自の閉じるボタン、hit testだけの代替根拠は採用しない。**入力だけ・窓の消滅だけではW11を確定しない**。
+- タブの×やclient／resize／不明判定、独自UIの位置だけから閉鎖を推測しない。矩形が空／不整合の場合のroot照会はWM_NCHITTEST・10ms上限とし、照会後にも同じroot・process・threadを確認する。有効な矩形がある場合は状態と位置の照合を優先し、この代替経路で無効状態や範囲外を迂回しない。**入力だけ・窓の消滅だけではW11を確定しない**。
 
 ## 2. 破棄確認と誤計上防止
 
@@ -29,3 +29,5 @@
 - `tests/fixture-integration.test.ts`と隔離smoke：3学習状態、ページモデル、通知adapter、停止・保存失敗／ACK喪失の非重複と復旧。
 - **実機検証入口**：本人の明示同意後、`validation/window-close/`の手動パネルでARMからFINISHまで（自動キー送出なし）。8ケースの結果・途中の見逃し原因・同じbuildかどうかの区別は[検証記録](https://github.com/YutoMatsui21/shortcut-expert/issues/39)に保存。
 - **未受入**：自作WinForms窓での局所8ケース成功は、代表外部アプリ、独自枠／多段確認、実OS Toast、同一最終buildのR02／J04を保証しない。[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)。
+
+Chromeの矩形不整合による復元棄却と、全矩形空によるmouse閉鎖候補未生成を[Issue #47のsession14](../../validation/issue-47/chrome-diagnosis-20261030.md)で観測。HTCLOSEは[WM_NCHITTESTの閉じるボタン判定](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest)に基づき、対象照合と破棄確認を併用する。修正の自然入力は別途確認し、fixtureを実機精度の証拠にしない。

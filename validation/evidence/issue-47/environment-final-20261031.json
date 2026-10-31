@@ -1,0 +1,28 @@
+{
+  "windowsVersion": "10.0.26340.0",
+  "screensPhysical": [
+    {
+      "primary": true,
+      "x": 0,
+      "y": 0,
+      "width": 2880,
+      "height": 1800,
+      "scalePercent": 200
+    },
+    {
+      "primary": false,
+      "x": 0,
+      "y": -1440,
+      "width": 2560,
+      "height": 1440,
+      "scalePercent": 100
+    }
+  ],
+  "chromeProductVersions": [
+    "156.0.8078.74"
+  ],
+  "explorerVersion": "10.0.26100.9949",
+  "association": "static version metadata; individual trial window not linked to executable",
+  "windowsSettingsChanged": false,
+  "scope": "read-only static environment; no windows, inputs, titles, paths or raw monitor handles retained"
+}

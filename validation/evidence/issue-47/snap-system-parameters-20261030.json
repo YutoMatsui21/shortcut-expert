@@ -1,0 +1,33 @@
+{
+  "kind": "read-only-system-snap-settings",
+  "windowsVersion": "10.0.26340.0",
+  "values": {
+    "WinArranging": {
+      "success": true,
+      "value": 1,
+      "error": 0
+    },
+    "DockMoving": {
+      "success": true,
+      "value": 1,
+      "error": 0
+    },
+    "MouseDockThreshold": {
+      "success": true,
+      "value": 64,
+      "error": 0
+    },
+    "MouseDragOutThreshold": {
+      "success": true,
+      "value": 138,
+      "error": 0
+    },
+    "MouseSideMoveThreshold": {
+      "success": true,
+      "value": 64,
+      "error": 0
+    }
+  },
+  "settingsChanged": false,
+  "limitation": "Legacy docking parameters; not assumed to expose the Windows11 corner-preview hit region"
+}

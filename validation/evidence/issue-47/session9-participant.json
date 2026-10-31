@@ -1,0 +1,12 @@
+{
+ "session":"session9",
+ "revision":"a4e62d839581340c4380a62d96717318adcd29ff",
+ "nativeDiagnostics":false,
+ "participantReport":"All nine cases completed as the supplied expectations; participant questions why compound notices omit the Win+Shift+Left monitor-move item and expects both operations in the toast",
+ "machinePassedTrials":[1,2,4,5,6,7,8,9],
+ "unmetTrial":3,
+ "unmetDetail":"P02m-unknown has zero candidate, record and notification; supplied no-notice expectation matched but required monitor-move record did not",
+ "compoundEvidence":"Trials6/7 each received one compound candidate, recorded W02 and W03/W07 mouse+1 atomically through the existing compound path, requested one notification with only the terminal operation",
+ "notificationAcceptance":"Implementation behavior only, not full release acceptance: current horizontal-only key-equivalence guard omits W02 on the vertical setup. Participant expects two operation lines; preserve as an unmet requirement rather than declaring release PASS.",
+ "keyboardEvidence":"Trials4/5 each confirm W02 key+1 and different-monitor before/after normal states for Win+Shift+Left/Right in this two-monitor vertical setup"
+}

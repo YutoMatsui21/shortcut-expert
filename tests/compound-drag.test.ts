@@ -136,3 +136,60 @@ for (const terminal of ['maximized', 'right-bottom']) test(`compound ${terminal}
   assert.equal(h.requests.length, 0, 'recovery never delivers old notices');
   } finally { db.close(); }
 });
+
+for (const terminal of ['maximized', 'left-top']) test(`two-display vertical compound ${terminal} includes both operation lines`, async t => {
+  const h = await harness(t);
+  const raw = input(terminal);
+  Object.assign(raw.evidence, { moveDirection: null, twoDisplayLayoutConfirmed: true,
+    toMonitor: { x: -1920, y: -1440, width: 2560, height: 1440 } });
+  const candidate = candidateV2(raw); assert.ok(candidate);
+  const observations = classifyGesture(candidate);
+  assert.equal(observations[0].shortcut, 'Win + Shift + ←');
+  await h.coach.accept(candidate);
+  assert.equal(h.requests.length, 1);
+  assert.match(h.requests[0].body!, /別画面に移動する.*Win \+ Shift \+ ←/);
+  assert.match(h.requests[0].body!, terminal === 'maximized' ? /最大化.*Win \+ ↑/ : /四隅.*Winを押したまま/);
+  for (const proof of [false, undefined]) {
+    Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: proof });
+    if (proof === undefined) delete (raw.evidence as Record<string, unknown>).twoDisplayLayoutConfirmed;
+    assert.equal(classifyGesture(candidateV2(raw)!)[0].shortcut, null);
+  }
+  Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: true, toMonitor: { ...fromMonitor, y: -100 } });
+  assert.equal(classifyGesture(candidateV2(raw)!)[0].shortcut, null, 'overlapping monitors cannot prove a unique destination');
+  for (const proof of [null, 1, 'true']) {
+    Object.assign(raw.evidence, { twoDisplayLayoutConfirmed: proof });
+    assert.equal(candidateV2(raw), null, 'new evidence must be a boolean');
+  }
+});
+
+for (const terminal of ['maximized', 'left-top'])
+for (const moveState of ['learning', 'mastered', 'excluded'] as const)
+for (const terminalState of ['learning', 'mastered', 'excluded'] as const)
+  test(`compound state matrix ${terminal}: W02=${moveState}, terminal=${terminalState}`, async t => {
+    const h = await harness(t), operation = terminal === 'maximized' ? 'W03' : 'W07';
+    await h.coach.setLearningState('W02', moveState);
+    await h.coach.setLearningState(operation, terminalState);
+    const raw = input(terminal);
+    Object.assign(raw.evidence, { moveDirection: null, twoDisplayLayoutConfirmed: true,
+      toMonitor: { x: -1920, y: -1440, width: 2560, height: 1440 } });
+    const candidate = candidateV2(raw); assert.ok(candidate);
+    const revision = h.coach.snapshot().revision!;
+    await h.coach.accept(candidate);
+    const saved = await h.repository.query(today, today);
+    assert.deepEqual(saved.counts[today], { W02: { mouse: 1, key: 0 }, [operation]: { mouse: 1, key: 0 } });
+    assert.equal(saved.revision, revision + 1, 'all learning states retain both counts atomically');
+    const expectedKeys = [moveState === 'learning' ? 'Win + Shift + ←' : null,
+      terminalState === 'learning' ? terminal === 'maximized' ? 'Win + ↑' : 'Winを押したまま ←、続けて ↑' : null]
+      .filter((key): key is string => key !== null);
+    assert.equal(h.requests.length, expectedKeys.length ? 1 : 0);
+    if (expectedKeys.length === 1) assert.equal(h.requests[0].title, expectedKeys[0]);
+    if (expectedKeys.length === 2) for (const key of expectedKeys) assert.ok(h.requests[0].body!.includes(key));
+    for (const [id, state] of [['W02', moveState], [operation, terminalState]]) {
+      const row = (await h.coach.getLearning(today)).rows.find(r => r.id === id)!;
+      assert.equal(row.state, state); assert.equal(row.mouse, 1);
+    }
+    await h.coach.accept({ ...candidate, sequence: 2 });
+    assert.equal(h.requests.length, expectedKeys.length ? 1 : 0, 'duplicate transaction never re-notifies');
+    const replayed = await h.repository.query(today, today);
+    assert.deepEqual(replayed.counts, saved.counts); assert.equal(replayed.revision, saved.revision);
+  });

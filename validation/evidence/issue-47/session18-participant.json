@@ -1,0 +1,11 @@
+{
+  "productRevision": "2ec7520",
+  "manifestSha256": "4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb",
+  "nativeDiagnostics": true,
+  "participantReport": "Chrome no notification; Explorer notification present",
+  "inputPathClarification": "Participant explicitly confirms Chrome cursor itself was placed at the upper-left screen edge before release; no top-center layout picker selected",
+  "chrome": "Valid quarter shape and caption/target/release checks reach side gate; PlacementSideAbove32=1 rejects; no candidate/count/notice",
+  "explorer": "PlacementSideWithin2=1 and PlacementAccepted=1; one compound candidate, W02/W07 mouse+1, one notification with both items",
+  "discrepancy": "User reports cursor at edge while hook-based release distance category is over32; neither user error nor DPI/coordinate bug is established",
+  "next": "Diagnostic-only comparison of hook release with physical cursor snapshots, monitor/work boundary and transient motion extrema. Keep 8px admission unchanged; no raw coordinates, event lists or timestamp series retained."
+}

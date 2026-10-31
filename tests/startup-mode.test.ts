@@ -2,6 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startupMode } from '../src/main/startup-mode.ts';
 
+test('native caption diagnostics are separately opt-in; final acceptance defaults to the normal observer', () => {
+  for (const argv of [[], ['--caption-diagnostics'], ['--final-natural-acceptance'], ['--w01-natural-acceptance', '--caption-diagnostics'],
+    ['--coach-smoke', '--final-natural-acceptance', '--caption-diagnostics']]) assert.equal(startupMode(argv).windowDiagnostics, false);
+  assert.equal(startupMode(['--final-natural-acceptance', '--caption-diagnostics']).windowDiagnostics, true);
+});
+
 test('secondary runner flags cannot enable fixtures, mock notifications or legacy storage', () => {
   for (const argv of [[], ['--activation-smoke', '--activation-failure-smoke'], ['--comparison-smoke'],
     ['--settings-smoke'], ['--ui-acceptance-exit'], ['--observe-consented']]) {

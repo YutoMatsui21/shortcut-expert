@@ -8,6 +8,55 @@ internal static partial class Program
         var source = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "stable-pair", HorizontalPair = true };
         var to = source with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040) };
+        foreach (string mode in new[] { "accepted", "same-monitor", "no-release", "release-monitor", "release-work",
+            "end-state", "unstable", "injected", "unmatched", "foreground" })
+            Check($"normal monitor drag diagnostics preserve decision: {mode}", () => {
+                var after = mode switch { "same-monitor" => source, "end-state" => to with { Arranged = null },
+                    "unstable" => to with { Dpi = 0 }, _ => to };
+                object? Run(Action<WindowDiagnosticReason>? diagnostic) {
+                    var tracker = Tracker(); tracker.Diagnostic = diagnostic;
+                    tracker.Mouse(11, source, HTCAPTION, default, 0, 500,
+                        mode == "injected" ? LLMHF_INJECTED : 0, false, mode != "unmatched");
+                    tracker.MoveStart(11, 100);
+                    if (mode != "no-release") tracker.MouseReleased(default,
+                        mode == "release-monitor" ? source.Monitor : after.Monitor,
+                        mode == "release-work" ? source.Work : after.Work, 0);
+                    return tracker.FinishMove(11, after, 500, mode == "foreground" ? 12 : 11, "2026-10-28");
+                }
+                var reasons = new List<string>(); var expected = Run(null); var actual = Run(r => reasons.Add(r.ToString()));
+                Equal(expected, actual);
+                Equal(mode == "accepted", actual is WindowCandidate);
+                string reason = mode switch { "accepted" => "MoveAccepted", "same-monitor" => "MoveSameMonitor",
+                    "no-release" => "DragReleaseUnknown", "release-monitor" => "MoveReleaseMonitorMismatch",
+                    "release-work" => "MoveReleaseWorkMismatch", "end-state" => "MoveEndStateInvalid",
+                    "unstable" => "MoveUnstable", "foreground" => "MoveForegroundMismatch", _ => "MoveInputInvalid" };
+                Equal(true, reasons.Contains(reason));
+            });
+        Check("two-display proof excludes incomplete, overlapping and three-display layouts", () => {
+            var upper = new MonitorBounds(-1920, -1440, 2560, 1440);
+            Equal(true, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, upper }));
+            Equal(true, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, to.Monitor! with { y = -300 } }));
+            Equal(false, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor! }));
+            Equal(false, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, upper, to.Monitor! }));
+            Equal(false, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, source.Monitor! }));
+            Equal(false, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, source.Monitor! with { y = -100 } }));
+            Equal(false, MonitorMovePolicy.TwoDisplays(new[] { source.Monitor!, upper with { width = 0 } }));
+            foreach (bool proven in new[] { false, true }) {
+                var tracker = Tracker();
+                var before = source with { TwoDisplayPair = proven };
+                var after = to with { Monitor = upper, Work = upper with { height = 1400 },
+                    HorizontalPair = false, TwoDisplayPair = true };
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
+                tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = upper.x + 500, Y = upper.y + 400 }, upper, after.Work, 0);
+                var result = tracker.FinishMove(11, after, 500, 11, "2026-10-28") as WindowCandidate;
+                Equal(true, result is not null);
+                Equal(proven, result!.twoDisplayLayoutConfirmed);
+                Equal<string?>(null, result.moveDirection);
+                var wire = CandidateProtocol.V2(result, 1, 1).evidence as WindowEvidence;
+                Equal(proven, wire!.result.twoDisplayLayoutConfirmed);
+            }
+        });
         foreach (string mode in new[] { "normal", "maximized-start", "vertical", "unaligned", "mixed-dpi", "no-release",
             "cancel", "injected", "conflict", "other-target", "process", "layout", "unknown-layout", "dpi-change",
             "return", "half", "maximized-end", "unknown-arranged", "program", "stop" })

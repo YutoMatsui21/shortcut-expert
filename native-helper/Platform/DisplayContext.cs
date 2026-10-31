@@ -18,6 +18,8 @@ internal static class DisplayContext
         var a = displays[0].Bounds; var b = displays[1].Bounds;
         return a.Top == b.Top && (a.Right <= b.Left || b.Right <= a.Left);
     }
+    internal static bool TwoDisplayPair() => MonitorMovePolicy.TwoDisplays(Screen.AllScreens
+        .Select(s => new MonitorBounds(s.Bounds.X, s.Bounds.Y, s.Bounds.Width, s.Bounds.Height)).ToArray());
     internal static string Layout() => string.Join(";", Screen.AllScreens.OrderBy(screen => screen.Bounds.X).ThenBy(screen => screen.Bounds.Y)
         .Select(screen => $"{screen.Bounds.X},{screen.Bounds.Y},{screen.Bounds.Width},{screen.Bounds.Height}:" +
             $"{screen.WorkingArea.X},{screen.WorkingArea.Y},{screen.WorkingArea.Width},{screen.WorkingArea.Height}"));

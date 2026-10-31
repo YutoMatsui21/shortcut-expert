@@ -1,0 +1,23 @@
+{
+  "productRevision": "2ec7520",
+  "manifestSha256": "4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb",
+  "nativeDiagnostics": false,
+  "participantReport": "All four trials completed. For N11-tab, participant opened two Chrome windows and clicked one window close button, destroying that window; a notification appeared and participant considers that appropriate",
+  "trials1to3": "P04m/S04-double/P11m: one classified candidate each; W04/W04/W11 mouse+1 respectively; one matching notification request each. No new per-case visual claim beyond completion was supplied",
+  "trial4": {
+    "originalCaseId": "N11-tab",
+    "actualAction": "window-close-button",
+    "participantConfirmedWindowDestroyed": true,
+    "machineCounts": {
+      "W11": {
+        "mouse": 1,
+        "key": 0
+      }
+    },
+    "notificationRequests": 1,
+    "interpretation": "Actual action is W11 and notification is correct. Original negative-case expected booleans remain false; the tab-only negative case was not performed and is still unverified",
+    "rawUnchanged": true
+  },
+  "specBasis": "ui-requirements.md W11 requires close-button input plus same-window destruction; learning-state confirmed mouse gestures notify after persistence",
+  "next": "Do not alter correct window-close behavior. Clarify one-window/multiple-tabs procedure and batch remaining negative cases"
+}

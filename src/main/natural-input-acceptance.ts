@@ -1,8 +1,9 @@
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Snapshot, LearningState, OperationId, ObserverCandidate } from '../shared/coach.ts';
+import type { Snapshot, LearningState, OperationId, ObserverCandidate, ShortcutNoticeItem } from '../shared/coach.ts';
 import { classify } from '../core/detector.ts';
 import { learningState } from '../shared/learning.ts';
+import type { WindowDiagnosticCounts } from '../shared/window-diagnostics.ts';
 
 type Plan = { kind: 'mouse' | 'key' | 'negative'; application: 'standard' | 'chrome'; state: LearningState; paused: boolean; slot?: number; scenario?: string };
 type NaturalOperation = 'W01' | 'W08' | 'W12';
@@ -85,14 +86,26 @@ export class NaturalInputTrials {
 
 // Opt-in operator control only. Normal execution never reads these files or collects trial results.
 export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: () => Promise<void>, operation: NaturalOperation = 'W08') {
+  return runTrialControl(directory, deps, quit, operation, start => new NaturalInputTrials({ ...deps, start }, operation), operation === 'W01');
+}
+
+type ManualTrials = Omit<Pick<NaturalInputTrials, 'armed' | 'results' | 'candidate' | 'observe' | 'expire' | 'arm'>, 'results'> & {
+  readonly results: object[]; finish(completed: boolean, confirmation?: unknown): Promise<void>;
+  noticeRequested(operation: OperationId, shortcut?: string, items?: ShortcutNoticeItem[]): void;
+  nativeDiagnostics?(counts: WindowDiagnosticCounts): void;
+};
+export function runTrialControl(directory: string, deps: Pick<Deps, 'start' | 'stop'>, quit: () => Promise<void>, name: string,
+  create: (start: Deps['start']) => ManualTrials, countdown = false) {
   let sequence = 0, busy = false, expired = false;
-  const trials = new NaturalInputTrials(operation === 'W01' ? { ...deps, start: async paused => {
+  const trials = create(async paused => {
+    if (countdown) {
     // Source selection happens with hooks OFF. The tool-window panel itself is ineligible for W01.
     await new Promise(resolve => setTimeout(resolve, 4000));
     const latest = JSON.parse(await readFile(join(directory, 'control.json'), 'utf8'));
     if (expired || latest.sequence !== sequence || latest.action !== 'arm') throw new Error('arming-cancelled');
+    }
     await deps.start(paused);
-  } } : deps, operation);
+  });
   let deadline: NodeJS.Timeout | undefined;
   let trialRetry: NodeJS.Timeout | undefined, shutdownRetry: NodeJS.Timeout | undefined;
   const status = async (error = false) => {
@@ -101,7 +114,7 @@ export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: (
     await writeFile(join(directory, 'status.tmp'), text);
     await rename(join(directory, 'status.tmp'), join(directory, 'status.json'));
   };
-  const finish = async (completed: boolean) => { clearTimeout(deadline); clearTimeout(trialRetry); await trials.finish(completed); await status(); };
+  const finish = async (completed: boolean, confirmation?: unknown) => { clearTimeout(deadline); clearTimeout(trialRetry); await trials.finish(completed, confirmation); await status(); };
   const timer = setInterval(async () => {
     if (busy || expired) return;
     busy = true;
@@ -109,7 +122,7 @@ export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: (
       let raw: string;
       try { raw = await readFile(join(directory, 'control.json'), 'utf8'); }
       catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
-      if (raw.length > 1024) throw new Error('invalid-control');
+      if (raw.length > 2048) throw new Error('invalid-control');
       const request = JSON.parse(raw);
       if (!Number.isSafeInteger(request.sequence) || request.sequence <= sequence) return;
       sequence = request.sequence;
@@ -119,7 +132,7 @@ export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: (
           trials.expire(); void deps.stop().catch(() => {}); void queueFinish();
         }, 45_000);
         await status();
-      } else if (request.action === 'finish' || request.action === 'cancel') await finish(request.action === 'finish');
+      } else if (request.action === 'finish' || request.action === 'cancel') await finish(request.action === 'finish', request.confirmation);
       else if (request.action === 'end') { await finish(false); expired = true; await status(); await quit(); }
       else throw new Error('invalid-action');
     } catch { await deps.stop(); await trials.finish(false); await status(true); }
@@ -140,7 +153,8 @@ export function runNaturalInputAcceptance(directory: string, deps: Deps, quit: (
     void queueFinish(true);
   }, 20 * 60_000);
   void status();
-  console.log(operation + '_NATURAL_READY observation stopped; arm in operator panel; 45s trial deadline');
-  return { candidate: (value: ObserverCandidate) => trials.candidate(value), observe: (snapshot: Snapshot) => trials.observe(snapshot), noticeRequested: (operation: OperationId, shortcut?: string) => trials.noticeRequested(operation, shortcut),
+  console.log(name + '_NATURAL_READY observation stopped; arm in operator panel; 45s trial deadline');
+  return { candidate: (value: ObserverCandidate) => trials.candidate(value), observe: (snapshot: Snapshot) => trials.observe(snapshot), noticeRequested: (operation: OperationId, shortcut?: string, items?: ShortcutNoticeItem[]) => trials.noticeRequested(operation, shortcut, items),
+    nativeDiagnostics: (counts: WindowDiagnosticCounts) => trials.nativeDiagnostics?.(counts),
     dispose: () => { clearInterval(timer); clearTimeout(deadline); clearTimeout(trialRetry); clearTimeout(shutdownRetry); clearTimeout(sessionDeadline); } };
 }

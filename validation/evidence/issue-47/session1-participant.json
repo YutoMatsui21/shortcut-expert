@@ -1,0 +1,11 @@
+{
+  "session": "session1",
+  "source": "explicit participant report after trials 2 and 3",
+  "reportedWindowResult": "participant described minimization and successful operation for both W12 cases; destruction not established",
+  "osToastVisible": "participant explicitly confirmed seeing Win + 1 after P12m (trial 2)",
+  "shortcutEquivalence": "unknown",
+  "trial1": "expired; preserve original anomaly; not part of the two completed cases",
+  "trial2": "machine checks passed; participant outcome confirmation kept separate from original panel fields",
+  "trial3": "machine checks passed; participant outcome confirmation kept separate from original panel fields",
+  "w01Confirmation": "Participant reports trials 4 (P01m) and 5 (P01k) matched the stated expectations: direct switch / Alt+Tab, mouse Alt+Tab notice and no key notice. Shortcut equivalence remains not separately tested."
+}

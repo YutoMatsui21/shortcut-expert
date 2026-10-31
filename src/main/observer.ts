@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { app } from 'electron';
 import type { Bounds, CandidateV2, Evidence, ObserverCandidate, WindowEvidenceResult } from '../shared/coach';
+import { parseWindowDiagnostics, type WindowDiagnosticCounts } from '../shared/window-diagnostics.ts';
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function protocolId(value: unknown): value is number {
@@ -26,13 +27,15 @@ function windowResult(value: unknown): WindowEvidenceResult | null {
       !(value.afterArranged === null || typeof value.afterArranged === 'boolean') ||
       !['monitor', 'fromMonitor', 'toMonitor'].every(key => value[key] === null || bounds(value[key])) ||
       !(value.moveDirection === null || value.moveDirection === 'left' || value.moveDirection === 'right') ||
-      ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean')) return null;
+      ('moveConfirmed' in value && typeof value.moveConfirmed !== 'boolean') ||
+      ('twoDisplayLayoutConfirmed' in value && typeof value.twoDisplayLayoutConfirmed !== 'boolean')) return null;
   return { app: value.app, operation: value.operation,
     before: { state: value.before.state, arranged: value.before.arranged }, after: { state: value.after.state },
     afterArranged: value.afterArranged, moving: value.moving as boolean, elevated: value.elevated as boolean,
     targetMatched: value.targetMatched as boolean, inputAgeMs: value.inputAgeMs, monitor: bounds(value.monitor),
     fromMonitor: bounds(value.fromMonitor), toMonitor: bounds(value.toMonitor), moveDirection: value.moveDirection,
-    ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}) };
+    ...('moveConfirmed' in value ? { moveConfirmed: value.moveConfirmed as boolean } : {}),
+    ...('twoDisplayLayoutConfirmed' in value ? { twoDisplayLayoutConfirmed: value.twoDisplayLayoutConfirmed as boolean } : {}) };
 }
 
 function nullableBoolean(value: unknown): value is boolean | null { return value === null || typeof value === 'boolean'; }
@@ -50,10 +53,12 @@ export function candidateV2(value: unknown): CandidateV2 | null {
       if (raw.profile !== 'compound-drag-v1' || !['maximized', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(raw.terminal as string) ||
           !['targetMatched', 'released', 'layoutStable', 'terminalEquivalent'].every(key => typeof raw[key] === 'boolean') ||
           typeof raw.inputAgeMs !== 'number' || !Number.isFinite(raw.inputAgeMs) || raw.inputAgeMs < 0 || !fromMonitor || !toMonitor ||
-          !(raw.moveDirection === null || raw.moveDirection === 'left' || raw.moveDirection === 'right')) return null;
+          !(raw.moveDirection === null || raw.moveDirection === 'left' || raw.moveDirection === 'right') ||
+          ('twoDisplayLayoutConfirmed' in raw && typeof raw.twoDisplayLayoutConfirmed !== 'boolean')) return null;
       evidence = { kind: raw.kind, profile: raw.profile, terminal: raw.terminal as Extract<Evidence, { kind: 'compound-drag' }>['terminal'],
         targetMatched: raw.targetMatched as boolean, released: raw.released as boolean, layoutStable: raw.layoutStable as boolean,
-        terminalEquivalent: raw.terminalEquivalent as boolean, inputAgeMs: raw.inputAgeMs, fromMonitor, toMonitor, moveDirection: raw.moveDirection }; break;
+        terminalEquivalent: raw.terminalEquivalent as boolean, inputAgeMs: raw.inputAgeMs, fromMonitor, toMonitor, moveDirection: raw.moveDirection,
+        ...('twoDisplayLayoutConfirmed' in raw ? { twoDisplayLayoutConfirmed: raw.twoDisplayLayoutConfirmed as boolean } : {}) }; break;
     }
     case 'window-close':
       if (raw.profile !== 'window-close-v1' || typeof raw.targetMatched !== 'boolean' || typeof raw.destroyed !== 'boolean' ||
@@ -133,20 +138,22 @@ export class ObserverClient {
   private fixture: boolean;
   private onCandidate: (candidate: ObserverCandidate) => void;
   private onFault: () => void;
+  private onWindowDiagnostics?: (counts: WindowDiagnosticCounts) => void;
   private ready: { resolve(): void; reject(error: Error): void; timer: NodeJS.Timeout } | null = null;
   private active = false;
   private closing = false;
   private arrangedAvailable = false;
   private pending = new Map<number, { type: string; resolve(value: Record<string, unknown>): void; reject(error: Error): void; timer: NodeJS.Timeout }>();
-  constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false) {
-    this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture;
+  constructor(onCandidate: (candidate: ObserverCandidate) => void, onFault: () => void, fixture = false,
+    onWindowDiagnostics?: (counts: WindowDiagnosticCounts) => void) {
+    this.onCandidate = onCandidate; this.onFault = onFault; this.fixture = fixture; this.onWindowDiagnostics = onWindowDiagnostics;
   }
   async start(): Promise<number> {
     if (!this.child) {
       this.closing = false;
       const path = app.isPackaged ? join(process.resourcesPath, 'native-helper', 'WindowObserver.exe')
         : join(app.getAppPath(), 'resources', 'native-helper', 'WindowObserver.exe');
-      const mode = this.fixture ? '--fixture' : '--observe';
+      const mode = this.fixture ? '--fixture' : this.onWindowDiagnostics ? '--window-validation-consented' : '--observe';
       this.child = spawn(path, [mode], { cwd: dirname(path), windowsHide: true, stdio: 'pipe' });
       const child = this.child;
       // A failed transport retires a child, but kill() alone does not confirm its exit.
@@ -252,6 +259,12 @@ export class ObserverClient {
         const value = candidateV2(message);
         if (!value) throw new Error('candidate');
         if (this.active && value.generation === this.generation) this.onCandidate(value);
+        return;
+      }
+      if (message.type === 'window-diagnostics' && this.onWindowDiagnostics) {
+        const counts = parseWindowDiagnostics(message.counts);
+        if (!counts || !protocolId(message.generation)) throw new Error('window-diagnostics');
+        if (message.generation === this.generation) this.onWindowDiagnostics(counts);
         return;
       }
       const pending = this.pending.get(message.requestId as number);

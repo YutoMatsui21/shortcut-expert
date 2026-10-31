@@ -2,26 +2,42 @@ import { test, mock, type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { HelperProcess } from './support/helper-process.ts';
 import { candidateFixture, v2Fixture } from './support/fixtures.ts';
+import { windowDiagnosticKeys, type WindowDiagnosticCounts } from '../src/shared/window-diagnostics.ts';
 
 let launched: HelperProcess[] = [];
+let spawnedArguments: string[][] = [];
 let sendReady = true;
 let readyVersion = 2;
 let supportedProtocols: number[] | undefined;
 mock.module('electron', { namedExports: { app: { isPackaged: false, getAppPath: () => '.' } } });
-mock.module('node:child_process', { namedExports: { spawn: () => {
+mock.module('node:child_process', { namedExports: { spawn: (_path: string, args: string[]) => {
+  spawnedArguments.push(args);
   const process = new HelperProcess(); launched.push(process);
   if (sendReady) queueMicrotask(() => process.send({ type: 'ready', protocolVersion: readyVersion, arrangedAvailable: true, supportedProtocols })); return process;
 } } });
 const { ObserverClient, candidateV2 } = await import('../src/main/observer.ts');
 
 function harness(t: TestContext) {
-  launched = []; sendReady = true; readyVersion = 2; supportedProtocols = undefined;
+  launched = []; spawnedArguments = []; sendReady = true; readyVersion = 2; supportedProtocols = undefined;
   const accepted: unknown[] = [];
   let faults = 0;
   const client = new ObserverClient((value) => accepted.push(value), () => { faults++; }, true);
   t.after(() => { launched.forEach((child) => child.dispose()); sendReady = true; readyVersion = 2; });
   return { client, accepted, faults: () => faults, child: () => launched.at(-1)! };
 }
+
+test('window diagnostics require explicit mode, strict counters and current generation', async t => {
+  const h = harness(t), observed: WindowDiagnosticCounts[] = [];
+  const normal = new ObserverClient(() => {}, () => {});
+  await normal.start(); assert.equal(spawnedArguments.at(-1)?.[0], '--observe'); await normal.shutdown();
+  const client = new ObserverClient(() => {}, () => {}, false, counts => observed.push(counts));
+  await client.start(); assert.equal(spawnedArguments.at(-1)?.[0], '--window-validation-consented');
+  const counts = Object.fromEntries(windowDiagnosticKeys.map(key => [key, 0]));
+  h.child().send({ type: 'window-diagnostics', generation: 2, counts }); assert.equal(observed.length, 0);
+  h.child().send({ type: 'window-diagnostics', generation: 1, counts }); assert.equal(observed.length, 1);
+  h.child().send({ type: 'window-diagnostics', generation: 1, counts: { ...counts, privateTitle: 'private' } });
+  assert.equal(h.child().killed, true); assert.equal(observed.length, 1); h.child().exit(1); await client.shutdown();
+});
 
 test('旧readyはv2広告があっても後方互換起動せず直ちに停止する', async t => {
   const h = harness(t); readyVersion = 1; supportedProtocols = [1, 2];
@@ -72,7 +88,7 @@ test('window証拠は必須項目・有限値を確認し余分な内容を転�
   if (value.evidence.kind !== 'window') throw new Error('fixture');
   const result = value.evidence.result;
   for (const invalid of [{ before: null }, { inputAgeMs: Infinity }, { inputAgeMs: NaN },
-    { afterArranged: 'false' }, { fromMonitor: [] }, { moveDirection: 'up' }, { moveConfirmed: 'true' },
+    { afterArranged: 'false' }, { fromMonitor: [] }, { moveDirection: 'up' }, { moveConfirmed: 'true' }, { twoDisplayLayoutConfirmed: 'true' },
     { monitor: { x: 0, y: 0, width: 0, height: 10 } }, { toMonitor: { x: 0, y: Infinity, width: 10, height: 10 } }])
     assert.equal(candidateV2({ ...value, evidence: { ...value.evidence, result: { ...result, ...invalid } } }), null);
   const parsed = candidateV2({ ...value, title: 'fixture-sensitive', keys: ['fixture-key'],

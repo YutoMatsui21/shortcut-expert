@@ -6,12 +6,161 @@ internal static partial class Program
     {
         var samples = new List<object>();
         var screen = new MonitorBounds(0, 0, 1920, 1080);
-        var start = normal with { Monitor = screen, Work = screen, DisplayLayout = "stable" };
+        var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (int gap in new[] { -1, 2, 3, 8, 33, 64, 65, 500 })
+            Check($"OS docking threshold governs top preview release {gap}", () => {
+                var tracker = Tracker(); var before = start with { MouseDockThresholdPx = 64 };
+                var after = max with { MouseDockThresholdPx = 64 };
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                var result = tracker.FinishMove(11, after, 5000, 11, "2026-10-31");
+                Equal(gap >= 0 && gap <= 64, result is WindowCandidate);
+                if (result is WindowCandidate value) { Equal("caption-top-drag", value.route); Equal("maximize", value.operation); }
+            });
+        foreach (int? threshold in new int?[] { null, 0, -1, 257, int.MaxValue })
+            foreach (int gap in new[] { 2, 3 })
+                Check($"top fallback threshold {threshold}/{gap}", () => {
+                    var tracker = Tracker(); var before = start with { MouseDockThresholdPx = threshold };
+                    tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                    tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                    Equal(gap == 2, tracker.FinishMove(11, max with { MouseDockThresholdPx = threshold }, 5000, 11, "2026-10-31") is WindowCandidate);
+                });
+        Check("top gesture rejects changed docking setting even at edge", () => {
+            var tracker = Tracker(); tracker.Mouse(11, start with { MouseDockThresholdPx = 64 }, HTCAPTION, default, 0, 500, 0, false, true);
+            tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+            Equal<object?>(null, tracker.FinishMove(11, max with { MouseDockThresholdPx = 8 }, 5000, 11, "2026-10-31"));
+        });
+        foreach (int gap in new[] { -1, 0, 2, 3, 8, 9, 32, 33, 64, 65 })
+            Check($"top release diagnostic is observational at {gap}", () => {
+                object? Run(bool diagnostics, List<WindowDiagnosticReason> reasons) {
+                    var tracker = Tracker(); if (diagnostics) tracker.Diagnostic = reasons.Add;
+                    tracker.Mouse(11, start, HTCAPTION, default, 0, 500, 0, false, true);
+                    tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = gap }, screen, screen, 0);
+                    return tracker.FinishMove(11, max, 5000, 11, "2026-10-31");
+                }
+                var reasons = new List<WindowDiagnosticReason>();
+                Equal(gap >= 0 && gap <= 2, Run(false, reasons) is WindowCandidate);
+                Equal(gap >= 0 && gap <= 2, Run(true, reasons) is WindowCandidate);
+                var bucket = gap < 0 ? WindowDiagnosticReason.MaxReleaseYBeforeTop : gap <= 2 ? WindowDiagnosticReason.MaxReleaseTopWithin2 :
+                    gap <= 8 ? WindowDiagnosticReason.MaxReleaseTop3To8 : gap <= 32 ? WindowDiagnosticReason.MaxReleaseTop9To32 :
+                    gap <= 64 ? WindowDiagnosticReason.MaxReleaseTop33To64 : WindowDiagnosticReason.MaxReleaseTopAbove64;
+                Equal(true, reasons.Contains(bucket));
+            });
+        Check("child caption requires explicit HTCAPTION and same root/process; buttons retain priority", () => {
+            Equal(HTCAPTION, WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true));
+            Equal(1, WindowCaption.ResolveChildCaption(1, HTCAPTION, false, true));
+            Equal(1, WindowCaption.ResolveChildCaption(1, HTCAPTION, true, false));
+            foreach (int child in new[] { 1, -1, 0, HTMAXBUTTON, HTMINBUTTON, HTCLOSE }) Equal(1, WindowCaption.ResolveChildCaption(1, child, true, true));
+            foreach (int root in new[] { HTCAPTION, HTMAXBUTTON, HTMINBUTTON, HTCLOSE, -1, 0 }) Equal(root, WindowCaption.ResolveChildCaption(root, HTCAPTION, true, true));
+        });
+        Check("caption diagnostics distinguish geometry without changing hit decisions", () => {
+            var window = new Rect { Left = 0, Top = 0, Right = 100, Bottom = 100 };
+            foreach (string mode in new[] { "fallback", "invalid", "valid", "disabled", "mismatch" }) {
+                var title = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
+                if (mode != "fallback") {
+                    title.Bounds[2] = new Rect { Left = 10, Top = 0, Right = 20, Bottom = 20 };
+                    title.Bounds[3] = new Rect { Left = 20, Top = 0, Right = 30, Bottom = 20 };
+                    title.Bounds[5] = new Rect { Left = 30, Top = 0, Right = 40, Bottom = 20 };
+                }
+                if (mode == "invalid") title.Bounds[3] = title.Bounds[2];
+                if (mode == "disabled") title.State[3] = 1;
+                var point = new Point { X = mode == "mismatch" ? 50 : 25, Y = 10 };
+                var reasons = new List<string>();
+                Equal(WindowCaption.Hit(title, window, point, HTMAXBUTTON),
+                    WindowCaption.Hit(title, window, point, HTMAXBUTTON, r => reasons.Add(r.ToString())));
+                string expected = mode switch { "fallback" => "TitleGeometryFallback", "invalid" => "TitleGeometryInvalid",
+                    "disabled" => "TitleButtonDisabled", "mismatch" => "TitleButtonMismatch", _ => "TitleGeometryValid" };
+                Equal(true, reasons.Contains(expected));
+                var closeReasons = new List<CloseReason>();
+                Equal(WindowCaption.CloseButton(title, window, point), WindowCaption.CloseButton(title, window, point, closeReasons.Add));
+                Equal(true, closeReasons.Contains(mode == "fallback" ? CloseReason.GeometryFallback :
+                    mode == "invalid" ? CloseReason.GeometryInvalid : CloseReason.GeometryValid));
+                if (mode == "valid") Equal(true, closeReasons.Contains(CloseReason.GeometryOutside));
+                title.State[5] = 1; closeReasons.Clear();
+                if (mode == "valid") {
+                    Equal(false, WindowCaption.CloseButton(title, window, new Point { X = 35, Y = 10 }, closeReasons.Add));
+                    Equal(true, closeReasons.Contains(CloseReason.GeometryDisabled));
+                }
+            }
+        });
+        Check("all close reasons map into bounded generation-scoped window diagnostics", () => {
+            var counters = new WindowDiagnosticAccumulator(); counters.Start(7);
+            foreach (var reason in Enum.GetValues<CloseReason>()) counters.RecordClose(reason);
+            var result = counters.Take()!;
+            foreach (var reason in Enum.GetValues<CloseReason>()) Equal(1, result.Counts["W11" + reason]);
+            counters.RecordClose(CloseReason.Completed); Equal(true, counters.Take() is null);
+            counters.Start(8);
+            for (int i = 0; i < 1005; i++) counters.RecordClose(CloseReason.Completed);
+            Equal(1000, counters.Take()!.Counts["W11Completed"]);
+        });
+        Check("diagnostic stop summary is consumed once and cannot leak into a stopped trial", () => {
+            var counters = new WindowDiagnosticAccumulator();
+            counters.Record(WindowDiagnosticReason.RawClient); Equal(true, counters.Take() is null);
+            counters.Start(7); counters.Record(WindowDiagnosticReason.RawClient); counters.Record(WindowDiagnosticReason.RawClient);
+            var first = counters.Take()!; Equal(7, first.Generation); Equal(2, first.Counts["RawClient"]);
+            counters.Record(WindowDiagnosticReason.RawClient); Equal(true, counters.Take() is null);
+            counters.Start(8); var second = counters.Take()!; Equal(8, second.Generation); Equal(0, second.Counts["RawClient"]);
+            Equal(2, first.Counts["RawClient"]);
+            counters.Start(9); for (int i = 0; i < 1005; i++) counters.Record(WindowDiagnosticReason.MouseDown);
+            Equal(1000, counters.Take()!.Counts["MouseDown"]); Equal(true, counters.Take() is null);
+        });
+        Check("general target eligibility is independent of process names and excludes nonordinary windows", () => {
+            bool Allowed(uint process = 42, long style = WS_CAPTION, long extended = 0, bool owned = false,
+                bool? cloaked = false, string? windowClass = "CabinetWClass", bool ordinary = true) =>
+                WindowTargetPolicy.Allows(process, 7, style, extended, owned, cloaked, windowClass, ordinary);
+            foreach (string cls in new[] { "CabinetWClass", "Notepad", "Chrome_WidgetWin_1", "custom-standard-caption" }) Equal(true, Allowed(windowClass: cls));
+            Equal(false, Allowed(process: 0)); Equal(false, Allowed(process: 7)); Equal(false, Allowed(ordinary: false));
+            Equal(false, Allowed(style: 0)); Equal(false, Allowed(style: WS_CAPTION | 0x40000000));
+            Equal(false, Allowed(extended: 0x80)); Equal(false, Allowed(extended: 0x08000000));
+            Equal(false, Allowed(owned: true)); Equal(false, Allowed(cloaked: true)); Equal(false, Allowed(cloaked: null));
+            Equal(false, Allowed(windowClass: null)); Equal(false, Allowed(windowClass: ""));
+            foreach (string cls in new[] { "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Progman", "WorkerW", "XamlExplorerHostIslandWindow", "MultitaskingViewFrame" })
+                Equal(false, Allowed(windowClass: cls));
+        });
         void Sample(WindowCandidate candidate, string? expected) => samples.Add(new {
             candidate = CandidateProtocol.V2(candidate, samples.Count + 1, samples.Count + 1), expected });
 
+        foreach (bool restore in new[] { false, true })
+            foreach (string source in new[] { "caption", "client", "unknown", "other-root", "other-process" })
+                Check($"child titlebar double-click: restore={restore}, {source}", () => {
+                    var tracker = Tracker(); var before = restore ? max : start; var after = restore ? start : max;
+                    int child = source == "client" ? 1 : source == "unknown" ? -1 : HTCAPTION;
+                    int hit = WindowCaption.ResolveChildCaption(1, child, source != "other-root", source != "other-process");
+                    tracker.Mouse(11, before, hit, default, 0, 500, 0, false, true);
+                    tracker.Mouse(11, before, hit, default, 100, 500, 0, false, true);
+                    var evidence = (WindowCandidate)tracker.Complete(11, before, after, 150, 11, "2026-10-28", screen)!;
+                    Equal(source == "caption" ? "mouse" : "unknown", evidence.origin);
+                    Sample(evidence, source == "caption" ? restore ? "W04" : "W03" : null);
+                });
+        Check("child caption starts the same bounded top-drag transaction", () => {
+            var tracker = Tracker(); int hit = WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true);
+            tracker.Mouse(11, start, hit, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+            Equal<object?>(null, tracker.Complete(11, start, max, 200, 11, "2026-10-28", screen));
+            tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+            var evidence = (WindowCandidate)tracker.FinishMove(11, max, 5000, 11, "2026-10-28")!;
+            Equal("caption-top-drag", evidence.route); Equal(100L, evidence.inputAgeMs); Sample(evidence, "W03");
+        });
+
+        Check("invalid custom title geometry retains explicit root caption and restore hits", () => {
+            var title = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
+            var window = new Rect { Right = 100, Bottom = 100 };
+            title.Bounds[3] = new Rect { Left = 20, Right = 40, Bottom = 20 };
+            foreach (int hit in new[] { HTCAPTION, HTMINBUTTON, HTMAXBUTTON, HTCLOSE })
+                Equal(hit, WindowCaption.Hit(title, window, new Point { X = 25, Y = 10 }, hit));
+            foreach (int hit in new[] { 1, 0, -1, 10, 12 })
+                Equal(-1, WindowCaption.Hit(title, window, new Point { X = 25, Y = 10 }, hit));
+            foreach (bool doubleClick in new[] { false, true }) {
+                var tracker = Tracker();
+                int hit = WindowCaption.Hit(title, window, default, doubleClick ? HTCAPTION : HTMAXBUTTON);
+                tracker.Mouse(11, max, hit, default, 0, 500, 0, false, true);
+                if (doubleClick) tracker.Mouse(11, max, hit, default, 100, 500, 0, false, true);
+                var candidate = (WindowCandidate)tracker.Complete(11, max, start, 150, 11, "2026-10-28", screen)!;
+                Equal("mouse", candidate.origin); Equal(doubleClick ? "caption-double-click" : "max-button", candidate.route);
+                Sample(candidate, "W04");
+            }
+        });
         Check("caption rectangles identify standard buttons even when hit test returns caption", () => {
             var info = new TitleInfo { State = new uint[6], Bounds = new Rect[6] };
             var window = new Rect { Left = 0, Top = 0, Right = 100, Bottom = 100 };
@@ -25,7 +174,8 @@ internal static partial class Program
                 Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
             }
             info.Bounds[3] = info.Bounds[2];
-            Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
+            Equal(-1, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, -1));
+            Equal(HTMINBUTTON, WindowCaption.Hit(info, window, new Point { X = 15, Y = 10 }, HTMINBUTTON));
         });
 
         // State callbacks during the drag are not independent W04/W03 operations.

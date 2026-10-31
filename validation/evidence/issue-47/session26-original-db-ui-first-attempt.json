@@ -1,0 +1,117 @@
+{
+  "completed": false,
+  "reason": "first learning geometry y243 vs expected191; no screenshots; exact banner cause unknown; stderr was not retained",
+  "matrix": {
+    "fixtureOnly": true,
+    "initial": {
+      "bounds": {
+        "x": 1069,
+        "y": -1082,
+        "width": 1116,
+        "height": 865
+      },
+      "content": {
+        "x": 1069,
+        "y": -1082,
+        "width": 1116,
+        "height": 865
+      },
+      "viewport": {
+        "width": 1116,
+        "height": 865,
+        "dpr": 1
+      },
+      "scaleFactor": 1
+    },
+    "displays": [
+      {
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 900
+        },
+        "workArea": {
+          "x": 0,
+          "y": 0,
+          "width": 1440,
+          "height": 852
+        },
+        "scaleFactor": 2
+      },
+      {
+        "bounds": {
+          "x": 0,
+          "y": -1440,
+          "width": 2560,
+          "height": 1440
+        },
+        "workArea": {
+          "x": 0,
+          "y": -1440,
+          "width": 2560,
+          "height": 1392
+        },
+        "scaleFactor": 1
+      }
+    ],
+    "samples": [
+      {
+        "page": "ショートカット一覧",
+        "requested": {
+          "width": 800,
+          "height": 600
+        },
+        "nominal": {
+          "bounds": {
+            "x": 1069,
+            "y": -1082,
+            "width": 800,
+            "height": 600
+          },
+          "content": {
+            "x": 1069,
+            "y": -1082,
+            "width": 800,
+            "height": 600
+          },
+          "viewport": {
+            "width": 800,
+            "height": 600,
+            "dpr": 1
+          },
+          "scaleFactor": 1
+        },
+        "corrected": {
+          "bounds": {
+            "x": 1069,
+            "y": -1082,
+            "width": 800,
+            "height": 600
+          },
+          "content": {
+            "x": 1069,
+            "y": -1082,
+            "width": 800,
+            "height": 600
+          },
+          "viewport": {
+            "width": 800,
+            "height": 600,
+            "dpr": 1
+          },
+          "scaleFactor": 1
+        },
+        "dimensionsMatched": true,
+        "geometry": {
+          "x": 148,
+          "y": 243,
+          "width": 552,
+          "horizontalOverflow": false,
+          "bodyOverflow": false,
+          "rows": 8
+        }
+      }
+    ]
+  }
+}

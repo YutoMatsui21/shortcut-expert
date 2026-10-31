@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -8,6 +9,7 @@ internal sealed class Observer : IDisposable
     private const uint HitTestTimeoutMs = 10;
     private readonly CandidateProtocol protocol;
     private readonly bool fixture;
+    private readonly Action<WindowDiagnosticReason>? windowDiagnostic;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
@@ -20,18 +22,25 @@ internal sealed class Observer : IDisposable
     private readonly List<nint> eventHooks = new();
     private nint mouseHook, keyHook;
     private int epoch;
+    private int? mouseDockThresholdPx;
     private static readonly Arranged? isArranged = LoadArranged();
 
-    internal Observer(Action<object> emit, bool fixture = false, Action<CloseReason>? closeDiagnostic = null)
+    internal Observer(Action<object> emit, bool fixture = false, Action<CloseReason>? closeDiagnostic = null,
+        Action<WindowDiagnosticReason>? windowDiagnostic = null)
     {
-        protocol = new CandidateProtocol(emit); this.fixture = fixture;
+        protocol = new CandidateProtocol(emit); this.fixture = fixture; this.windowDiagnostic = windowDiagnostic;
+        tracker.Diagnostic = windowDiagnostic;
         taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
-        switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
+        switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, windowDiagnostic);
         closing = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
-    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); }
+    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); mouseDockThresholdPx = null; }
+    internal void RefreshDockThreshold() {
+        InvalidateDisplay();
+        mouseDockThresholdPx = !fixture && Active ? WindowDockSettings.ReadMouseDockThreshold() : null;
+    }
     internal static bool ArrangedAvailable => isArranged is not null;
     internal static string ForegroundToken => GetForegroundWindow().ToString();
     private static Arranged? LoadArranged()
@@ -46,6 +55,7 @@ internal sealed class Observer : IDisposable
         epoch = newGeneration;
         protocol.Start(newGeneration, protocolVersion);
         if (!fixture && GetSystemMetrics(SM_REMOTESESSION) != 0) throw new InvalidOperationException("remote-session-unsupported");
+        mouseDockThresholdPx = fixture ? null : WindowDockSettings.ReadMouseDockThreshold();
         if (!fixture) EnumWindows((window, _) => { Remember(window); return true; }, 0);
         nint module = GetModuleHandleW(null);
         mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
@@ -73,22 +83,19 @@ internal sealed class Observer : IDisposable
         if (mouseHook != 0) released &= UnhookWindowsHookEx(mouseHook);
         if (keyHook != 0) released &= UnhookWindowsHookEx(keyHook);
         foreach (nint hook in eventHooks) released &= UnhookWinEvent(hook);
-        mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0);
+        mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0); mouseDockThresholdPx = null;
         if (!released) throw new InvalidOperationException("hook-release-failed");
     }
     private WindowState? Read(nint window, WindowState? cached = null)
     {
         if (window == 0 || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window)) return null;
-        GetWindowThreadProcessId(window, out uint pid);
-        string app;
-        if (cached is not null && cached.Process == pid) app = cached.App;
-        else
-        {
-            try { using var process = Process.GetProcessById((int)pid); app = process.ProcessName.ToLowerInvariant(); }
-            catch { return null; }
-            if (app is not ("chrome" or "obsidian" or "code" or "chatgpt")) return null;
-            if (!OrdinaryProcess(pid)) return null;
-        }
+        if (window == GetDesktopWindow() || window == GetShellWindow()) return null;
+        if (GetWindowThreadProcessId(window, out uint pid) == 0) return null;
+        var cls = new StringBuilder(256);
+        string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
+        bool? cloaked = DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0 ? cloak != 0 : null;
+        if (!WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
+            GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))) return null;
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
@@ -96,9 +103,9 @@ internal sealed class Observer : IDisposable
         bool frameKnown = DwmGetWindowAttribute(window, DWMWA_EXTENDED_FRAME_BOUNDS, out Rect frame,
             (uint)Marshal.SizeOf<Rect>()) == 0;
         static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
-        return new WindowState(pid, app, placement.Show, isArranged is null ? null : isArranged(window) != 0,
+        return new WindowState(pid, WindowTargetPolicy.ApplicationCategory, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
-            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window));
+            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair(), mouseDockThresholdPx);
     }
     internal static bool OrdinaryProcess(uint pid)
     {
@@ -120,33 +127,84 @@ internal sealed class Observer : IDisposable
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
+            bool probeRelease = windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
+            Point? physicalBefore = probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             closing.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
+            if (windowDiagnostic is not null && message == 0x200) tracker.MouseMoved(taskbarMouse.Point, taskbarMouse.Flags);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message == WM_LBUTTONUP)
                 {
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseUp);
                     var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
                     bool known = GetMonitorInfoW(MonitorFromPoint(taskbarMouse.Point, MONITOR_DEFAULTTONULL), ref info);
                     static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+                    Point? physicalAfter = probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
                     tracker.MouseReleased(taskbarMouse.Point, known ? Bounds(info.Monitor) : null,
-                        known ? Bounds(info.Work) : null, taskbarMouse.Flags);
+                        known ? Bounds(info.Work) : null, taskbarMouse.Flags, physicalBefore, physicalAfter);
                 }
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
                 return CallNextHookEx(0, code, message, data);
             }
             var mouse = Marshal.PtrToStructure<MouseData>(data);
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseDown);
             nint target = GetAncestor(WindowFromPoint(mouse.Point), GA_ROOT);
-            if (!states.TryGetValue(target, out WindowState? cached)) { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
+            if (!states.TryGetValue(target, out WindowState? cached)) { windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetMissing); tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
             WindowState? before = Read(target, cached);
-            if (before is null) { tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
+            if (before is null) { windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetRejected); tracker.ClearInput(); return CallNextHookEx(0, code, message, data); }
             states[target] = before;
             long packed = (uint)((mouse.Point.Y & 0xffff) << 16) | (uint)(mouse.Point.X & 0xffff);
             int hit = -1;
             if (SendMessageTimeoutW(target, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint result) != 0) hit = unchecked((int)result);
+            windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.RawCaption : hit == 1 ? WindowDiagnosticReason.RawClient :
+                hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.RawButton : WindowDiagnosticReason.RawOther);
+            if (hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE)
+                windowDiagnostic?.Invoke(hit == HTMINBUTTON ? WindowDiagnosticReason.RawMinButton :
+                    hit == HTMAXBUTTON ? WindowDiagnosticReason.RawMaxButton : WindowDiagnosticReason.RawCloseButton);
+            bool rootCaptionRead = false;
             if (GetWindowRect(target, out Rect rect) && WindowCaption.Read(target, out TitleInfo title))
-                hit = WindowCaption.Hit(title, rect, mouse.Point, hit);
+            {
+                rootCaptionRead = true;
+                windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadOk);
+                windowDiagnostic?.Invoke(SnapGeometry.Contains(title.Bar, mouse.Point) ? WindowDiagnosticReason.TitleContainsPoint : WindowDiagnosticReason.TitleOutsidePoint);
+                hit = WindowCaption.Hit(title, rect, mouse.Point, hit, windowDiagnostic);
+            }
+            else windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadFail);
+            if (hit == 1 && rootCaptionRead || windowDiagnostic is not null)
+            {
+                nint hitWindow = WindowFromPhysicalPoint(mouse.Point);
+                if (hitWindow == target) windowDiagnostic?.Invoke(WindowDiagnosticReason.HitRoot);
+                else if (hitWindow == 0 || GetAncestor(hitWindow, GA_ROOT) != target ||
+                    GetWindowThreadProcessId(hitWindow, out uint childProcess) == 0 || childProcess != before.Process)
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
+                else
+                {
+                    int childHit = -1;
+                    bool known = SendMessageTimeoutW(hitWindow, WM_NCHITTEST, 0, (nint)packed, SMTO_ABORTIFHUNG, HitTestTimeoutMs, out nuint value) != 0;
+                    if (known) childHit = unchecked((int)value);
+                    // Revalidate after the bounded cross-window query; never use another process or a reparented child.
+                    bool sameRoot = GetAncestor(hitWindow, GA_ROOT) == target;
+                    bool sameProcess = GetWindowThreadProcessId(hitWindow, out uint checkedProcess) != 0 && checkedProcess == before.Process;
+                    if (sameRoot && sameProcess)
+                    {
+                        windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildSameProcess);
+                        if (known) windowDiagnostic?.Invoke(childHit == HTCAPTION ? WindowDiagnosticReason.ChildCaption : childHit == 1 ? WindowDiagnosticReason.ChildClient : WindowDiagnosticReason.ChildOther);
+                        else windowDiagnostic?.Invoke(WindowDiagnosticReason.ChildHitFailed);
+                        if (windowDiagnostic is not null)
+                        {
+                            if (WindowCaption.Read(hitWindow, out TitleInfo childTitle))
+                                windowDiagnostic(SnapGeometry.Contains(childTitle.Bar, mouse.Point) ? WindowDiagnosticReason.ChildTitleContainsPoint : WindowDiagnosticReason.ChildTitleOutsidePoint);
+                            else windowDiagnostic(WindowDiagnosticReason.ChildTitleReadFail);
+                        }
+                    }
+                    else windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
+                    if (rootCaptionRead) hit = WindowCaption.ResolveChildCaption(hit, childHit, sameRoot, sameProcess);
+                }
+            }
+            windowDiagnostic?.Invoke(hit == HTCAPTION ? WindowDiagnosticReason.FinalCaption : hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.FinalButton : WindowDiagnosticReason.FinalOther);
+            windowDiagnostic?.Invoke(GetForegroundWindow() == target ? WindowDiagnosticReason.ForegroundMatched : WindowDiagnosticReason.ForegroundOther);
             tracker.Mouse(target, before, hit, mouse.Point, clock.ElapsedMilliseconds, GetDoubleClickTime(), mouse.Flags,
                 GetAsyncKeyState(VK_SHIFT) < 0 || GetAsyncKeyState(VK_CONTROL) < 0 ||
                 GetAsyncKeyState(VK_MENU) < 0 || GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0,
@@ -214,9 +272,10 @@ internal sealed class Observer : IDisposable
                 states.Remove(window);
                 return;
             }
-            if (kind == EVENT_SYSTEM_MOVESIZESTART) { switching.Cancel(); tracker.MoveStart(window, clock.ElapsedMilliseconds); return; }
+            if (kind == EVENT_SYSTEM_MOVESIZESTART) { windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveStart); switching.Cancel(); tracker.MoveStart(window, clock.ElapsedMilliseconds); return; }
             if (kind == EVENT_SYSTEM_MOVESIZEEND)
             {
+                windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveEnd);
                 states.TryGetValue(window, out WindowState? cached);
                 WindowState? end = Read(window, cached);
                 object? result = tracker.FinishMove(window, end, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));

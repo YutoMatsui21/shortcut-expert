@@ -9,6 +9,7 @@ import { join, resolve } from 'node:path';
 import { DurableCoach } from '../src/core/durable-coach.ts';
 import { SqliteRepository } from '../src/main/sqlite-repository.ts';
 import { v2Fixture, type Candidate } from './support/fixtures.ts';
+import { windowDiagnosticKeys } from '../src/shared/window-diagnostics.ts';
 
 mock.module('electron', { namedExports: { app: {} } });
 const { candidateV2 } = await import('../src/main/observer.ts');
@@ -21,6 +22,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   assert.equal(result.status, 0, result.stderr + result.stdout);
   const report = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1)!);
   assert.equal(report.globalInputCollected, false);
+  assert.deepEqual(report.windowDiagnosticKeys, [...windowDiagnosticKeys], 'native reason taxonomy and Main allowlist must stay synchronized');
   assert.ok(report.passed.length > 0, 'Native policy suite must not silently discover zero tests');
   t.diagnostic(`C# production policy assertions: ${report.passed.length}`);
   const observations = report.samples.map((sample: Candidate) => {
@@ -82,7 +84,7 @@ test('本番のC#候補生成と全画面分類を人工イベント列で検証
   }
   assert.deepEqual((await repository.query('2026-10-28', '2026-10-28')).counts['2026-10-28'], totals);
   assert.equal(notices, expectedNotices);
-  assert.equal(totals.W03.mouse, 2); assert.ok(totals.W04.key > 0); assert.ok(totals.W04.mouse > 0);
+  assert.equal(totals.W03.mouse, 4, 'existing top-drag cases plus child-caption double-click and drag'); assert.ok(totals.W04.key > 0); assert.ok(totals.W04.mouse > 0);
   assert.equal(totals.W05, undefined);
   assert.deepEqual(totals.W06, { mouse: 2, key: 3 });
   assert.deepEqual(totals.W07, { mouse: 4, key: 6 });

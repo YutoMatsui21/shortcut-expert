@@ -52,3 +52,15 @@ test('元状態に合わない最小化・復元と元画面への往復を除�
   assert.equal(classify({ ...move, origin: 'key', route: 'win-shift-left' })?.shortcut, null);
   for (const moveConfirmed of [false, undefined]) assert.equal(classify({ ...move, moveConfirmed }), null);
 });
+
+test('two-display vertical standalone move preserves actual key route and requires layout proof', () => {
+  const move: Candidate = { ...addedCases[3].candidate, moveDirection: null, twoDisplayLayoutConfirmed: true,
+    toMonitor: { x: 0, y: -1440, width: 2560, height: 1440 } };
+  assert.equal(classify(move)?.shortcut, 'Win + Shift + ←');
+  for (const [route, arrow] of [['win-shift-left', '←'], ['win-shift-right', '→']])
+    assert.equal(classify({ ...move, origin: 'key', route })?.shortcut, `Win + Shift + ${arrow}`);
+  for (const proof of [false, undefined])
+    assert.equal(classify({ ...move, twoDisplayLayoutConfirmed: proof })?.shortcut, null);
+  assert.equal(classify({ ...move, toMonitor: { ...move.fromMonitor!, y: -100 } })?.shortcut, null);
+  assert.equal(classify({ ...move, moveConfirmed: false }), null);
+});

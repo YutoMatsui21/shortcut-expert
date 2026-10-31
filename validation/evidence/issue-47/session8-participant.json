@@ -1,0 +1,10 @@
+{
+  "session": "session8",
+  "revision": "c4d7d2ca34df79c0d4c916e86cbeb77972aa0547",
+  "nativeDiagnostics": true,
+  "participantReport": "Both left mouse cases completed with no notifications",
+  "leftTopFinding": "Caption source, move start/end, target, layout, monitor/work, start, exact quarter shape and release are confirmed. Side distance category is 3 to 8 physical pixels; old 2px limit rejects it.",
+  "leftBottomFinding": "Exact left-bottom shape and drag source are confirmed, but PlacementStartInvalid rejects it before side-distance evaluation. Which start-state predicate failed is not established by the existing counters.",
+  "nextDecision": "Fix bounded direct side-edge release tolerance using observed counterexample. Do not relax arranged/unknown start-state guard without evidence of equivalent shortcut behavior.",
+  "leftBottomPreparation": "Participant explicitly states they dragged directly from an already arranged left-top/other placement to left-bottom, without restoring a normal unarranged starting state. This does not satisfy the planned normal-start case. Retain arranged-start exclusion as a product limitation, not a completed acceptance condition."
+}

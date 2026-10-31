@@ -20,6 +20,87 @@ internal static partial class Program
             output.Add(new { candidate = new CandidateEnvelope("candidate", 2, 1, id, id, "2026-10-28", result.Origin,
                 result.Origin == "mouse" ? "caption-edge-drag" : "win-held-arrows", false, false, result.Evidence), expected });
         }
+        Check("dock settings reads are isolated and restore DPI context even on failure", () => {
+            foreach (int? value in new int?[] { null, -1, 0, 1, 8, 64, 256, 257, int.MaxValue }) {
+                var calls = new List<nint>();
+                var read = WindowDockSettings.Read(context => { calls.Add(context); return -4; }, () => value);
+                Equal(value is >= 1 and <= 256 ? value : null, read);
+                Equal(2, calls.Count); Equal((nint)(-2), calls[0]); Equal((nint)(-4), calls[1]);
+            }
+            int queries = 0;
+            Equal<int?>(null, WindowDockSettings.Read(_ => 0, () => { queries++; return 64; })); Equal(0, queries);
+            var restored = new List<nint>(); bool threw = false;
+            try { WindowDockSettings.Read(context => { restored.Add(context); return -4; }, () => throw new InvalidOperationException("fixture")); }
+            catch (InvalidOperationException) { threw = true; }
+            Equal(true, threw); Equal(2, restored.Count); Equal((nint)(-4), restored[1]);
+        });
+        Check("OS docking threshold admits early side/corner previews while rejecting its outside", () => {
+            foreach (string side in new[] { "left", "right" }) foreach (string vertical in new[] { "half", "top", "bottom" }) {
+                var before = start with { MouseDockThresholdPx = 64 };
+                var after = Placed(side, vertical) with { MouseDockThresholdPx = 64 };
+                int edge = side == "left" ? work.x : work.x + work.width - 1;
+                int y = vertical == "bottom" ? work.y + work.height - 1 : work.y;
+                foreach (int distance in new[] { 8, 33, 64, 65, 500 }) {
+                    var point = new Point { X = edge + (side == "left" ? distance : -distance), Y = y };
+                    var evidence = PlacementGeometry.Drag(before, after, point, monitor, work, 100, true);
+                    Equal(distance <= 64, evidence is not null);
+                }
+                var preview = new Point { X = edge + (side == "left" ? 60 : -60), Y = y };
+                foreach (int? raw in new int?[] { null, 0, -1, 257, int.MaxValue })
+                    Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before with { MouseDockThresholdPx = raw },
+                        after with { MouseDockThresholdPx = raw }, preview, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after with { MouseDockThresholdPx = 8 },
+                    new Point { X = edge, Y = y }, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before with { Arranged = true }, after, preview, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after, preview, monitor, work, 100, false));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(before, after, preview, monitor, work, 1001, true));
+            }
+        });
+        Check("natural direct side-edge release accepts observed 3..8px while preserving interior/start guards", () => {
+            foreach (string side in new[] { "left", "right" }) foreach (string vertical in new[] { "half", "top", "bottom" }) {
+                var after = Placed(side, vertical);
+                int y = vertical == "bottom" ? work.y + work.height / 2 : work.y;
+                int edge = side == "left" ? work.x : work.x + work.width - 1;
+                foreach (int distance in new[] { 3, 8, 9, 100 }) {
+                    var point = new Point { X = edge + (side == "left" ? distance : -distance), Y = y };
+                    var evidence = PlacementGeometry.Drag(start, after, point, monitor, work, 100, true);
+                    Equal(distance <= 8, evidence is not null);
+                    if (evidence is not null) Equal(side + "-" + vertical, evidence.shape);
+                }
+                var release = new Point { X = edge + (side == "left" ? 8 : -8), Y = y };
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start with { Arranged = true }, after, release, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start with { Arranged = null }, after, release, monitor, work, 100, true));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start, after, release, monitor, work, 100, false));
+                Equal<PlacementEvidence?>(null, PlacementGeometry.Drag(start, after, release, monitor, work, 1001, true));
+            }
+        });
+        Check("placement diagnostics preserve outcomes and categorize bounded rejection reasons", () => {
+            foreach (string mode in new[] { "valid", "side3", "side12", "side64", "outside-y", "shape", "age", "unmatched" }) {
+                var after = Placed("left", "top");
+                int offset = mode == "side3" ? 3 : mode == "side12" ? 12 : mode == "side64" ? 64 : 0;
+                var point = new Point { X = work.x + offset, Y = mode == "outside-y" ? work.y - 1 : work.y };
+                if (mode == "shape") after = after with { Frame = after.Frame! with { x = after.Frame!.x + 3 } };
+                long age = mode == "age" ? 1001 : 100; bool matched = mode != "unmatched";
+                var expected = PlacementGeometry.Drag(start, after, point, monitor, work, age, matched);
+                var reasons = new List<WindowDiagnosticReason>();
+                var actual = PlacementGeometry.Drag(start, after, point, monitor, work, age, matched, reasons.Add);
+                Equal(expected, actual); Equal(true, reasons.Count > 0);
+                var reason = mode switch {
+                    "valid" => WindowDiagnosticReason.PlacementAccepted, "side3" => WindowDiagnosticReason.PlacementSide3To8,
+                    "side12" => WindowDiagnosticReason.PlacementSide9To32, "side64" => WindowDiagnosticReason.PlacementSideAbove32,
+                    "outside-y" => WindowDiagnosticReason.PlacementYOutside, "shape" => WindowDiagnosticReason.PlacementShapeUnknown,
+                    "age" => WindowDiagnosticReason.PlacementStartAgeInvalid, _ => WindowDiagnosticReason.PlacementInputUnmatched };
+                Equal(true, reasons.Contains(reason));
+            }
+            foreach (bool foreground in new[] { true, false }) {
+                var tracker = Tracker(); var reasons = new List<WindowDiagnosticReason>(); tracker.Diagnostic = reasons.Add;
+                tracker.Mouse(11, start, HTCAPTION, default, 0, 500, 0, false, true); tracker.MoveStart(11, 100);
+                if (foreground) tracker.ForegroundChanged(12); else tracker.ClearInput();
+                Equal<object?>(null, tracker.FinishMove(11, Placed("left", "top"), 300, 11, "2026-10-28"));
+                Equal(true, reasons.Contains(foreground ? WindowDiagnosticReason.DragForegroundCancelled : WindowDiagnosticReason.DragInputCancelled));
+                Equal(true, reasons.Contains(WindowDiagnosticReason.DragNoSource));
+            }
+        });
         foreach (uint dpi in new uint[] { 96, 144, 192 }) foreach (uint show in new uint[] { SW_SHOWNORMAL, SW_SHOWMAXIMIZED })
             Check($"placement geometry physical units/start {show}/DPI {dpi}", () => {
                 var after = Placed("right", "top") with { Dpi = dpi };

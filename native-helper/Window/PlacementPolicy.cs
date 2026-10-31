@@ -6,14 +6,30 @@ internal sealed record PlacementResult(int Transaction, string Origin, Placement
 // Physical DWM frame and monitor work area; never serialize window rectangles or input sequences.
 internal static class PlacementGeometry
 {
-    internal static string? Shape(WindowState state)
+    // Bounded implementation tolerance, informed by the observed 3..8px natural-input counterexample.
+    // This is not a measurement or guarantee of Windows' complete Snap activation region.
+    internal const int DirectSideReleaseTolerancePx = 8;
+    internal static int? NormalizeMouseDockThreshold(int? raw) => raw is >= 1 and <= 256 ? raw : null;
+    internal static int? ReleaseTolerance(WindowState before, WindowState after, int fallback = DirectSideReleaseTolerancePx) =>
+        before.MouseDockThresholdPx != after.MouseDockThresholdPx ? null :
+            Math.Max(fallback, NormalizeMouseDockThreshold(before.MouseDockThresholdPx) ?? fallback);
+    internal static string? Shape(WindowState state, Action<WindowDiagnosticReason>? diagnostic = null)
     {
         if (state.Show != SW_SHOWNORMAL || state.Arranged != true || state.Frame is not { } f ||
-            state.Work is not { } w || state.Dpi is < 48 or > 768 || w.width < 2 || w.height < 2) return null;
+            state.Work is not { } w || state.Dpi is < 48 or > 768 || w.width < 2 || w.height < 2)
+        { diagnostic?.Invoke(WindowDiagnosticReason.ShapeInputInvalid); return null; }
         // Only rounding of physical coordinates is tolerated. Size-limited/free-ratio windows stay unknown.
         bool Near(long a, long b) => Math.Abs(a - b) <= 1;
         long right = (long)w.x + w.width, bottom = (long)w.y + w.height;
         long midX = (long)w.x + w.width / 2, midY = (long)w.y + w.height / 2;
+        if (Near(f.x, w.x)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeLeftEdge);
+        if (Near((long)f.x + f.width, right)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeRightEdge);
+        if (Near((long)f.x + f.width, midX)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeLeftEndAtMid);
+        if (Near(f.x, midX)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeRightStartAtMid);
+        if (Near(f.y, w.y)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeTop);
+        if (Near((long)f.y + f.height, bottom)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeBottom);
+        if (Near(f.y, midY)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeMidStart);
+        if (Near((long)f.y + f.height, midY)) diagnostic?.Invoke(WindowDiagnosticReason.ShapeMidEnd);
         bool left = Near(f.x, w.x) && Near((long)f.x + f.width, midX);
         bool onRight = Near(f.x, midX) && Near((long)f.x + f.width, right);
         if (!left && !onRight) return null;
@@ -26,20 +42,34 @@ internal static class PlacementGeometry
     internal static bool Compatible(WindowState a, WindowState b) => a.Process == b.Process &&
         a.DisplayLayout is not null && a.DisplayLayout == b.DisplayLayout && a.Monitor is not null && b.Monitor is not null;
     internal static PlacementEvidence? Drag(WindowState before, WindowState after, Point point,
-        MonitorBounds releasedMonitor, MonitorBounds work, long age, bool matched)
+        MonitorBounds releasedMonitor, MonitorBounds work, long age, bool matched, Action<WindowDiagnosticReason>? diagnostic = null)
     {
-        string? shape = Shape(after);
-        if (!matched || !Compatible(before, after) || before.Arranged != false ||
-            before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED) || shape is null ||
-            after.Monitor != releasedMonitor || after.Work != work || age is < 0 or > 1000) return null;
-        if (before.Monitor == after.Monitor && (before.Work != after.Work || before.Dpi != after.Dpi)) return null;
+        string? shape = Shape(after, diagnostic);
+        if (!matched) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementInputUnmatched); return null; }
+        if (!Compatible(before, after)) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementIncompatible); return null; }
+        if (before.Arranged != false || before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED))
+        { diagnostic?.Invoke(WindowDiagnosticReason.PlacementStartInvalid); return null; }
+        if (shape is null) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementShapeUnknown); return null; }
+        if (after.Monitor != releasedMonitor) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementReleaseMonitorMismatch); return null; }
+        if (after.Work != work) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementReleaseWorkMismatch); return null; }
+        if (age is < 0 or > 1000) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementStartAgeInvalid); return null; }
+        if (before.Monitor == after.Monitor && (before.Work != after.Work || before.Dpi != after.Dpi))
+        { diagnostic?.Invoke(WindowDiagnosticReason.PlacementGeometryChanged); return null; }
+        int? releaseTolerance = ReleaseTolerance(before, after);
+        if (releaseTolerance is null) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementGeometryChanged); return null; }
         bool left = shape.StartsWith("left-");
         long edge = left ? work.x : (long)work.x + work.width - 1;
         // Conservative direct side-edge release: excludes the interior top Snap Layout selection area.
         // This is not Windows' undocumented corner hit region (see implementation evidence).
-        if (Math.Abs((long)point.X - edge) > 2 || point.Y < work.y || (long)point.Y >= (long)work.y + work.height) return null;
+        long distance = Math.Abs((long)point.X - edge);
+        diagnostic?.Invoke(distance <= 2 ? WindowDiagnosticReason.PlacementSideWithin2 : distance <= 8 ? WindowDiagnosticReason.PlacementSide3To8 :
+            distance <= 32 ? WindowDiagnosticReason.PlacementSide9To32 : WindowDiagnosticReason.PlacementSideAbove32);
+        if (distance > releaseTolerance.Value) return null;
+        if (point.Y < work.y || (long)point.Y >= (long)work.y + work.height) { diagnostic?.Invoke(WindowDiagnosticReason.PlacementYOutside); return null; }
         long mid = (long)work.y + work.height / 2;
-        if (shape.EndsWith("-top") && point.Y >= mid || shape.EndsWith("-bottom") && point.Y < mid) return null;
+        if (shape.EndsWith("-top") && point.Y >= mid || shape.EndsWith("-bottom") && point.Y < mid)
+        { diagnostic?.Invoke(WindowDiagnosticReason.PlacementVerticalMismatch); return null; }
+        diagnostic?.Invoke(WindowDiagnosticReason.PlacementAccepted);
         return new(shape, true, age, before.Monitor != after.Monitor, after.Monitor);
     }
 }

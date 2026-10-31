@@ -1,0 +1,10 @@
+{
+  "session": "session2",
+  "participantReport": "Ten W03/W04 cases completed; no mouse case displayed a notification",
+  "recordedTrials": 9,
+  "missingCase": "S04-min-normal has no saved trial; unknown rather than a product pass or failure",
+  "machineFinding": "All nine stored trials: candidates=0, counts empty, notificationRequests=0; learning state, pause, stop, expiry and interruption did not explain failure",
+  "sourceFinding": "Native Observer.Read and Core classifyWindow retain a four-app allowlist that excludes Explorer",
+  "revision": "e42974da3512f05e49710ce4aa752fbc774f2894",
+  "fixStatus": "not yet changed; preserve original failure evidence"
+}

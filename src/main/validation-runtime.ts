@@ -15,7 +15,8 @@ import { runSettingsSmoke } from './settings-smoke';
 import { runActivationSmoke } from './activation-smoke';
 import { runNotificationAcceptance } from './notification-acceptance';
 import { runUiAcceptance } from './ui-acceptance';
-import { runNaturalInputAcceptance } from './natural-input-acceptance';
+import { runNaturalInputAcceptance, runTrialControl } from './natural-input-acceptance';
+import { FinalInputTrials } from './final-input-trials';
 
 type ValidationContext = {
   coach: DurableCoach; observer: ObserverClient;
@@ -67,12 +68,16 @@ export class ValidationRuntime {
     const { coach, observer, window, repository, standardNotices,
       command, startObservation, stopObservation, quit, showCoach, control, ticker } = context;
     if (naturalAcceptance) {
-      this.naturalControl = runNaturalInputAcceptance(app.getPath('userData'), {
+      const deps = {
         snapshot: () => coach.snapshot(), start: paused => control.run(async () => {
           this.naturalArming = true; try { await startObservation(); coach.pauseNotifications(paused); } finally { this.naturalArming = false; }
         }), stop: () => control.run(stopObservation), idle: () => coach.idle(),
-        configure: state => coach.setLearningState(naturalOperation, state)
-      }, quit, naturalOperation);
+      } satisfies Pick<Parameters<typeof runNaturalInputAcceptance>[1], 'snapshot' | 'start' | 'stop' | 'idle'>;
+      this.naturalControl = naturalOperation === 'ALL'
+        ? runTrialControl(app.getPath('userData'), deps, quit, 'ALL', start => new FinalInputTrials({ ...deps, start, date: localDate,
+          configure: async states => { for (const [op, state] of Object.entries(states)) await coach.setLearningState(op as import('../shared/coach').OperationId, state!); }
+        }), true)
+        : runNaturalInputAcceptance(app.getPath('userData'), { ...deps, configure: state => coach.setLearningState(naturalOperation, state) }, quit, naturalOperation);
       app.once('will-quit', () => this.naturalControl?.dispose());
       return;
     }

@@ -1,0 +1,19 @@
+{
+  "productionRevision": "f22db85e9199a93a39a5e67f208ccb9ccf5b6d21",
+  "review": "dedicated Codex overall review plus P1 re-review; four docs/code-review.md viewpoints",
+  "code": [
+    {
+      "path": "scripts/acceptance/records-renderer-replay.mjs",
+      "sha256": "38a6b57565eef5e6120ee0ccfdd07aec6a7d3e756417b926666b465df1309303"
+    },
+    {
+      "path": "validation/issue-47/records-renderer-replay.ts",
+      "sha256": "e718617e3453017d85c2c8038a8a0fadc5e8aae3a720d1ebc25dcc9d78f8c3ef"
+    }
+  ],
+  "firstP1Rereview": "interrupted by usage limit; not treated as completed",
+  "resumedP1Rereview": "completed; previous P1 resolved; no mandatory Issue47 acceptance gate unsupported",
+  "basis": "actual session26 byte-identical DB copy through unchanged packaged Main/Store/Worker/Core/IPC/renderer/preload, Native fixture only, 16 viewport samples and own-app local screenshots, public-model equality and immutable source DB/package",
+  "artificialReplay": "secondary evidence only, not natural input",
+  "publicationApproval": false
+}

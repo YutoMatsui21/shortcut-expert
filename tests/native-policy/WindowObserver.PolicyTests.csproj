@@ -15,5 +15,9 @@
     <Compile Include="../../native-helper/Taskbar/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
     <Compile Include="../../native-helper/Window/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />
     <Compile Include="../../native-helper/Window/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
+    <Compile Include="../../native-helper/Window/WindowTargetPolicy.cs" Link="WindowTargetPolicy.cs" />
+    <Compile Include="../../native-helper/Window/WindowDiagnostics.cs" Link="WindowDiagnostics.cs" />
+    <Compile Include="../../native-helper/Window/MonitorMovePolicy.cs" Link="MonitorMovePolicy.cs" />
+    <Compile Include="../../native-helper/Platform/WindowDockSettings.cs" Link="WindowDockSettings.cs" />
   </ItemGroup>
 </Project>
