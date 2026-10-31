@@ -74,7 +74,7 @@ export function RecordsPage({ coach, query, changeQuery }: { coach: ReturnType<t
         <tbody>{model?.rows.map(row => {
           const operation = learningOperations.find(operation => operation.id === row.id)!;
           return <tr key={operation.id} data-operation={operation.id}>
-            <th scope="row"><span>{operation.label}</span><span className="availability">準備中</span></th>
+            <th scope="row"><span>{operation.label}</span></th>
             <td className="record-shortcut"><div className="shortcut-keys" aria-label={operation.hint ?? operation.keys.join(' + ')} title={operation.hint}>
               {operation.keys.map((key, i) => <Fragment key={key}>{i > 0 && <span className="key-plus">+</span>}<kbd>{key}</kbd></Fragment>)}
             </div></td>
