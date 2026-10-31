@@ -23,7 +23,7 @@ nsis:
   oneClick: true
   perMachine: false
   allowElevation: false
-  runAfterFinish: false
+  runAfterFinish: true
   deleteAppDataOnUninstall: false
   createStartMenuShortcut: true
   shortcutName: Shortcut Expert
