@@ -133,3 +133,21 @@ Native全473ファイル一致、package全550ファイルを `../evidence/issue
 回帰は同monitorおよび別monitor最大化の3/8/33/64を正例、65/500・負のY・無効getter・設定変更を負例とした。追加テストを既存集計サンプルへ混ぜたことで最初のGreen実行はfixture集計の期待と不一致となり、集計サンプルを増やさず直接policy結果をassertする形に修正して成功。既存の期待値は変更していない。
 
 上端修正後の検証：型検査、関連unit60件、Native全7件（policy assertions651）、helper build、同梱base/settings/activation/migration/comparison、保存受入17件が成功。専用reviewerが1dc4481以降の全tracked/untracked差分を4観点で確認し、対応が必要な指摘なし。Native473ファイル全一致、package550ファイルのmanifestは `../evidence/issue-47/top-threshold-build.json`。同梱先は `release/issue-47-top-threshold/win-unpacked`。現在の実機確認はこの修正後buildでは未実施であり、session24の診断結果と混同しない。記録回収時に一度別packageを指定してhash mismatchとなった準備エラーは、実際の診断packageを指定して解消し、session24のhash不変・DB整合性・残存0を確認済み。Native strict診断キーは186。NU1900警告あり。
+
+## 上端修正後の通常経路6件（2026-10-31、session25）
+
+製品f22db85、Native診断OFF、同梱 `release/issue-47-top-threshold/win-unpacked`。全6件valid/completed、記録・通知要求6/6一致。Chrome／standardの同monitor top preview解放はW03 mouse各1・通知各1、別monitor top previewはW02/W03 mouse各1・1通知2行。複数TabはChrome／standardでW01 key各1・通知0。Snap Layout選択は候補・記録・通知0。本人は全件期待どおりと報告し、原本の初期確認欄を変更せずparticipant別添へ残す。
+
+正常終了code0、Main CLOSED/error=false、read-only SQLite integrity=ok、build hash不変、自身のapp/helper/panel残存0。本人報告後にIDLEを確認して既存end制御で終了した。f22db85のwindows-quality/change-scope成功。session23/24の未記録・通知対応不明の原本は保持し、今回をW01判定修正の証拠とは扱わない。
+
+製品コードを以降変更せず、同一最終buildの基本8操作×mouse/keyとキー同等性、複合四隅・pause/stop・保存確認取消を20件で確認する。自然入力の一般化や認識率95%は主張しない。今回追記は証拠／文書だけのため追加専用レビュー・再buildは不要。
+
+## 最終8操作20件（2026-10-31、session26）
+
+f22db85の同一最終package・診断OFF。全20件valid/completed、記録・通知要求20/20一致、本人は全て期待どおりと報告。[受入一覧](final-build-acceptance-20261031.md)へ8入力対と追加4条件、静的環境、read-only DB、画面確認の限界をまとめた。通常終了code0・DB integrity=ok・hash不変・当該プロセス残存0。
+
+一覧は実セッションの窓を最小化から復帰してUIAで8行の値を確認。記録画面の本人報告はW番号・key/total表示の対応が不明で未確定。source recordsReadModelと同一renderer fixtureは全値一致するが、最終レビューはそれでは実DB→本番Main/IPC→記録UIの受入を代替しないとP1指摘。#47の残る必須ゲートとして維持する。本人の画像保存許可後に、隔離した元DB複製と変更していない製品パッケージで既存UI試験を実行する準備を済ませた。
+
+P1対応：本人の明示画像許可後、元session26のSQLite一式のbyte一致複製を使い、同じf22db85の本番Main/Store/Worker/IPC/画面で16条件を実施した。Nativeのみfixtureで実入力hookなし、fake Main handlers／合成countsなし。全16条件成功・正常終了・元DB/package不変・全8行のpublic modelと欠測条件一致を確認。初回1条件のy差、後検査のnull-prototype型差、補足UIA保持fixtureの制御終了はそれぞれ原本／説明を保持する。16枚はローカル確認のみで公開しない。[P1の根拠と対応](final-build-acceptance-20261031.md#p1対応元db複製を本番mainipcで確認)を再レビュー対象にする。
+
+最終P1再レビューは一度利用上限で中断したが、完了扱いにせず再実行して完走した。4観点でP1解消・#47の必須条件に未確認なしと確認された。最終製品f22db85の同梱物を変えず、最終証拠commitのCI成功後にmerge／Closeする。

@@ -1,0 +1,75 @@
+{
+  "source": "production recordsReadModel with read-only closed natural-trial SQLite",
+  "from": "2026-10-25",
+  "to": "2026-10-31",
+  "query": {
+    "period": 7,
+    "filter": "learning-mastered",
+    "sort": "rate"
+  },
+  "summary": {
+    "mouse": 12,
+    "key": 8,
+    "total": 20,
+    "rate": 40,
+    "barRate": 40
+  },
+  "rows": [
+    {
+      "id": "W02",
+      "mouse": 3,
+      "key": 1,
+      "total": 4,
+      "rate": 25
+    },
+    {
+      "id": "W03",
+      "mouse": 2,
+      "key": 1,
+      "total": 3,
+      "rate": 33.3
+    },
+    {
+      "id": "W07",
+      "mouse": 2,
+      "key": 1,
+      "total": 3,
+      "rate": 33.3
+    },
+    {
+      "id": "W12",
+      "mouse": 1,
+      "key": 1,
+      "total": 2,
+      "rate": 50
+    },
+    {
+      "id": "W01",
+      "mouse": 1,
+      "key": 1,
+      "total": 2,
+      "rate": 50
+    },
+    {
+      "id": "W04",
+      "mouse": 1,
+      "key": 1,
+      "total": 2,
+      "rate": 50
+    },
+    {
+      "id": "W06",
+      "mouse": 1,
+      "key": 1,
+      "total": 2,
+      "rate": 50
+    },
+    {
+      "id": "W11",
+      "mouse": 1,
+      "key": 1,
+      "total": 2,
+      "rate": 50
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "readOnly": true,
+  "rows": [
+    {
+      "day": "2026-10-31",
+      "operation": "W01",
+      "mouse": 1,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W02",
+      "mouse": 3,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W03",
+      "mouse": 2,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W04",
+      "mouse": 1,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W06",
+      "mouse": 1,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W07",
+      "mouse": 2,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W11",
+      "mouse": 1,
+      "key": 1
+    },
+    {
+      "day": "2026-10-31",
+      "operation": "W12",
+      "mouse": 1,
+      "key": 1
+    }
+  ],
+  "summary": {
+    "mouse": 12,
+    "key": 8,
+    "total": 20,
+    "keyRatePercent": 40
+  },
+  "listUi": "8 matched rates/fractions via UIA, no images retained",
+  "recordsUi": "participant uncertain; clarification pending"
+}

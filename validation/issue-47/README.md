@@ -4,7 +4,7 @@
 
 ## 候補と証拠
 
-基本受入の前段候補は製品revision `b80e645`、`release/issue-47-normal-drag-diag/win-unpacked`。固定manifestは `../evidence/issue-47/normal-drag-diag-build.json`、最新の実測と未解決事項は[上下2画面・session9〜11](two-display-notice-20261030.md)。診断は起動引数でON/OFFを切り替え、通常経路の受入ではOFFを使う。以下のmain／初期同梱先は準備時の履歴であり、現在の候補ではない。
+現在の候補は製品revision `f22db85`、`release/issue-47-top-threshold/win-unpacked`。[最終buildの結果と残件](final-build-acceptance-20261031.md)、[固定manifest](../evidence/issue-47/top-threshold-build.json)を参照。session25/26は診断OFFで8操作と影響ケースを確認した。以下の旧main／初期同梱先は準備時の履歴であり、現在の候補ではない。
 
 - 製品ソース：main `64cdc61`（完全SHAと全同梱ファイルのSHA-256は `.tools/issue-47-candidate.json`）。製品変更後は新しい候補として影響ケースを再確認する。
 - 同梱先：`release/issue-47/win-unpacked`。公開・インストールは行わない。
@@ -32,7 +32,7 @@ Nativeのcaption診断は既定OFFで、`--diagnostics`を追加したランチ�
 
 実結果は `matched`（想定どおり）／`different`／`not-observed`、Toastは `matched`／`different`／`not-seen`／`not-expected`、キー同等性は `matched`／`different`／`not-tested` を本人が選ぶ。初期値は未確認。`recordsPassed` と `notificationRequestPassed` は件数・要求の機械照合だけであり、本人確認・同等性・環境条件まで含む総合PASSではない。日付変更・期限切れ・停止／保存異常は試行を無効にし、製品の精度失敗と区別する。
 
-現在の非整列構成では `P02m-unknown`、`P02k-unknown-left/right`、`C03-unknown-left`、`C07-unknown` を使う。W02は記録とキー案内の確証を分け、mouseのW02単独通知は0件、複合ではW03／W07だけを案内する想定。横並び前提のケースをそのまま適用しない。
+現在の非重複2画面では `P02m-two-displays`／`C03-two-displays`／`C07-two-displays` を使い、2画面のキー同等性が成立する場合はW02も案内する。3画面以上等でキー同等性を確証できない場合だけunknown系を使い、W02の記録とキー案内を分ける。横並び前提のケースをそのまま適用しない。
 
 ## 結果の記録
 

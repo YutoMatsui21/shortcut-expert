@@ -1,0 +1,205 @@
+{
+  "readOnly": true,
+  "publicModelEqual": true,
+  "revisionExcludedBecauseFixtureSessionAndBoundsWrite": true,
+  "model": {
+    "query": {
+      "period": 7,
+      "filter": "learning-mastered",
+      "sort": "rate"
+    },
+    "from": "2026-10-25",
+    "to": "2026-10-31",
+    "summary": {
+      "mouse": 12,
+      "key": 8,
+      "total": 20,
+      "rate": 40,
+      "barRate": 40
+    },
+    "previous": {
+      "mouse": null,
+      "key": null,
+      "total": null,
+      "rate": null,
+      "barRate": null
+    },
+    "comparison": {
+      "mouse": null,
+      "key": null,
+      "total": null,
+      "improvement": null,
+      "hasMissingCoverage": true
+    },
+    "rows": [
+      {
+        "id": "W02",
+        "mouse": 3,
+        "key": 1,
+        "total": 4,
+        "rate": 25,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W03",
+        "mouse": 2,
+        "key": 1,
+        "total": 3,
+        "rate": 33.3,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W07",
+        "mouse": 2,
+        "key": 1,
+        "total": 3,
+        "rate": 33.3,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W12",
+        "mouse": 1,
+        "key": 1,
+        "total": 2,
+        "rate": 50,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W01",
+        "mouse": 1,
+        "key": 1,
+        "total": 2,
+        "rate": 50,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W04",
+        "mouse": 1,
+        "key": 1,
+        "total": 2,
+        "rate": 50,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W06",
+        "mouse": 1,
+        "key": 1,
+        "total": 2,
+        "rate": 50,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      },
+      {
+        "id": "W11",
+        "mouse": 1,
+        "key": 1,
+        "total": 2,
+        "rate": 50,
+        "previous": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "rate": null,
+          "barRate": null
+        },
+        "comparison": {
+          "mouse": null,
+          "key": null,
+          "total": null,
+          "improvement": null,
+          "hasMissingCoverage": true
+        }
+      }
+    ]
+  }
+}

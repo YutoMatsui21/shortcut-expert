@@ -1,0 +1,128 @@
+{
+  "fixtureOnly": true,
+  "sourceTotalsSha256": "41f223909a0366c144b6783dd08100cfbb0692a3d9be6f22e51fe032166c81c6",
+  "rendererAndPreload": "unchanged final package",
+  "main": "production IPC validation and read models; fixture read-only handlers",
+  "nativeHelperStarted": false,
+  "realInputObserved": false,
+  "screenshotsSaved": false,
+  "originalDbWritten": false,
+  "fixtureDay": "2026-10-31",
+  "sourceDay": "2026-10-31",
+  "runtimeElectronVersion": "44.7.0",
+  "list": [
+    {
+      "id": "W12",
+      "rate": "キー率：50.0% （1/2）"
+    },
+    {
+      "id": "W01",
+      "rate": "キー率：50.0% （1/2）"
+    },
+    {
+      "id": "W03",
+      "rate": "キー率：33.3% （1/3）"
+    },
+    {
+      "id": "W04",
+      "rate": "キー率：50.0% （1/2）"
+    },
+    {
+      "id": "W06",
+      "rate": "キー率：50.0% （1/2）"
+    },
+    {
+      "id": "W07",
+      "rate": "キー率：33.3% （1/3）"
+    },
+    {
+      "id": "W02",
+      "rate": "キー率：25.0% （1/4）"
+    },
+    {
+      "id": "W11",
+      "rate": "キー率：50.0% （1/2）"
+    }
+  ],
+  "records": {
+    "summary": {
+      "rate": "40.0%",
+      "key": "8回",
+      "mouse": "12回"
+    },
+    "rows": [
+      {
+        "id": "W02",
+        "label": "別画面に移動する",
+        "mouse": 3,
+        "key": 1,
+        "fraction": "（1/4）",
+        "rate": "25.0%"
+      },
+      {
+        "id": "W03",
+        "label": "ウィンドウを最大化する",
+        "mouse": 2,
+        "key": 1,
+        "fraction": "（1/3）",
+        "rate": "33.3%"
+      },
+      {
+        "id": "W07",
+        "label": "画面の四隅に配置する",
+        "mouse": 2,
+        "key": 1,
+        "fraction": "（1/3）",
+        "rate": "33.3%"
+      },
+      {
+        "id": "W12",
+        "label": "タスクバーのアプリを開く",
+        "mouse": 1,
+        "key": 1,
+        "fraction": "（1/2）",
+        "rate": "50.0%"
+      },
+      {
+        "id": "W01",
+        "label": "ウィンドウを切り替える",
+        "mouse": 1,
+        "key": 1,
+        "fraction": "（1/2）",
+        "rate": "50.0%"
+      },
+      {
+        "id": "W04",
+        "label": "最大化解除・最小化",
+        "mouse": 1,
+        "key": 1,
+        "fraction": "（1/2）",
+        "rate": "50.0%"
+      },
+      {
+        "id": "W06",
+        "label": "左右半分に配置する",
+        "mouse": 1,
+        "key": 1,
+        "fraction": "（1/2）",
+        "rate": "50.0%"
+      },
+      {
+        "id": "W11",
+        "label": "ウィンドウを閉じる",
+        "mouse": 1,
+        "key": 1,
+        "fraction": "（1/2）",
+        "rate": "50.0%"
+      }
+    ]
+  },
+  "passed": true,
+  "packageManifestSha256": "7369ba5f0ceba5e5a47ddf9aafb09a9f5343ebca237fe3d0e833ce1c13bb6070",
+  "harnessSha256": "e718617e3453017d85c2c8038a8a0fadc5e8aae3a720d1ebc25dcc9d78f8c3ef",
+  "electronVersion": "44.7.0",
+  "exit": {
+    "code": 0,
+    "signal": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "source": "explicit user report: all twenty expected, following instructions to report paired equivalence as well",
+  "allTwentyExpected": true,
+  "panelInitialValuesPreserved": true,
+  "operatorResult": "not-observed in raw panel; user later confirms all expected",
+  "visibleNotification": "not-seen in raw panel; user later confirms all expected including no-notice cases",
+  "pairedEquivalence": "global expected-results report includes eight-pair comparison request; individual raw fields remain not-tested",
+  "ui": {
+    "tray": "user could not find icon",
+    "learning": "agent restored known trial app from minimized state; UIA text matches all 8 rates/fractions",
+    "records": "user unsure and could not map W identifiers; awaiting clarification of aggregate display"
+  },
+  "shutdown": "panel closed by participant after UI request"
+}
