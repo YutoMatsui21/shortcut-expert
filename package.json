@@ -1,10 +1,10 @@
 {
   "name": "window-shortcut-coach",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Windows window-operation shortcut coach",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "out/main/index.cjs",
   "engines": { "node": ">=24.11.1 <25", "npm": ">=10" },
   "scripts": {

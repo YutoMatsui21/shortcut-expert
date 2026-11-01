@@ -62,7 +62,7 @@
 
 1. [GitHub Releases](https://github.com/YutoMatsui21/shortcut-expert/releases)から最新版のインストーラーをダウンロードします。
 2. インストーラーを実行します。
-3. Shortcut Expertを起動します。
+3. インストール完了後、Shortcut Expertが自動起動します（起動しない場合はスタートメニューから開いてください）。
 
    設定の「Windowsへのサインイン時に起動」をONにすると、次回サインインから画面を開かずトレイへ常駐します（初期OFF）。計測の停止／再開状態は、アプリを再起動しても保持されます。
 
@@ -102,14 +102,10 @@ Shortcut Expertは、操作の記録をすべてPC内で管理します。
 
 ## 開発への参加
 
-Shortcut Expertは公開リポジトリで開発しています。
-
 不具合の報告や機能の提案は、[GitHub Issues](https://github.com/YutoMatsui21/shortcut-expert/issues)からお願いします。
 
 開発環境や設計については、[開発ドキュメント](docs/index.md)をご覧ください。
 
-<!-- LICENSEファイルの追加後に有効化
 ## ライセンス
 
-[LICENSE](LICENSE) を参照してください。
--->
+Shortcut Expert本体は [MIT License](LICENSE) で公開します。組み込みコンポーネントにはそれぞれのライセンスが適用されます（[第三者ライセンスの通知](THIRD_PARTY_NOTICES.md)）。

@@ -47,6 +47,6 @@
 
 ## 5. 配布名と互換性
 
-- NSISインストーラー、exe、スタートメニュー、インストール済みアプリの表示名は`Shortcut Expert`。`runAfterFinish: false`は維持する。
+- NSISインストーラー、exe、スタートメニュー、インストール済みアプリの表示名は`Shortcut Expert`。`runAfterFinish: true`とし、通常インストール完了後にアプリを起動する。
 - `package.json`の`name: window-shortcut-coach`、`appId`／AUMID `local.window-shortcut-coach`を維持する。ElectronのuserDataはpackage name由来の既存保存先を使い、表示名変更で移動・削除しない。NSISの識別も同じappIdを使う。
 - 自動fixtureは起動要求・同一窓復元・隔離保存先を検証する。Windows 11のインストール済みNSIS版で、旧版からの再導入、表示名、初回／再cold起動、×後の別プロセス起動、通知センターからの起動、既存記録・学習設定の保全を別途確認する。未実施を自動試験成功で代替しない。
