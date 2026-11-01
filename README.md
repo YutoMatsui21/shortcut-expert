@@ -108,4 +108,4 @@ Shortcut Expertは、操作の記録をすべてPC内で管理します。
 
 ## ライセンス
 
-Shortcut Expert本体は [MIT License](LICENSE) で公開します。組み込みフォントなどの第三者コンポーネントには、それぞれのライセンスが適用されます。
+Shortcut Expert本体は [MIT License](LICENSE) で公開します。組み込みコンポーネントにはそれぞれのライセンスが適用されます（[第三者ライセンスの通知](THIRD_PARTY_NOTICES.md)）。
