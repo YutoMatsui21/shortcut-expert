@@ -9,6 +9,11 @@ files:
 asarUnpack:
   - out/main/storage-worker.cjs
   - out/main/chunks/**/*
+extraFiles:
+  - from: LICENSE
+    to: LICENSE.txt
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
 extraResources:
   - from: resources/native-helper
     to: native-helper
