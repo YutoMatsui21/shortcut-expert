@@ -24,6 +24,6 @@
 
 ## 3. 検証と限界
 
-- `tests/delete-confirmation.test.ts`、`tests/delete-purge.test.ts`、`tests/durable-storage.test.ts`：tokenの期限・単回性とframe制限、並行保存・失敗・再試行、epoch更新・旧書込拒否、設定保持と移行原本の掃除。
+- `tests/app/ipc/history-delete-confirmation.test.ts`、`tests/storage/usage-history-deletion.test.ts`、`tests/storage/durable-write-recovery.test.ts`：tokenの期限・単回性とframe制限、並行保存・失敗・再試行、epoch更新・旧書込拒否、設定保持と移行原本の掃除。
 - 隔離`node scripts/test/smoke.mjs --settings`（配布版は`--packaged --settings`）：実Main／Preload／React／SQLiteのfocus・取消・確定・失敗復旧を確認。
 - V02の配布物受入・未確認の物理障害は[検証記録](https://github.com/YutoMatsui21/shortcut-expert/issues/45)。人工入力・SQLiteエラーの注入・画面smokeだけで自然入力精度／実OS障害／SSD物理消去を保証しない。

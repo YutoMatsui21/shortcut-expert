@@ -36,8 +36,8 @@ API根拠：[Electron Notification](https://github.com/electron/electron/blob/v4
 
 | 検証 | 対象と限界 |
 | --- | --- |
-| `tests/learning-state.test.ts` | 遅延保存・状態変更・世代・通知再送禁止 |
-| `tests/standard-notification.test.ts` | APIをfakeにしたUUID・イベント・参照寿命・発行継続 |
+| `tests/records/learning-state-updates.test.ts` | 遅延保存・状態変更・世代・通知再送禁止 |
+| `tests/app/notifications/windows-toast-delivery.test.ts` | APIをfakeにしたUUID・イベント・参照寿命・発行継続 |
 | 隔離storage／activation smoke | 本番Core／Main・SQLiteの接続。OSトーストとCOMはfake |
 | Windows配布版受入（未完） | 実バナー・通知履歴click・cold起動・更新／再導入・COM登録 |
 

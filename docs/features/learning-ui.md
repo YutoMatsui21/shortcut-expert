@@ -31,5 +31,5 @@
 ## 4. アセットと検証
 
 - Figma由来のSVGと同梱fontは`src/renderer/src/assets/`等で管理し、実行時にFigmaや外部font APIへアクセスしない。Noto Sans JP・Interのライセンスは`src/renderer/public/licenses/`に同梱する。第三者素材の再配布権限は公開前に確認する。
-- **自動試験**：`tests/learning.test.ts`（操作定義・日付・既知0・丸め）、`tests/learning-state.test.ts`（3状態・SQLite・故障復旧）、IPC試験と一覧smoke（画面往復・再読込・4幅・保存失敗）。
+- **自動試験**：`tests/records/shortcut-learning-summary.test.ts`（操作定義・日付・既知0・丸め）、`tests/records/learning-state-updates.test.ts`（3状態・SQLite・故障復旧）、IPC試験と一覧smoke（画面往復・再読込・4幅・保存失敗）。
 - **対象外の証拠**：隔離fixtureでの表示・通知adapter試験は、実入力認識率、実OSトースト表示、混在DPI・文字拡大、NSIS導入の合格を示さない。

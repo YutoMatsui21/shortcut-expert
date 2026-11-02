@@ -53,13 +53,15 @@ npm.cmd run dev
 関連するテストだけ先に実行し、変更がまとまってから影響する層へ広げる。
 
 ~~~powershell
-npm.cmd run test:unit -- --file=coach-ipc.test.ts
-npm.cmd run test:unit -- --file=protocol-v2.test.ts --test-name-pattern=v2
+npm.cmd run test:unit -- --file=app/ipc/ipc-command-handlers.test.ts
+npm.cmd run test:unit -- --file=app/ipc/native-message-protocol.test.ts --test-name-pattern=v2
 npm.cmd run helper:build
-node scripts/test/test.mjs native --file=native-policy.test.ts
+node scripts/test/test.mjs native --file=native/native-operation-policy.test.ts
 ~~~
 
-`--file=`は`tests/`直下の`*.test.ts`を指定する。`--test-reporter=spec|tap|dot`と`--test-concurrency=1|2|4|8`も利用できる。**絞り込みの成功を全件合格とは扱わない。** `test:coverage`はimport済みNode対象だけで、RendererやC#を含む全体coverageではない。
+`--file=`は`tests/`からの相対パス、またはsuite内で一意のファイル名を指定する。同名が複数ある場合は相対パスを使う。探索は再帰的に行い、`native/`配下がnative、それ以外がunitとなる（`support/`・`fixtures/`・生成物の`bin/`・`obj/`は探索対象外）。`--test-reporter=spec|tap|dot`と`--test-concurrency=1|2|4|8`も利用できる。**絞り込みの成功を全件合格とは扱わない。** `test:coverage`はimport済みNode対象だけで、RendererやC#を含む全体coverageではない。
+
+テストは`operations/`（操作の検出・分類）、`records/`（集計・学習状態）、`storage/`（保存・移行・復旧）、`app/{lifecycle,window,ipc,notifications}/`（アプリ境界）、`native/`（helper連携、C# policyは`policy/`）、`integration/`（結合・受入基盤）、`tooling/`（開発補助）へ配置する。共通補助は`support/`、fixtureは`fixtures/`を使う。ファイル名はkebab-caseで検証対象と振る舞いを表す。
 
 ## 4. 検証の種類と限界
 

@@ -29,6 +29,6 @@
 
 ## 5. 検証と限界
 
-- `tests/storage-migration.test.ts`、`tests/storage-migration-files.test.ts`：既存原本bytes、空日、長期履歴、source変更、schema中断、部分commit・再実行、全行照合、破損・旧原本の再import拒否、cleanup復旧。
+- `tests/storage/legacy-json-migration.test.ts`、`tests/storage/json-migration-file-recovery.test.ts`：既存原本bytes、空日、長期履歴、source変更、schema中断、部分commit・再実行、全行照合、破損・旧原本の再import拒否、cleanup復旧。
 - 隔離`node scripts/test/smoke.mjs --migration`：旧JSON→Worker→Core→IPC→画面、完全終了後の**別プロセス起動**による二重取り込み防止。配布版は`--packaged --migration`。
 - 選定時の技術的根拠は[SQLite方式のprobe](../research/sqlite-storage-validation.md)、配布版の検証範囲は[V02受入](https://github.com/YutoMatsui21/shortcut-expert/issues/45)を参照。通常userDataの実アップグレード、NSIS更新、電源断による任意のrename途中の安全性はfixture成功だけでは保証しない。

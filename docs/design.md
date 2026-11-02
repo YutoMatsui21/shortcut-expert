@@ -56,7 +56,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 
 | 層 | 確認するもの | 証明しないもの |
 | --- | --- | --- |
-| Node unit（`tests/*.test.ts`） | Coreの判定・集計、Main境界の契約・故障対応 | 実際のWindows入力 |
+| Node unit（`tests/**/*.test.ts`のうち`native/`以外） | Coreの判定・集計、Main境界の契約・故障対応 | 実際のWindows入力 |
 | C# policy／native | 本番C#の判定、JSON→Main→Coreの契約、helper起動停止 | 実OSイベントの到着精度 |
 | Electron smoke | 実Main・Preload・React・SQLiteの接続を隔離fixtureで確認 | 通常利用環境の動作・通知表示 |
 | 同梱版smoke | 配布用exeとhelperの同梱・起動経路 | NSIS導入、自然入力の認識精度 |

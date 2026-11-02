@@ -35,6 +35,6 @@
 
 ## 4. 検証と限界
 
-- **unit**：`tests/records.test.ts`（日付・丸め・比較・既知0）、`tests/records-query.test.ts`（本番SQLite Worker・revision・フィルタ／5ソート・欠損・並行更新）、Main/Preloadの不正query拒否。
+- **unit**：`tests/records/usage-statistics-calculation.test.ts`（日付・丸め・比較・既知0）、`tests/records/usage-history-query.test.ts`（本番SQLite Worker・revision・フィルタ／5ソート・欠損・並行更新）、Main/Preloadの不正query拒否。
 - **結合**：隔離smokeの`--comparison`等で、Main→Preload→ReactのKPI・行・info、画面往復と再読込、800／920／1120／1360pxを確認する。
 - **証拠の限界**：人工fixtureの成功は自然入力の認識精度、実DPI・文字拡大、実スクリーンリーダー、OS通知・NSISの受入を証明しない。

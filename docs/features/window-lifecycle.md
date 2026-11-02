@@ -39,7 +39,7 @@
 
 ## 4. 検証・残る実機受入
 
-- **unit**：`tests/coach-window.test.ts`、`tests/window-bounds.test.ts`などで単一窓、負座標・画面外補正、通常bounds保存・再open、失敗時の再試行、終了競合を確認。
+- **unit**：`tests/app/window/window-display-controls.test.ts`、`tests/app/window/window-bounds-persistence.test.ts`などで単一窓、負座標・画面外補正、通常bounds保存・再open、失敗時の再試行、終了競合を確認。
 - **Electron smoke**：実Main／Renderer／IPCでhide・復元・画面状態、保存失敗時の終了取消、helperとWorkerの終了順、外形／content／viewportを確認。
 - **未合格のV03**：自前の最大化ボタンによる標準Snap Layoutのhover表示は未実証。実トレイ操作・別プロセス二重起動・混在DPI／画面着脱・再起動後bounds保持も同一配布buildで検証が必要。CSSのdrag／no-dragや最大化成功だけでOSのSnap UI対応と判断しない。
 
