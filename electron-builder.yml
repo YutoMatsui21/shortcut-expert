@@ -17,6 +17,8 @@ extraFiles:
 extraResources:
   - from: resources/native-helper
     to: native-helper
+  - from: build/icon.png
+    to: icons/icon.png
 win:
   target:
     - target: nsis
