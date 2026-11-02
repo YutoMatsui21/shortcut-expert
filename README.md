@@ -26,11 +26,7 @@
 
 作業を中断して調べる必要はありません。
 
-<!-- スクリーンショットを配置したら、以下を有効化
-<p align="center">
-  <img src="assets/readme/notification.png" alt="ショートカット通知" width="720">
-</p>
--->
+<img width="1962" height="1101" alt="スクリーンショット 2026-11-02 143040" src="https://github.com/user-attachments/assets/e1256406-01dd-44c5-99d8-b02adf27fba5" />
 
 ### 自分のペースで学習する
 
@@ -38,11 +34,7 @@
 
 覚えたショートカットの通知を止めて、まだ覚えていない操作に集中できます。
 
-<!-- スクリーンショットを配置したら、以下を有効化
-<p align="center">
-  <img src="assets/readme/shortcuts.png" alt="ショートカット一覧画面" width="720">
-</p>
--->
+<img width="1106" height="944" alt="スクリーンショット 2026-11-02 142113" src="https://github.com/user-attachments/assets/c168431c-53c5-4743-b089-e88e71f80949" />
 
 ### 操作習慣の変化を振り返る
 
@@ -50,11 +42,7 @@
 
 直近7日間と前の7日間を比較して、操作習慣の変化を確認できます。
 
-<!-- スクリーンショットを配置したら、以下を有効化
-<p align="center">
-  <img src="assets/readme/records.png" alt="利用記録画面" width="720">
-</p>
--->
+<img width="1107" height="788" alt="スクリーンショット 2026-11-02 142131" src="https://github.com/user-attachments/assets/3637fe7d-399a-41b4-9126-9a5e2a73c901" />
 
 ## インストール
 
