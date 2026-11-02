@@ -6,5 +6,5 @@ resources/native-helper/
 native-helper/bin/
 native-helper/obj/
 *.tsbuildinfo
-tests/native-policy/bin/
-tests/native-policy/obj/
+tests/native/policy/bin/
+tests/native/policy/obj/

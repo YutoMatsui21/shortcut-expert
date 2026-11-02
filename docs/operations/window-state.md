@@ -40,6 +40,6 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 ## 5. 検証と残る受入
 
-- `tests/native-policy/WindowStateTests.cs`：W03のcaption／上端、W04のmouse／key／連続キー・repeat・競合、否定例と世代。`tests/window-state.test.ts`／`tests/native-policy.test.ts`で厳格parse→Core→SQLiteを確認。
-- `tests/fixture-integration.test.ts`：W03/W04各状態・通知adapter・一覧／記録・保存遅延／失敗・ACK喪失・再送非重複。
+- `tests/native/policy/WindowStateTests.cs`：W03のcaption／上端、W04のmouse／key／連続キー・repeat・競合、否定例と世代。`tests/operations/window-maximize-minimize.test.ts`／`tests/native/native-operation-policy.test.ts`で厳格parse→Core→SQLiteを確認。
+- `tests/integration/candidate-to-page-model-data-flow.test.ts`：W03/W04各状態・通知adapter・一覧／記録・保存遅延／失敗・ACK喪失・再送非重複。
 - **未確認**：一般アプリ・上端解放許容範囲・遅着結果、混在DPI、複合操作の#113、最終buildの自然入力R02／J04とOS通知。[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)。Issue #31／#33の局所実装完了を全面受入と混同しない。

@@ -19,8 +19,8 @@
 
 ## 検証と限界
 
-- `tests/native-policy/CompoundDragTests.cs`：本番tracker／protocolの人工操作列、派生復元・half、対象／process／構成変更、取消・注入・競合・重複・停止・解放不明・内部選択。`tests/native-policy.test.ts`でC# JSON→厳格parse→Core→実SQLiteを接続する。
-- `tests/compound-drag.test.ts`：最大化／quarter、方向不明／キー不明、学習状態混在、保存中の状態変更、pause／stop、保存失敗、ACK喪失、2件目INSERT失敗のrollback、再送・再試行、通知adapterの単一発行とunknown、一覧／記録read model。
+- `tests/native/policy/CompoundDragTests.cs`：本番tracker／protocolの人工操作列、派生復元・half、対象／process／構成変更、取消・注入・競合・重複・停止・解放不明・内部選択。`tests/native/native-operation-policy.test.ts`でC# JSON→厳格parse→Core→実SQLiteを接続する。
+- `tests/operations/cross-monitor-compound-drag.test.ts`：最大化／quarter、方向不明／キー不明、学習状態混在、保存中の状態変更、pause／stop、保存失敗、ACK喪失、2件目INSERT失敗のrollback、再送・再試行、通知adapterの単一発行とunknown、一覧／記録read model。
 - 隔離storage smoke：helper fixture→Main→実SQLite→IPC→両画面。通常buildと同梱buildで同じfixtureを使用する。
 - 一般アプリの実入力、混在monitor・DPI、実OS Toastの表示、NSIS、同一最終buildのR02／J04は[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)へ残す。fixture成功を自然入力PASSと扱わない。
 

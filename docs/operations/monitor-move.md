@@ -30,6 +30,6 @@
 
 ## 4. 検証と限界
 
-- `tests/native-policy/MonitorMoveTests.cs`：戻し、DPI／作業域変更、停止・注入・競合、複数画面配置。`tests/native-policy.test.ts`でC# JSON→Main／Core→SQLiteを検証。
-- `tests/fixture-integration.test.ts`と隔離smoke：W02両入力、方向不明時の記録のみ、3学習状態、保存失敗・ACK喪失・再配送と両ページ集計。
+- `tests/native/policy/MonitorMoveTests.cs`：戻し、DPI／作業域変更、停止・注入・競合、複数画面配置。`tests/native/native-operation-policy.test.ts`でC# JSON→Main／Core→SQLiteを検証。
+- `tests/integration/candidate-to-page-model-data-flow.test.ts`と隔離smoke：W02両入力、方向不明時の記録のみ、3学習状態、保存失敗・ACK喪失・再配送と両ページ集計。
 - **未確認**：代表アプリでの実入力、画面構成変更・混在DPI、実OS通知、同一最終buildのR02／J04。追跡は[#47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)。実装時の検証結果と異常なローカル保存環境の切り分けは[#38](https://github.com/YutoMatsui21/shortcut-expert/issues/38)／該当PRで参照する。

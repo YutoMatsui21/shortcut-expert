@@ -41,7 +41,7 @@ Issueの目的・受入条件と、変更が失敗した場合の影響を先に
 3. **テスト先行なら意図した失敗を確認する。** 新機能は未実装の振る舞い、バグは再現操作列によるassert失敗を確かめる（構文・準備エラーをRedとしない）。関連ケースをまとめて先に書いてよく、1テストごとのRed→Greenは強制しない。既存の正しい挙動への追加試験は最初から成功してよい。
 4. **最小限を実装して段階的に検証する。** テストを通すために期待値を弱めず、未要求の分岐・抽象化・機能を増やさない。まず関連テスト、次に影響した層、PRでは必要なCIを確認する。修正中の絞り込み結果を全件合格と扱わない。
 5. **本番の経路と隔離範囲を守る。** Core、Mainの通信・保存・通知、本番C# policy、実helper、Electron UI、配布物は別の証拠。OS・Electron・ファイルI/Oは境界でfakeにし、内部の判定器やキューには本番コードを使う。非同期順序はdeferred、期限は仮想時計を使い、fakeは各試験で片付ける。
-6. **既存配置に従う。** 新しいNode試験は`tests/*.test.ts`へ置く。helper/SDKが必要なら`native`で始め、本番C# policyは`tests/native-policy`へ追加してC#→TS契約を保つ。保存・移行は[故障境界](../../../docs/design.md#storage-review)の該当ケースを実装前の選定・PR前のレビューで確認する。
+6. **責務別の配置に従う。** 新しいNode試験は`tests/`配下の責務別フォルダへ置き、検証対象と振る舞いが分かるkebab-case名にする。helper/SDKが必要な試験は`tests/native/`、本番C# policyは`tests/native/policy/`へ追加してC#→TS契約を保つ。共通補助は`support/`、fixtureは`fixtures/`へ置く。保存・移行は[故障境界](../../../docs/design.md#storage-review)の該当ケースを実装前の選定・PR前のレビューで確認する。
 
 ## 検証・レビューの反復を抑える
 
@@ -63,7 +63,7 @@ Issueの目的・受入条件と、変更が失敗した場合の影響を先に
 | native-helper/C# | 本番C# policy、helper build・native suite | TSとの契約試験、関連Core・Electron smoke |
 | scripts/CI/package | 対応するtool試験と設定検証 | build・package・配布smoke |
 
-対象unitは`npm.cmd run test:unit -- --file=対象.test.ts`、nativeはhelperをbuild後に`node scripts/test/test.mjs native --file=native-policy.test.ts`などで絞る。正確なコマンドは[package.json](../../../package.json)、実行方法は[開発・検証ガイド](../../../docs/development.md)を正本とする。
+対象unitは`npm.cmd run test:unit -- --file=対象.test.ts`、nativeはhelperをbuild後に`node scripts/test/test.mjs native --file=native/native-operation-policy.test.ts`などで絞る。正確なコマンドは[package.json](../../../package.json)、実行方法は[開発・検証ガイド](../../../docs/development.md)を正本とする。
 
 PRでは実装・テスト・設定・workflowを変更したらWindowsフルCIを維持する。MarkdownのみはフルCIを省略するが、必須チェック`windows-quality`は成功させる。依存関係が不明なら安全側に検証を広げる。
 

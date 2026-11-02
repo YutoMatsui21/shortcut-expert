@@ -28,8 +28,8 @@
 
 ## 3. 検証と限界
 
-- `tests/settings-state.test.ts`：古いIPC応答・トレイcommandとの競合。`tests/learning-state.test.ts`：保存保留・停止／再開・世代と通知。
+- `tests/records/settings-state-synchronization.test.ts`：古いIPC応答・トレイcommandとの競合。`tests/records/learning-state-updates.test.ts`：保存保留・停止／再開・世代と通知。
 - 隔離`node scripts/test/smoke.mjs --settings`（配布版は`--packaged --settings`）：2ページ×4幅、focusと閉じ方、スイッチ状態、保存中の禁止操作、トレイcallbackとの同期を確認する。
-- `tests/login-startup.test.ts`・`tests/durable-storage.test.ts`と`--activation` smoke：登録拒否／OS無効化、停止保存失敗・再試行、再起動後の停止、非表示起動・手動復元を確認。ログイン項目APIはfixtureへ差し替え、実Windows登録には触れない。
+- `tests/app/lifecycle/login-startup-registration.test.ts`・`tests/storage/durable-write-recovery.test.ts`と`--activation` smoke：登録拒否／OS無効化、停止保存失敗・再試行、再起動後の停止、非表示起動・手動復元を確認。ログイン項目APIはfixtureへ差し替え、実Windows登録には触れない。
 - **NSIS版で別途必要**：ON／OFF後の再サインイン、Windows側無効化、停止／再開の保持、既存インスタンスの手動表示、更新とアンインストール時の登録処理。[#138](https://github.com/YutoMatsui21/shortcut-expert/issues/138)で受入を追跡する。
 - **実機で別途必要**：OSトレイのクリック配送、DPI／文字拡大、実入力認識と標準通知。fixture結果はそれらの合格証拠ではない。
