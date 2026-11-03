@@ -9,6 +9,46 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (string route in new[] { "event", "timer", "release" })
+            Check($"Win+Up retains eligible target when result loses caption via {route}", () => {
+                var tracker = Tracker();
+                bool BeforeAllowed(long style) => WindowTargetPolicy.Allows(start.Process, 99, style, 0, false, false, "fixture-root", true);
+                Equal(true, BeforeAllowed(WS_CAPTION)); Equal(false, BeforeAllowed(0));
+                tracker.Key(11, start, VK_UP, true, false, 0, 0);
+                uint? expected = tracker.MaximizeProcess(11, 50);
+                Equal<uint?>(start.Process, expected);
+                bool resultAllowed = WindowTargetPolicy.AllowsMaximizeResult(start.Process, expected!.Value, 99, 0, 0, false, false, "fixture-root", true);
+                Equal(true, resultAllowed);
+                // A location event can arrive after caption disappears but before showCmd updates.
+                Equal<object?>(null, tracker.Complete(11, start, start, 20, 11, "2026-10-28", screen));
+                Equal<uint?>(start.Process, tracker.MaximizeProcess(11, 30));
+                var after = resultAllowed ? max : null;
+                object? result = route == "release" ? tracker.FinishKey(11, after, 50, false, "2026-10-28") :
+                    route == "timer" ? tracker.ConfirmMaximize(11, after, 50, 11, "2026-10-28") :
+                    tracker.Complete(11, start, after!, 50, 11, "2026-10-28", screen);
+                Equal(true, result is WindowCandidate { operation: "maximize", route: "win-up" });
+                Sample((WindowCandidate)result!, "W03");
+                Equal<uint?>(null, tracker.MaximizeProcess(11, 60));
+                Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, max, 60, 11, "2026-10-28"));
+                Equal(false, BeforeAllowed(0)); // mouse, W04 and placement still use the original target policy.
+            });
+        foreach (string mode in new[] { "no-input", "input-captionless", "other-window", "expired", "cancel", "destroy", "stop" })
+            Check($"captionless result access requires a live eligible Win+Up candidate: {mode}", () => {
+                var tracker = Tracker();
+                if (mode != "no-input") tracker.Key(11, mode == "input-captionless" ? null : start, VK_UP, true, false, 0, 0);
+                if (mode == "cancel") tracker.ClearInput();
+                if (mode == "destroy") tracker.Forget(11);
+                if (mode == "stop") tracker.Reset(2);
+                Equal<uint?>(null, tracker.MaximizeProcess(mode == "other-window" ? 22 : 11, mode == "expired" ? 1001 : 50));
+            });
+        foreach (string mode in new[] { "process", "self", "child", "owned", "tool", "no-activate", "cloaked", "unknown-cloak", "unknown-class", "shell", "elevated", "style-error", "extended-style-error" })
+            Check($"W03 result without caption still rejects unsafe target: {mode}", () => {
+                Equal(false, WindowTargetPolicy.AllowsMaximizeResult(mode == "process" ? 8u : 7u, 7, mode == "self" ? 7u : 99u,
+                    mode == "style-error" ? null : mode == "child" ? 0x40000000 : 0,
+                    mode == "extended-style-error" ? null : mode == "tool" ? 0x80 : mode == "no-activate" ? 0x08000000 : 0,
+                    mode == "owned", mode == "unknown-cloak" ? null : mode == "cloaked",
+                    mode == "unknown-class" ? null : mode == "shell" ? "Shell_TrayWnd" : "fixture-root", mode != "elevated"));
+            });
         foreach (bool? arranged in new bool?[] { false, true, null })
             Check($"Win+Up confirms live start without cached event state: {arranged}", () => {
                 var tracker = Tracker(); var before = start with { Arranged = arranged };

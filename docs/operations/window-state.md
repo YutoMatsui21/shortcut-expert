@@ -21,6 +21,10 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 キー経路は物理的な`Win+↑`の初回keydown時にforegroundのHWND・process・`GetWindowPlacement`の状態を取得する。既存cacheへの登録は要求せず、通常状態（`SW_SHOWNORMAL`）だけを起点にする。最大化済み・読取不能・注入・競合入力は候補にしない。スナップ配置中を含み、キー経路には`IsWindowArranged`の値・配置形状・monitor/work/DPIの一致を要求しない。マウス経路の条件は変更しない。
 
+入力時は共通の対象条件（`WS_CAPTION`を含む）を維持する。一方、保留中のW03キー候補と一致するHWNDの**結果読取**は`ReadStateChange`で分離し、入力時processとの一致、可視root・非shell／self／child／owned／tool／noActivate／cloaked／昇格などの条件を再確認する。最大化によって`WS_CAPTION`が外れても、それだけで候補を消去しない。WinEvent・50ms timer・キー解放の全てで同じ結果読取を使う。候補がない／別対象／期限超過では共通読取へ戻るため、入力時からcaptionなしの窓や、マウスW03・W04・配置操作の適格性は広げない。
+
+結果側のstyle／extended styleは`GetWindowLongPtrW`を`SetLastError=true`で呼び、戻り値0かつエラーありを読取不能として棄却する。0かつエラーなしは既知のstyle値として扱う（[API仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw)、[.NETのエラー初期化・保持](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute.setlasterror)）。Placement・process等の取得不能も従来どおり棄却する。
+
 同一HWND／processかつforegroundが一致し、入力後1000ms以内に`SW_SHOWMAXIMIZED`を読めたら1件確定する。WinEventと、候補がある間だけ動く50ms間隔のWinForms timerが同じ確定処理を使う。timerはhook／WinEventと同じmessage-loop thread上で動作し、常時ポーリングや並行した状態更新を行わない。イベント欠落・キー解放後の遅延も期限内なら確認し、期限超過時は棄却する。timerの配送が遅れた場合に期限を延長しない。
 
 ↑のrepeatは候補・期限を更新せず、確定で候補と進行中の配置列を消費するため、イベント・再照会・Win解放が重なっても重複しない。別キー／マウス入力・注入・foreground離脱・対象破棄・process不一致・移動開始・画面設定変更・停止／世代変更で取消す。arranged不明でもキー記録は採用するが、マウス操作へのキー案内は従来どおりarranged=falseの確証を必要とする。

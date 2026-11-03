@@ -29,6 +29,7 @@ internal sealed class CandidateTracker
         if (winUp is { } pending && now - pending.At is < 0 or > InputMatchWindowMs) winUp = null;
         return winUp?.Window;
     }
+    internal uint? MaximizeProcess(nint window, long now) => MaximizeTarget(now) == window ? winUp!.Before.Process : null;
     internal WindowCandidate? ConfirmMaximize(nint window, WindowState? after, long now, nint foreground, string date) {
         if (MaximizeTarget(now) is not { } target || target != window) return null;
         var pending = winUp!;

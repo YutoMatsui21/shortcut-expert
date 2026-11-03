@@ -89,7 +89,14 @@ internal sealed class Observer : IDisposable
         mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0); mouseDockThresholdPx = null;
         if (!released) throw new InvalidOperationException("hook-release-failed");
     }
-    private WindowState? Read(nint window, WindowState? cached = null)
+    private WindowState? ReadStateChange(nint window, WindowState? cached = null) =>
+        Read(window, cached, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
+    private static long? ReadResultStyle(nint window, int index)
+    {
+        nint value = GetWindowStyleChecked(window, index);
+        return value == 0 && Marshal.GetLastPInvokeError() != 0 ? null : value.ToInt64();
+    }
+    private WindowState? Read(nint window, WindowState? cached = null, uint? maximizeProcess = null)
     {
         if (window == 0 || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window)) return null;
         if (window == GetDesktopWindow() || window == GetShellWindow()) return null;
@@ -97,8 +104,12 @@ internal sealed class Observer : IDisposable
         var cls = new StringBuilder(256);
         string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
         bool? cloaked = DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0 ? cloak != 0 : null;
-        if (!WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
-            GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))) return null;
+        bool allowed = maximizeProcess is { } expectedProcess
+            ? WindowTargetPolicy.AllowsMaximizeResult(pid, expectedProcess, (uint)Environment.ProcessId,
+                ReadResultStyle(window, GWL_STYLE), ReadResultStyle(window, -20), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))
+            : WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
+                GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid));
+        if (!allowed) return null;
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
@@ -235,7 +246,7 @@ internal sealed class Observer : IDisposable
                 if (key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT) {
                     nint releasedTarget = GetForegroundWindow();
                     states.TryGetValue(releasedTarget, out WindowState? releasedCached);
-                    var result = tracker.FinishKey(releasedTarget, Read(releasedTarget, releasedCached), clock.ElapsedMilliseconds,
+                    var result = tracker.FinishKey(releasedTarget, ReadStateChange(releasedTarget, releasedCached), clock.ElapsedMilliseconds,
                         (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, DateTime.Now.ToString("yyyy-MM-dd"));
                     if (result is PlacementResult placed) protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placed);
                     if (result is WindowCandidate maximized) protocol.Complete(maximized);
@@ -273,7 +284,7 @@ internal sealed class Observer : IDisposable
     private void PollMaximize() {
         try {
             if (!fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is { } target) {
-                WindowState? after = Read(target);
+                WindowState? after = ReadStateChange(target);
                 var result = tracker.ConfirmMaximize(target, after, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
                 if (after is not null) states[target] = after;
                 if (result is not null) protocol.Complete(result);
@@ -311,7 +322,7 @@ internal sealed class Observer : IDisposable
             if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&
                 (obj != OBJID_WINDOW || child != CHILDID_SELF)) return;
             states.TryGetValue(window, out WindowState? previous);
-            WindowState? after = Read(window, previous);
+            WindowState? after = ReadStateChange(window, previous);
             if (after is null) { tracker.Forget(window); return; }
             states[window] = after;
             object? candidate = tracker.Complete(window, previous, after, clock.ElapsedMilliseconds,
