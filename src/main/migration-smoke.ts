@@ -44,7 +44,7 @@ export async function runMigrationSmoke({ coach, window, repository }: {
       mouse: document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent,
       key: document.querySelector('[data-kpi="key"]')?.textContent,
       busy: document.querySelector('.records-scroll')?.getAttribute('aria-busy')
-    })`));
+    })`).catch(() => 'unavailable'));
     throw error;
   }
   assert.equal(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'),
