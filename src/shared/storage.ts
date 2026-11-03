@@ -1,14 +1,42 @@
-import type { Counts, OperationId, Settings } from './coach.ts';
-export const recordOperations: OperationId[] = ['W12', 'W01', 'W03', 'W04', 'W06', 'W07', 'W02', 'W11'];
+import type { Counts, OperationId, Settings } from "./coach.ts";
+export const recordOperations: OperationId[] = [
+  "W12",
+  "W01",
+  "W03",
+  "W04",
+  "W06",
+  "W07",
+  "W02",
+  "W11",
+];
 
-export type Coverage = { knowledge: 'observed' | 'not-observed' | 'legacy-unknown'; activeMs: number; gap: boolean; capabilityRevision: string };
-export type CoverageDays = Record<string, Partial<Record<OperationId, Coverage>>>;
-export type RecordRange = { counts: Counts; coverage: CoverageDays; revision: number };
-export type StorageState = RecordRange & { settings: Settings; epoch: number; highWater: string };
+export type Coverage = {
+  knowledge: "observed" | "not-observed" | "legacy-unknown";
+  activeMs: number;
+  gap: boolean;
+  capabilityRevision: string;
+};
+export type CoverageDays = Record<
+  string,
+  Partial<Record<OperationId, Coverage>>
+>;
+export type RecordRange = {
+  counts: Counts;
+  coverage: CoverageDays;
+  revision: number;
+};
+export type StorageState = RecordRange & {
+  settings: Settings;
+  epoch: number;
+  highWater: string;
+};
 export type RecordMutation = {
-  epoch: number; writeSession: string; sequence: number; today: string;
-  count?: { day: string; operation: OperationId; origin: 'mouse' | 'key' };
-  counts?: { day: string; operation: OperationId; origin: 'mouse' | 'key' }[];
+  epoch: number;
+  writeSession: string;
+  sequence: number;
+  today: string;
+  count?: { day: string; operation: OperationId; origin: "mouse" | "key" };
+  counts?: { day: string; operation: OperationId; origin: "mouse" | "key" }[];
   coverage: { day: string; operation: OperationId; value: Coverage }[];
   reset?: boolean;
 };
@@ -21,6 +49,7 @@ export interface DurableRepository {
   close(): Promise<void>;
 }
 export function daysBefore(day: string, amount: number): string {
-  const date = new Date(day + 'T00:00:00Z'); date.setUTCDate(date.getUTCDate() - amount);
+  const date = new Date(day + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() - amount);
   return date.toISOString().slice(0, 10);
 }
