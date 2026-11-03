@@ -9,11 +9,44 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (string route in new[] { "win-up", "win-down-restore", "win-down-minimize", "max-button", "restore-button", "min-button", "double-max", "double-restore", "top-drag" })
+            Check($"captionless target records state operation: {route}", () => {
+                var tracker = Tracker();
+                WindowState? Read(WindowState state) => WindowTargetPolicy.Allows(state.Process, 99, 0, 0, false, false, "fixture-root", true) ? state with { HasCaption = false } : null;
+                bool restore = route is "win-down-restore" or "restore-button" or "double-restore";
+                var before = Read(restore ? max : start);
+                var after = Read(restore ? start : route is "win-down-minimize" or "min-button" ? min : max);
+                Equal(true, before is not null && after is not null);
+                if (route.StartsWith("win-")) tracker.Key(11, before, route == "win-up" ? (uint)VK_UP : (uint)VK_DOWN, true, false, 0, 0);
+                else {
+                    int hit = route.StartsWith("double-") || route == "top-drag" ? HTCAPTION : route == "min-button" ? HTMINBUTTON : HTMAXBUTTON;
+                    tracker.Mouse(11, before!, hit, default, 0, 500, 0, false, true);
+                    if (route.StartsWith("double-")) tracker.Mouse(11, before!, hit, default, 100, 500, 0, false, true);
+                    if (route == "top-drag") {
+                        tracker.MoveStart(11, 100);
+                        tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+                    }
+                }
+                var result = (route == "top-drag" ? tracker.FinishMove(11, after, 200, 11, "2026-10-28") :
+                    tracker.Complete(11, before, after!, 200, 11, "2026-10-28", screen)) as WindowCandidate;
+                Equal(true, result is not null);
+                Equal(restore ? "restore" : route is "win-down-minimize" or "min-button" ? "minimize" : "maximize", result!.operation);
+                Equal(route.StartsWith("win-") ? "key" : "mouse", result.origin);
+                Sample(result, restore || result.operation == "minimize" ? "W04" : "W03");
+            });
+        foreach (string mode in new[] { "self", "child", "owned", "tool", "no-activate", "cloaked", "unknown-cloak", "unknown-class", "shell", "elevated" })
+            Check($"captionless input still rejects unsafe target: {mode}", () => {
+                Equal(false, WindowTargetPolicy.Allows(7, mode == "self" ? 7u : 99u,
+                    mode == "child" ? 0x40000000 : 0,
+                    mode == "tool" ? 0x80 : mode == "no-activate" ? 0x08000000 : 0,
+                    mode == "owned", mode == "unknown-cloak" ? null : mode == "cloaked",
+                    mode == "unknown-class" ? null : mode == "shell" ? "Shell_TrayWnd" : "fixture-root", mode != "elevated"));
+            });
         foreach (string route in new[] { "event", "timer", "release" })
             Check($"Win+Up retains eligible target when result loses caption via {route}", () => {
                 var tracker = Tracker();
                 bool BeforeAllowed(long style) => WindowTargetPolicy.Allows(start.Process, 99, style, 0, false, false, "fixture-root", true);
-                Equal(true, BeforeAllowed(WS_CAPTION)); Equal(false, BeforeAllowed(0));
+                Equal(true, BeforeAllowed(WS_CAPTION)); Equal(true, BeforeAllowed(0));
                 tracker.Key(11, start, VK_UP, true, false, 0, 0);
                 uint? expected = tracker.MaximizeProcess(11, 50);
                 Equal<uint?>(start.Process, expected);
@@ -30,7 +63,7 @@ internal static partial class Program
                 Sample((WindowCandidate)result!, "W03");
                 Equal<uint?>(null, tracker.MaximizeProcess(11, 60));
                 Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, max, 60, 11, "2026-10-28"));
-                Equal(false, BeforeAllowed(0)); // mouse, W04 and placement still use the original target policy.
+                Equal(true, BeforeAllowed(0)); // W03/W04 also accept captionless input targets.
             });
         foreach (string mode in new[] { "no-input", "input-captionless", "other-window", "expired", "cancel", "destroy", "stop" })
             Check($"captionless result access requires a live eligible Win+Up candidate: {mode}", () => {
@@ -209,7 +242,7 @@ internal static partial class Program
                 WindowTargetPolicy.Allows(process, 7, style, extended, owned, cloaked, windowClass, ordinary);
             foreach (string cls in new[] { "CabinetWClass", "Notepad", "Chrome_WidgetWin_1", "custom-standard-caption" }) Equal(true, Allowed(windowClass: cls));
             Equal(false, Allowed(process: 0)); Equal(false, Allowed(process: 7)); Equal(false, Allowed(ordinary: false));
-            Equal(false, Allowed(style: 0)); Equal(false, Allowed(style: WS_CAPTION | 0x40000000));
+            Equal(true, Allowed(style: 0)); Equal(false, Allowed(style: WS_CAPTION | 0x40000000));
             Equal(false, Allowed(extended: 0x80)); Equal(false, Allowed(extended: 0x08000000));
             Equal(false, Allowed(owned: true)); Equal(false, Allowed(cloaked: true)); Equal(false, Allowed(cloaked: null));
             Equal(false, Allowed(windowClass: null)); Equal(false, Allowed(windowClass: ""));

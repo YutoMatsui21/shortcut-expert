@@ -104,11 +104,13 @@ internal sealed class Observer : IDisposable
         var cls = new StringBuilder(256);
         string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
         bool? cloaked = DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0 ? cloak != 0 : null;
+        long? style = ReadResultStyle(window, GWL_STYLE), extended = ReadResultStyle(window, -20);
         bool allowed = maximizeProcess is { } expectedProcess
             ? WindowTargetPolicy.AllowsMaximizeResult(pid, expectedProcess, (uint)Environment.ProcessId,
-                ReadResultStyle(window, GWL_STYLE), ReadResultStyle(window, -20), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))
-            : WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
-                GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid));
+                style, extended, GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))
+            : style is { } knownStyle && extended is { } knownExtended &&
+                WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, knownStyle,
+                knownExtended, GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid));
         if (!allowed) return null;
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
@@ -119,7 +121,8 @@ internal sealed class Observer : IDisposable
         static MonitorBounds Bounds(Rect r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
         return new WindowState(pid, WindowTargetPolicy.ApplicationCategory, placement.Show, isArranged is null ? null : isArranged(window) != 0,
             DisplayContext.Monitor(window), DisplayContext.HorizontalPair(), DisplayContext.Layout(),
-            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair(), mouseDockThresholdPx);
+            frameKnown ? Bounds(frame) : null, workKnown ? Bounds(info.Work) : null, GetDpiForWindow(window), DisplayContext.TwoDisplayPair(), mouseDockThresholdPx)
+            { HasCaption = (style!.Value & WS_CAPTION) == WS_CAPTION };
     }
     internal static bool OrdinaryProcess(uint pid)
     {
