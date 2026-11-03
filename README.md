@@ -26,7 +26,8 @@
 
 作業を中断して調べる必要はありません。
 
-<img width="1962" height="1101" alt="スクリーンショット 2026-11-02 143040" src="https://github.com/user-attachments/assets/e1256406-01dd-44c5-99d8-b02adf27fba5" />
+<img width="1561" height="977" alt="image" src="https://github.com/user-attachments/assets/c8b0efd3-a0bb-4411-ac34-7606a266eb5e" />
+
 
 ### 自分のペースで学習する
 
