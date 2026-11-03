@@ -7,6 +7,21 @@ import { pathToFileURL } from 'node:url';
 import { developmentEnvironment, checkWritableDirectories } from '../../scripts/dev/dev-environment.mjs';
 import { smokeSucceeded, smokeFailureSummary } from '../../scripts/test/smoke-result.mjs';
 
+test('builder cache runs downloaded CommonJS icon tools inside an ESM workspace', t => {
+  mkdirSync('.tools/tests', { recursive: true });
+  const root = mkdtempSync(resolve('.tools/tests/builder-module-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ type: 'module' }));
+  const env = developmentEnvironment(root);
+  const bundle = join(env.ELECTRON_BUILDER_CACHE, 'icons-fixture');
+  mkdirSync(bundle);
+  const script = join(bundle, 'icon-tool.js');
+  writeFileSync(script, 'console.log(typeof require("node:fs").readFileSync);');
+  const result = spawnSync(process.execPath, [script], { env, encoding: 'utf8', windowsHide: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'function');
+});
+
 test('development runner passes workspace TEMP and caches to child tools on every invocation', t => {
   mkdirSync('.tools/tests', {recursive:true});
   const root = mkdtempSync(resolve('.tools/tests/dev-tools-'));

@@ -168,12 +168,25 @@ internal static partial class Program
             var result = tracker.FinishKey(11, quarter, 100, false, "2026-10-28");
             Equal(true, result is PlacementResult); Sample((PlacementResult)result!, "W07");
         });
+        foreach (uint flags in new[] { LLKHF_INJECTED, LLKHF_LOWER_IL_INJECTED })
+            Check($"injected Up repeat cancels an existing placement series: {flags}", () => {
+                var tracker = Tracker(); var half = Placed("left", "half"); var quarter = Placed("left", "top");
+                tracker.Key(11, start, VK_LWIN, false, false, 0, 0);
+                tracker.Key(11, start, VK_LEFT, true, false, 10, 0); tracker.KeyReleased(VK_LEFT);
+                tracker.Key(11, half, VK_UP, true, false, 20, 0);
+                tracker.Key(11, quarter, VK_UP, true, false, 30, flags);
+                tracker.KeyReleased(VK_UP);
+                tracker.Key(11, quarter, VK_UP, true, false, 40, 0);
+                Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, start with { Show = SW_SHOWMAXIMIZED }, 45, 11, "2026-10-28"));
+                tracker.KeyReleased(VK_UP); tracker.KeyReleased(VK_LWIN);
+                Equal<object?>(null, tracker.FinishKey(11, quarter, 50, false, "2026-10-28"));
+            });
         Check("arranged Win+Up maximize still records W03 without claiming an equivalent key", () => {
             var tracker = Tracker(); var before = Placed("left", "top"); var after = start with { Show = SW_SHOWMAXIMIZED };
             tracker.Key(11, before, VK_UP, true, false, 0, 0);
-            Equal<object?>(null, tracker.Complete(11, before, after, 20, 11, "2026-10-28", monitor));
+            var result = tracker.Complete(11, before, after, 20, 11, "2026-10-28", monitor);
             tracker.KeyReleased(VK_UP);
-            var result = tracker.FinishKey(11, after, 100, false, "2026-10-28");
+            Equal<object?>(null, tracker.FinishKey(11, after, 100, false, "2026-10-28"));
             Equal(true, result is WindowCandidate);
             var c = (WindowCandidate)result!; int id = 1000 + output.Count;
             output.Add(new { candidate = CandidateProtocol.V2(c, id, id), expected = "W03" });

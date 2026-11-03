@@ -34,7 +34,7 @@ class FixtureWindow extends EventEmitter {
 }
 
 Object.defineProperty(globalThis, '__dirname', { value: 'fixture-main' });
-mock.module('electron', { namedExports: { BrowserWindow: FixtureWindow } });
+mock.module('electron', { namedExports: { BrowserWindow: FixtureWindow, app: { isPackaged: false, getAppPath: () => process.cwd() } } });
 const { CoachWindow } = await import('../../../src/main/coach-window.ts');
 
 test('読込中も窓を重複作成せず、closeで隠し同じ窓を復元する', async () => {

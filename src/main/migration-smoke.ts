@@ -11,6 +11,8 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   coach: DurableCoach; window: BrowserWindow; repository: unknown;
 }) {
   assert.ok(repository instanceof SqliteRepository);
+  assert.equal(coach.snapshot().observing, false, 'migration fixture must not create new observation coverage');
+  await window.webContents.executeJavaScript('window.coach.getSnapshot()');
   const state = coach.snapshot(); assert.equal(state.error, null);
   assert.equal(state.settings.opened, true); assert.equal(state.settings.states?.W03, 'excluded');
   assert.equal(state.settings.states?.W12, 'learning');
@@ -33,9 +35,20 @@ export async function runMigrationSmoke({ coach, window, repository }: {
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'all');
     select.dispatchEvent(new Event('change', {bubbles:true}));
   })()`);
-  await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='ー' &&
+  try { await waitFor(window, `document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent==='ー' &&
     document.querySelector('[data-operation="W09"]')===null &&
-    document.querySelector('[data-kpi="key"]')?.textContent==='ー'`, 'migration-renderer');
+    document.querySelector('[data-kpi="key"]')?.textContent==='ー'`, 'migration-renderer'); }
+  catch (error) {
+    // Isolated migration fixture only: report the failed contract, never window/input data.
+    console.error('MIGRATION_RENDERER_FIXTURE', await window.webContents.executeJavaScript(`JSON.stringify({
+      filters: [...document.querySelectorAll('.records-page select')].map(s => s.value),
+      operations: [...document.querySelectorAll('[data-operation]')].map(row => row.dataset.operation),
+      mouse: document.querySelector('[data-operation="W03"] [data-kind="mouse"]')?.textContent,
+      key: document.querySelector('[data-kpi="key"]')?.textContent,
+      busy: document.querySelector('.records-scroll')?.getAttribute('aria-busy')
+    })`).catch(() => 'unavailable'));
+    throw error;
+  }
   assert.equal(await readFile(join(app.getPath('userData'), 'counts.json'), 'utf8'),
     '  {"schemaVersion":1,"days":{"2020-01-02":{"W03":{"mouse":7,"key":5},"W09":{"mouse":100,"key":100}}}}\n');
   return { fixtureOnly: true, migratedRows: true, legacyUnknown: true, excludedRetained: true,

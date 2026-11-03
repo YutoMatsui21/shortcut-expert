@@ -13,6 +13,7 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
+    private readonly System.Windows.Forms.Timer maximizeTimer = new() { Interval = 50 };
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
     private readonly WindowCloseObserver closing;
@@ -34,9 +35,10 @@ internal sealed class Observer : IDisposable
         switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, windowDiagnostic);
         closing = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
+        maximizeTimer.Tick += (_, _) => PollMaximize();
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
-    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); mouseDockThresholdPx = null; }
+    internal void InvalidateDisplay() { tracker.ClearInput(); maximizeTimer.Stop(); closing.Cancel(); mouseDockThresholdPx = null; }
     internal void RefreshDockThreshold() {
         InvalidateDisplay();
         mouseDockThresholdPx = !fixture && Active ? WindowDockSettings.ReadMouseDockThreshold() : null;
@@ -75,6 +77,7 @@ internal sealed class Observer : IDisposable
     }
     internal void Stop()
     {
+        maximizeTimer.Stop();
         protocol.Stop();
         taskbar.Stop();
         switching.Stop();
@@ -86,7 +89,14 @@ internal sealed class Observer : IDisposable
         mouseHook = keyHook = 0; eventHooks.Clear(); states.Clear(); tracker.Reset(0); mouseDockThresholdPx = null;
         if (!released) throw new InvalidOperationException("hook-release-failed");
     }
-    private WindowState? Read(nint window, WindowState? cached = null)
+    private WindowState? ReadStateChange(nint window, WindowState? cached = null) =>
+        Read(window, cached, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
+    private static long? ReadResultStyle(nint window, int index)
+    {
+        nint value = GetWindowStyleChecked(window, index);
+        return value == 0 && Marshal.GetLastPInvokeError() != 0 ? null : value.ToInt64();
+    }
+    private WindowState? Read(nint window, WindowState? cached = null, uint? maximizeProcess = null)
     {
         if (window == 0 || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window)) return null;
         if (window == GetDesktopWindow() || window == GetShellWindow()) return null;
@@ -94,8 +104,12 @@ internal sealed class Observer : IDisposable
         var cls = new StringBuilder(256);
         string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
         bool? cloaked = DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0 ? cloak != 0 : null;
-        if (!WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
-            GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))) return null;
+        bool allowed = maximizeProcess is { } expectedProcess
+            ? WindowTargetPolicy.AllowsMaximizeResult(pid, expectedProcess, (uint)Environment.ProcessId,
+                ReadResultStyle(window, GWL_STYLE), ReadResultStyle(window, -20), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid))
+            : WindowTargetPolicy.Allows(pid, (uint)Environment.ProcessId, GetWindowStyle(window, GWL_STYLE).ToInt64(),
+                GetWindowStyle(window, -20).ToInt64(), GetWindow(window, 4) != 0, cloaked, windowClass, OrdinaryProcess(pid));
+        if (!allowed) return null;
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement)) return null;
         var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
@@ -232,7 +246,7 @@ internal sealed class Observer : IDisposable
                 if (key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT) {
                     nint releasedTarget = GetForegroundWindow();
                     states.TryGetValue(releasedTarget, out WindowState? releasedCached);
-                    var result = tracker.FinishKey(releasedTarget, Read(releasedTarget, releasedCached), clock.ElapsedMilliseconds,
+                    var result = tracker.FinishKey(releasedTarget, ReadStateChange(releasedTarget, releasedCached), clock.ElapsedMilliseconds,
                         (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, DateTime.Now.ToString("yyyy-MM-dd"));
                     if (result is PlacementResult placed) protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placed);
                     if (result is WindowCandidate maximized) protocol.Complete(maximized);
@@ -249,15 +263,35 @@ internal sealed class Observer : IDisposable
             bool shift = GetAsyncKeyState(VK_SHIFT) < 0, alt = GetAsyncKeyState(VK_MENU) < 0;
             bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
             WindowState? before = null;
-            if (CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null && states.TryGetValue(target, out WindowState? cached))
+            bool maximizeKey = CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) == "win-up";
+            if (CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null && (maximizeKey || states.ContainsKey(target)))
             {
+                states.TryGetValue(target, out WindowState? cached);
                 before = Read(target, cached);
                 if (before is not null) states[target] = before;
             }
             tracker.Key(target, before, key.Key, win, modifiers, clock.ElapsedMilliseconds, key.Flags, shift, alt);
         }
         catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
+        finally { SyncMaximizeTimer(); }
         return CallNextHookEx(0, code, message, data);
+    }
+    private void SyncMaximizeTimer() {
+        bool pending = !fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is not null;
+        if (pending && !maximizeTimer.Enabled) maximizeTimer.Start();
+        if (!pending) maximizeTimer.Stop();
+    }
+    private void PollMaximize() {
+        try {
+            if (!fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is { } target) {
+                WindowState? after = ReadStateChange(target);
+                var result = tracker.ConfirmMaximize(target, after, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
+                if (after is not null) states[target] = after;
+                if (result is not null) protocol.Complete(result);
+            }
+        }
+        catch { tracker.ClearInput(); }
+        finally { SyncMaximizeTimer(); }
     }
     private void OnEvent(nint hook, uint kind, nint window, int obj, int child, uint thread, uint time)
     {
@@ -288,7 +322,7 @@ internal sealed class Observer : IDisposable
             if (kind is not (EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND) &&
                 (obj != OBJID_WINDOW || child != CHILDID_SELF)) return;
             states.TryGetValue(window, out WindowState? previous);
-            WindowState? after = Read(window, previous);
+            WindowState? after = ReadStateChange(window, previous);
             if (after is null) { tracker.Forget(window); return; }
             states[window] = after;
             object? candidate = tracker.Complete(window, previous, after, clock.ElapsedMilliseconds,
@@ -297,5 +331,5 @@ internal sealed class Observer : IDisposable
         }
         catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
     }
-    public void Dispose() { Stop(); taskbar.Dispose(); switching.Dispose(); closing.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); maximizeTimer.Dispose(); taskbar.Dispose(); switching.Dispose(); closing.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }

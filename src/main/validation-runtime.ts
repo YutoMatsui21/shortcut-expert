@@ -47,7 +47,8 @@ export class ValidationRuntime {
       setLoginItemSettings: (value: { openAtLogin: boolean }) => { enabled = value.openAtLogin; }
     };
   }
-  get canStartObservation() { return this.mode.naturalOperation === null || this.naturalArming; }
+  // Migration verifies legacy data without adding fresh coverage through renderer snapshot reads.
+  get canStartObservation() { return !this.mode.migration && (this.mode.naturalOperation === null || this.naturalArming); }
   capabilities(): Capability[] { return this.mode.fixture ? [{ operation: 'W03', revision: 'fixture-v1' }] : []; }
   activated() { if (this.mode.osAcceptance) console.log('V01_ACTIVATION instance'); }
   notificationResult(result: NotificationResult) {

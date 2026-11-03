@@ -81,6 +81,7 @@ internal static class NativeMethods
     [DllImport("user32.dll")] internal static extern bool IsIconic(nint window);
     [DllImport("user32.dll")] internal static extern bool IsZoomed(nint window);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] internal static extern nint GetWindowStyle(nint window, int index);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)] internal static extern nint GetWindowStyleChecked(nint window, int index);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int GetClassNameW(nint window, StringBuilder name, int maximum);
     [DllImport("user32.dll")] internal static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] internal static extern uint GetDoubleClickTime();
