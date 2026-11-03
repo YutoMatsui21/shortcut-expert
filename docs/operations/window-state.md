@@ -19,6 +19,14 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 | マウス | 最大化ボタン、captionダブルクリック、**上端への直接ドラッグ**と通常→最大化の結果 |
 | キー | `Win+↑`と対象窓の最大化結果 |
 
+キー経路は物理的な`Win+↑`の初回keydown時にforegroundのHWND・process・`GetWindowPlacement`の状態を取得する。既存cacheへの登録は要求せず、通常状態（`SW_SHOWNORMAL`）だけを起点にする。最大化済み・読取不能・注入・競合入力は候補にしない。スナップ配置中を含み、キー経路には`IsWindowArranged`の値・配置形状・monitor/work/DPIの一致を要求しない。マウス経路の条件は変更しない。
+
+同一HWND／processかつforegroundが一致し、入力後1000ms以内に`SW_SHOWMAXIMIZED`を読めたら1件確定する。WinEventと、候補がある間だけ動く50ms間隔のWinForms timerが同じ確定処理を使う。timerはhook／WinEventと同じmessage-loop thread上で動作し、常時ポーリングや並行した状態更新を行わない。イベント欠落・キー解放後の遅延も期限内なら確認し、期限超過時は棄却する。timerの配送が遅れた場合に期限を延長しない。
+
+↑のrepeatは候補・期限を更新せず、確定で候補と進行中の配置列を消費するため、イベント・再照会・Win解放が重なっても重複しない。別キー／マウス入力・注入・foreground離脱・対象破棄・process不一致・移動開始・画面設定変更・停止／世代変更で取消す。arranged不明でもキー記録は採用するが、マウス操作へのキー案内は従来どおりarranged=falseの確証を必要とする。
+
+状態APIの根拠：[GetWindowPlacement](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowplacement)は最大化時のshowCmdを`SW_SHOWMAXIMIZED`と定義する。1000ms／50msは実装上の有界な確認期間・頻度であり、一般アプリの実測精度を保証する値ではない。
+
 上端ドラッグはcaption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEEND／最大化を確認し、**終端だけ**1件計上。解放位置は作業域上端から公開API `SPI_GETMOUSEDOCKTHRESHOLD` の検証済み値（1〜256px）と2pxの大きい方以内・作業域内のX、解放先monitorと結果monitorが一致することを必要とする。取得不能／範囲外は従来の2pxへfallbackし、gesture前後で値が変わった場合は採用しない。
 
 [SystemParametersInfoWの公開仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)は、mouse dockingの距離と上端・左右端のdocking設定を定義する。getterのDPI context／cache lifecycleは[配置設計](window-placement.md#osの早期スナップ閾値)と共通。これは完全なWindows 11 preview領域を返すAPIではなく、256pxは実装上限でMicrosoftの公表上限ではない。Snap Layoutの内部選択、解放不明・取消・注入・対象変更・構成変更・重複・遅着の未検証結果は採用しない。

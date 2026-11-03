@@ -82,6 +82,7 @@ internal sealed class PlacementPolicy
     private bool cancelled;
     private readonly HashSet<uint> held = new();
     internal bool WinHeld => held.Contains(VK_LWIN) || held.Contains(VK_RWIN);
+    internal bool Cancelled => cancelled;
     internal bool Owns(nint window) => series?.Window == window;
     internal void Cancel() { if (series is not null) cancelled = true; series = null; }
     internal void Reset() { series = null; cancelled = false; held.Clear(); }
@@ -123,13 +124,6 @@ internal sealed class PlacementPolicy
         pending.Window == window && after is not null && PlacementGeometry.Compatible(pending.Before, after) &&
         pending.Before.Monitor == after.Monitor && pending.Before.Work == after.Work && pending.Before.Dpi == after.Dpi &&
         now - pending.Started is >= 0 and <= 15000 && now - pending.Last is >= 0 and <= 1000;
-    internal (WindowState Before, int Transaction, long Age)? Maximize(nint window, WindowState? after, long now, bool injected)
-    {
-        if (series is not { } pending || !Valid(pending, window, after, now, injected) ||
-            pending.LastBefore.Show != SW_SHOWNORMAL || pending.LastBefore.Arranged is null || pending.Vertical != "top" ||
-            after!.Show != SW_SHOWMAXIMIZED || after.Arranged != false) return null;
-        return (pending.LastBefore, pending.Transaction, now - pending.Last);
-    }
     internal PlacementResult? Finish(nint window, WindowState? after, long now, bool injected)
     {
         var pending = series; series = null; cancelled = false;

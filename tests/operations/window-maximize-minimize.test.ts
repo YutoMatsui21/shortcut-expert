@@ -5,6 +5,16 @@ import { candidateFixture, v2Fixture, type Candidate } from '../support/fixtures
 
 const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
+test('Win+Up uses confirmed state transition regardless of arranged availability', () => {
+  for (const arranged of [false, true, null]) {
+    const value = candidateFixture({ origin: 'key', route: 'win-up', before: { state: 'normal', arranged } });
+    assert.equal(classify(value)?.operation, 'W03');
+    for (const invalid of [{ injected: true }, { conflicted: true }, { targetMatched: false },
+      { inputAgeMs: 1001 }, { before: { state: 'maximized', arranged } }, { after: { state: 'normal' } }])
+      assert.equal(classify({ ...value, ...invalid }), null);
+  }
+});
+
 test('ordinary-window category supports general-app W03/W04 while preserving input/result checks', () => {
   const max = candidateFixture({ app: 'ordinary-window' });
   assert.equal(classify(max)?.operation, 'W03');

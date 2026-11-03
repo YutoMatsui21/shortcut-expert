@@ -15,6 +15,12 @@ import { loginItemName, loginItemArgs } from '../../../src/main/login-startup.ts
 
 test('normal composition migrates without pruning, records via SQLite IPC, recovers stopped and closes the writer', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'coach-composition-'));
+  const resourcesPath = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+  Object.defineProperty(process, 'resourcesPath', { configurable: true, value: root });
+  t.after(() => {
+    if (resourcesPath) Object.defineProperty(process, 'resourcesPath', resourcesPath);
+    else Reflect.deleteProperty(process, 'resourcesPath');
+  });
   const source = ' {"schemaVersion":1,"days":{"2020-01-02":{"W03":{"mouse":7,"key":5}}}}\n';
   await writeFile(path.join(root, 'counts.json'), source);
   // Only OS/UI boundaries are fake. Composition, Core, selection and Worker are real.
@@ -32,7 +38,7 @@ test('normal composition migrates without pruning, records via SQLite IPC, recov
   });
   const window = new EventEmitter();
   mock.module('electron', { namedExports: { app, dialog: { showMessageBox: () => assert.fail('unexpected dialog') },
-    Menu: { buildFromTemplate: (value: unknown) => value }, nativeImage: { createFromBitmap: () => ({}) },
+    Menu: { buildFromTemplate: (value: unknown) => value }, nativeImage: { createFromPath: () => ({ isEmpty: () => false }) },
     screen: new EventEmitter(), powerMonitor: new EventEmitter(), Tray: class {
       on() {} setToolTip() {} setContextMenu() {} destroy() {}
     } } });

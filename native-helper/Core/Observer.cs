@@ -13,6 +13,7 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
+    private readonly System.Windows.Forms.Timer maximizeTimer = new() { Interval = 50 };
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
     private readonly WindowCloseObserver closing;
@@ -34,9 +35,10 @@ internal sealed class Observer : IDisposable
         switching = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, windowDiagnostic);
         closing = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse; keyCallback = OnKey; eventCallback = OnEvent;
+        maximizeTimer.Tick += (_, _) => PollMaximize();
     }
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
-    internal void InvalidateDisplay() { tracker.ClearInput(); closing.Cancel(); mouseDockThresholdPx = null; }
+    internal void InvalidateDisplay() { tracker.ClearInput(); maximizeTimer.Stop(); closing.Cancel(); mouseDockThresholdPx = null; }
     internal void RefreshDockThreshold() {
         InvalidateDisplay();
         mouseDockThresholdPx = !fixture && Active ? WindowDockSettings.ReadMouseDockThreshold() : null;
@@ -75,6 +77,7 @@ internal sealed class Observer : IDisposable
     }
     internal void Stop()
     {
+        maximizeTimer.Stop();
         protocol.Stop();
         taskbar.Stop();
         switching.Stop();
@@ -249,15 +252,35 @@ internal sealed class Observer : IDisposable
             bool shift = GetAsyncKeyState(VK_SHIFT) < 0, alt = GetAsyncKeyState(VK_MENU) < 0;
             bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
             WindowState? before = null;
-            if (CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null && states.TryGetValue(target, out WindowState? cached))
+            bool maximizeKey = CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) == "win-up";
+            if (CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null && (maximizeKey || states.ContainsKey(target)))
             {
+                states.TryGetValue(target, out WindowState? cached);
                 before = Read(target, cached);
                 if (before is not null) states[target] = before;
             }
             tracker.Key(target, before, key.Key, win, modifiers, clock.ElapsedMilliseconds, key.Flags, shift, alt);
         }
         catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
+        finally { SyncMaximizeTimer(); }
         return CallNextHookEx(0, code, message, data);
+    }
+    private void SyncMaximizeTimer() {
+        bool pending = !fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is not null;
+        if (pending && !maximizeTimer.Enabled) maximizeTimer.Start();
+        if (!pending) maximizeTimer.Stop();
+    }
+    private void PollMaximize() {
+        try {
+            if (!fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is { } target) {
+                WindowState? after = Read(target);
+                var result = tracker.ConfirmMaximize(target, after, clock.ElapsedMilliseconds, GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"));
+                if (after is not null) states[target] = after;
+                if (result is not null) protocol.Complete(result);
+            }
+        }
+        catch { tracker.ClearInput(); }
+        finally { SyncMaximizeTimer(); }
     }
     private void OnEvent(nint hook, uint kind, nint window, int obj, int child, uint thread, uint time)
     {
@@ -297,5 +320,5 @@ internal sealed class Observer : IDisposable
         }
         catch { tracker.ClearInput(); switching.Cancel(); closing.Cancel(); }
     }
-    public void Dispose() { Stop(); taskbar.Dispose(); switching.Dispose(); closing.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
+    public void Dispose() { Stop(); maximizeTimer.Dispose(); taskbar.Dispose(); switching.Dispose(); closing.Dispose(); GC.KeepAlive(mouseCallback); GC.KeepAlive(keyCallback); GC.KeepAlive(eventCallback); }
 }

@@ -22,6 +22,21 @@ internal sealed class CandidateTracker
     private readonly Dictionary<nint, Input> drags = new();
     private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
     private Input? input;
+    private Input? winUp;
+    private bool upHeld;
+    private readonly HashSet<uint> injectedWin = new();
+    internal nint? MaximizeTarget(long now) {
+        if (winUp is { } pending && now - pending.At is < 0 or > InputMatchWindowMs) winUp = null;
+        return winUp?.Window;
+    }
+    internal WindowCandidate? ConfirmMaximize(nint window, WindowState? after, long now, nint foreground, string date) {
+        if (MaximizeTarget(now) is not { } target || target != window) return null;
+        var pending = winUp!;
+        if (foreground != window || after is null || after.Process != pending.Before.Process) { winUp = null; return null; }
+        if (after.Show != SW_SHOWMAXIMIZED) return null;
+        winUp = null; input = null; Placement.Cancel();
+        return (WindowCandidate)Build("maximize", pending.Before, after, pending, now - pending.At, true, false, date, after.Monitor);
+    }
     private bool moveKeyReleased;
     private Input? completedWinDown;
     private bool winDownHeld;
@@ -37,24 +52,26 @@ internal sealed class CandidateTracker
     internal int NextTransaction() => checked(++transaction);
     internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
     {
+        if (injected) winUp = null;
+        var confirmed = ConfirmMaximize(window, after, now, window, date);
+        if (confirmed is not null) return confirmed;
         if (input is { Route: "win-shift-left" or "win-shift-right" } move && move.Window == window && moveKeyReleased) {
             if (injected || after is null) { ClearInput(); return null; }
             return Complete(window, move.Before, after, now, window, date, after.Monitor);
         }
         if (Placement.WinHeld) return null;
-        var maximize = Placement.Maximize(window, after, now, injected);
         var placed = Placement.Finish(window, after, now, injected);
-        if (maximize is not { } m || after is null) return placed;
-        var source = new Input(window, m.Before, "key", "win-up", now - m.Age, false, false, true, m.Transaction);
-        return Build("maximize", m.Before, after, source, m.Age, true, false, date, after.Monitor);
+        return placed;
     }
     internal void KeyReleased(uint key) {
-        Placement.Released(key); if (key == VK_DOWN) winDownHeld = false;
+        Placement.Released(key); injectedWin.Remove(key); if (key == VK_UP) upHeld = false;
+        if (key == VK_DOWN) winDownHeld = false;
         if (input is { Route: "win-shift-left" } && key == VK_LEFT || input is { Route: "win-shift-right" } && key == VK_RIGHT)
             moveKeyReleased = true;
     }
     internal void ForegroundChanged(nint window) {
         Placement.Foreground(window);
+        if (winUp?.Window != window) winUp = null;
         if (input is { Route: "win-shift-left" or "win-shift-right" } && input.Window != window) input = null;
         if (drags.Keys.Any(target => target != window)) { Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled); drags.Clear(); release = null; }
         if (completedWinDown is not null && completedWinDown.Window != window) completedWinDown = null;
@@ -66,11 +83,13 @@ internal sealed class CandidateTracker
         completedWinDown = null; winDownHeld = false; release = null;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
         Placement.Reset();
+        winUp = null; upHeld = false; injectedWin.Clear();
     }
-    internal void ClearInput() { if (drags.Count > 0) Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled); Placement.Cancel(); input = null; drags.Clear(); completedWinDown = null; release = null; }
+    internal void ClearInput() { if (drags.Count > 0) Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled); Placement.Cancel(); input = null; winUp = null; drags.Clear(); completedWinDown = null; release = null; }
     internal void Forget(nint window)
     {
         Placement.Forget(window);
+        if (winUp?.Window == window) winUp = null;
         moving.Remove(window);
         drags.Remove(window);
         if (input?.Window == window) input = null;
@@ -81,6 +100,7 @@ internal sealed class CandidateTracker
     {
         release = null;
         moving.Add(window);
+        winUp = null;
         if (input is { Route: "caption-press" } && input.Window == window && now - input.At is >= 0 and <= InputMatchWindowMs)
             drags[window] = input with { Origin = "mouse", Route = "caption-drag", At = now - input.At, Probe = Diagnostic is null ? null : new() };
         if (input?.Window == window) input = input with { Conflicted = true };
@@ -101,6 +121,7 @@ internal sealed class CandidateTracker
         uint doubleClickTime, uint flags, bool modifiers, bool foreground)
     {
         Placement.Cancel();
+        winUp = null;
         drags.Clear();
         release = null;
         completedWinDown = null;
@@ -120,12 +141,22 @@ internal sealed class CandidateTracker
         drags.Clear();
         release = null;
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
+        bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+        if (injected && key is VK_LWIN or VK_RWIN) injectedWin.Add(key);
+        if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN)) winUp = null;
         if (IsModifier(key)) {
             Placement.Key(window, before, key, winDown, modifiers, now, flags, NextTransaction);
             if (key is not (VK_LWIN or VK_RWIN) || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) completedWinDown = null;
             if (input is not null) input = input with { Conflicted = true }; return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
+        if (key == VK_UP) {
+            if (upHeld) { if (injected) ClearInput(); return; }
+            upHeld = true;
+            winUp = route == "win-up" && before is { Show: SW_SHOWNORMAL } && !injected &&
+                injectedWin.Count == 0 && !conflict && !moving.Contains(window) && !Placement.Cancelled
+                ? new Input(window, before, "key", "win-up", now, false, false, true, NextTransaction()) : null;
+        }
         if (route is "win-shift-left" or "win-shift-right" && input?.Route == route && !moveKeyReleased) {
             if ((flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0) ClearInput();
             return;
@@ -139,7 +170,7 @@ internal sealed class CandidateTracker
             if (winDownHeld) return;
             winDownHeld = true;
         }
-        if (route is null || before is null) { input = null; return; }
+        if (route is null || route == "win-up" && !injected && !conflict || before is null) { input = null; return; }
         input = new Input(window, before, "key", route, now,
             (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0, conflict, true, checked(++transaction));
         moveKeyReleased = false;
@@ -235,6 +266,8 @@ internal sealed class CandidateTracker
     internal object? Complete(nint window, WindowState? previous, WindowState after, long now,
         nint foreground, string date, MonitorBounds? monitor)
     {
+        var maximized = ConfirmMaximize(window, after, now, foreground, date);
+        if (maximized is not null) return maximized;
         if (previous is null) return null;
         if (previous.Process != after.Process) { Forget(window); return null; }
         if (Placement.Owns(window)) return null;

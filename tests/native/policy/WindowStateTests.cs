@@ -9,6 +9,63 @@ internal static partial class Program
         var start = normal with { App = WindowTargetPolicy.ApplicationCategory, Monitor = screen, Work = screen, DisplayLayout = "stable" };
         var max = start with { Show = SW_SHOWMAXIMIZED };
         var min = start with { Show = SW_SHOWMINIMIZED };
+        foreach (bool? arranged in new bool?[] { false, true, null })
+            Check($"Win+Up confirms live start without cached event state: {arranged}", () => {
+                var tracker = Tracker(); var before = start with { Arranged = arranged };
+                tracker.Key(11, before, VK_UP, true, false, 0, 0);
+                var result = tracker.Complete(11, null, max, 250, 11, "2026-10-28", screen) as WindowCandidate;
+                Equal(true, result is not null); Equal("win-up", result!.route);
+                Equal(arranged, result.before.arranged);
+                Sample(result, "W03");
+                Equal<object?>(null, tracker.Complete(11, max, max, 300, 11, "2026-10-28", screen));
+            });
+        foreach (int delay in new[] { 50, 450, 1000, 1001 })
+            Check($"Win+Up requery without any state event at {delay}", () => {
+                var tracker = Tracker(); tracker.Key(11, start, VK_UP, true, false, 0, 0);
+                tracker.KeyReleased(VK_UP); tracker.KeyReleased(VK_LWIN);
+                for (int at = 50; at < delay; at += 50)
+                    Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, start, at, 11, "2026-10-28"));
+                var result = tracker.ConfirmMaximize(11, max, delay, 11, "2026-10-28");
+                Equal(delay <= 1000, result is not null);
+                Equal<nint?>(null, tracker.MaximizeTarget(1001));
+                Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, max, delay + 1, 11, "2026-10-28"));
+            });
+        foreach (string mode in new[] { "already-max", "no-change", "other-window", "process", "foreground", "injected", "lower-injected", "injected-win", "conflict", "mouse", "stop", "destroy", "display" })
+            Check($"Win+Up requery rejects {mode}", () => {
+                var tracker = Tracker();
+                if (mode == "injected-win") tracker.Key(11, null, VK_LWIN, false, false, 0, LLKHF_INJECTED);
+                tracker.Key(11, mode == "already-max" ? max : start, VK_UP, true, false, 0,
+                    mode == "injected" ? LLKHF_INJECTED : mode == "lower-injected" ? LLKHF_LOWER_IL_INJECTED : 0);
+                if (mode == "conflict") tracker.Key(11, start, 0x41, true, false, 10, 0);
+                if (mode == "mouse") tracker.Mouse(11, start, HTMAXBUTTON, default, 10, 500, 0, false, true);
+                if (mode == "stop") tracker.Reset(2);
+                if (mode == "destroy") tracker.Forget(11);
+                if (mode == "display") tracker.ClearInput();
+                var result = tracker.ConfirmMaximize(mode == "other-window" ? 22 : 11,
+                    mode == "no-change" ? start : mode == "process" ? max with { Process = 99 } : max,
+                    100, mode == "foreground" ? 22 : 11, "2026-10-28");
+                Equal<WindowCandidate?>(null, result);
+            });
+        Check("Win+Up held after success cannot create another operation", () => {
+            var tracker = Tracker(); tracker.Key(11, start, VK_UP, true, false, 0, 0);
+            Equal(true, tracker.ConfirmMaximize(11, max, 50, 11, "2026-10-28") is not null);
+            tracker.Key(11, start, VK_UP, true, false, 100, 0);
+            Equal<WindowCandidate?>(null, tracker.ConfirmMaximize(11, max, 150, 11, "2026-10-28"));
+            tracker.KeyReleased(VK_UP); tracker.Key(11, start, VK_UP, true, false, 200, 0);
+            Equal(true, tracker.ConfirmMaximize(11, max, 250, 11, "2026-10-28") is not null);
+        });
+        Check("Win+Up repeat does not renew the original deadline", () => {
+            var tracker = Tracker(); tracker.Key(11, start, VK_UP, true, false, 0, 0);
+            tracker.Key(11, start, VK_UP, true, false, 900, 0);
+            var result = tracker.Complete(11, start, max, 1100, 11, "2026-10-28", screen) as WindowCandidate;
+            Equal(false, result is { origin: "key", targetMatched: true, inputAgeMs: <= 1000 });
+        });
+        Check("Win+Up foreground departure and return cancels the operation", () => {
+            var tracker = Tracker(); tracker.Key(11, start, VK_UP, true, false, 0, 0);
+            tracker.ForegroundChanged(22); tracker.ForegroundChanged(11);
+            var result = tracker.Complete(11, start, max, 100, 11, "2026-10-28", screen) as WindowCandidate;
+            Equal(false, result is { origin: "key", targetMatched: true });
+        });
         foreach (int gap in new[] { -1, 2, 3, 8, 33, 64, 65, 500 })
             Check($"OS docking threshold governs top preview release {gap}", () => {
                 var tracker = Tracker(); var before = start with { MouseDockThresholdPx = 64 };
