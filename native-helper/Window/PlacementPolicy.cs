@@ -39,7 +39,7 @@ internal static class PlacementGeometry
         if (Near(f.y, midY) && Near((long)f.y + f.height, bottom)) return side + "-bottom";
         return null;
     }
-    internal static bool Compatible(WindowState a, WindowState b) => a.Process == b.Process &&
+    internal static bool Compatible(WindowState a, WindowState b) => a.HasCaption && b.HasCaption && a.Process == b.Process &&
         a.DisplayLayout is not null && a.DisplayLayout == b.DisplayLayout && a.Monitor is not null && b.Monitor is not null;
     internal static PlacementEvidence? Drag(WindowState before, WindowState after, Point point,
         MonitorBounds releasedMonitor, MonitorBounds work, long age, bool matched, Action<WindowDiagnosticReason>? diagnostic = null)
@@ -99,7 +99,7 @@ internal sealed class PlacementPolicy
         bool arrow = key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
         bool active = series is not null;
         if (cancelled && arrow && win) return true;
-        if (!arrow || !win || modified || before is null || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
+        if (!arrow || !win || modified || before is null || !before.HasCaption || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
         { Cancel(); if (win && key is VK_LEFT or VK_RIGHT) cancelled = true; return active && arrow; }
         if (!held.Add(key)) return active; // repeat cannot extend a transaction or its deadline
         if (series is not null && (series.Window != window || !PlacementGeometry.Compatible(series.Before, before) ||

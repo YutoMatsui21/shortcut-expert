@@ -14,6 +14,19 @@ internal static partial class Program
                 work.y + (vertical == "bottom" ? work.height / 2 : 0),
                 side == "left" ? work.width / 2 : work.width - work.width / 2,
                 vertical == "half" ? work.height : work.height / 2) };
+        foreach (bool inputCaption in new[] { false, true })
+            Check($"placement retains caption requirement on input/result: {inputCaption}", () => {
+                var before = start with { HasCaption = inputCaption };
+                var after = Placed("left", "half") with { HasCaption = !inputCaption };
+                var tracker = Tracker();
+                tracker.Key(11, before, VK_LEFT, true, false, 0, 0);
+                Equal<object?>(null, tracker.FinishKey(11, after, 100, false, "2026-10-28"));
+                tracker = Tracker();
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
+                tracker.MoveStart(11, 100);
+                tracker.MouseReleased(new Point { X = work.x, Y = work.y + work.height / 2 }, monitor, work, 0);
+                Equal<object?>(null, tracker.FinishMove(11, after, 200, 11, "2026-10-28"));
+            });
         void Sample(PlacementResult result, string? expected)
         {
             int id = 1000 + output.Count;

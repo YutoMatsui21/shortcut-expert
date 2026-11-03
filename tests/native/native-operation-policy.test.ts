@@ -194,8 +194,8 @@ test(
     assert.equal(notices, expectedNotices);
     assert.equal(
       totals.W03.mouse,
-      4,
-      "existing top-drag cases plus child-caption double-click and drag",
+      7,
+      "existing maximize routes plus captionless button, double-click and top-drag",
     );
     assert.ok(totals.W04.key > 0);
     assert.ok(totals.W04.mouse > 0);

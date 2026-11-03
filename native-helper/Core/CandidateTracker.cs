@@ -4,7 +4,11 @@ using Point = NativeMethods.Point;
 internal sealed record MonitorBounds(int x, int y, int width, int height);
 internal sealed record WindowState(uint Process, string App, uint Show, bool? Arranged,
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
-    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false, int? MouseDockThresholdPx = null);
+    MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false, int? MouseDockThresholdPx = null)
+{
+    // Retain the caption requirement for operations other than W03/W04; never sent on the wire.
+    internal bool HasCaption { get; init; } = true;
+}
 // Only verified terminal evidence crosses the protocol; HWND/process stay in the tracker.
 internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMonitor, MonitorBounds ToMonitor,
     string Terminal, long InputAgeMs, string? MoveDirection = null, bool TwoDisplayLayoutConfirmed = false);
@@ -260,7 +264,7 @@ internal sealed class CandidateTracker
     {
         Input? candidate = input?.Window == window ? input : null;
         Forget(window);
-        if (previous is null || candidate is null || candidate.Before.Process != previous.Process ||
+        if (previous is null || candidate is null || !candidate.Before.HasCaption || !previous.HasCaption || candidate.Before.Process != previous.Process ||
             candidate.Route is not ("close-button" or "alt-f4")) return null;
         return Build("close", candidate.Before, previous with { Show = 0 }, candidate, now - candidate.At, true, false, date, candidate.Before.Monitor);
     }
@@ -328,7 +332,7 @@ internal sealed class CandidateTracker
         before.TwoDisplayPair && after.TwoDisplayPair && StableMove(before, after) &&
         MonitorMovePolicy.Separate(before.Monitor!, after.Monitor!);
     private static bool StableMove(WindowState before, WindowState after) =>
-        before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
+        before.HasCaption && after.HasCaption && before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
         before.Monitor is not null && after.Monitor is not null && before.Work is not null && after.Work is not null &&
         before.Dpi > 0 && after.Dpi > 0 && State(before.Show) is "normal" or "maximized" &&
         State(after.Show) is "normal" or "maximized";

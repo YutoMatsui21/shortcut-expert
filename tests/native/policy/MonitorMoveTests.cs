@@ -8,6 +8,20 @@ internal static partial class Program
         var source = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "stable-pair", HorizontalPair = true };
         var to = source with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040) };
+        foreach (bool inputCaption in new[] { false, true })
+            Check($"monitor move retains caption requirement on input/result: {inputCaption}", () => {
+                var before = source with { HasCaption = inputCaption };
+                var after = to with { HasCaption = !inputCaption };
+                var tracker = Tracker();
+                tracker.Key(11, before, VK_RIGHT, true, false, 0, 0, true);
+                tracker.KeyReleased(VK_RIGHT);
+                Equal<object?>(null, tracker.Complete(11, before, after, 200, 11, "2026-10-28", after.Monitor));
+                tracker = Tracker();
+                tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
+                tracker.MoveStart(11, 100);
+                tracker.MouseReleased(default, after.Monitor, after.Work, 0);
+                Equal<object?>(null, tracker.FinishMove(11, after, 200, 11, "2026-10-28"));
+            });
         foreach (string mode in new[] { "accepted", "same-monitor", "no-release", "release-monitor", "release-work",
             "end-state", "unstable", "injected", "unmatched", "foreground" })
             Check($"normal monitor drag diagnostics preserve decision: {mode}", () => {

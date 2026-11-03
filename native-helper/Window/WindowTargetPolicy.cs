@@ -10,7 +10,7 @@ internal static class WindowTargetPolicy
         style is { } knownStyle && extended is { } knownExtended &&
         AllowsTarget(process, selfProcess, knownStyle, knownExtended, owned, cloaked, windowClass, ordinary);
     internal static bool Allows(uint process, uint selfProcess, long style, long extended, bool owned,
-        bool? cloaked, string? windowClass, bool ordinary) => (style & WS_CAPTION) == WS_CAPTION &&
+        bool? cloaked, string? windowClass, bool ordinary) =>
         AllowsTarget(process, selfProcess, style, extended, owned, cloaked, windowClass, ordinary);
     private static bool AllowsTarget(uint process, uint selfProcess, long style, long extended, bool owned,
         bool? cloaked, string? windowClass, bool ordinary) =>

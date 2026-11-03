@@ -8,7 +8,7 @@
 
 通常のNative→Main厳格parse→Core→SQLite→学習・記録画面→保存後通知を使用する。W03/W04の学習状態は別に保持し、旧W05を新W04へ合算しない。
 
-対象は実行ファイル名の許可リストではなく、通常の可視root窓・caption・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。この同じ対象読取はW02／W06／W07と複合dragにも使う。
+対象は実行ファイル名の許可リストではなく、通常の可視root窓・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。W03/W04は入力・結果とも`WS_CAPTION`を必須としない。対象読取はW02／W06／W07と複合dragにも使うが、captionの有無を一時状態として保持し、これらの操作には入力・結果とも従来のcaption条件を維持する。
 
 rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実際のヒット先の子窓を10ms上限で照会する。同じroot祖先・同じprocessを照会前後で確認し、子窓が明示的に`HTCAPTION`を返した場合だけcaptionとして扱う。rootのボタン／resize／不明判定を上書きせず、子窓のclient・不明・別対象・別processも採用しない。子窓のHWND・process・座標は一時照合だけで、通信・保存へ追加しない。W03/W04以外のcaption dragも同じ入力照合を使う。
 
@@ -21,9 +21,9 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 キー経路は物理的な`Win+↑`の初回keydown時にforegroundのHWND・process・`GetWindowPlacement`の状態を取得する。既存cacheへの登録は要求せず、通常状態（`SW_SHOWNORMAL`）だけを起点にする。最大化済み・読取不能・注入・競合入力は候補にしない。スナップ配置中を含み、キー経路には`IsWindowArranged`の値・配置形状・monitor/work/DPIの一致を要求しない。マウス経路の条件は変更しない。
 
-入力時は共通の対象条件（`WS_CAPTION`を含む）を維持する。一方、保留中のW03キー候補と一致するHWNDの**結果読取**は`ReadStateChange`で分離し、入力時processとの一致、可視root・非shell／self／child／owned／tool／noActivate／cloaked／昇格などの条件を再確認する。最大化によって`WS_CAPTION`が外れても、それだけで候補を消去しない。WinEvent・50ms timer・キー解放の全てで同じ結果読取を使う。候補がない／別対象／期限超過では共通読取へ戻るため、入力時からcaptionなしの窓や、マウスW03・W04・配置操作の適格性は広げない。
+入力時と結果読取で`WS_CAPTION`を要求しない。保留中のW03キー候補と一致するHWNDの結果読取は、従来どおり入力時processとの一致も再確認する。WinEvent・50ms timer・キー解放の全てで同じ結果読取を使う。マウスのヒット位置・入力由来、対象照合、結果・期限・競合などの操作条件は維持する。
 
-結果側のstyle／extended styleは`GetWindowLongPtrW`を`SetLastError=true`で呼び、戻り値0かつエラーありを読取不能として棄却する。0かつエラーなしは既知のstyle値として扱う（[API仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw)、[.NETのエラー初期化・保持](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute.setlasterror)）。Placement・process等の取得不能も従来どおり棄却する。
+入力・結果のstyle／extended styleは`GetWindowLongPtrW`を`SetLastError=true`で呼び、戻り値0かつエラーありを読取不能として棄却する。0かつエラーなしは既知のstyle値として扱う（[API仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw)、[.NETのエラー初期化・保持](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.dllimportattribute.setlasterror)）。Placement・process等の取得不能も従来どおり棄却する。
 
 同一HWND／processかつforegroundが一致し、入力後1000ms以内に`SW_SHOWMAXIMIZED`を読めたら1件確定する。WinEventと、候補がある間だけ動く50ms間隔のWinForms timerが同じ確定処理を使う。timerはhook／WinEventと同じmessage-loop thread上で動作し、常時ポーリングや並行した状態更新を行わない。イベント欠落・キー解放後の遅延も期限内なら確認し、期限超過時は棄却する。timerの配送が遅れた場合に期限を延長しない。
 
