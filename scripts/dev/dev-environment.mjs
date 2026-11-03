@@ -7,6 +7,9 @@ export function developmentEnvironment(root = resolve('.'), base = process.env) 
   const electron = resolve(root, '.tools/electron-cache');
   const builder = resolve(root, '.tools/builder-cache');
   for (const directory of [temp, electron, builder]) mkdirSync(directory, { recursive: true });
+  // Downloaded builder tools use CommonJS .js files; do not inherit the app's ESM scope.
+  try { writeFileSync(join(builder, 'package.json'), '{"type":"commonjs"}\n', { flag: 'wx' }); }
+  catch (error) { if (error.code !== 'EEXIST') throw error; }
   return { ...base, TEMP: temp, TMP: temp, ELECTRON_CACHE: electron,
     electron_config_cache: electron, ELECTRON_BUILDER_CACHE: builder };
 }
