@@ -252,6 +252,61 @@ internal static partial class Program
         void Sample(WindowCandidate candidate, string? expected) => samples.Add(new {
             candidate = CandidateProtocol.V2(candidate, samples.Count + 1, samples.Count + 1), expected });
 
+        foreach (string transition in new[] { "maximize", "restore", "min-normal", "min-max" })
+            Check($"unidentified client click fallback: {transition}", () => {
+                var tracker = Tracker();
+                var before = transition is "restore" or "min-max" ? max : start;
+                var after = transition == "maximize" ? max : transition == "restore" ? start : min;
+                tracker.Mouse(11, before, 1, default, 0, 500, 0, false, true);
+                tracker.MouseReleased(default, screen, screen, 0);
+                var result = (WindowCandidate)tracker.Complete(11, before, after, 500, transition.StartsWith("min-") ? 12 : 11, "2026-10-28", screen)!;
+                Equal("mouse", result.origin); Equal("mouse-state-fallback", result.route);
+                Sample(result, transition == "maximize" ? "W03" : "W04");
+                // Repeated state events cannot consume the click twice, even with a stale cache.
+                var duplicate = tracker.Complete(11, before, after, 501, 11, "2026-10-28", screen) as WindowCandidate;
+                Equal(false, duplicate?.origin == "mouse");
+            });
+        foreach (string reason in new[] { "no-click", "other-window", "process", "expired", "negative-age", "key", "key-up", "modifier", "other-click", "injected", "lower-injected", "release-injected", "drag", "move-return", "release-moved", "held", "foreground", "initial-foreground", "held-modifier", "stop", "unchanged" })
+            Check($"client fallback rejects {reason}", () => {
+                var tracker = Tracker();
+                if (reason != "no-click") tracker.Mouse(reason == "other-window" ? 12 : 11, start, 1, default, 0, 500,
+                    reason == "injected" ? LLMHF_INJECTED : reason == "lower-injected" ? LLMHF_LOWER_IL_INJECTED : 0, reason == "held-modifier", reason != "initial-foreground");
+                if (reason == "key-up") tracker.CancelMouseState(); // Observer cancels on every key event, including key-up.
+                if (reason == "key") tracker.Key(11, start, 0x41, false, false, 10, 0);
+                if (reason == "modifier") tracker.Key(11, start, VK_SHIFT, false, true, 10, 0);
+                if (reason == "other-click") tracker.Mouse(12, start, 1, default, 10, 500, 0, false, true);
+                if (reason == "drag") tracker.MoveStart(11, 10);
+                if (reason == "move-return") { tracker.MouseMoved(new Point { X = 20 }, 0); tracker.MouseMoved(default, 0); }
+                if (reason != "held") tracker.MouseReleased(reason == "release-moved" ? new Point { X = 20 } : default, screen, screen,
+                    reason == "release-injected" ? LLMHF_INJECTED : 0);
+                if (reason == "stop") tracker.Reset(2);
+                var result = tracker.Complete(11, start, reason == "unchanged" ? start : reason == "process" ? max with { Process = 8 } : max,
+                    reason == "expired" ? 501 : reason == "negative-age" ? -1 : 100, reason == "foreground" ? 12 : 11, "2026-10-28", screen) as WindowCandidate;
+                Equal(false, result is { origin: "mouse", injected: false, conflicted: false, targetMatched: true, moving: false });
+                if (result is not null) Sample(result, null);
+            });
+        Check("client state event before release is confirmed against click start after release", () => {
+            var tracker = Tracker(); tracker.Mouse(11, start, 1, default, 0, 500, 0, false, true);
+            Equal<object?>(null, tracker.Complete(11, start, max, 20, 11, "2026-10-28", screen));
+            tracker.MouseReleased(default, screen, screen, 0);
+            var result = (WindowCandidate)tracker.Complete(11, max, max, 40, 11, "2026-10-28", screen)!;
+            Equal("mouse-state-fallback", result.route); Sample(result, "W03");
+        });
+        foreach (int message in new[] { WM_RBUTTONDOWN, WM_MBUTTONDOWN, WM_MOUSEWHEEL, 0x20b, 0x20c, 0x20e })
+            Check($"client fallback cancels competing mouse message {message}", () => {
+                var tracker = Tracker(); tracker.Mouse(11, start, 1, default, 0, 500, 0, false, true);
+                tracker.MouseReleased(default, screen, screen, 0); tracker.MouseMessage(message);
+                var result = (WindowCandidate)tracker.Complete(11, start, max, 100, 11, "2026-10-28", screen)!;
+                Equal("unknown", result.origin); Sample(result, null);
+            });
+        foreach (uint flags in new[] { LLMHF_INJECTED, LLMHF_LOWER_IL_INJECTED })
+            Check($"client fallback cancels injected movement after release {flags}", () => {
+                var tracker = Tracker(); tracker.Mouse(11, start, 1, default, 0, 500, 0, false, true);
+                tracker.MouseReleased(default, screen, screen, 0); tracker.MouseMoved(default, flags);
+                var result = (WindowCandidate)tracker.Complete(11, start, max, 100, 11, "2026-10-28", screen)!;
+                Equal("unknown", result.origin); Sample(result, null);
+            });
+
         foreach (bool restore in new[] { false, true })
             foreach (string source in new[] { "caption", "client", "unknown", "other-root", "other-process" })
                 Check($"child titlebar double-click: restore={restore}, {source}", () => {
@@ -260,9 +315,9 @@ internal static partial class Program
                     int hit = WindowCaption.ResolveChildCaption(1, child, source != "other-root", source != "other-process");
                     tracker.Mouse(11, before, hit, default, 0, 500, 0, false, true);
                     tracker.Mouse(11, before, hit, default, 100, 500, 0, false, true);
-                    var evidence = (WindowCandidate)tracker.Complete(11, before, after, 150, 11, "2026-10-28", screen)!;
-                    Equal(source == "caption" ? "mouse" : "unknown", evidence.origin);
-                    Sample(evidence, source == "caption" ? restore ? "W04" : "W03" : null);
+                    var evidence = tracker.Complete(11, before, after, 150, 11, "2026-10-28", screen) as WindowCandidate;
+                    if (source == "caption") { Equal("mouse", evidence!.origin); Sample(evidence, restore ? "W04" : "W03"); }
+                    else Equal<WindowCandidate?>(null, evidence); // Unidentified clicks remain pending until physical release.
                 });
         Check("child caption starts the same bounded top-drag transaction", () => {
             var tracker = Tracker(); int hit = WindowCaption.ResolveChildCaption(1, HTCAPTION, true, true);

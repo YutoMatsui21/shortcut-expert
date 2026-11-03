@@ -4,7 +4,7 @@ export const finalDiagnosticKeys = [
   'kind-window', 'kind-placement', 'kind-compound', 'kind-close', 'kind-switch', 'kind-taskbar', 'kind-snap', 'kind-other',
   'origin-mouse', 'origin-key', 'origin-unknown', 'injected', 'conflicted',
   'route-max-button', 'route-min-button', 'route-caption-double-click', 'route-caption-top-drag', 'route-caption-drag',
-  'route-win-up', 'route-win-down', 'route-unknown', 'route-other',
+  'route-win-up', 'route-win-down', 'route-mouse-state-fallback', 'route-unknown', 'route-other',
   'operation-maximize', 'operation-restore', 'operation-minimize', 'operation-other',
   'before-normal', 'before-maximized', 'before-minimized', 'before-other',
   'after-normal', 'after-maximized', 'after-minimized', 'after-other',
@@ -26,7 +26,7 @@ export function finalCandidateDiagnostics(value: ObserverCandidate): FinalDiagno
   if (value.injected) keys.push('injected'); if (value.conflicted) keys.push('conflicted');
   const routes: Record<string, FinalDiagnosticKey> = { 'max-button': 'route-max-button', 'min-button': 'route-min-button',
     'caption-double-click': 'route-caption-double-click', 'caption-top-drag': 'route-caption-top-drag', 'caption-drag': 'route-caption-drag',
-    'win-up': 'route-win-up', 'win-down': 'route-win-down', unknown: 'route-unknown' };
+    'win-up': 'route-win-up', 'win-down': 'route-win-down', 'mouse-state-fallback': 'route-mouse-state-fallback', unknown: 'route-unknown' };
   keys.push(lookup(routes, value.route, 'route-other'));
   if (value.evidence.kind !== 'window') return keys;
   const e = value.evidence.result;

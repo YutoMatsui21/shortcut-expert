@@ -52,7 +52,7 @@ internal static partial class Program
                 Check($"modifier conflict {modifier}", () => { var tracker = Tracker(); Mouse(tracker); tracker.Key(11, null, modifier, false, false, 1, 0); Equal(true, Complete(tracker).GetProperty("conflicted").GetBoolean()); });
             Check("mouse then key conflict", () => { var tracker = Tracker(); Mouse(tracker); tracker.Key(11, normal, VK_UP, true, false, 1, 0); Equal(true, Complete(tracker).GetProperty("conflicted").GetBoolean()); });
             Check("program change has unknown origin", () => { var tracker = Tracker(); Equal("unknown", Complete(tracker).GetProperty("origin").GetString()); });
-            Check("unknown hit test", () => { var tracker = Tracker(); Mouse(tracker, hit: -1); Equal("unknown", Complete(tracker).GetProperty("origin").GetString()); });
+            Check("unknown hit test waits for release", () => { var tracker = Tracker(); Mouse(tracker, hit: -1); Equal(JsonValueKind.Null, Complete(tracker).ValueKind); });
             Check("caption double click", () => { var tracker = Tracker(); Mouse(tracker, HTCAPTION); Mouse(tracker, HTCAPTION, 500); Equal("caption-double-click", Complete(tracker, 501).GetProperty("route").GetString()); });
             Check("caption double click expires", () => { var tracker = Tracker(); Mouse(tracker, HTCAPTION); Mouse(tracker, HTCAPTION, 501); Equal("unknown", Complete(tracker, 502).GetProperty("route").GetString()); });
             Check("caption distant click", () => { var tracker = Tracker(); Mouse(tracker, HTCAPTION); tracker.Mouse(11, normal, HTCAPTION, new Point { X = -95, Y = 20 }, 1, 500, 0, false, true); Equal("unknown", Complete(tracker).GetProperty("route").GetString()); });

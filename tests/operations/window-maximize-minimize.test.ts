@@ -9,6 +9,24 @@ import {
 
 const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
+test("mouse state fallback is limited to W03/W04 and 500ms with existing safety checks", () => {
+  for (const [operation, before, after, expected] of [
+    ["maximize", "normal", "maximized", "W03"],
+    ["restore", "maximized", "normal", "W04"],
+    ["minimize", "normal", "minimized", "W04"],
+    ["minimize", "maximized", "minimized", "W04"],
+  ]) {
+    const value = candidateFixture({ operation, route: "mouse-state-fallback",
+      before: { state: before, arranged: false }, after: { state: after }, afterArranged: false, inputAgeMs: 500 });
+    assert.equal(classify(value)?.operation, expected);
+    for (const invalid of [{ inputAgeMs: 501 }, { inputAgeMs: -1 }, { injected: true },
+      { conflicted: true }, { targetMatched: false }, { moving: true }, { origin: "key" as const },
+      { operation: "close", after: { state: "closed" } }, { operation: "monitor-move" }])
+      assert.equal(classify({ ...value, ...invalid }), null, JSON.stringify(invalid));
+  }
+  assert.equal(classify(candidateFixture({ inputAgeMs: 1000 }))?.operation, "W03");
+});
+
 test("Win+Up uses confirmed state transition regardless of arranged availability", () => {
   for (const arranged of [false, true, null]) {
     const value = candidateFixture({

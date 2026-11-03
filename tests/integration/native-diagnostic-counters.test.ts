@@ -72,6 +72,9 @@ test("diagnostic categories explain caption rejection without exposing raw field
     finalCandidateDiagnostics(accepted).includes("route-caption-double-click"),
   );
   assert.equal(classifyGesture(accepted)[0]?.operation, "W03");
+  const fallback = v2Fixture(candidateFixture({ route: "mouse-state-fallback", inputAgeMs: 500 }));
+  assert.ok(finalCandidateDiagnostics(fallback).includes("route-mouse-state-fallback"));
+  assert.equal(classifyGesture(fallback)[0]?.operation, "W03");
   for (const property of ["__proto__", "constructor", "toString"]) {
     const keys = finalCandidateDiagnostics(
       v2Fixture(candidateFixture({ route: property, operation: property })),

@@ -194,8 +194,8 @@ test(
     assert.equal(notices, expectedNotices);
     assert.equal(
       totals.W03.mouse,
-      7,
-      "existing maximize routes plus captionless button, double-click and top-drag",
+      9,
+      "existing maximize routes plus client click and pre-release event fallback",
     );
     assert.ok(totals.W04.key > 0);
     assert.ok(totals.W04.mouse > 0);

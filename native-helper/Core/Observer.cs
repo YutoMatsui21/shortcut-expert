@@ -144,12 +144,13 @@ internal sealed class Observer : IDisposable
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
+            tracker.MouseMessage(message);
             bool probeRelease = windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
             Point? physicalBefore = probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
             taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
             switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
             closing.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
-            if (windowDiagnostic is not null && message == 0x200) tracker.MouseMoved(taskbarMouse.Point, taskbarMouse.Flags);
+            if (message == 0x200) tracker.MouseMoved(taskbarMouse.Point, taskbarMouse.Flags);
             if (message != WM_LBUTTONDOWN)
             {
                 if (message == WM_LBUTTONUP)
@@ -161,6 +162,17 @@ internal sealed class Observer : IDisposable
                     Point? physicalAfter = probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
                     tracker.MouseReleased(taskbarMouse.Point, known ? Bounds(info.Monitor) : null,
                         known ? Bounds(info.Work) : null, taskbarMouse.Flags, physicalBefore, physicalAfter);
+                    if (tracker.MouseStateTarget is { } clicked) {
+                        states.TryGetValue(clicked, out WindowState? previous);
+                        var after = ReadStateChange(clicked, previous);
+                        if (after is null) tracker.Forget(clicked);
+                        else {
+                            states[clicked] = after;
+                            if (tracker.Complete(clicked, previous, after, clock.ElapsedMilliseconds,
+                                GetForegroundWindow(), DateTime.Now.ToString("yyyy-MM-dd"), after.Monitor) is WindowCandidate evidence)
+                                protocol.Complete(evidence);
+                        }
+                    }
                 }
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL) tracker.ClearInput();
                 return CallNextHookEx(0, code, message, data);
@@ -236,6 +248,7 @@ internal sealed class Observer : IDisposable
         {
             if (code < 0 || fixture || !Active) return CallNextHookEx(0, code, message, data);
             var key = Marshal.PtrToStructure<KeyData>(data);
+            tracker.CancelMouseState();
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             taskbar.Key(key.Key, down, key.Flags);
             switching.Key(key.Key, down, key.Flags, key.Time);

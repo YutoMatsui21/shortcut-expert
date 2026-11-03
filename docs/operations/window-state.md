@@ -4,7 +4,11 @@
 
 ## 1. 共有する判定
 
-`CandidateTracker`で入力対象・process・入力由来・結果・期限・競合・dragの始終を照合。標準captionのボタン矩形は`WindowCaption`を共用し、有効な`TITLEBARINFOEX`を優先する。全ボタン矩形が空なら既存hit testへ戻す。独自captionの矩形が不整合でも、root自身が明示的に返したHTCAPTION／HTMINBUTTON／HTMAXBUTTON／HTCLOSEは維持する。不整合な矩形から位置を推測せず、client／resize／不明から操作を作らない。有効な矩形の優先・無効状態の棄却と、取得失敗時の扱いは維持する。
+`CandidateTracker`で入力対象・process・入力由来・結果・期限・競合・dragの始終を照合。標準captionのボタン矩形は`WindowCaption`を共用し、有効な`TITLEBARINFOEX`を優先する。全ボタン矩形が空なら既存hit testへ戻す。独自captionの矩形が不整合でも、root自身が明示的に返したHTCAPTION／HTMINBUTTON／HTMAXBUTTON／HTCLOSEは維持する。不整合な矩形から位置を推測しない。有効な矩形の優先・無効状態の棄却と、取得失敗時の扱いは維持する。
+
+ボタンもcaptionも識別できない左クリック（`HTCLIENT`を含む）は、別route `mouse-state-fallback`でW03/W04に限り照合する。物理押下から500ms以内に同一HWND・processの通常→最大化、最大化→通常、通常／最大化→最小化を確認し、物理解放済み・競合入力なし・dragなしを要求する。押下から解放までに片軸4pxを超える移動、注入入力、他のクリック・キー入力、MOVESIZESTART、対象破棄・停止・画面設定変更で取消す。解放時の位置も照合し、途中で移動して元へ戻った場合も取消す。最大化／復元は結果もforeground一致が必要で、最小化によるforeground移動は許容する。解放前の状態イベントでcacheが更新されても、解放時の再読取を押下時状態と照合する。成立時に候補を消費する。既存のボタン／caption／drag経路と1000msの期限は維持する。
+
+500msと4pxは初期の実装値で、認識精度の実測値ではない。アプリ内クリックが間接的に同じ状態変化を起こす場合も採用し得ることは許容リスクとする。UI Automationやボタン位置の推測は追加しない。記録・通知・キー同等性の既存条件は共通に適用する。
 
 通常のNative→Main厳格parse→Core→SQLite→学習・記録画面→保存後通知を使用する。W03/W04の学習状態は別に保持し、旧W05を新W04へ合算しない。
 
@@ -16,7 +20,7 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 | 入力 | 成立条件 |
 | --- | --- |
-| マウス | 最大化ボタン、captionダブルクリック、**上端への直接ドラッグ**と通常→最大化の結果 |
+| マウス | 最大化ボタン、captionダブルクリック、**上端への直接ドラッグ**、または上記クリックfallbackと通常→最大化の結果 |
 | キー | `Win+↑`と対象窓の最大化結果 |
 
 キー経路は物理的な`Win+↑`の初回keydown時にforegroundのHWND・process・`GetWindowPlacement`の状態を取得する。既存cacheへの登録は要求せず、通常状態（`SW_SHOWNORMAL`）だけを起点にする。最大化済み・読取不能・注入・競合入力は候補にしない。スナップ配置中を含み、キー経路には`IsWindowArranged`の値・配置形状・monitor/work/DPIの一致を要求しない。マウス経路の条件は変更しない。
@@ -39,8 +43,8 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 | 経路 | 成立条件 |
 | --- | --- |
-| 最大化解除 | 復元ボタン／captionダブルクリック／`Win+↓`で最大化→通常 |
-| 最小化 | 通常／最大化中の最小化ボタン、または`Win+↓`で最小化 |
+| 最大化解除 | 復元ボタン／captionダブルクリック／クリックfallback／`Win+↓`で最大化→通常 |
+| 最小化 | 通常／最大化中の最小化ボタン、クリックfallback、または`Win+↓`で最小化 |
 
 - 同一窓／processへの確定済み`Win+↓`の**物理的な再押下**が1000ms以内なら、最大化解除→最小化を**W04の1操作**へまとめる。キーrepeatは再押下として扱わず、期限を延長しない。
 - 他入力・別対象・foreground変更・停止／世代変更・期限超過で連続関係を終了する。1000msは実装上の境界で、実機精度の統計ではない。

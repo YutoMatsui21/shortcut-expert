@@ -18,6 +18,15 @@ internal sealed record CompoundMoveResult(int Transaction, MonitorBounds FromMon
 internal sealed class CandidateTracker
 {
     private const long InputMatchWindowMs = 1000;
+    private const long MouseStateMatchWindowMs = 500;
+    private const int ClickMovementPx = 4;
+    private Point clickPoint;
+    private bool clickReleased;
+    internal nint? MouseStateTarget => input is { Route: "unknown" } ? input.Window : null;
+    internal void CancelMouseState() { if (MouseStateTarget is not null) input = null; }
+    internal void MouseMessage(nint message) {
+        if (message is not (0x200 or WM_LBUTTONDOWN or WM_LBUTTONUP)) CancelMouseState();
+    }
     private const int CaptionDoubleClickDistancePx = 4;
     private const long NoCaptionClickAt = -10000;
     private sealed record Input(nint Window, WindowState Before, string Origin, string Route,
@@ -53,7 +62,13 @@ internal sealed class CandidateTracker
     internal PlacementPolicy Placement { get; } = new();
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal bool HasDrag => drags.Count == 1;
-    internal void MouseMoved(Point point, uint flags) { foreach (var drag in drags.Values) drag.Probe?.Sample(point, flags); }
+    internal void MouseMoved(Point point, uint flags) {
+        foreach (var drag in drags.Values) drag.Probe?.Sample(point, flags);
+        if (MouseStateTarget is not null &&
+            ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0 ||
+             !clickReleased && (Math.Abs((long)point.X - clickPoint.X) > ClickMovementPx || Math.Abs((long)point.Y - clickPoint.Y) > ClickMovementPx)))
+            CancelMouseState();
+    }
     internal int NextTransaction() => checked(++transaction);
     internal object? FinishKey(nint window, WindowState? after, long now, bool injected, string date)
     {
@@ -115,6 +130,8 @@ internal sealed class CandidateTracker
     internal void MouseReleased(Point point, MonitorBounds? monitor, MonitorBounds? work, uint flags, Point? physicalBefore = null, Point? physicalAfter = null)
     {
         if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0) { ClearInput(); return; }
+        MouseMoved(point, flags);
+        clickReleased = true;
         if (drags.Count == 1 && monitor is not null && work is not null && Diagnostic is { } diagnostic)
             drags.Values.First().Probe?.Record(point, monitor, work, physicalBefore, physicalAfter, diagnostic);
         release = drags.Count == 1 && monitor is not null && work is not null ? (monitor, work, point) : null;
@@ -130,6 +147,7 @@ internal sealed class CandidateTracker
         drags.Clear();
         release = null;
         completedWinDown = null;
+        clickPoint = point; clickReleased = false;
         string route = hit switch { HTMAXBUTTON => "max-button", HTMINBUTTON => "min-button", HTCLOSE => "close-button", HTCAPTION => "caption-press", _ => "unknown" };
         if (hit == HTCAPTION && lastCaption == window && lastCaptionProcess == before.Process && now - lastCaptionAt <= doubleClickTime &&
             Math.Abs(point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx &&
@@ -278,6 +296,9 @@ internal sealed class CandidateTracker
         if (Placement.Owns(window)) return null;
         // A drag owns this transaction until its terminal result; derived transitions cannot consume it.
         if (drags.ContainsKey(window)) return null;
+        // Re-read from the click start: a state event may have updated the cache before button-up.
+        bool fallback = input is { Route: "unknown" } mouse && mouse.Window == window;
+        if (fallback && clickReleased) previous = input!.Before;
         string? operation = (State(previous.Show), State(after.Show)) switch {
             ("normal", "maximized") => "maximize",
             ("normal" or "maximized", "minimized") => "minimize",
@@ -293,6 +314,13 @@ internal sealed class CandidateTracker
         if (candidate is { Route: "win-shift-left" or "win-shift-right" } && operation != "monitor-move") return null;
         if (operation is null) return null;
         long age = candidate is null ? -1 : now - candidate.At;
+        if (fallback) {
+            // Do not emit a rejected candidate with this transaction: Main deduplicates before classification.
+            if (!clickReleased) return null;
+            if (age is >= 0 and <= MouseStateMatchWindowMs && candidate is { Injected: false, Conflicted: false, Matched: true } &&
+                !moving.Contains(window) && (operation == "minimize" || foreground == window))
+                candidate = candidate with { Origin = "mouse", Route = "mouse-state-fallback" };
+        }
         bool recent = age >= 0 && age <= InputMatchWindowMs;
         WindowState before = recent && candidate is not null ? candidate.Before : previous;
         object result = Build(operation, before, after, candidate, age,
