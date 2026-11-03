@@ -11,6 +11,8 @@ export async function runMigrationSmoke({ coach, window, repository }: {
   coach: DurableCoach; window: BrowserWindow; repository: unknown;
 }) {
   assert.ok(repository instanceof SqliteRepository);
+  assert.equal(coach.snapshot().observing, false, 'migration fixture must not create new observation coverage');
+  await window.webContents.executeJavaScript('window.coach.getSnapshot()');
   const state = coach.snapshot(); assert.equal(state.error, null);
   assert.equal(state.settings.opened, true); assert.equal(state.settings.states?.W03, 'excluded');
   assert.equal(state.settings.states?.W12, 'learning');
