@@ -1,5 +1,7 @@
-import type { CoachBridge } from '../../shared/coach';
+import type { CoachBridge } from "../../shared/coach";
 
 declare global {
-  interface Window { coach: CoachBridge }
+  interface Window {
+    coach: CoachBridge;
+  }
 }
