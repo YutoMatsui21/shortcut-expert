@@ -224,6 +224,15 @@ test(
       );
     }
     assert.equal(report.compoundSamples.length, 7);
+    assert.equal(report.captionSamples.length, 3);
+    for (const sample of report.captionSamples) {
+      const parsed = candidateV2(sample);
+      assert.ok(parsed);
+      assert.deepEqual(
+        classifyGesture(parsed).map((o) => o.operation),
+        ["W01", sample.evidence.terminal === "maximized" ? "W03" : "W04"],
+      );
+    }
     assert.equal(
       notices,
       expectedNotices + 7,

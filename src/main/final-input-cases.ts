@@ -38,6 +38,25 @@ const negative = (
 const quarter = (side: string, vertical: string) =>
   `Winを押したまま ${side}、続けて ${vertical}`;
 export const finalInputCases: FinalCase[] = [
+  ...["Chrome", "ChatGPT", "Obsidian"].flatMap((application) =>
+    ["normal-maximize", "normal-minimize", "maximized-minimize"].map(
+      (action): FinalCase => {
+        const maximize = action === "normal-maximize";
+        const operation = maximize ? "W03" : "W04";
+        return {
+          id: `I152-${application}-${action}`,
+          label: `${application}: ${action}（背後窓）`,
+          instruction: `${application}を${action === "maximized-minimize" ? "最大化" : "通常"}状態に準備。ARM後の待機中に別窓を前面へ。ARMED後、背後に見える${application}の${maximize ? "最大化" : "最小化"}ボタンを1回直接クリック。2操作が各1件、通知は1つに2行であることを確認してFINISH。キーで複合動作を再現する試験は不要。`,
+          origin: "mouse",
+          records: ["W01", operation],
+          notices: [
+            { operation: "W01", shortcut: "Alt + Tab" },
+            { operation, shortcut: maximize ? "Win + ↑" : "Win + ↓" },
+          ],
+        };
+      },
+    ),
+  ),
   one(
     "P12m",
     "W12",

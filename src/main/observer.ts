@@ -134,6 +134,33 @@ export function candidateV2(value: unknown): CandidateV2 | null {
   const raw = value.evidence;
   let evidence: Evidence;
   switch (raw.kind) {
+    case "caption-click":
+      if (
+        raw.profile !== "caption-click-v1" ||
+        !(
+          raw.terminal === null ||
+          raw.terminal === "maximized" ||
+          raw.terminal === "minimized"
+        ) ||
+        !["switched", "targetMatched", "released"].every(
+          (k) => typeof raw[k] === "boolean",
+        ) ||
+        typeof raw.inputAgeMs !== "number" ||
+        !Number.isFinite(raw.inputAgeMs) ||
+        raw.inputAgeMs < 0
+      )
+        return null;
+      evidence = {
+        kind: raw.kind,
+        profile: raw.profile,
+        terminal: raw.terminal,
+        switched: raw.switched as boolean,
+        targetMatched: raw.targetMatched as boolean,
+        released: raw.released as boolean,
+        inputAgeMs: raw.inputAgeMs,
+        monitor: bounds(raw.monitor),
+      };
+      break;
     case "compound-drag": {
       const fromMonitor = bounds(raw.fromMonitor),
         toMonitor = bounds(raw.toMonitor);

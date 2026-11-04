@@ -460,6 +460,7 @@ internal static partial class Program
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
+            var captionSamples = InactiveCaptionTests.Run(passed);
             var closeSamples = WindowCloseTests.Run(passed);
             Console.WriteLine(
                 JsonSerializer.Serialize(
@@ -471,6 +472,7 @@ internal static partial class Program
                         snapSamples,
                         taskbarSamples,
                         switchSamples,
+                        captionSamples,
                         windowStateSamples,
                         placementSamples,
                         monitorMoveSamples,

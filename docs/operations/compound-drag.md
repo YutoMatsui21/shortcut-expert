@@ -25,3 +25,5 @@
 - 一般アプリの実入力、混在monitor・DPI、実OS Toastの表示、NSIS、同一最終buildのR02／J04は[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)へ残す。fixture成功を自然入力PASSと扱わない。
 
 W02＋W07のdirect side解放も[配置側のOS docking閾値](window-placement.md#osの早期スナップ閾値)を共用する。設定が安定し厳密なquarter終端が成立したときだけ2件を確定し、距離条件や他条件が失敗したgestureを単独W02へ分割しない。
+
+W01＋W03／W04のボタンクリックも、[複合クリック契約](compound-caption-click.md)から同じ原子保存・複数行通知の経路を使う。

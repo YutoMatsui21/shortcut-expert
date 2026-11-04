@@ -481,8 +481,10 @@ export class StorageStore {
           !value.count &&
           value.counts[0].day === value.counts[1].day &&
           value.counts.every((c) => c.origin === "mouse") &&
-          value.counts[0].operation === "W02" &&
-          ["W03", "W07"].includes(value.counts[1].operation)),
+          ((value.counts[0].operation === "W02" &&
+            ["W03", "W07"].includes(value.counts[1].operation)) ||
+            (value.counts[0].operation === "W01" &&
+              ["W03", "W04"].includes(value.counts[1].operation)))),
       "INVALID_COUNTS",
     );
     const counts = value.counts ?? (value.count ? [value.count] : []);

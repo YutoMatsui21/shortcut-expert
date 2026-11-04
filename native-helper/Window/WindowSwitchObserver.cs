@@ -20,6 +20,7 @@ internal sealed class WindowSwitchObserver(
     private uint inputTick;
     private uint shellProcess;
     private Point? mouseDown;
+    internal bool MousePending => mouseDown is not null && policy.Pending;
 
     // Query only defined key/button codes, not reserved virtual values with undefined state.
     private static readonly int[] neutralKeys = Enum.GetValues<System.Windows.Forms.Keys>()
@@ -57,7 +58,7 @@ internal sealed class WindowSwitchObserver(
     private void Neutral() =>
         policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
 
-    private static SwitchWindow? Read(nint window, Action<WindowDiagnosticReason>? note = null)
+    internal static SwitchWindow? Read(nint window, Action<WindowDiagnosticReason>? note = null)
     {
         if (
             window == 0

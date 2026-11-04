@@ -43,6 +43,16 @@ export type WindowEvidenceResult = {
 };
 export type Evidence =
   | {
+      kind: "caption-click";
+      profile: "caption-click-v1";
+      terminal: "maximized" | "minimized" | null;
+      switched: boolean;
+      targetMatched: boolean;
+      released: boolean;
+      inputAgeMs: number;
+      monitor: Bounds | null;
+    }
+  | {
       kind: "compound-drag";
       profile: "compound-drag-v1";
       terminal:

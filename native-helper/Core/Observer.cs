@@ -13,6 +13,12 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly CandidateTracker tracker = new();
+    private readonly InactiveCaptionPolicy captionClick = new();
+    private string captionDate = "";
+
+    private static bool CaptionModifiers() =>
+        new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k => GetAsyncKeyState(k) < 0);
+
     private readonly System.Windows.Forms.Timer maximizeTimer = new() { Interval = 50 };
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
@@ -63,6 +69,7 @@ internal sealed class Observer : IDisposable
 
     internal void InvalidateDisplay()
     {
+        captionClick.Cancel();
         tracker.ClearInput();
         maximizeTimer.Stop();
         closing.Cancel();
@@ -138,6 +145,7 @@ internal sealed class Observer : IDisposable
 
     internal void Stop()
     {
+        captionClick.Cancel();
         maximizeTimer.Stop();
         protocol.Stop();
         taskbar.Stop();
@@ -288,6 +296,27 @@ internal sealed class Observer : IDisposable
             if (code < 0 || fixture || !Active)
                 return CallNextHookEx(0, code, message, data);
             var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
+            nint pressForeground = GetForegroundWindow();
+            if (captionClick.Pending)
+            {
+                if (message == WM_LBUTTONDOWN)
+                    captionClick.Cancel();
+                else
+                {
+                    nint root = GetAncestor(WindowFromPhysicalPoint(taskbarMouse.Point), GA_ROOT);
+                    GetWindowThreadProcessId(root, out uint process);
+                    captionClick.Mouse(
+                        message,
+                        taskbarMouse.Point,
+                        taskbarMouse.Flags,
+                        CaptionModifiers(),
+                        root,
+                        process,
+                        clock.ElapsedMilliseconds
+                    );
+                    return CallNextHookEx(0, code, message, data);
+                }
+            }
             tracker.MouseMessage(message);
             bool probeRelease =
                 windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
@@ -485,6 +514,32 @@ internal sealed class Observer : IDisposable
                     ? WindowDiagnosticReason.ForegroundMatched
                     : WindowDiagnosticReason.ForegroundOther
             );
+            if (
+                pressForeground != target
+                && hit is HTMINBUTTON or HTMAXBUTTON
+                && captionClick.Start(
+                    target,
+                    before,
+                    hit,
+                    mouse.Point,
+                    clock.ElapsedMilliseconds,
+                    mouse.Time,
+                    tracker.NextTransaction(),
+                    switching.MousePending
+                        && WindowSwitchObserver.Read(pressForeground) is not null
+                        && WindowSwitchObserver.Read(target) is not null,
+                    (mouse.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) == 0,
+                    CaptionModifiers()
+                )
+            )
+            {
+                captionDate = DateTime.Now.ToString("yyyy-MM-dd");
+                tracker.ClearInput();
+                switching.Cancel();
+                closing.Cancel();
+                SyncMaximizeTimer();
+                return CallNextHookEx(0, code, message, data);
+            }
             tracker.Mouse(
                 target,
                 before,
@@ -503,6 +558,7 @@ internal sealed class Observer : IDisposable
         }
         catch
         {
+            captionClick.Cancel();
             tracker.ClearInput();
             switching.Cancel();
             closing.Cancel();
@@ -517,6 +573,7 @@ internal sealed class Observer : IDisposable
             if (code < 0 || fixture || !Active)
                 return CallNextHookEx(0, code, message, data);
             var key = Marshal.PtrToStructure<KeyData>(data);
+            captionClick.Cancel();
             tracker.CancelMouseState();
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             taskbar.Key(key.Key, down, key.Flags);
@@ -599,6 +656,7 @@ internal sealed class Observer : IDisposable
         }
         catch
         {
+            captionClick.Cancel();
             tracker.ClearInput();
             switching.Cancel();
             closing.Cancel();
@@ -613,7 +671,12 @@ internal sealed class Observer : IDisposable
     private void SyncMaximizeTimer()
     {
         bool pending =
-            !fixture && Active && tracker.MaximizeTarget(clock.ElapsedMilliseconds) is not null;
+            !fixture
+            && Active
+            && (
+                captionClick.Pending
+                || tracker.MaximizeTarget(clock.ElapsedMilliseconds) is not null
+            );
         if (pending && !maximizeTimer.Enabled)
             maximizeTimer.Start();
         if (!pending)
@@ -624,6 +687,18 @@ internal sealed class Observer : IDisposable
     {
         try
         {
+            if (!fixture && Active && captionClick.Pending)
+            {
+                var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
+                var result = captionClick.Poll(after, clock.ElapsedMilliseconds);
+                if (result is { } completed)
+                    protocol.CaptionClick(
+                        epoch,
+                        completed.Transaction,
+                        captionDate,
+                        completed.Evidence
+                    );
+            }
             if (
                 !fixture
                 && Active
@@ -646,6 +721,7 @@ internal sealed class Observer : IDisposable
         }
         catch
         {
+            captionClick.Cancel();
             tracker.ClearInput();
         }
         finally
@@ -668,6 +744,25 @@ internal sealed class Observer : IDisposable
             return;
         try
         {
+            if (captionClick.Pending)
+            {
+                if (
+                    kind == EVENT_SYSTEM_MOVESIZESTART
+                    || kind == EVENT_OBJECT_DESTROY
+                        && window == captionClick.Target
+                        && obj == OBJID_WINDOW
+                )
+                    captionClick.Cancel();
+                else
+                {
+                    captionClick.State(
+                        Read(captionClick.Target, maximizeProcess: captionClick.Process),
+                        clock.ElapsedMilliseconds
+                    );
+                    if (kind == EVENT_SYSTEM_FOREGROUND)
+                        captionClick.Foreground(window, GetForegroundWindow(), time);
+                }
+            }
             closing.Event(kind, window, obj, child, thread, time);
             if (kind == EVENT_SYSTEM_FOREGROUND)
             {
@@ -741,6 +836,7 @@ internal sealed class Observer : IDisposable
         }
         catch
         {
+            captionClick.Cancel();
             tracker.ClearInput();
             switching.Cancel();
             closing.Cancel();
