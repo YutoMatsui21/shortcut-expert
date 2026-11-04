@@ -224,7 +224,7 @@ test(
       );
     }
     assert.equal(report.compoundSamples.length, 7);
-    assert.equal(report.captionSamples.length, 3);
+    assert.equal(report.captionSamples.length, 6);
     for (const sample of report.captionSamples) {
       const parsed = candidateV2(sample);
       assert.ok(parsed);

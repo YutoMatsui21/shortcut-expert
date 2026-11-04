@@ -23,6 +23,20 @@ internal sealed class WindowSwitchPolicy
         releasedAt;
     private readonly HashSet<nint> switcherWindows = new();
     internal bool Pending => before is not null;
+    internal bool CanStartMouse => ready && !Pending && held.Count == 0;
+
+    internal static bool AllowsStyle(
+        long? style,
+        long? extended,
+        bool? cloaked,
+        bool requireCaption = true
+    ) =>
+        style is { } s
+        && extended is { } e
+        && cloaked == false
+        && (s & 0x40000000) == 0
+        && (!requireCaption || (s & 0x00c00000) == 0x00c00000)
+        && (e & (0x80 | 0x08000000)) == 0;
 
     internal static bool KeysReleased(IEnumerable<int> definedKeys, Func<int, bool> released) =>
         definedKeys.All(released);

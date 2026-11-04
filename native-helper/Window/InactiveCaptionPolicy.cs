@@ -8,6 +8,21 @@ internal sealed class InactiveCaptionPolicy
     internal nint Target { get; private set; }
     internal uint Process { get; private set; }
     internal bool Pending => Target != 0;
+    internal bool Fallback { get; private set; }
+    internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
+
+    internal static bool EligiblePress(
+        bool neutral,
+        SwitchWindow? foreground,
+        SwitchWindow? target,
+        uint process
+    ) =>
+        neutral
+        && foreground is not null
+        && target is not null
+        && foreground.Handle != target.Handle
+        && target.Process == process;
+
     private WindowState? before;
     private Point press;
     private long started;
@@ -25,6 +40,7 @@ internal sealed class InactiveCaptionPolicy
         before = null;
         terminal = null;
         released = switched = false;
+        Fallback = false;
     }
 
     internal bool Start(
@@ -48,7 +64,11 @@ internal sealed class InactiveCaptionPolicy
             || target == 0
             || state.Process == 0
             || state.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED)
-            || !(button == HTMINBUTTON || button == HTMAXBUTTON && state.Show == SW_SHOWNORMAL)
+            || !(
+                button is 1 or 0 or -1
+                || button == HTMINBUTTON
+                || button == HTMAXBUTTON && state.Show == SW_SHOWNORMAL
+            )
         )
             return false;
         Target = target;
@@ -59,6 +79,7 @@ internal sealed class InactiveCaptionPolicy
         tick = inputTick;
         transaction = id;
         hit = button;
+        Fallback = button is 1 or 0 or -1;
         return true;
     }
 
@@ -82,13 +103,17 @@ internal sealed class InactiveCaptionPolicy
                 && (Math.Abs((long)point.X - press.X) > 4 || Math.Abs((long)point.Y - press.Y) > 4)
         )
         {
+            Diagnostic?.Invoke(WindowDiagnosticReason.CaptionMotionOrInputRejected);
             Cancel();
             return;
         }
         if (message == WM_LBUTTONUP)
         {
             if (released || root != Target || process != Process || at - started is < 0 or > 500)
+            {
+                Diagnostic?.Invoke(WindowDiagnosticReason.CaptionReleaseRejected);
                 Cancel();
+            }
             else
                 released = true;
         }
@@ -102,12 +127,16 @@ internal sealed class InactiveCaptionPolicy
             return;
         if (after is null || after.Process != Process || at - started < 0)
         {
+            Diagnostic?.Invoke(WindowDiagnosticReason.CaptionStateRejected);
             Cancel();
             return;
         }
-        if (hit == HTMINBUTTON && after.Show == SW_SHOWMINIMIZED)
+        if ((hit == HTMINBUTTON || Fallback) && after.Show == SW_SHOWMINIMIZED)
             terminal = "minimized";
-        if (hit == HTMAXBUTTON && after.Show == SW_SHOWMAXIMIZED)
+        if (
+            (hit == HTMAXBUTTON || Fallback && before!.Show == SW_SHOWNORMAL)
+            && after.Show == SW_SHOWMAXIMIZED
+        )
             terminal = "maximized";
     }
 
@@ -144,6 +173,7 @@ internal sealed class InactiveCaptionPolicy
                 terminal == "minimized" && after!.Show == SW_SHOWMINIMIZED
                 || terminal == "maximized" && after!.Show == SW_SHOWMAXIMIZED
             )
+            && (!Fallback || switched)
                 ? terminal
                 : null;
         var evidence =
@@ -151,6 +181,8 @@ internal sealed class InactiveCaptionPolicy
                 ? new CaptionClickEvidence(result, switched, true, true, 500, before!.Monitor)
                 : null;
         int id = transaction;
+        if (evidence is null)
+            Diagnostic?.Invoke(WindowDiagnosticReason.CaptionNoResult);
         Cancel();
         return evidence is null ? null : (id, evidence);
     }

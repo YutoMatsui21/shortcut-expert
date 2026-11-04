@@ -46,6 +46,7 @@ internal sealed class Observer : IDisposable
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
+        captionClick.Diagnostic = windowDiagnostic;
         taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
         switching = new(
             protocol,
@@ -303,6 +304,7 @@ internal sealed class Observer : IDisposable
                     captionClick.Cancel();
                 else
                 {
+                    bool fallback = captionClick.Fallback;
                     nint root = GetAncestor(WindowFromPhysicalPoint(taskbarMouse.Point), GA_ROOT);
                     GetWindowThreadProcessId(root, out uint process);
                     captionClick.Mouse(
@@ -314,7 +316,10 @@ internal sealed class Observer : IDisposable
                         process,
                         clock.ElapsedMilliseconds
                     );
-                    return CallNextHookEx(0, code, message, data);
+                    if (fallback && !captionClick.Pending)
+                        tracker.CancelMouseState();
+                    if (!fallback)
+                        return CallNextHookEx(0, code, message, data);
                 }
             }
             tracker.MouseMessage(message);
@@ -349,7 +354,7 @@ internal sealed class Observer : IDisposable
                         physicalBefore,
                         physicalAfter
                     );
-                    if (tracker.MouseStateTarget is { } clicked)
+                    if (tracker.MouseStateTarget is { } clicked && captionClick.Target != clicked)
                     {
                         states.TryGetValue(clicked, out WindowState? previous);
                         var after = ReadStateChange(clicked, previous);
@@ -514,9 +519,20 @@ internal sealed class Observer : IDisposable
                     ? WindowDiagnosticReason.ForegroundMatched
                     : WindowDiagnosticReason.ForegroundOther
             );
+            // Diagnostic categories do not alter admission or retain window/input data.
+            if (pressForeground != target)
+            {
+                windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionInactivePress);
+                if (!switching.MousePending)
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionSwitchMissing);
+                if (!before.HasCaption)
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStyleMissing);
+                if (hit is not (HTMINBUTTON or HTMAXBUTTON))
+                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionButtonUnknown);
+            }
             if (
                 pressForeground != target
-                && hit is HTMINBUTTON or HTMAXBUTTON
+                && hit is HTMINBUTTON or HTMAXBUTTON or 1 or 0 or -1
                 && captionClick.Start(
                     target,
                     before,
@@ -525,20 +541,28 @@ internal sealed class Observer : IDisposable
                     clock.ElapsedMilliseconds,
                     mouse.Time,
                     tracker.NextTransaction(),
-                    switching.MousePending
-                        && WindowSwitchObserver.Read(pressForeground) is not null
-                        && WindowSwitchObserver.Read(target) is not null,
+                    InactiveCaptionPolicy.EligiblePress(
+                        switching.CaptionPressReady,
+                        WindowSwitchObserver.Read(pressForeground, requireCaption: false),
+                        WindowSwitchObserver.Read(target, requireCaption: false),
+                        before.Process
+                    ),
                     (mouse.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) == 0,
                     CaptionModifiers()
                 )
             )
             {
                 captionDate = DateTime.Now.ToString("yyyy-MM-dd");
-                tracker.ClearInput();
+                windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStartAccepted);
+                // Preserve the existing drag press for unidentified client/caption surfaces.
+                // MOVESIZESTART cancels this click policy and leaves drag ownership unchanged.
+                if (!captionClick.Fallback)
+                    tracker.ClearInput();
                 switching.Cancel();
                 closing.Cancel();
                 SyncMaximizeTimer();
-                return CallNextHookEx(0, code, message, data);
+                if (!captionClick.Fallback)
+                    return CallNextHookEx(0, code, message, data);
             }
             tracker.Mouse(
                 target,
@@ -689,8 +713,11 @@ internal sealed class Observer : IDisposable
         {
             if (!fixture && Active && captionClick.Pending)
             {
+                bool fallback = captionClick.Fallback;
                 var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
                 var result = captionClick.Poll(after, clock.ElapsedMilliseconds);
+                if (fallback && !captionClick.Pending)
+                    tracker.CancelMouseState();
                 if (result is { } completed)
                     protocol.CaptionClick(
                         epoch,
@@ -746,6 +773,7 @@ internal sealed class Observer : IDisposable
         {
             if (captionClick.Pending)
             {
+                bool fallback = captionClick.Fallback;
                 if (
                     kind == EVENT_SYSTEM_MOVESIZESTART
                     || kind == EVENT_OBJECT_DESTROY
@@ -762,6 +790,8 @@ internal sealed class Observer : IDisposable
                     if (kind == EVENT_SYSTEM_FOREGROUND)
                         captionClick.Foreground(window, GetForegroundWindow(), time);
                 }
+                if (fallback && !captionClick.Pending)
+                    tracker.CancelMouseState();
             }
             closing.Event(kind, window, obj, child, thread, time);
             if (kind == EVENT_SYSTEM_FOREGROUND)
@@ -822,6 +852,8 @@ internal sealed class Observer : IDisposable
                 return;
             }
             states[window] = after;
+            if (captionClick.Target == window)
+                return;
             object? candidate = tracker.Complete(
                 window,
                 previous,

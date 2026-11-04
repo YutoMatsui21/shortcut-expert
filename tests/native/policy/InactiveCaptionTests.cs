@@ -150,6 +150,141 @@ internal static class InactiveCaptionTests
                 )
             );
         }
+        foreach (uint initial in new[] { SW_SHOWNORMAL, SW_SHOWMAXIMIZED })
+        foreach (
+            string mode in new[]
+            {
+                "maximize",
+                "minimize",
+                "body",
+                "restore",
+                "no-activation",
+                "drag",
+                "injected",
+                "wrong-release",
+                "late-release",
+            }
+        )
+        {
+            var p = new InactiveCaptionPolicy();
+            var before = state with { Show = initial };
+            Check(
+                "unidentified physical click starts " + mode,
+                p.Start(11, before, 1, new(), 0, 100, 9, true, true, false)
+            );
+            if (mode != "no-activation")
+                p.Foreground(11, 11, 110);
+            var after = before with
+            {
+                Show =
+                    mode is "minimize" or "no-activation" ? SW_SHOWMINIMIZED
+                    : mode == "maximize" ? SW_SHOWMAXIMIZED
+                    : SW_SHOWNORMAL,
+            };
+            if (mode == "body")
+                after = before;
+            if (mode == "drag")
+                p.Cancel(); // MOVESIZESTART transfers ownership to the existing tracker.
+            p.Mouse(
+                WM_LBUTTONUP,
+                new(),
+                mode == "injected" ? 1u : 0u,
+                false,
+                mode == "wrong-release" ? 12 : 11,
+                7,
+                mode == "late-release" ? 501 : 100
+            );
+            p.State(after, 150);
+            if (after.Show == SW_SHOWMINIMIZED)
+                p.Foreground(12, 12, 160);
+            var result = p.Poll(after, 510);
+            bool good = mode is "maximize" or "minimize" or "body" or "restore";
+            Check("fallback result " + initial + "/" + mode, (result is not null) == good);
+            if (result is { } completed)
+            {
+                string? terminal =
+                    mode == "minimize" ? "minimized"
+                    : mode == "maximize" && initial == SW_SHOWNORMAL ? "maximized"
+                    : null;
+                Check("fallback terminal " + mode, completed.Evidence.terminal == terminal);
+                Check("fallback switch " + mode, completed.Evidence.switched);
+                if (terminal is not null)
+                {
+                    var wire = new CandidateProtocol(samples.Add);
+                    wire.Start(1, 2);
+                    wire.CaptionClick(1, completed.Transaction, "2026-11-04", completed.Evidence);
+                }
+            }
+        }
+        var fg = new SwitchWindow(12, 8);
+        var dragTracker = new CandidateTracker();
+        dragTracker.Reset(1);
+        dragTracker.Mouse(11, state, 1, new(), 0, 500, 0, false, false);
+        var dragClick = new InactiveCaptionPolicy();
+        Check(
+            "fallback retains shadow drag tracking",
+            dragClick.Start(11, state, 1, new(), 0, 100, 9, true, true, false) && dragClick.Fallback
+        );
+        dragTracker.ForegroundChanged(11);
+        dragClick.Cancel(); // Same ownership handoff as Observer's MOVESIZESTART.
+        dragTracker.CancelMouseState(); // Cancel shadow click evidence without losing the drag press.
+        dragTracker.MoveStart(11, 30);
+        Check("custom surface drag keeps its candidate", dragTracker.HasDrag && !dragClick.Pending);
+        var target = new SwitchWindow(11, 7);
+        Check(
+            "captionless click eligible",
+            InactiveCaptionPolicy.EligiblePress(true, fg, target, 7)
+        );
+        Check(
+            "same window rejected",
+            !InactiveCaptionPolicy.EligiblePress(true, target, target, 7)
+        );
+        Check(
+            "unknown foreground rejected",
+            !InactiveCaptionPolicy.EligiblePress(true, null, target, 7)
+        );
+        Check(
+            "process mismatch rejected",
+            !InactiveCaptionPolicy.EligiblePress(true, fg, target, 9)
+        );
+        Check("nonneutral rejected", !InactiveCaptionPolicy.EligiblePress(false, fg, target, 7));
+        var switching = new WindowSwitchPolicy();
+        Check("initial not ready", !switching.CanStartMouse);
+        switching.Neutral(true);
+        Check("neutral ready", switching.CanStartMouse);
+        switching.Mouse(WM_LBUTTONDOWN, target, fg, false, false, 0);
+        Check("pending press not reusable", !switching.CanStartMouse);
+        switching.Cancel();
+        Check("cancel needs neutral", !switching.CanStartMouse);
+        Check(
+            "ordinary W01 still requires caption",
+            !WindowSwitchPolicy.AllowsStyle(0x10000000, 0, false)
+        );
+        Check(
+            "compound accepts no caption",
+            WindowSwitchPolicy.AllowsStyle(0x10000000, 0, false, false)
+        );
+        foreach (
+            var styles in new (long? Style, long? Extended, bool? Cloaked)[]
+            {
+                (null, 0, false),
+                (0x10000000, null, false),
+                (0x50000000, 0, false),
+                (0x10000000, 0x80, false),
+                (0x10000000, 0x08000000, false),
+                (0x10000000, 0, true),
+                (0x10000000, 0, null),
+            }
+        )
+            Check(
+                "compound retains style safety",
+                !WindowSwitchPolicy.AllowsStyle(
+                    styles.Style,
+                    styles.Extended,
+                    styles.Cloaked,
+                    false
+                )
+            );
         return samples;
     }
 }
