@@ -106,9 +106,15 @@ jobs:
           exit $LASTEXITCODE
       - run: npm.cmd run dev:install
         if: ${{ needs.change-scope.outputs.full == 'true' }}
-      - name: Check formatting
+      - name: Restore .NET tools
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
+        run: dotnet tool restore
+      - name: Check formatting（Prettier）
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run format:check
+      - name: Check formatting (CSharpier)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
+        run: dotnet csharpier check .
       - name: Types
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run typecheck
