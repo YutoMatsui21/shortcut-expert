@@ -27,7 +27,6 @@ fixtureで、角に触れた後の異なるevent／物理位置、monitor/work i
 
 検証結果：関連unit35件、Native全7件、型検査、helper build、同梱base smoke・保存受入17件が成功。専用ローカルレビューは4観点で指摘なし。Native全473ファイル一致。固定manifestは `../evidence/issue-47/release-probe-build.json`、同梱先は `release/issue-47-release-probe/win-unpacked`。新しい診断を使った自然入力は未実施。NU1900警告は残る。
 
-
 ## 解放位置を変えた比較（session19）
 
 診断revision `0d4618f`（採否は`2ec7520`と同じ8px）、hash `678aab19055b2ce0b8323ab3378164c7bdef7bfb0c978808f818dd08aa47fdad`。原本 `../evidence/issue-47/session19-*.json`。
@@ -69,14 +68,14 @@ session19の終了はcode=null／SIGTERM、最終Main statusはCLOSED/error=true
 
 本人が6件全て期待どおりだったと報告。session21原本は `../evidence/issue-47/session21-status.json` 等に保持し、パネルの未選択初期値（not-observed／not-seen）は書き換えず、後の本人確認をparticipant別添へ保存した。代替キー同等性は今回未試験。
 
-| 試行 | 入力／状態（W02／W07） | 記録 | 通知要求 |
-| --- | --- | --- | --- |
-| 1 | Chrome早期preview解放、learning／learning | W02/W07各mouse1 | 1件、2行 |
-| 2 | 同、learning／excluded | 同 | 1件、W02のみ |
-| 3 | 同、excluded／learning | 同 | 1件、W07のみ |
-| 4 | 同、excluded／mastered | 同 | 0 |
-| 5 | Explorer実端解放、learning／learning | 同 | 1件、2行 |
-| 6 | Chrome上部中央のSnap Layout選択 | 0 | 0 |
+| 試行 | 入力／状態（W02／W07）                    | 記録            | 通知要求     |
+| ---- | ----------------------------------------- | --------------- | ------------ |
+| 1    | Chrome早期preview解放、learning／learning | W02/W07各mouse1 | 1件、2行     |
+| 2    | 同、learning／excluded                    | 同              | 1件、W02のみ |
+| 3    | 同、excluded／learning                    | 同              | 1件、W07のみ |
+| 4    | 同、excluded／mastered                    | 同              | 0            |
+| 5    | Explorer実端解放、learning／learning      | 同              | 1件、2行     |
+| 6    | Chrome上部中央のSnap Layout選択           | 0               | 0            |
 
 全6件valid/completed、期限切れ・中断・日付変更なし。通知可視結果と窓の結果は本人の一括報告で期待一致。Main CLOSED/error=false、exit code0、read-only SQLite integrity=ok、build hash不変。停止後の当該app／helper／panelの残存0も確認した。session19の異常終了原本は消さず、今回の正常終了で以前の原因が判明したとは扱わない。
 

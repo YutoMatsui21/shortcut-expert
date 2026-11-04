@@ -22,7 +22,6 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 
 今回は文書と実測原本の追加のみ。本番の採否・型・試験設定を変更しないため、GitHub操作Skillの例外で追加コードレビュー・再build・自動製品試験を省略する。診断ON試行を通常モードの合格へ転記しない。Issue #47は未達3件と残る受入条件があるためOpen／Draftを維持する。
 
-
 ## 既存診断の結果（session13）
 
 同じ製品revision `b80e645`・同じhash、Native診断ON。原本は `../evidence/issue-47/session13-*.json`。panelは全件standardだが、本人は3件ともChrome窓を操作したと明示。`application`は手動結果の分類メタデータで、検出器選択には使っていない。原本は変更せず、別添でChromeとして区別する。ラベルの誤りだけを理由に操作を繰り返さない。
@@ -43,7 +42,6 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 fixtureではcaption／closeの診断ON/OFFの戻り同値、geometry原因、CloseReason全件の固定mapping、世代と上限を確認する。追加診断の目的は、同じ未達3件を1バッチで再試行した際に、修正に必要な分岐を特定すること。採否の変更や解決済みの主張はしない。
 
 追加診断の検証：関連unit35件・Native全7件・型検査・helper build成功。C#/TSの固定112カテゴリ一致、caption／close判定のON/OFF同値、CloseReason全件mappingと上限・世代を検証。同梱base smoke・保存受入17件、Native全473ファイル一致。専用ローカルレビューは4観点で指摘なし。NU1900の脆弱性index取得警告は残る。新診断同梱先は `release/issue-47-chrome-detail/win-unpacked`、manifestは `../evidence/issue-47/chrome-detail-diag-build.json`。自然入力は未実施であり、失敗3件は未達のまま。
-
 
 ## 原因の判別（session14）
 
@@ -68,7 +66,6 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 
 同梱結果：別出力先 `release/issue-47-chrome-hit-verified/win-unpacked` で成功。全473 Nativeファイル一致、base／settings／activation／migration／comparisonの5種smoke、保存受入17件成功。固定manifestは `../evidence/issue-47/chrome-hit-fixed-build.json`。初回失敗の出力先は使わず、Windows権限設定は変更していない。次の4件はこの同じbinary・通常observer（診断OFF）で行う。修正後の自然入力はまだ未確認。
 
-
 ## 修正後・通常モードの結果（session15）
 
 製品revision `2ec7520`、hash `4fc685d4ce54e03d50c6a7e5a3df90567a2506ecd35edb8dd16fc900eb82d1cb`、Chrome・Native診断OFF。原本は `../evidence/issue-47/session15-*.json`。4件とも有効・期限内。
@@ -83,7 +80,6 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 根拠は製品要件W11の「閉じるボタンと対象窓の破棄」と、学習中の確証済みmouse操作の保存後通知。Chrome窓がもう1つ開いていても、閉じた対象窓のW11成立は変わらない。N11-tabで意図した操作は、**1つのChrome窓にCtrl+Tで2つ以上のタブを作り、ページ名の横の小さい×を押して1タブだけ閉じ、窓は残す**こと。窓右上の×は使わない。窓破棄が起きないのでW11を記録・通知しない負例である。
 
 次は同じ製品build・診断OFFで、N11-tabと、タブ切替／同窓click／Alt+Tab取消・元窓／配置drag取消／Win+Z／Win+Tabの8負例をまとめて行う。成功した修正3件は繰り返さない。この追記は文書・証拠のみなのでSkillの例外で追加コードレビュー・再build・製品自動試験は省略する。
-
 
 ## 重要負例の結果（session16）
 
@@ -100,7 +96,6 @@ Nativeへ学習状態は送らず、状態による保存・通知適格性は�
 製品コード・同梱binaryは変更しない。追加の共通状態fixtureを含むcompound suite49件と型検査が成功。追加試験は既存の成立する契約の網羅であり、修正前の失敗を作るテストファーストの対象ではない。保存失敗・再送・停止等の既存ケースは維持する。
 
 状態マトリクスの専用ローカルレビューは4観点で指摘なし。製品コード・binaryの再buildは行っていない。環境の補助記録 `../evidence/issue-47/environment-versions-20261030.json` はmanifest-aware PowerShellのWindows version 10.0.26340.0と、既知のchrome processのProductVersion集合156.0.8078.74だけを取得した。process ID・path・窓情報は保存せず、個別試行窓と実行ファイルの対応を確証したとは扱わない。旧WinForms panelのosBuild9200はlegacy manifest値として実OS buildの根拠に使わない。
-
 
 ## 状態混在と閉鎖取消の自然入力（session17）
 

@@ -2,7 +2,6 @@
 
 > 2026-10-27：W08（Win+Z）・W10（Win+Tab）は初回8操作の対象外。関連学習候補にも含めない。本書は対象変更前の実装・調査・証拠として保持する。現行の対象は[確定要件](../../ui-requirements.md)を参照。
 
-
 2026-10-22。対象は [Issue #4](https://github.com/YutoMatsui21/shortcut-expert/issues/4) のB03/A03。製品検出器の実装ではない。本体の閉→開→閉、mouse/key由来、負例での誤判定0は**未実証**。Issueは未完了。
 
 ## 今回確認した範囲
@@ -17,9 +16,9 @@ Specは `node scripts/dev/github-workflow.mjs issue 14 --repo=YutoMatsui21/short
 
 以下は今回の実機試験ではなく、既存JSONLの内容を再集計した結果。
 
-| ローカルsession / sequence | ラベル | 記録された結果 |
-| --- | --- | --- |
-| `.tools/validation/shell-blockers/20261017-123340-843` / 4 | `taskview-key` | `shellRead=completed`、`shellRoots=[]`、`originMeasured=false` |
+| ローカルsession / sequence                                 | ラベル         | 記録された結果                                                                                                                                                  |
+| ---------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.tools/validation/shell-blockers/20261017-123340-843` / 4 | `taskview-key` | `shellRead=completed`、`shellRoots=[]`、`originMeasured=false`                                                                                                  |
 | `.tools/validation/shell-blockers/20261017-152728-511` / 2 | `taskview-key` | `strategy=desktop-direct-children-shell-pid-raw-view`、候補2・適格0・除外2、`shellRoots=[]`、`rootFailures=0`、`rootLimitReached=false`、`originMeasured=false` |
 
 後者のsession metadataはOS build 26300、`desktopShellRoots=true`、`inputHooks=false`、`keysSent=false`、`shellUIAOnly=true`。これは当時の環境であり、今回のhostの確認結果ではない。
@@ -30,10 +29,10 @@ Specは `node scripts/dev/github-workflow.mjs issue 14 --repo=YutoMatsui21/short
 
 現チェックアウトの `validation/probes/` にShellOperationProbeのソースはなく、既存実行ファイルだけが `.tools/validation/shell-blockers/` にある。Issueが参照する基準commit `fb3329f13b1eccfb3d6c020c11e4ee0ce67c1171` にも `validation/probes/ShellOperationProbe.cs` は存在しなかった。現在のローカル履歴で同パスの変更履歴も見つからなかった。ソースの所在・取得設定の限界を含む結果であり、過去にソースが存在しなかったとの断定ではない。
 
-| ファイル | 今回計算したSHA-256 |
-| --- | --- |
-| ShellOperationProbe.exe | `369FA74676D19F81EF3A48AD123E287214FCE3B5F1C32CE457BEA3F7DF858C3F` |
-| ShellOperationProbeV2.exe | `7B2CFA37BCB8B8BEF4C5874B8354F48CB6C9578ABDF9EC714BA4E1B56A0B676A` |
+| ファイル                       | 今回計算したSHA-256                                                |
+| ------------------------------ | ------------------------------------------------------------------ |
+| ShellOperationProbe.exe        | `369FA74676D19F81EF3A48AD123E287214FCE3B5F1C32CE457BEA3F7DF858C3F` |
+| ShellOperationProbeV2.exe      | `7B2CFA37BCB8B8BEF4C5874B8354F48CB6C9578ABDF9EC714BA4E1B56A0B676A` |
 | ShellOperationProbeDesktop.exe | `90B31FA24AC892B59B27DBC560DF183518EC69785F27CB64D1DB6F249FFFAB69` |
 
 hashは動作・安全性・ソース対応の証明ではない。過去の承認やself-testを今回の実行許可として流用しない。実行前にソースを回収するか、探索範囲・保存項目・終了処理を確認できる調査専用probeを用意する。
@@ -50,14 +49,14 @@ hashは動作・安全性・ソース対応の証明ではない。過去の承�
 
 ## 必要な試験と判定
 
-| 条件 | 必要な証拠 |
-| --- | --- |
-| Task View buttonの自然click | 本体closed→open→closed、実測mouse由来、一意な本体selector |
-| 自然Win+Tab | 同じ本体と遷移、実測key由来、注入入力との区別 |
-| 既表示でtoggle / Escape解除 | open→closedを新規表示として数えない |
-| 表示前cancel / 競合入力 | 本体が出なければ成功0、対応が不明ならunknown |
-| button非表示 / 別画面 | button不在を本体closedと混同せず、monitor対応と適用限界を示す |
-| Shell再起動 | 別途実施範囲を確認し、古いPID/root/cacheを失効させる。復旧途中を表示成功としない |
+| 条件                        | 必要な証拠                                                                       |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| Task View buttonの自然click | 本体closed→open→closed、実測mouse由来、一意な本体selector                        |
+| 自然Win+Tab                 | 同じ本体と遷移、実測key由来、注入入力との区別                                    |
+| 既表示でtoggle / Escape解除 | open→closedを新規表示として数えない                                              |
+| 表示前cancel / 競合入力     | 本体が出なければ成功0、対応が不明ならunknown                                     |
+| button非表示 / 別画面       | button不在を本体closedと混同せず、monitor対応と適用限界を示す                    |
+| Shell再起動                 | 別途実施範囲を確認し、古いPID/root/cacheを失効させる。復旧途中を表示成功としない |
 
 まずprovider成立性を確認し、成立後に正例・負例を試行する。認識率の受入はSpecのA00/R02（両自然入力各20回以上・95%以上、負例の誤記録/誤通知0）と区別して記録する。snapshotの成功だけではこの受入を満たさない。
 
@@ -97,13 +96,13 @@ OS版は [RtlGetVersion](https://learn.microsoft.com/en-us/windows/win32/devnote
 
 ## 今回の新しい実機証拠
 
-| artifact（`.tools/validation/task-view/` 以下） | 条件 / 結果 |
-| --- | --- |
-| `snapshot-1792663325332.jsonl` | sandbox側。root0・除外0。本体不在の証拠にはしない |
-| `snapshot-1792663392556.jsonl` | ユーザーデスクトップの基準snapshot。root5、入口button2、本体仮説0、読取失敗/上限到達0 |
-| `snapshot-1792663473657.jsonl` | 本人の「Win+Tabで開いた」回答後。root3、すべて不可視、入口/本体仮説0。取得時の実表示は未照合であり、開状態の正解ラベルではない |
-| `snapshot-1792663602311.jsonl` | Desktop直下host-discovery。直下11要素、対象Shell host4（すべてexplorer）、他host7を除外、読取失敗0。本体host未特定 |
-| `snapshot-1792663665221.jsonl` | OS取得修正後。実build **26340**、root5、本体仮説0、cross-process除外/読取失敗/上限到達0 |
+| artifact（`.tools/validation/task-view/` 以下） | 条件 / 結果                                                                                                                    |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `snapshot-1792663325332.jsonl`                  | sandbox側。root0・除外0。本体不在の証拠にはしない                                                                              |
+| `snapshot-1792663392556.jsonl`                  | ユーザーデスクトップの基準snapshot。root5、入口button2、本体仮説0、読取失敗/上限到達0                                          |
+| `snapshot-1792663473657.jsonl`                  | 本人の「Win+Tabで開いた」回答後。root3、すべて不可視、入口/本体仮説0。取得時の実表示は未照合であり、開状態の正解ラベルではない |
+| `snapshot-1792663602311.jsonl`                  | Desktop直下host-discovery。直下11要素、対象Shell host4（すべてexplorer）、他host7を除外、読取失敗0。本体host未特定             |
+| `snapshot-1792663665221.jsonl`                  | OS取得修正後。実build **26340**、root5、本体仮説0、cross-process除外/読取失敗/上限到達0                                        |
 
 最初の2つのユーザーデスクトップsnapshotのosBuild=9200は、manifestなし.NET Frameworkの互換版表示だったため環境比較に使わない。修正後のRtlGetVersionによるbuild26340と、過去記録のbuild26300を区別する。新しいroot5の取得もTask View本体の取得成功ではない。
 
@@ -119,11 +118,11 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 `node scripts/probes/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
 
-| session（`.tools/validation/task-view/` 以下） | 秒 / 採取数 | 探索完了 / 不完全 | 結果 |
-| --- | --- | --- | --- |
-| `sampling-1792665092630.jsonl` | 60 / 22 | 21 / 1 | snapshotとDesktop直下探索。本体仮説0。最後のworkerは総時間上限で打切り |
-| `sampling-1792665337090.jsonl` | 60 / 29 | 18 / 11 | 上記に中央一点の親探索を追加。本体仮説0。親探索10件はすべてShell対象外9要素で上限到達。最後のsnapshotは時間上限で打切り |
-| `sampling-1792665519624.jsonl` | 30 / 14 | 8 / 6 | 親探索の対象外プロセスがSystem32/SystemApps由来かを一時照合。本体仮説0。親探索5件はすべて9要素で上限到達し、システムhost候補はunidentified。最後のsnapshotは時間上限で打切り |
+| session（`.tools/validation/task-view/` 以下） | 秒 / 採取数 | 探索完了 / 不完全 | 結果                                                                                                                                                                         |
+| ---------------------------------------------- | ----------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sampling-1792665092630.jsonl`                 | 60 / 22     | 21 / 1            | snapshotとDesktop直下探索。本体仮説0。最後のworkerは総時間上限で打切り                                                                                                       |
+| `sampling-1792665337090.jsonl`                 | 60 / 29     | 18 / 11           | 上記に中央一点の親探索を追加。本体仮説0。親探索10件はすべてShell対象外9要素で上限到達。最後のsnapshotは時間上限で打切り                                                      |
+| `sampling-1792665519624.jsonl`                 | 30 / 14     | 8 / 6             | 親探索の対象外プロセスがSystem32/SystemApps由来かを一時照合。本体仮説0。親探索5件はすべて9要素で上限到達し、システムhost候補はunidentified。最後のsnapshotは時間上限で打切り |
 
 合計65採取、本体仮説0。worker正常終了は62件だが、親探索15件は対象外/上限到達で不完全であり、正常終了を探索完了へ読み替えない。時間上限の3件は実providerの15秒timeoutを証明するものではない。
 

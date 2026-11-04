@@ -3,16 +3,17 @@
 Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記す。機能の合格条件は[製品要件](ui-requirements.md)、起動・検証コマンドは[開発ガイド](development.md)を正本とする。実装状況や作業順はIssue・PRで追跡し、ここには日付別の進捗を積み重ねない。
 
 <a id="architecture"></a>
+
 ## 1. 全体構成
 
-| 層 | 主な場所 | 責務・依存の制約 |
-| --- | --- | --- |
+| 層            | 主な場所         | 責務・依存の制約                                                                          |
+| ------------- | ---------------- | ----------------------------------------------------------------------------------------- |
 | Native helper | `native-helper/` | Win32の入力・ウィンドウ状態を観測し、候補をJSON Linesで通知。採用操作や案内キーは決めない |
-| Main | `src/main/` | Electronライフサイクル、候補の厳格検証、IPC、保存・通知、helper管理 |
-| Core | `src/core/` | 操作の採用判定、学習状態、集計、日付処理。Electron・Windows APIに依存しない |
-| Preload | `src/preload/` | Rendererへ必要最小限の型付きIPC APIを公開 |
-| Renderer | `src/renderer/` | Reactの一覧・記録・設定UI。Windows APIや保存ファイルへ直接アクセスしない |
-| Shared | `src/shared/` | 共通の操作ID、契約型、表示に必要な定義。OS依存を持たない |
+| Main          | `src/main/`      | Electronライフサイクル、候補の厳格検証、IPC、保存・通知、helper管理                       |
+| Core          | `src/core/`      | 操作の採用判定、学習状態、集計、日付処理。Electron・Windows APIに依存しない               |
+| Preload       | `src/preload/`   | Rendererへ必要最小限の型付きIPC APIを公開                                                 |
+| Renderer      | `src/renderer/`  | Reactの一覧・記録・設定UI。Windows APIや保存ファイルへ直接アクセスしない                  |
+| Shared        | `src/shared/`    | 共通の操作ID、契約型、表示に必要な定義。OS依存を持たない                                  |
 
 **依存方向**：Main → Core/Shared、Core → Shared、Renderer → Shared。RendererとMainはPreloadを介して通信する。CoreからMainを参照しない。
 
@@ -50,32 +51,34 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 保存成功後にMainの`StandardNotifications`へ発行を依頼する。発行直前に学習状態・通知停止・計測停止を再確認し、失敗後の古い通知はまとめて再発行しない。OSへの発行要求成功と、Windowsがポップアップを表示したことは別。詳細は[通知設計](features/standard-notifications.md)。
 
 <a id="test-design"></a>
+
 ## 5. テスト設計
 
 **目的は誤記録・誤通知・データ喪失・入力妨害の検出。** テスト件数やcoverageだけで実機受入を代用しない。
 
-| 層 | 確認するもの | 証明しないもの |
-| --- | --- | --- |
-| Node unit（`tests/**/*.test.ts`のうち`native/`以外） | Coreの判定・集計、Main境界の契約・故障対応 | 実際のWindows入力 |
-| C# policy／native | 本番C#の判定、JSON→Main→Coreの契約、helper起動停止 | 実OSイベントの到着精度 |
-| Electron smoke | 実Main・Preload・React・SQLiteの接続を隔離fixtureで確認 | 通常利用環境の動作・通知表示 |
-| 同梱版smoke | 配布用exeとhelperの同梱・起動経路 | NSIS導入、自然入力の認識精度 |
-| 自然入力・配布受入 | 対象Windows 11環境の実操作・通知・導入・終了 | 未試行の環境や全アプリの保証 |
+| 層                                                   | 確認するもの                                            | 証明しないもの               |
+| ---------------------------------------------------- | ------------------------------------------------------- | ---------------------------- |
+| Node unit（`tests/**/*.test.ts`のうち`native/`以外） | Coreの判定・集計、Main境界の契約・故障対応              | 実際のWindows入力            |
+| C# policy／native                                    | 本番C#の判定、JSON→Main→Coreの契約、helper起動停止      | 実OSイベントの到着精度       |
+| Electron smoke                                       | 実Main・Preload・React・SQLiteの接続を隔離fixtureで確認 | 通常利用環境の動作・通知表示 |
+| 同梱版smoke                                          | 配布用exeとhelperの同梱・起動経路                       | NSIS導入、自然入力の認識精度 |
+| 自然入力・配布受入                                   | 対象Windows 11環境の実操作・通知・導入・終了            | 未試行の環境や全アプリの保証 |
 
 `tests/`は自動回帰、`validation/probes/`は技術成立性の調査、`validation/evidence/`は実測原本。人工入力は通常の利用記録へ混ぜない。操作・リスクに応じたテスト選択は[テスト設計Skill](../.agents/skills/test-shortcut-coach/SKILL.md)、実行方法は[開発ガイド](development.md)を参照。
 
 <a id="storage-review"></a>
+
 ### 保存・移行の故障境界
 
 保存経路を変える際は、影響するケースを既存試験と照合する。
 
-| 境界 | 守る条件 |
-| --- | --- |
-| 未作成と読取失敗 | `ENOENT`を`EACCES`・I/O失敗と混同して空データにしない |
-| 書込・公開途中の中断 | 再起動後も所有情報と旧データを保全し、安全に再試行する |
-| DB・markerの欠落／破損 | 移行済み記録を空の初期値へ戻さない |
-| 移行照合 | 空日・設定のみ・総和が同じ別行も含め、再openして全件照合 |
-| 削除・ACK喪失 | 旧データの復活、同一書込の二重加算を防止する |
+| 境界                   | 守る条件                                                 |
+| ---------------------- | -------------------------------------------------------- |
+| 未作成と読取失敗       | `ENOENT`を`EACCES`・I/O失敗と混同して空データにしない    |
+| 書込・公開途中の中断   | 再起動後も所有情報と旧データを保全し、安全に再試行する   |
+| DB・markerの欠落／破損 | 移行済み記録を空の初期値へ戻さない                       |
+| 移行照合               | 空日・設定のみ・総和が同じ別行も含め、再openして全件照合 |
+| 削除・ACK喪失          | 旧データの復活、同一書込の二重加算を防止する             |
 
 ## 6. 維持する設計原則
 

@@ -46,11 +46,7 @@ export type Evidence =
       kind: "compound-drag";
       profile: "compound-drag-v1";
       terminal:
-        | "maximized"
-        | "left-top"
-        | "right-top"
-        | "left-bottom"
-        | "right-bottom";
+        "maximized" | "left-top" | "right-top" | "left-bottom" | "right-bottom";
       targetMatched: boolean;
       released: boolean;
       layoutStable: boolean;
@@ -172,11 +168,7 @@ export type LoginStartupState = {
   error: string | null;
 };
 export type SnapshotErrorKind =
-  | "record-save"
-  | "settings-save"
-  | "storage"
-  | "clock"
-  | "observer";
+  "record-save" | "settings-save" | "storage" | "clock" | "observer";
 export type Snapshot = {
   counts: Counts;
   settings: Settings;

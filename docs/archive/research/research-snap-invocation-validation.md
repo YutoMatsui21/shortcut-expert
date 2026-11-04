@@ -34,16 +34,16 @@ ARM前にWinとZを離す。FINISHまでの操作は原則1回とし、押し続
 
 ## 必須8ケース
 
-| ケース | Windows設定と操作 | 仮説上の推定 | 実表示・設定値・実測結果 |
-| --- | --- | --- | --- |
-| 1 | Snap ON、通常アプリでWin+Z | 記録 | 表示あり、key候補1。A trial 1 |
-| 2 | Snap ON、デスクトップにfocusしてWin+Z | 除外 | 表示なし、key候補0、desktop除外1。B trial 1 |
-| 3 | Snap全体OFF、通常アプリでWin+Z | 除外 | 表示なし、key候補1。SPI=false、arrangement="0"。B trial 4 |
-| 4 | Snap ON、hover表示OFF、通常アプリでWin+Z | 記録 | 表示あり、key候補1。SPI=true、arrangement="1"、flyout=0。B trial 6 |
-| 5 | 両設定ON、最大化ボタンの閾値以上hover | 記録 | 表示あり、hover候補1、非アクティブ窓。B trial 2（ケース番号の訂正あり） |
-| 6 | 両設定ON、最大化ボタンの閾値未満hover | 除外 | 表示なし、hover候補0。B trial 3（目視結果の訂正あり） |
-| 7 | Snap全体OFF、最大化ボタンhover | 除外 | 表示なし、hover候補1。SPI=false、arrangement="0"。B trial 5 |
-| 8 | Snap ON、hover表示OFF、最大化ボタンhover | 除外 | 表示なし、hover候補1。SPI=true、arrangement="1"、flyout=0。B trial 7 |
+| ケース | Windows設定と操作                        | 仮説上の推定 | 実表示・設定値・実測結果                                                |
+| ------ | ---------------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| 1      | Snap ON、通常アプリでWin+Z               | 記録         | 表示あり、key候補1。A trial 1                                           |
+| 2      | Snap ON、デスクトップにfocusしてWin+Z    | 除外         | 表示なし、key候補0、desktop除外1。B trial 1                             |
+| 3      | Snap全体OFF、通常アプリでWin+Z           | 除外         | 表示なし、key候補1。SPI=false、arrangement="0"。B trial 4               |
+| 4      | Snap ON、hover表示OFF、通常アプリでWin+Z | 記録         | 表示あり、key候補1。SPI=true、arrangement="1"、flyout=0。B trial 6      |
+| 5      | 両設定ON、最大化ボタンの閾値以上hover    | 記録         | 表示あり、hover候補1、非アクティブ窓。B trial 2（ケース番号の訂正あり） |
+| 6      | 両設定ON、最大化ボタンの閾値未満hover    | 除外         | 表示なし、hover候補0。B trial 3（目視結果の訂正あり）                   |
+| 7      | Snap全体OFF、最大化ボタンhover           | 除外         | 表示なし、hover候補1。SPI=false、arrangement="0"。B trial 5             |
+| 8      | Snap ON、hover表示OFF、最大化ボタンhover | 除外         | 表示なし、hover候補1。SPI=true、arrangement="1"、flyout=0。B trial 7    |
 
 A=`trials-1792750663856.jsonl`、B=`trials-1792750819748.jsonl`。表の候補数は**設定除外前の実測**。ケース3/7/8は入力／hit testだけなら余計に数える。表の仮説列を実装済みの出力として扱わない。
 
@@ -69,11 +69,11 @@ B trial 2の保存scenarioは2だが、本人が実施した操作はケース5�
 
 比較アプリはChrome 155.0.8059.85。下表はBの続き。Win+Zではhook callback時のforeground rootを対象にしており、timer側の計上時にはShellの表示へforegroundが移る場合があった。`foregroundAtCount=0`をWin+Z開始時に対象が非アクティブだった証拠に使わない。
 
-| 試行 | 本人が行った操作・表示 | probeの結果 | 評価 |
-| --- | --- | --- | --- |
-| B trial 8 | ChromeでWin+Zを約2秒押し続け、表示あり | key候補1、対象chrome。Z事象78、追加down76を非採用 | キーリピートで重複しないことを1試行で確認 |
-| B trial 9 | 非アクティブChromeの最大化ボタンへ約2秒hover、退出後再入場。2回とも表示あり | hover候補2、対象chrome、foreground一致0。hit一致60sample、最大化矩形一致0、問い合わせ失敗0 | 継続中1回、退出再入場で2回。Chromeでは矩形取得を根拠にできない |
-| B trial 10 | Chromeの最小化ボタンへ約2秒hover、表示なし | 両候補0。ただしhit／矩形query失敗が各2回 | 保存scenarioは6だが、別ボタンの試行と本人が確認。取得失敗を含むため安定した負例成功とは扱わない |
+| 試行       | 本人が行った操作・表示                                                      | probeの結果                                                                                | 評価                                                                                            |
+| ---------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| B trial 8  | ChromeでWin+Zを約2秒押し続け、表示あり                                      | key候補1、対象chrome。Z事象78、追加down76を非採用                                          | キーリピートで重複しないことを1試行で確認                                                       |
+| B trial 9  | 非アクティブChromeの最大化ボタンへ約2秒hover、退出後再入場。2回とも表示あり | hover候補2、対象chrome、foreground一致0。hit一致60sample、最大化矩形一致0、問い合わせ失敗0 | 継続中1回、退出再入場で2回。Chromeでは矩形取得を根拠にできない                                  |
+| B trial 10 | Chromeの最小化ボタンへ約2秒hover、表示なし                                  | 両候補0。ただしhit／矩形query失敗が各2回                                                   | 保存scenarioは6だが、別ボタンの試行と本人が確認。取得失敗を含むため安定した負例成功とは扱わない |
 
 設定復元後のB trial 8〜10はSPI=true、arrangement="1"、flyout=1。開始前後の設定値は同じだった。最後に本人がpanelを閉じ、runnerの`SNAP_INVOCATION_CLOSED`と正常終了を確認した。入力観測は終了している。
 
@@ -89,11 +89,11 @@ B trial 2の保存scenarioは2だが、本人が実施した操作はケース5�
 
 原本は`.tools/validation/snap-invocation/`に保持し、後日の訂正は上表で明示して原本へ上書きしていない。
 
-| 原本 | SHA-256 |
-| --- | --- |
+| 原本                                | SHA-256                                                            |
+| ----------------------------------- | ------------------------------------------------------------------ |
 | 診断前 `trials-1792750484774.jsonl` | `faa1a42ae3c6ec7c01c1af8915a9bef2c3ed6044013670cd0198df107de02817` |
-| A `trials-1792750663856.jsonl` | `afcd42a0557da681291dbed1630c0d53129025a59a674c094c0977a7f68c3cc2` |
-| B `trials-1792750819748.jsonl` | `da258581a8f8b2fc02b299a95fc5f468930b20d9da6538af1acd35286efb4bdb` |
+| A `trials-1792750663856.jsonl`      | `afcd42a0557da681291dbed1630c0d53129025a59a674c094c0977a7f68c3cc2` |
+| B `trials-1792750819748.jsonl`      | `da258581a8f8b2fc02b299a95fc5f468930b20d9da6538af1acd35286efb4bdb` |
 
 A/Bのsource SHA-256は`58988961f22ca4f3642dba8293762f4f87e35ccec218be694af96654c5ca682c`。同hashのsource snapshotを照合して保持した。Bのexe SHA-256は`2af2ee9d938ff189e75680511de10d9898f61fa91f205d5ade980f53a7df6463`で、原本と一致するexe copyを保持した。現行ソースはARM時の目視欄リセットを追加しているため実測版とhashが異なる。変更後のcompile・16assertion self-test・runner構文確認は成功。リセット後の画面操作は再試験していない。
 
@@ -109,13 +109,13 @@ A/Bのsource SHA-256は`58988961f22ca4f3642dba8293762f4f87e35ccec218be694af96654
 
 各一時削除後に元のDWORD 1へ復元して型と値を照合した。さらに本人がUIでON→OFF→ONへ戻し、実表示を再確認した。復元確認後、設定を再変更していない。
 
-| 条件 | Win+Zの設定判定 | hoverの設定判定 |
-| --- | --- | --- |
-| SPI成功・falseとarrangement文字列"0"が一致 | OFF | OFF |
-| SPI成功・trueとarrangement文字列"1"が一致、flyout DWORD 0 | ON | OFF |
-| 同上、flyout DWORD 1 | ON | ON |
-| 同上、flyout欠落・型違い・未知値・読取失敗 | ON | unknown |
-| SPI失敗、arrangement欠落・型違い・未知値・失敗、両者不一致 | unknown | unknown |
+| 条件                                                       | Win+Zの設定判定 | hoverの設定判定 |
+| ---------------------------------------------------------- | --------------- | --------------- |
+| SPI成功・falseとarrangement文字列"0"が一致                 | OFF             | OFF             |
+| SPI成功・trueとarrangement文字列"1"が一致、flyout DWORD 0  | ON              | OFF             |
+| 同上、flyout DWORD 1                                       | ON              | ON              |
+| 同上、flyout欠落・型違い・未知値・読取失敗                 | ON              | unknown         |
+| SPI失敗、arrangement欠落・型違い・未知値・失敗、両者不一致 | unknown         | unknown         |
 
 known ONなら候補を採用、known OFFなら不採用、unknownなら計上・通知せず観測不能として扱う。unknownを既知0の精度・coverageにしない。本実装では採用直前にも設定を読み、能力状態変更でpendingを破棄する。probeの設定込み集約は開始・終了の設定が一致する隔離試行を対象とし、設定変化を含む稼働中の製品実装を代替しない。
 
@@ -139,12 +139,12 @@ D trial 2は表示あり・最大化矩形一致86sampleなのに、hitは最小
 4. query失敗、不正な部分矩形、DPI context設定失敗、採用APIの結果不明はunknownとしてpendingを破棄する。TITLEが有効な場合の診断用hit失敗は、そのTITLE結果を無効にはしない。
 5. query前後で対象root・窓の外形・最大化領域内にいることを再照合する。使用するAPI経路が変わっても同じ滞在を再計上しない。
 
-| 試行 | 実測と本人の確認 | 結果 |
-| --- | --- | --- |
-| E trial 2 | 標準窓へ1回hover。hitは最小化64、矩形最大化64 | 矩形経路でhover 1、設定込み1、表示あり |
-| E trial 3 | Ctrl+Win+Z、表示なし | key 0。追加modifierを除外 |
-| E trial 4 | 非アクティブChromeのhover、表示あり | 空矩形を確認したhit fallbackでhover 1、設定込み1 |
-| E trial 5 | 標準窓の閉じるボタン左寄り、表示なし。hitは最大化57 | 矩形経路でhover 0。hit単独の誤計上を防いだ |
+| 試行      | 実測と本人の確認                                         | 結果                                                   |
+| --------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| E trial 2 | 標準窓へ1回hover。hitは最小化64、矩形最大化64            | 矩形経路でhover 1、設定込み1、表示あり                 |
+| E trial 3 | Ctrl+Win+Z、表示なし                                     | key 0。追加modifierを除外                              |
+| E trial 4 | 非アクティブChromeのhover、表示あり                      | 空矩形を確認したhit fallbackでhover 1、設定込み1       |
+| E trial 5 | 標準窓の閉じるボタン左寄り、表示なし。hitは最大化57      | 矩形経路でhover 0。hit単独の誤計上を防いだ             |
 | F trial 1 | 本文で左down→押したまま最大化へ→本文へ戻ってup、表示なし | 押下中182sample、最大化矩形114sample、候補0、設定込み0 |
 
 E trial 1は比較中にhover候補3となり、ARM後の入退場回数が確定しないため重複精度の証拠に使わず、本人がE trial 2を再実施した。E trial 6は最大化上でdownした試行で、同UI threadが約6秒停止し、押す前の滞在を分離できず候補1。成功扱いせず、先に押してから入るF trial 1へ置き換えた。Fの182sampleで押下の観測も確認できた。

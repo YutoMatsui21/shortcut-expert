@@ -18,9 +18,7 @@
       "scalePercent": 100
     }
   ],
-  "chromeProductVersions": [
-    "156.0.8078.74"
-  ],
+  "chromeProductVersions": ["156.0.8078.74"],
   "explorerVersion": "10.0.26100.9949",
   "association": "static version metadata; individual trial window not linked to executable",
   "windowsSettingsChanged": false,

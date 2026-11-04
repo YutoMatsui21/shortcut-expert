@@ -51,13 +51,13 @@ Microsoftは、最大化／復元ボタンへのホバーとWin+ZをSnap flyout�
 
 呼出し直前に`SetLastError(ERROR_SUCCESS)`を行い、APIの戻り値と`lpdwResult`を別に扱う。**APIが非zeroのときだけmessage結果を解釈する。** APIの戻り値0でerror0の場合もgeneric failureである。この手順は[SendMessageTimeoutW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagetimeoutw)の明示的な指示に従う。
 
-| APIの戻り値 | 直後のlast error | 解釈とprobeの扱い |
-| --- | --- | --- |
-| 0 | 0 | 原因未特定の失敗。正常な否定hitへ変換しない |
-| 0 | 5 | `ERROR_ACCESS_DENIED`。権限制約の失敗としてunknown |
-| 0 | 1460 | `ERROR_TIMEOUT`。期限内未完了としてunknown |
-| 0 | 1400 | `ERROR_INVALID_WINDOW_HANDLE`。対象消失等で有効な問い合わせ結果なし |
-| 0 | その他 | 取得失敗としてunknown。error値は診断に残せるが推定の肯定に使わない |
+| APIの戻り値 | 直後のlast error | 解釈とprobeの扱い                                                   |
+| ----------- | ---------------- | ------------------------------------------------------------------- |
+| 0           | 0                | 原因未特定の失敗。正常な否定hitへ変換しない                         |
+| 0           | 5                | `ERROR_ACCESS_DENIED`。権限制約の失敗としてunknown                  |
+| 0           | 1460             | `ERROR_TIMEOUT`。期限内未完了としてunknown                          |
+| 0           | 1400             | `ERROR_INVALID_WINDOW_HANDLE`。対象消失等で有効な問い合わせ結果なし |
+| 0           | その他           | 取得失敗としてunknown。error値は診断に残せるが推定の肯定に使わない  |
 
 コード値の定義は[System Error Codes 0–499](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-)と[1300–1699](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-)。message送信はUIPIの制約を受け、UIPIによる拒否のlast errorは5と説明されている。ただし5だけから拒否の全原因をさらに断定しない。[SendMessageW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagew)
 

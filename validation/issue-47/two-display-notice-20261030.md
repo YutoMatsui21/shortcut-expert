@@ -25,7 +25,6 @@
 
 検証結果：全unit301件、Native全7件、型検査、helper build成功。同梱版の5種類smokeと保存受入17件成功。レビューによる手順文言の限定後に再bundleし、base smoke・保存受入17件を再確認。Native全473ファイル一致。固定build manifestは `../evidence/issue-47/two-display-build.json`。NuGet脆弱性index取得NU1900警告あり。Electron試験のsandbox環境での読取エラーは通常環境の隔離試験で解消し、ACLは変更していない。
 
-
 ## 修正後の自然入力（session10）
 
 `b47e75b`、固定hash `1c8fab6922d8d772cad5db491fc755adbd2afd680196c161193f8ead0a284129`、通常観測・Native診断OFF。`C03-two-displays`／`C07-two-displays`の各1回で、候補は各1つのcompound、W02＋W03／W07のmouse各1、通知要求各1・2操作のキー案内一致。本人も両件の動作・表示が期待どおりと報告。原本の確認欄は未選択なので書き換えず、本人申告を別添に保存した。終了code0、read-only integrity_check=ok、build hash不変。`../evidence/issue-47/session10-*.json`。
@@ -39,7 +38,6 @@ session9 trial3はNative候補0件で原因不明。複合通知の修正で直�
 診断追加前に、採用自体は成立するが理由カテゴリがないためassertが失敗する回帰試験を確認。10条件で診断ON/OFFの候補同値と期待理由を照合する。新たな自然入力はこの診断を有効にした隔離試行で行い、通常移動の往復方向・戻し・Esc取消をまとめて切り分ける。原因確認前に採用条件を緩和しない。
 
 診断版検証：関連unit35件、Native全7件、型検査、helper build、同梱base smoke、保存受入17件が成功。新71カテゴリはC#/TS一致、診断ON/OFFの10条件採否同値を確認。専用ローカルレビューは4観点で追加指摘なし。manifestは `../evidence/issue-47/normal-drag-diag-build.json`。settings等の動作変更はなく、b47e75bでの5種smokeを履歴として保持するが新buildの全自然入力合格へ転記しない。
-
 
 ## 単独mouse移動の再確認（session11）
 

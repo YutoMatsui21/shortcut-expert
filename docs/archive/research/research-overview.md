@@ -80,16 +80,16 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 
 2026-10-09、公式masterの資料・コード確認、実機未試用。JetBrains IDE用、無料OSS／BSD-3-Clause。[repo](https://github.com/halirutan/IntelliJ-Key-Promoter-X)
 
-| 項目 | 確認事実・出典 | 今回への含意 |
-| --- | --- | --- |
-| 通常通知 | 操作名・代替キー・累積missedをBALLOON表示、設定／非表示links。[code](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterNotification.java) | 主要参考。[IDE既定](https://www.jetbrains.com/help/idea/notifications.html)はIDE窓右下で、Windows画面への独自固定とは別 |
-| 強制性 | 通常経路は通知のみ。任意Hard Modeは指定キーで閉じるmodal、既定off。[dialog](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterDialog.java) | 再入力不要という希望に合う。Hard Modeは不要、実フォーカス未検証 |
-| 頻度 | 項目ごとmouse使用N回、既定1／範囲1〜30。[条件](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterTipService.java) | 今回の時間間隔とは別 |
-| 制御 | 個別抑制／復帰、再起動までsnooze、UI別制御、統計reset。[設定](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterSettings.java) | 停止UIの参考 |
-| 統計 | Count(mouse)・Hit(key)、累積missed/used一覧。[項目](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/StatisticsItem.java)、[UI](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/StatisticsList.java) | PC全入力数ではない |
-| 範囲・保存 | key回数は過去mouse実行で登録した項目だけ。抑制・snooze等で集計も停止、XML保存。[code](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/KeyPromoterStatistics.java) | 今回は全対応項目を日別記録し、通知停止中も集計 |
-| 日別・graph | 保存項目に日時なし、確認codeに日別／推移graphなし | 日別保存は別に必要 |
-| 入力判定 | IDE ActionのMouseEvent／KeyEventを実行前に区別。[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java) | 成功数検証ではなく実行観測。Windows全体へ流用できない |
+| 項目        | 確認事実・出典                                                                                                                                                                                                                                                                                                        | 今回への含意                                                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 通常通知    | 操作名・代替キー・累積missedをBALLOON表示、設定／非表示links。[code](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterNotification.java)                                                                                                                     | 主要参考。[IDE既定](https://www.jetbrains.com/help/idea/notifications.html)はIDE窓右下で、Windows画面への独自固定とは別 |
+| 強制性      | 通常経路は通知のみ。任意Hard Modeは指定キーで閉じるmodal、既定off。[dialog](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterDialog.java)                                                                                                                    | 再入力不要という希望に合う。Hard Modeは不要、実フォーカス未検証                                                         |
+| 頻度        | 項目ごとmouse使用N回、既定1／範囲1〜30。[条件](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterTipService.java)                                                                                                                                             | 今回の時間間隔とは別                                                                                                    |
+| 制御        | 個別抑制／復帰、再起動までsnooze、UI別制御、統計reset。[設定](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterSettings.java)                                                                                                                                | 停止UIの参考                                                                                                            |
+| 統計        | Count(mouse)・Hit(key)、累積missed/used一覧。[項目](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/StatisticsItem.java)、[UI](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/StatisticsList.java) | PC全入力数ではない                                                                                                      |
+| 範囲・保存  | key回数は過去mouse実行で登録した項目だけ。抑制・snooze等で集計も停止、XML保存。[code](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/statistic/KeyPromoterStatistics.java)                                                                                            | 今回は全対応項目を日別記録し、通知停止中も集計                                                                          |
+| 日別・graph | 保存項目に日時なし、確認codeに日別／推移graphなし                                                                                                                                                                                                                                                                     | 日別保存は別に必要                                                                                                      |
+| 入力判定    | IDE ActionのMouseEvent／KeyEventを実行前に区別。[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java)                                                                                                                             | 成功数検証ではなく実行観測。Windows全体へ流用できない                                                                   |
 
 今回の通知・停止・記録契約は[mvp-requirements.md](../requirements/mvp-requirements.md)、APIの差は[技術調査](research-overview.md#platforms)。
 
@@ -101,18 +101,18 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 
 ### 参照・練習・操作後案内
 
-| 製品 | 確認できた機能／提供根拠 | 制約・採用判断 |
-| --- | --- | --- |
-| [PowerToys Shortcut Guide](https://learn.microsoft.com/en-us/windows/powertoys/shortcut-guide) | 前面app別表示・検索（Windows／Chrome／VS Code等）、推奨・pin | 操作後案内／mouse時間比較は未確認 |
-| [KeyCombiner](https://keycombiner.com/features/) | 選択・練習・lesson・間隔反復・成績。[desktop](https://keycombiner.com/desktop/)で個人／前面appキー参照 | 無料／有料範囲差、browser予約キー制約。練習入力時間あり、mouse比較未確認 |
-| [Key Promoter X](https://github.com/halirutan/IntelliJ-Key-Promoter-X) | JetBrains IDEのmouse後案内、累積統計・制御。[2026配布](https://github.com/halirutan/IntelliJ-Key-Promoter-X/releases/tag/v2026.1.2)、BSD-3-Clause | IDE外対象外。主要参考、[詳細](research-overview.md#kpx) |
-| [VS Code Key Promoter](https://github.com/donebd/vscode-keypromoter) | 操作／編集パターンから案内。[VSIX](https://github.com/donebd/vscode-keypromoter/releases/tag/release/1.2.0-tag)、MIT | API制約の間接検出、未対応あり、counterはmemory内。Marketplace現状未確認 |
-| KeyRocket | Explorer／Office向け案内・進捗。[会社名義2012発表](https://www.prlog.org/11970990-keyrocket-adds-support-for-spanish-and-french-russian-portuguese-greek-on-the-way.pdf) | 現行機能・互換性不明、導入候補外 |
-| [WORK & MOVE](https://workandmove.bakkerelkhuizen.com/) | 現行Windows商用。[FAQ](https://workandmove.bakkerelkhuizen.com/faqs/)はWin10以上・導入・週間統計。[案内／学習list](https://www.bakkerelkhuizen.com/de-de/wissen/weniger-mausverbrauch-dank-tastaturkurzeln/) | 認識方式・代表操作・個人購入条件未確認。有料で条件外 |
-| [Shortcut Coach](https://github.com/NirMendelson/shortcut-tips) | Windows/Python試作。UIA・入力監視・key対応・通知・SQLite | licenseファイル・再利用許諾・動作精度未確認。README保存方針と文字／clipboard断片を渡すcodeが不一致。導入候補外 |
-| [Excel Shortcut Coach](https://excelshortcutcoach.com/) | Windows/Excelの操作後案内・項目制御、購入／download案内 | [FAQ](https://excelshortcutcoach.com/faq/)は初期実験版。認識方式・統計未確認、対象範囲外 |
-| [Hotkey Hero](https://chromewebstore.google.com/detail/hotkey-hero/eeecmdilafpbkojiihcajnfkblljcfpa) | Google Docs。開発元は操作に応じた案内・記録・推定節約時間を説明 | code・認識・推定式未確認。Chrome本体とは別 |
-| [Keylume.app](https://keylume.app/) | macOS商用、download／trial、Accessibilityで標準menu取得・click後案内・習得分析 | 内部未確認、OS条件外 |
+| 製品                                                                                                 | 確認できた機能／提供根拠                                                                                                                                                                                     | 制約・採用判断                                                                                                 |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| [PowerToys Shortcut Guide](https://learn.microsoft.com/en-us/windows/powertoys/shortcut-guide)       | 前面app別表示・検索（Windows／Chrome／VS Code等）、推奨・pin                                                                                                                                                 | 操作後案内／mouse時間比較は未確認                                                                              |
+| [KeyCombiner](https://keycombiner.com/features/)                                                     | 選択・練習・lesson・間隔反復・成績。[desktop](https://keycombiner.com/desktop/)で個人／前面appキー参照                                                                                                       | 無料／有料範囲差、browser予約キー制約。練習入力時間あり、mouse比較未確認                                       |
+| [Key Promoter X](https://github.com/halirutan/IntelliJ-Key-Promoter-X)                               | JetBrains IDEのmouse後案内、累積統計・制御。[2026配布](https://github.com/halirutan/IntelliJ-Key-Promoter-X/releases/tag/v2026.1.2)、BSD-3-Clause                                                            | IDE外対象外。主要参考、[詳細](research-overview.md#kpx)                                                        |
+| [VS Code Key Promoter](https://github.com/donebd/vscode-keypromoter)                                 | 操作／編集パターンから案内。[VSIX](https://github.com/donebd/vscode-keypromoter/releases/tag/release/1.2.0-tag)、MIT                                                                                         | API制約の間接検出、未対応あり、counterはmemory内。Marketplace現状未確認                                        |
+| KeyRocket                                                                                            | Explorer／Office向け案内・進捗。[会社名義2012発表](https://www.prlog.org/11970990-keyrocket-adds-support-for-spanish-and-french-russian-portuguese-greek-on-the-way.pdf)                                     | 現行機能・互換性不明、導入候補外                                                                               |
+| [WORK & MOVE](https://workandmove.bakkerelkhuizen.com/)                                              | 現行Windows商用。[FAQ](https://workandmove.bakkerelkhuizen.com/faqs/)はWin10以上・導入・週間統計。[案内／学習list](https://www.bakkerelkhuizen.com/de-de/wissen/weniger-mausverbrauch-dank-tastaturkurzeln/) | 認識方式・代表操作・個人購入条件未確認。有料で条件外                                                           |
+| [Shortcut Coach](https://github.com/NirMendelson/shortcut-tips)                                      | Windows/Python試作。UIA・入力監視・key対応・通知・SQLite                                                                                                                                                     | licenseファイル・再利用許諾・動作精度未確認。README保存方針と文字／clipboard断片を渡すcodeが不一致。導入候補外 |
+| [Excel Shortcut Coach](https://excelshortcutcoach.com/)                                              | Windows/Excelの操作後案内・項目制御、購入／download案内                                                                                                                                                      | [FAQ](https://excelshortcutcoach.com/faq/)は初期実験版。認識方式・統計未確認、対象範囲外                       |
+| [Hotkey Hero](https://chromewebstore.google.com/detail/hotkey-hero/eeecmdilafpbkojiihcajnfkblljcfpa) | Google Docs。開発元は操作に応じた案内・記録・推定節約時間を説明                                                                                                                                              | code・認識・推定式未確認。Chrome本体とは別                                                                     |
+| [Keylume.app](https://keylume.app/)                                                                  | macOS商用、download／trial、Accessibilityで標準menu取得・click後案内・習得分析                                                                                                                               | 内部未確認、OS条件外                                                                                           |
 
 [AltMouse](https://www.bakkerelkhuizen.com/altmouse/)は終了しWORK & MOVEへ移行。[LowtechguysのKeylume](https://lowtechguys.com/keylume/)は別製品（key可視化・cheatsheet中心）で、Keylume.appと混同しない。
 
@@ -134,12 +134,12 @@ PCを約10時間/日使用。Windowsの日常操作で有用なキーを知ら�
 
 主要な差は操作の意味・入力由来・代替キーを取得できるか。市場の普及原因・作者の他OS対応動機は未確認。同種ツールの不存在を前提にしない。
 
-| 環境 | 取得・制約 | 根拠 |
-| --- | --- | --- |
-| IntelliJ/KPX | 内部Action＋入力種別。外から意味を推定せずに済むが全mouse操作対応ではない | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html)、[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java)、[README](https://github.com/halirutan/IntelliJ-Key-Promoter-X) |
-| VS Code | 全command実行の公開監視APIは確認できず、既存拡張はcommand捕捉・key履歴・editor変化から間接推定 | [Commands](https://code.visualstudio.com/api/extension-guides/command)、[型定義](https://github.com/microsoft/vscode/blob/main/src/vscode-dts/vscode.d.ts)、[拡張](https://github.com/donebd/vscode-keypromoter) |
-| Chrome拡張 | content scriptはpage DOM。tabs.onActivatedのtabId/windowIdに入力由来なし。action.onClickedは拡張自身のbutton用 | [scripts](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts)、[tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs#event-onActivated)、[action](https://developer.chrome.com/docs/extensions/reference/api/action#event-onClicked) |
-| Windows UIA | 意味・key情報を提供し得るが、全app／全event保証なし。AcceleratorKey既定は空 | [購読](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsforclients)、[user/program両由来](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsoverview)、[AcceleratorKey](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.acceleratorkeyproperty?view=windowsdesktop-10.0) |
+| 環境         | 取得・制約                                                                                                     | 根拠                                                                                                                                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| IntelliJ/KPX | 内部Action＋入力種別。外から意味を推定せずに済むが全mouse操作対応ではない                                      | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html)、[listener](https://github.com/halirutan/IntelliJ-Key-Promoter-X/blob/master/src/de/halirutan/keypromoterx/KeyPromoterActionListener.java)、[README](https://github.com/halirutan/IntelliJ-Key-Promoter-X)                                                               |
+| VS Code      | 全command実行の公開監視APIは確認できず、既存拡張はcommand捕捉・key履歴・editor変化から間接推定                 | [Commands](https://code.visualstudio.com/api/extension-guides/command)、[型定義](https://github.com/microsoft/vscode/blob/main/src/vscode-dts/vscode.d.ts)、[拡張](https://github.com/donebd/vscode-keypromoter)                                                                                                                                         |
+| Chrome拡張   | content scriptはpage DOM。tabs.onActivatedのtabId/windowIdに入力由来なし。action.onClickedは拡張自身のbutton用 | [scripts](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts)、[tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs#event-onActivated)、[action](https://developer.chrome.com/docs/extensions/reference/api/action#event-onClicked)                                                                         |
+| Windows UIA  | 意味・key情報を提供し得るが、全app／全event保証なし。AcceleratorKey既定は空                                    | [購読](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsforclients)、[user/program両由来](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsoverview)、[AcceleratorKey](https://learn.microsoft.com/en-us/dotnet/api/system.windows.automation.automationelement.acceleratorkeyproperty?view=windowsdesktop-10.0) |
 
 VS Code開発者は2019年に性能・内部引数漏出等を理由に全command監視APIを撤回し、学習機能の本体提案は歓迎と説明した。「発想がなかった」説への反証で、市場全体の原因ではない。[懸念](https://github.com/microsoft/vscode/issues/78091#issuecomment-518545491)、[削除](https://github.com/microsoft/vscode/issues/78091#issuecomment-521640092)
 
@@ -161,7 +161,6 @@ W11の本番実装と局所検証は[#39の判定契約](../../operations/window
 
 > [2026-10-28の8操作調査結果（#9）](../../research/eight-operation-validation.md)：既存W12/W01と新規33完了試行を照合し、当時はW12/W01/W04/W06/W11が制約付き着手可、W03/W07/W02は未成立。その後の新仕様と16追加試行による[#14の再審査](../../research/compound-drag-validation.md)で、全8ゲートを制約付き着手PASSとした。製品完全対応・リリース合格ではない。下表の初期仮説や過去の結論は最新ゲートの代用にしない。
 
-
 ## Windows操作の技術判断（ステップ3結論）
 
 2026-10-12実装更新：W02・W04・W05・W11を以下の仮説から条件付きで製品へ実装。W05の採用キーは最大化→通常・非arrangedへのWin+↓に限定し、Win+Shift+↓やスナップ解除は今回扱わない。W02はドラッグ開始時の入力照合を終端まで保持し、2画面が左右・上端一致・非重複の場合のみ方向付き案内を行う。移動中の画面構成変更は見送る。W11は破棄前の入力対象と画面を保持する。人工policy／通信／UI試験と実入力の精度は区別し、後者は未確認。以下の表は技術判断時点の仮説・残リスクを記録したもの。
@@ -174,20 +173,20 @@ W11の本番実装と局所検証は[#39の判定契約](../../operations/window
 
 「実装へ」は仕様の根拠、「合成」は観測値からの推論、「UI待ち」はprovider依存。全行に入力・対象・期待結果の対応が必要。未知・注入・競合・対象不一致は見送り、因果関係を保証したとは呼ばない。
 
-| ID | 必要情報／API | 判定仮説・同等キーの条件 | 判断・残リスク |
-| --- | --- | --- | --- |
-| W01 切替 | mouse/key hook、直接クリックの候補HWND（WindowFromPhysicalPoint/GetAncestor）、前後foreground HWND、EVENT_SYSTEM_FOREGROUNDとcallback時/settle時poll。SWITCHENDは今回未出現 | 背後の別窓へ直接クリック／Alt+Tabの確定後、入力元と最終foregroundを照合し1候補。案内はAlt+Tabを基本とし、番号対応が確証できた場合だけWin+数字を追加。taskbar click・Win+数字はW12のみ | [#7実測](../../research/window-switch-validation.md)：自作通常3窓の基本経路は制約付きで実装着手可。負例とW12入口はW01候補0、後着イベントを現在pollと区別。外部アプリ一般・owner・同時program競合・W12製品との統合は#29/#47へ。Edgeタブは2026-10-26の現行要件でW01対象外。番号対応はunknown、Alt+Tabへfallback。追加案内は#96 |
-| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要 | **#6/#28：1〜10番の単一Win+数字案内は製品実装済み**。主タスクバーの1/2/9/10番と負例を代表環境で確認（全条件の保証ではない）。**#96で起動済み/未起動判定、起動済み11番目以降のAlt+Tab案内、2候補通知を別途実証・実装**。別タスクバー・overflow・変動はunknownを維持。[原本・限界・採用条件](../../research/taskbar-input-validation.md) |
-| W02 画面移動 | monitor前後・配置、MOVESIZE開始終了、実入力 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等 | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能 |
-| W03 最大化 | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input | 同一対象の標準経路＋結果。Win+↑、独自全画面除外 | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認 |
-| W04 最小化 | placement・MINIMIZE系event、HTMINBUTTON等、input | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない |
-| W05 復元 | 最大化／arranged→通常・非arranged、button/input | placement＋arranged＋経路。移動開始の派生復元除外。Win+Shift+↓等は前後stateに合う場合 | **実装へ**。最大化復元とスナップ解除を区別 |
-| W06 左右半分 | arranged変化、最終可視rect・作業領域・元state、drag終端／input | 非arranged普通窓→arranged、左右半分の定型rect。Win+左右が同じ結果になる元状態のみ | **合成**。API利用・DPI・不可視枠補正は実装時確認。自由比率／境界リサイズ除外 |
-| W07 四隅 | W06＋四分割rect、元state、一連input | 非arranged→arranged四隅。方向キー順次操作の途中半分配置を重複計上しない | **合成**。具体的な順序・同等結果は実装時確認。任意layout除外 |
-| W08 配置候補を呼び出す | Win+Z／最大化ボタン矩形優先・空矩形時hit fallback、実hover、対象窓、設定の既知状態 | 対象窓を伴う有効なWin+Zまたは500ms以上のhoverを各1操作として認識。メニュー本体の表示成功は問わない | **制約付き成立（#83）**。設定unknownは非計上。製品の自然入力精度・通常環境での合格は未確認 |
-| W09 desktop表示 | UIA Show desktop要素、click/key、表示前後 | 識別済み要素＋表示／復帰の対応。Win+D。一窓最小化・desktop通常click除外 | **UI待ち**。設定・要素ID・前後stateが未確定 |
-| W10 Task View | UIA button、click/key、識別済みTask View出現 | button＋対象UI出現。Win+Tab。以降の窓／desktop選択は別 | **UI待ち**。専用の安定state契約は今回未確認。Alt+Tab用eventsを代用しない |
-| W11 閉じる | activeなtop-level HWND、HTCLOSE／close rect、input、DESTROY／WindowClosed | クリック前からactiveな標準×＋同一窓の閉鎖。Alt+F4。閉鎖前のtarget・画面を保持 | **実装へ**。非active・tab×・確認／中止・tray格納・独自×除外。click／process終了だけで数えない |
+| ID                           | 必要情報／API                                                                                                                                                               | 判定仮説・同等キーの条件                                                                                                                                                              | 判断・残リスク                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W01 切替                     | mouse/key hook、直接クリックの候補HWND（WindowFromPhysicalPoint/GetAncestor）、前後foreground HWND、EVENT_SYSTEM_FOREGROUNDとcallback時/settle時poll。SWITCHENDは今回未出現 | 背後の別窓へ直接クリック／Alt+Tabの確定後、入力元と最終foregroundを照合し1候補。案内はAlt+Tabを基本とし、番号対応が確証できた場合だけWin+数字を追加。taskbar click・Win+数字はW12のみ | [#7実測](../../research/window-switch-validation.md)：自作通常3窓の基本経路は制約付きで実装着手可。負例とW12入口はW01候補0、後着イベントを現在pollと区別。外部アプリ一般・owner・同時program競合・W12製品との統合は#29/#47へ。Edgeタブは2026-10-26の現行要件でW01対象外。番号対応はunknown、Alt+Tabへfallback。追加案内は#96           |
+| W12 タスクバーのアプリを開く | UIAのアプリアイコンの存在・座標・順番、mouse/key hook                                                                                                                       | マウスのアプリアイコンクリックと、存在する番号のWin+1〜9／Win+0を計測。番号不明/該当項目なしは除外、個別窓の起動/選択結果は不要                                                       | **#6/#28：1〜10番の単一Win+数字案内は製品実装済み**。主タスクバーの1/2/9/10番と負例を代表環境で確認（全条件の保証ではない）。**#96で起動済み/未起動判定、起動済み11番目以降のAlt+Tab案内、2候補通知を別途実証・実装**。別タスクバー・overflow・変動はunknownを維持。[原本・限界・採用条件](../../research/taskbar-input-validation.md) |
+| W02 画面移動                 | monitor前後・配置、MOVESIZE開始終了、実入力                                                                                                                                 | drag終端比較／key＋結果。往復元画面0、途中を数えず、派生復元を別計上しない。Win+Shift+左右は移動方向が明確な2画面等                                                                   | **合成＋初期証拠**。細かな座標再現は対象外。上下配置等で方向対応不明なら見送り。Obsidian分類は既存ログから修正可能                                                                                                                                                                                                                     |
+| W03 最大化                   | placement通常→最大化、HTMAXBUTTON／caption・button矩形、input                                                                                                               | 同一対象の標準経路＋結果。Win+↑、独自全画面除外                                                                                                                                       | **実装へ＋初期証拠**。Chrome成立例あり。Obsidian mouseはunknown、標準矩形／UIAで識別できるか未確認                                                                                                                                                                                                                                     |
+| W04 最小化                   | placement・MINIMIZE系event、HTMINBUTTON等、input                                                                                                                            | targetと結果を対応。Win+↓は通常・非arranged等の元状態に限定。Alt+Space→N等はメニュー条件確認時のみ                                                                                    | **実装へ**。既存state観測を拡張、最大化から1回と無条件案内しない                                                                                                                                                                                                                                                                       |
+| W05 復元                     | 最大化／arranged→通常・非arranged、button/input                                                                                                                             | placement＋arranged＋経路。移動開始の派生復元除外。Win+Shift+↓等は前後stateに合う場合                                                                                                 | **実装へ**。最大化復元とスナップ解除を区別                                                                                                                                                                                                                                                                                             |
+| W06 左右半分                 | arranged変化、最終可視rect・作業領域・元state、drag終端／input                                                                                                              | 非arranged普通窓→arranged、左右半分の定型rect。Win+左右が同じ結果になる元状態のみ                                                                                                     | **合成**。API利用・DPI・不可視枠補正は実装時確認。自由比率／境界リサイズ除外                                                                                                                                                                                                                                                           |
+| W07 四隅                     | W06＋四分割rect、元state、一連input                                                                                                                                         | 非arranged→arranged四隅。方向キー順次操作の途中半分配置を重複計上しない                                                                                                               | **合成**。具体的な順序・同等結果は実装時確認。任意layout除外                                                                                                                                                                                                                                                                           |
+| W08 配置候補を呼び出す       | Win+Z／最大化ボタン矩形優先・空矩形時hit fallback、実hover、対象窓、設定の既知状態                                                                                          | 対象窓を伴う有効なWin+Zまたは500ms以上のhoverを各1操作として認識。メニュー本体の表示成功は問わない                                                                                    | **制約付き成立（#83）**。設定unknownは非計上。製品の自然入力精度・通常環境での合格は未確認                                                                                                                                                                                                                                             |
+| W09 desktop表示              | UIA Show desktop要素、click/key、表示前後                                                                                                                                   | 識別済み要素＋表示／復帰の対応。Win+D。一窓最小化・desktop通常click除外                                                                                                               | **UI待ち**。設定・要素ID・前後stateが未確定                                                                                                                                                                                                                                                                                            |
+| W10 Task View                | UIA button、click/key、識別済みTask View出現                                                                                                                                | button＋対象UI出現。Win+Tab。以降の窓／desktop選択は別                                                                                                                                | **UI待ち**。専用の安定state契約は今回未確認。Alt+Tab用eventsを代用しない                                                                                                                                                                                                                                                               |
+| W11 閉じる                   | activeなtop-level HWND、HTCLOSE／close rect、input、DESTROY／WindowClosed                                                                                                   | クリック前からactiveな標準×＋同一窓の閉鎖。Alt+F4。閉鎖前のtarget・画面を保持                                                                                                         | **実装へ**。非active・tab×・確認／中止・tray格納・独自×除外。click／process終了だけで数えない                                                                                                                                                                                                                                          |
 
 キー／定型操作：[Windows公式](https://support.microsoft.com/en-us/accessibility/windows/keyboard-shortcuts-in-windows)、[Snap](https://support.microsoft.com/en-us/windows/experience/snap-your-windows)。W08：[アプリのSnap Layout対応](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-snap-layout-menu)。W09／10：[taskbar](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)。仕様はキーの意味の根拠で、検出方式の保証ではない。
 
@@ -207,14 +206,14 @@ W11の本番実装と局所検証は[#39の判定契約](../../operations/window
 
 Electron＋TypeScript／React＋小さなWindows native helper。C#／Win32 helper→TSでJSONを受け取る初期経路は検証済み。Windows APIの直接呼出しまでTSに統一することを必須にしない。Next.js・外部backend・accountは不要という判断。
 
-| 機能 | 仕様上の手段・仮説 | 実装後確認 |
-| --- | --- | --- |
-| 通知 | BrowserWindow.showInactive／focusable＋React | focus・click阻害、時間・頻度・同時1件 |
-| 画面右下 | screen display取得、Win32 physical／DIP変換 | 混在DPI・負座標・画面変更。対象不明なら見送り |
-| 全画面抑制 | native前面窓state／rect＋画面を合成 | 覆う／判別不能時は保守的に抑制。自分のisFullScreenを外部判定に使わない |
-| 停止 | TS制御＋helper hooks解除・再登録／停止 | 通知停止と観測全停止を分け、再開時に古い候補を数えない |
-| 日別保存 | TSで操作ID×日付×mouse/keyを集計、userData等へ保存 | unknown・重複、再起動・日付・30日保持・削除。時計／試験データで確認可能 |
-| 配布 | Electron実行フォルダ＋helper同梱 | 配置・起動・runtime依存・通常権限・終了解除 |
+| 機能       | 仕様上の手段・仮説                                | 実装後確認                                                              |
+| ---------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| 通知       | BrowserWindow.showInactive／focusable＋React      | focus・click阻害、時間・頻度・同時1件                                   |
+| 画面右下   | screen display取得、Win32 physical／DIP変換       | 混在DPI・負座標・画面変更。対象不明なら見送り                           |
+| 全画面抑制 | native前面窓state／rect＋画面を合成               | 覆う／判別不能時は保守的に抑制。自分のisFullScreenを外部判定に使わない  |
+| 停止       | TS制御＋helper hooks解除・再登録／停止            | 通知停止と観測全停止を分け、再開時に古い候補を数えない                  |
+| 日別保存   | TSで操作ID×日付×mouse/keyを集計、userData等へ保存 | unknown・重複、再起動・日付・30日保持・削除。時計／試験データで確認可能 |
+| 配布       | Electron実行フォルダ＋helper同梱                  | 配置・起動・runtime依存・通常権限・終了解除                             |
 
 根拠：[BrowserWindow](https://www.electronjs.org/docs/latest/api/browser-window)、[screen](https://www.electronjs.org/docs/latest/api/screen)、[app.getPath](https://www.electronjs.org/docs/latest/api/app)、[packaging](https://www.electronjs.org/docs/latest/tutorial/application-distribution)。保存規約は要件書に従い、診断ログを製品の保存形式に流用しない。
 
@@ -232,22 +231,22 @@ Electron＋TypeScript／React＋小さなWindows native helper。C#／Win32 help
 
 ### 状態・入力・UI
 
-| API／情報 | 仕様上取れるもの | 制限／推論 |
-| --- | --- | --- |
-| [SetWinEventHook](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwineventhook) | desktop events。OUTOFCONTEXTは非同期・順序維持、登録threadにmessage loop必要 | 登録成功≠必要event取得。発生時刻と配送時刻を分ける |
-| [WinEventProc](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc) | event・HWND・object/child・thread・発生時刻 | mouse/key由来なし、inputとの対応は別判断 |
-| [GetWindowPlacement](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowplacement) | showCmdの最大化／最小化／通常 | 失敗あり。原因を返さず、通常でもarrangedの場合あり |
-| [IsWindowArranged](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowarranged) | arranged boolean、snap窓を含む | 方向／原因なし。最大化・最小化と排他、最小化から復帰するとarrangedの場合あり。prerelease注意・動的取得説明、対象runtime未実測 |
-| [MonitorFromWindow](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-monitorfromwindow) | 交差面積最大のmonitor。最小化時は直前rect | 変更だけではdrag完了・全面移動を証明しない |
-| [GetWindowRect](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowrect) | screen rect | DPI仮想化・不可視枠。可視rectはDwmGetWindowAttribute／DWMWA_EXTENDED_FRAME_BOUNDS、こちらはDPI補正なし |
-| [GetMonitorInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmonitorinfoa)／[MONITORINFO](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-monitorinfo) | monitor／作業領域、primary flag | rectと座標系を統一。MONITORINFOEXの画面名は今回不要 |
-| [WM_NCHITTEST](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest) | 座標のcaption・max/min/close等 | 独自UIの返し方に依存。負座標を符号付きとして扱う |
-| [TITLEBARINFOEX](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-titlebarinfoex) | 標準titlebar buttonsのrect・state | 外部独自枠で必要情報が提供されるか未確認 |
-| [mouse hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)／[key hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc) | target queue投入前のinput | 他hookが止め得る。押下≠処理／成功。message loop必要、遅いhookは無通知解除もある |
-| [mouse flags](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-msllhookstruct)／[key flags](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct) | injected／lower-integrity flags | 非注入でも意味・対象・成功は未確定 |
-| [UIA ElementFromPoint](https://learn.microsoft.com/en-us/windows/win32/api/uiautomationclient/nf-uiautomationclient-iuiautomation-elementfrompoint) | 座標上の要素 | 消失時失敗。click原因・成功ではない |
-| [UIA events](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsoverview)／[購読](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsforclients) | action／state等 | user/program両方、状態不変でも発生、一部未提供 |
-| [UIA tree](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-treeoverview) | app/providerの要素・properties | tree固定ではない。taskbar ID／階層／Win+数字順位の全build保証は今回未確認 |
+| API／情報                                                                                                                                                                                                   | 仕様上取れるもの                                                             | 制限／推論                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [SetWinEventHook](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwineventhook)                                                                                                   | desktop events。OUTOFCONTEXTは非同期・順序維持、登録threadにmessage loop必要 | 登録成功≠必要event取得。発生時刻と配送時刻を分ける                                                                            |
+| [WinEventProc](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wineventproc)                                                                                                         | event・HWND・object/child・thread・発生時刻                                  | mouse/key由来なし、inputとの対応は別判断                                                                                      |
+| [GetWindowPlacement](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowplacement)                                                                                             | showCmdの最大化／最小化／通常                                                | 失敗あり。原因を返さず、通常でもarrangedの場合あり                                                                            |
+| [IsWindowArranged](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowarranged)                                                                                                 | arranged boolean、snap窓を含む                                               | 方向／原因なし。最大化・最小化と排他、最小化から復帰するとarrangedの場合あり。prerelease注意・動的取得説明、対象runtime未実測 |
+| [MonitorFromWindow](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-monitorfromwindow)                                                                                               | 交差面積最大のmonitor。最小化時は直前rect                                    | 変更だけではdrag完了・全面移動を証明しない                                                                                    |
+| [GetWindowRect](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowrect)                                                                                                       | screen rect                                                                  | DPI仮想化・不可視枠。可視rectはDwmGetWindowAttribute／DWMWA_EXTENDED_FRAME_BOUNDS、こちらはDPI補正なし                        |
+| [GetMonitorInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmonitorinfoa)／[MONITORINFO](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-monitorinfo) | monitor／作業領域、primary flag                                              | rectと座標系を統一。MONITORINFOEXの画面名は今回不要                                                                           |
+| [WM_NCHITTEST](https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest)                                                                                                                       | 座標のcaption・max/min/close等                                               | 独自UIの返し方に依存。負座標を符号付きとして扱う                                                                              |
+| [TITLEBARINFOEX](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-titlebarinfoex)                                                                                                     | 標準titlebar buttonsのrect・state                                            | 外部独自枠で必要情報が提供されるか未確認                                                                                      |
+| [mouse hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)／[key hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)                             | target queue投入前のinput                                                    | 他hookが止め得る。押下≠処理／成功。message loop必要、遅いhookは無通知解除もある                                               |
+| [mouse flags](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-msllhookstruct)／[key flags](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)   | injected／lower-integrity flags                                              | 非注入でも意味・対象・成功は未確定                                                                                            |
+| [UIA ElementFromPoint](https://learn.microsoft.com/en-us/windows/win32/api/uiautomationclient/nf-uiautomationclient-iuiautomation-elementfrompoint)                                                         | 座標上の要素                                                                 | 消失時失敗。click原因・成功ではない                                                                                           |
+| [UIA events](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsoverview)／[購読](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-eventsforclients)                        | action／state等                                                              | user/program両方、状態不変でも発生、一部未提供                                                                                |
+| [UIA tree](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-treeoverview)                                                                                                                     | app/providerの要素・properties                                               | tree固定ではない。taskbar ID／階層／Win+数字順位の全build保証は今回未確認                                                     |
 
 ### Eventの意味
 
@@ -305,13 +304,13 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 [round1原本](../../../validation/evidence/manual-window-observations-round1.jsonl)：10/09 20:28:42保存、20:29:09読取。reset3件を含む11records。
 
-| 本人ラベル | 観測／入力候補 | 評価 |
-| --- | --- | --- |
-| mouse-maximize | state1→3、nearby-mouse、5ms | 初期取得 |
-| key-maximize | 1→3、nearby-key、Win+Up、8ms | 初期取得 |
-| mouse-monitor-move | monitor0→1→0→1→0、mouse1／unknown3 | 本人回答は1回のdragで往復・元画面終了。4操作ではなく移動0 |
-| key-monitor-move | 0→1、nearby-key、Win+Shift+Right、3ms | 初期取得 |
-| program-maximize | 1→3、unknown | この負例ではmouse/key誤認なし |
+| 本人ラベル         | 観測／入力候補                        | 評価                                                      |
+| ------------------ | ------------------------------------- | --------------------------------------------------------- |
+| mouse-maximize     | state1→3、nearby-mouse、5ms           | 初期取得                                                  |
+| key-maximize       | 1→3、nearby-key、Win+Up、8ms          | 初期取得                                                  |
+| mouse-monitor-move | monitor0→1→0→1→0、mouse1／unknown3    | 本人回答は1回のdragで往復・元画面終了。4操作ではなく移動0 |
+| key-monitor-move   | 0→1、nearby-key、Win+Shift+Right、3ms | 初期取得                                                  |
+| program-maximize   | 1→3、unknown                          | この負例ではmouse/key誤認なし                             |
 
 原因：1秒の近接判定が長いdragを切る、途中のmonitor変化を操作扱い、入力競合／hit test／hook欠落。長時間・競合の修正前失敗を自動再現。v2はcaption実押下＋MOVESIZESTART/ENDで入力候補を保持し、終端と開始を比較。途中を数えず、元画面終了0、競合キーはunknown、終了解除。
 
@@ -342,23 +341,23 @@ Win32はcallback・message loop、UIAはCOMが必要。[UIA概要](https://learn
 
 初回：[原本](../../../validation/evidence/external-window-observations-20261011-050724-973.jsonl)、10/11 14:10:43保存。chromeだけ選択。Obsidianの選び直しなしという本人申告のため、Obsidian証拠に使わない。
 
-| Chrome初回 | 結果 |
-| --- | --- |
-| mouse最大化 | 1→3、nearby-mouse、135ms |
+| Chrome初回      | 結果                                           |
+| --------------- | ---------------------------------------------- |
+| mouse最大化     | 1→3、nearby-mouse、135ms                       |
 | key最大化ラベル | 3→1のrestore、Win+Up、21ms。原因未確定、再確認 |
-| mouse画面移動 | move-size-end、0→1、drag-mouse、2980ms |
-| key画面移動 | 1→0、nearby-key、Win+Shift+Left、36ms |
+| mouse画面移動   | move-size-end、0→1、drag-mouse、2980ms         |
+| key画面移動     | 1→0、nearby-key、Win+Shift+Left、36ms          |
 
 再試行：[原本](../../../validation/evidence/external-window-observations-20261011-051237-322.jsonl)、14:14:27保存。chrome／obsidianとも選択済み、2画面、4hooks=true。
 
-| 対象／操作 | 観測 | 判定 |
-| --- | --- | --- |
-| Chrome key最大化 | 1→3、Win+Up、nearby-key、34ms | 正しい初期例。前回不一致の原因は未確定 |
-| Obsidian mouse最大化 | 1→3、unknown、inputAge64425ms | state取得、入力由来不成立。独自枠／hit test等の原因未確定 |
-| Obsidian reset復元 | 3→1、unknown、75483ms | resetとして記録 |
-| Obsidian key最大化 | 1→3、Win+Up、nearby-key、19ms | 初期取得 |
-| Obsidian mouse移動 | move-size-end、3→1、monitor0→1、drag-mouse、2579ms、operation=restore | 複合変化をstate優先で分類する不備。移動＋派生復元を別々に数えない |
-| Obsidian key移動 | 1→0、Win+Shift+Left、nearby-key、11ms | 初期取得 |
+| 対象／操作           | 観測                                                                  | 判定                                                              |
+| -------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Chrome key最大化     | 1→3、Win+Up、nearby-key、34ms                                         | 正しい初期例。前回不一致の原因は未確定                            |
+| Obsidian mouse最大化 | 1→3、unknown、inputAge64425ms                                         | state取得、入力由来不成立。独自枠／hit test等の原因未確定         |
+| Obsidian reset復元   | 3→1、unknown、75483ms                                                 | resetとして記録                                                   |
+| Obsidian key最大化   | 1→3、Win+Up、nearby-key、19ms                                         | 初期取得                                                          |
+| Obsidian mouse移動   | move-size-end、3→1、monitor0→1、drag-mouse、2579ms、operation=restore | 複合変化をstate優先で分類する不備。移動＋派生復元を別々に数えない |
+| Obsidian key移動     | 1→0、Win+Shift+Left、nearby-key、11ms                                 | 初期取得                                                          |
 
 Chromeは2試行で4ケース、Obsidianはkey2ケースの初期証拠。mouse2ケースは未修正。通常サイズから始めたかはログだけで断定しない。
 
@@ -374,15 +373,15 @@ ChatGPT・VS Code、配置系、UI識別、日別保存、通知・全画面抑�
 
 終了・総経過・手戻りは[mvp-requirements.md](../requirements/mvp-requirements.md#工程記録jst)。以下は記録できた区間（終端の応答／保存処理は一部未計測）。
 
-| 日付 | 作業区間 | 時間 | 内容 |
-| --- | --- | --- | --- |
-| 10/09 | 19:37:19–19:45:34 | 8:15 | 環境・API・probe |
-| 10/09 | 19:50:41–19:51:34 | 0:53 | 権限変更後の拒否確認 |
-| 10/09 | 20:02:38–20:03:39 | 1:01 | 設定切り分け |
-| 10/09 | 20:14:01–20:15:27 | 1:26 | 手動手順 |
-| 10/09 | 20:29:09–20:35:44 | 6:35 | 初回評価・v2修正 |
-| 10/09 | 20:41:15–20:49:02 | 7:47 | v2評価・taskbar準備 |
-| 10/10 | 08:18:52–08:20:44 | 1:52 | external準備・記録 |
+| 日付  | 作業区間          | 時間 | 内容                     |
+| ----- | ----------------- | ---- | ------------------------ |
+| 10/09 | 19:37:19–19:45:34 | 8:15 | 環境・API・probe         |
+| 10/09 | 19:50:41–19:51:34 | 0:53 | 権限変更後の拒否確認     |
+| 10/09 | 20:02:38–20:03:39 | 1:01 | 設定切り分け             |
+| 10/09 | 20:14:01–20:15:27 | 1:26 | 手動手順                 |
+| 10/09 | 20:29:09–20:35:44 | 6:35 | 初回評価・v2修正         |
+| 10/09 | 20:41:15–20:49:02 | 7:47 | v2評価・taskbar準備      |
+| 10/10 | 08:18:52–08:20:44 | 1:52 | external準備・記録       |
 | 10/11 | 14:25:04–14:30:22 | 5:18 | 必要情報/API表・最終判断 |
 
 累計33:07。10/09 20:55:43以降のtaskbar評価・ソース複製は終点未計測。10/11の初回／再試行評価・方針変更も厳密未計測。区間間差分（5:07、13:42、5:31等）と夜間は回答待ち中心／本人試行／中断／未計測作業を含むため純粋な待ち時間としない。
@@ -395,14 +394,14 @@ ChatGPT・VS Code、配置系、UI識別、日別保存、通知・全画面抑�
 
 製品実装ではない。ステップ3完了、現在追加試行は不要。API到達性／program変化／本人inputを区別し、実測は[技術検証記録](research-overview.md#measurements)、採用条件は[技術判断](research-overview.md#operations)。
 
-| ファイル | 用途／確認済み |
-| --- | --- |
-| NativeHealthProbe.cs／exe、run-native-health.ts | 自分の非表示窓のstate・rect・monitor・event・hook登録、TS→exe→JSON。input payload未読、自然input試行0 |
-| ManualWindowProbe.cs／exe | controller＋自作target。v1／v2実施済み。v2はdrag開始／終了比較、長いdrag1・往復0・key移動1・program最大化unknown |
-| TaskbarProbe.cs／exe | UIAで自分のbutton ID／class／rectだけ確認。mouse／Win+6でtarget一致の初期例。外部title／browser内容は読まない |
-| ExternalWindowProbe.cs／exe | 本人選択1窓のstate／monitor／限定input候補。Chrome4ケース、Obsidian key2取得。mouse由来／複合分類不備は未修正 |
-| InputOriginCandidate.cs、WindowStateSequence.cs | 候補・drag終端・state遷移の純粋ロジック |
-| OriginCandidateTests.cs／exe | 修正前失敗→回帰12件合格。OS配送／全app精度ではない |
+| ファイル                                        | 用途／確認済み                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| NativeHealthProbe.cs／exe、run-native-health.ts | 自分の非表示窓のstate・rect・monitor・event・hook登録、TS→exe→JSON。input payload未読、自然input試行0            |
+| ManualWindowProbe.cs／exe                       | controller＋自作target。v1／v2実施済み。v2はdrag開始／終了比較、長いdrag1・往復0・key移動1・program最大化unknown |
+| TaskbarProbe.cs／exe                            | UIAで自分のbutton ID／class／rectだけ確認。mouse／Win+6でtarget一致の初期例。外部title／browser内容は読まない    |
+| ExternalWindowProbe.cs／exe                     | 本人選択1窓のstate／monitor／限定input候補。Chrome4ケース、Obsidian key2取得。mouse由来／複合分類不備は未修正    |
+| InputOriginCandidate.cs、WindowStateSequence.cs | 候補・drag終端・state遷移の純粋ロジック                                                                          |
+| OriginCandidateTests.cs／exe                    | 修正前失敗→回帰12件合格。OS配送／全app精度ではない                                                               |
 
 共通：通常権限で本人がExplorerから起動、hook初期化trueを確認。異常／falseなら終了して報告。文字内容・title・URL等を保存せず、限定入力の候補を扱う。近接1秒は仮値、causalityConfirmed=false。monitor番号は出現順。controllerの×で監視解除・保存。最新のmanual-window-observations-20261009-113827-828.jsonl／taskbar-observations-20261009-115509-449.jsonl／external-window-observations-20261011-051237-322.jsonlとUTC時刻付き原本を保持、v1原本はmanual-window-observations-round1.jsonl。各試行間はresetで戻し2秒待つ。
 
@@ -422,12 +421,12 @@ ownMatches=1・slotCandidate1〜10・3hooks=trueを確認。mouse-switch／key-s
 
 対象appを通常サイズにする→「5秒後に手前のウィンドウを対象にする」→5秒以内に対象をclick→controllerでtarget-selectedのappと4hooks=trueを確認。対象を替えるたびに選び直す（再起動不要）。CodexとChatGPTは別。
 
-| label | 対象で行う操作／期待 |
-| --- | --- |
-| mouse-maximize | max button／maximize＋nearby-mouse |
-| key-maximize | 手前でWin+↑／maximize＋nearby-key |
+| label              | 対象で行う操作／期待                                             |
+| ------------------ | ---------------------------------------------------------------- |
+| mouse-maximize     | max button／maximize＋nearby-mouse                               |
+| key-maximize       | 手前でWin+↑／maximize＋nearby-key                                |
 | mouse-monitor-move | 通常窓を2秒以上かけて別画面へ完全drag／move-size-end＋drag-mouse |
-| key-monitor-move | 手前でWin+Shift+左右／画面変化＋nearby-key |
+| key-monitor-move   | 手前でWin+Shift+左右／画面変化＋nearby-key                       |
 
 resetを選び本人が通常サイズに戻し2秒待つ。できない操作は飛ばして報告し、unknown／recordなしを整えるために反復しない。保存buttonは監視継続、×は解除・保存。
 
@@ -444,5 +443,3 @@ node .\validation\probes\run-native-health.ts
 & $probeCompiler /nologo /out:.tools\validation\OriginCandidateTests.exe validation\probes\OriginCandidateTests.cs validation\probes\InputOriginCandidate.cs validation\probes\WindowStateSequence.cs
 & .\.tools\validation\OriginCandidateTests.exe
 ```
-
-

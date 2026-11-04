@@ -50,12 +50,12 @@ Electron＋TypeScript／React＋C#／Win32 helperを採用。既存のhelper→T
 
 C#は一般に最良と断定した選択ではない。この作業では既にWindows観測・UIA・TS接続のC#試作があり、実装の見通しを引き継げるため推奨する。既存probeの誤分類は引き継がず修正する。言語を分けることでhelperのビルド・配布確認が必要になる。
 
-| Module | 責務／Interface |
-| --- | --- |
-| Windows観測 | helper内で入力候補・対象窓・開始／終了状態・画面・UI識別をまとめる。start／stopと、完了した操作候補・稼働状態をJSON Linesで交換。キー生ログや窓タイトルは送らない |
-| 操作判定 | TS内で候補を評価し、採用可能な操作ID・mouse/key・同等キー・通知画面、または見送り理由を返す。操作ごとの前提と複合変化の扱いをここへ集める |
-| 利用制御・記録 | main内で稼働状態・セッション世代・通知間隔・操作別mute・日別数値・保存を一元管理。判定された1操作を1回だけ受理する |
-| 表示 | Reactの数値／設定画面と通知画面。狭いIPCを介して状態取得・設定変更・削除を要求する。OS観測やファイル書込みを直接行わない |
+| Module         | 責務／Interface                                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows観測    | helper内で入力候補・対象窓・開始／終了状態・画面・UI識別をまとめる。start／stopと、完了した操作候補・稼働状態をJSON Linesで交換。キー生ログや窓タイトルは送らない |
+| 操作判定       | TS内で候補を評価し、採用可能な操作ID・mouse/key・同等キー・通知画面、または見送り理由を返す。操作ごとの前提と複合変化の扱いをここへ集める                         |
+| 利用制御・記録 | main内で稼働状態・セッション世代・通知間隔・操作別mute・日別数値・保存を一元管理。判定された1操作を1回だけ受理する                                                |
+| 表示           | Reactの数値／設定画面と通知画面。狭いIPCを介して状態取得・設定変更・削除を要求する。OS観測やファイル書込みを直接行わない                                          |
 
 helperがOSの時間順序と入力候補の寿命を管理し、TSが操作の意味・通知するキーを判断する。判定の試験は同じ候補入力と結果出力を使い、既存probeを製品へそのまま移さない。
 
@@ -146,14 +146,14 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 
 ### 確認した範囲
 
-| 確認 | 結果 |
-| --- | --- |
-| npm test | 14件成功。判定の負例、重複・同時受信、keyへの無通知、停止／mute／頻度、保存失敗・再試行、保存遅延時の無通知、保持・削除、時計後退、形式検査・読み戻し、Native hook登録／解除・親stdin終了 |
-| npm run build | 最終のC# publish／TS型検査／Electron・React build成功 |
-| npm run smoke:coach | fixtureのmouse1・key1、重複／unknown0、JSON保存、React表示、非フォーカス通知、4秒消去、hook解除に成功 |
-| npm run package:dir | 最終実装のhelper同梱フォルダー作成成功。1回のrename EPERM後、再試行で解消 |
-| npm run smoke:coach:packaged | 同梱版でも同じ接続確認成功、終了コード0 |
-| 画面確認 | 自分の数値画面と通知のPNGを確認。日本語・数値・キー案内が表示される |
+| 確認                         | 結果                                                                                                                                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm test                     | 14件成功。判定の負例、重複・同時受信、keyへの無通知、停止／mute／頻度、保存失敗・再試行、保存遅延時の無通知、保持・削除、時計後退、形式検査・読み戻し、Native hook登録／解除・親stdin終了 |
+| npm run build                | 最終のC# publish／TS型検査／Electron・React build成功                                                                                                                                     |
+| npm run smoke:coach          | fixtureのmouse1・key1、重複／unknown0、JSON保存、React表示、非フォーカス通知、4秒消去、hook解除に成功                                                                                     |
+| npm run package:dir          | 最終実装のhelper同梱フォルダー作成成功。1回のrename EPERM後、再試行で解消                                                                                                                 |
+| npm run smoke:coach:packaged | 同梱版でも同じ接続確認成功、終了コード0                                                                                                                                                   |
+| 画面確認                     | 自分の数値画面と通知のPNGを確認。日本語・数値・キー案内が表示される                                                                                                                       |
 
 同梱版の試験データ・画像は`.tools/tests/coach-*`。通常の記録と分離し、公開データではない。当時の数値・通知画面を画像で確認した。固定画像は整理時に削除し、smokeで再生成できる。数値1／1はテストデータ。
 fixtureはNativeのテスト専用経路から人工候補を送る。hookは登録・解除するが、fixture中のcallbackはpayloadを読み込まない。キーの自動入力・本人への追加反復依頼は行っていない。
@@ -209,14 +209,14 @@ TDDの意図したred→greenは欠陥の手戻りと別に扱う。手戻りは
 
 ### 確認結果
 
-| 確認 | 結果・範囲 |
-| --- | --- |
-| npm install／npm ls --depth=0 | 成功。peer依存の不一致を解消した構成 |
-| npm run build | C# publish、TypeScript型検査、main／preload／Reactのproduction build成功。最終ビルドでNuGet情報取得の警告なし |
-| npm run smoke | 非表示のElectronでReact mount→preload IPC→main→helper JSON受信に成功、確認後終了 |
-| npm run smoke:dev | 開発用renderer serverを使う同じ接続確認に成功、確認後Electronと開発server終了 |
-| npm run package:dir | Windows x64実行フォルダーとhelper同梱に成功 |
-| npm run smoke:packaged | 最終更新した同梱フォルダーのexeで接続確認成功、終了コード0／SETUP_SMOKE_OK |
+| 確認                          | 結果・範囲                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| npm install／npm ls --depth=0 | 成功。peer依存の不一致を解消した構成                                                                          |
+| npm run build                 | C# publish、TypeScript型検査、main／preload／Reactのproduction build成功。最終ビルドでNuGet情報取得の警告なし |
+| npm run smoke                 | 非表示のElectronでReact mount→preload IPC→main→helper JSON受信に成功、確認後終了                              |
+| npm run smoke:dev             | 開発用renderer serverを使う同じ接続確認に成功、確認後Electronと開発server終了                                 |
+| npm run package:dir           | Windows x64実行フォルダーとhelper同梱に成功                                                                   |
+| npm run smoke:packaged        | 最終更新した同梱フォルダーのexeで接続確認成功、終了コード0／SETUP_SMOKE_OK                                    |
 
 helperのhealth応答はprotocolVersion=1、runtime=.NET 10.0.12、architecture=X64、monitorCount=2、ownWindowPlacement=true、ownWindowRect=true、uiAutomationLinked=true、observationActive=false。
 

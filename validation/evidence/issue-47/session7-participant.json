@@ -1,11 +1,23 @@
 {
- "session":"session7",
- "revision":"e8b6752518aa427990600142566009dabc32ef25",
- "participantReport":"Twelve placement cases completed; left-top mouse may have been labelled key. If two P07k-left-top trials exist, treat the first as mouse. Mouse left-top and left-bottom had no notifications; right-top and right-bottom showed notifications.",
- "windowResults":"Participant explicitly confirmed both left mouse cases reached their expected quarter placements",
- "corrections":[{"trial":5,"originalCaseId":"P07k-left-top","correctedCaseId":"P07m-left-top","expectedOrigin":"mouse","expectedNotificationRequests":1,"basis":"explicit participant instruction applied because two original key-labelled trials exist","inputOriginEvidence":"not recoverable from zero candidates; keep participant correction separate from machine evidence","correctedRecordsPassed":false,"correctedNotificationRequestPassed":false}],
- "machinePassedTrials":[1,2,3,4,6,7,8,10,11,12],
- "failedTrials":[5,9],
- "failureBoundary":"Both left mouse cases had zero candidates, records and notification requests; source case correction does not add or rewrite product counts",
- "shortcutEquivalence":"not separately verified"
+  "session": "session7",
+  "revision": "e8b6752518aa427990600142566009dabc32ef25",
+  "participantReport": "Twelve placement cases completed; left-top mouse may have been labelled key. If two P07k-left-top trials exist, treat the first as mouse. Mouse left-top and left-bottom had no notifications; right-top and right-bottom showed notifications.",
+  "windowResults": "Participant explicitly confirmed both left mouse cases reached their expected quarter placements",
+  "corrections": [
+    {
+      "trial": 5,
+      "originalCaseId": "P07k-left-top",
+      "correctedCaseId": "P07m-left-top",
+      "expectedOrigin": "mouse",
+      "expectedNotificationRequests": 1,
+      "basis": "explicit participant instruction applied because two original key-labelled trials exist",
+      "inputOriginEvidence": "not recoverable from zero candidates; keep participant correction separate from machine evidence",
+      "correctedRecordsPassed": false,
+      "correctedNotificationRequestPassed": false
+    }
+  ],
+  "machinePassedTrials": [1, 2, 3, 4, 6, 7, 8, 10, 11, 12],
+  "failedTrials": [5, 9],
+  "failureBoundary": "Both left mouse cases had zero candidates, records and notification requests; source case correction does not add or rewrite product counts",
+  "shortcutEquivalence": "not separately verified"
 }

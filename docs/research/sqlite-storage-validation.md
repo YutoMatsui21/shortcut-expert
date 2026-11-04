@@ -6,13 +6,13 @@
 
 **採用**：Electron同梱Nodeの`node:sqlite`を**専用Worker内の単一SQLite writer**から使用し、`WAL + synchronous=FULL`、commit後のACK、同じID／payloadの冪等再試行を組み合わせる。
 
-| 選択肢・方式 | 研究時の判断 |
-| --- | --- |
-| 旧JSONへの日別上書き | 実装は単純でも、書込の原子性・ACK喪失・移行時の原本保護を自前で設計する必要がある。新規のauthorityとしては採用しない |
-| 外部SQLiteバインディング | Electron配布環境の互換・追加native依存を増やす。固定版同梱`node:sqlite`で配布probeが成立したため採用しなかった |
-| Mainスレッドで同期SQLite | 同期DB操作がUI／メッセージ処理を止めるリスクがある。**専用Workerに閉じ込める** |
-| WAL／`synchronous=NORMAL` | commit済みの更新が停電等で戻り得る。FULLを選び、正常値`2`を検査する |
-| DBに集計のみ保存 | ACK喪失後の再送で二重加算しかねない。**sequence・payload一致とcheckpointを同一transaction**に含める |
+| 選択肢・方式              | 研究時の判断                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 旧JSONへの日別上書き      | 実装は単純でも、書込の原子性・ACK喪失・移行時の原本保護を自前で設計する必要がある。新規のauthorityとしては採用しない |
+| 外部SQLiteバインディング  | Electron配布環境の互換・追加native依存を増やす。固定版同梱`node:sqlite`で配布probeが成立したため採用しなかった       |
+| Mainスレッドで同期SQLite  | 同期DB操作がUI／メッセージ処理を止めるリスクがある。**専用Workerに閉じ込める**                                       |
+| WAL／`synchronous=NORMAL` | commit済みの更新が停電等で戻り得る。FULLを選び、正常値`2`を検査する                                                  |
+| DBに集計のみ保存          | ACK喪失後の再送で二重加算しかねない。**sequence・payload一致とcheckpointを同一transaction**に含める                  |
 
 ## 2. 検証で確認したこと・確認していないこと
 

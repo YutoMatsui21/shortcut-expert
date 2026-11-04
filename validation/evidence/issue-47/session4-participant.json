@@ -1,9 +1,9 @@
 {
- "session":"session4",
- "revision":"b22b883d31a618af02bba19d4e6c21e8d2bb4a55",
- "participantReport":"All three caption trials completed and no notifications appeared",
- "cases":["S03-double","S04-double","S03-drag"],
- "commonObservedCause":"Root WM_NCHITTEST returned HTCLIENT for each target press; TITLEBARINFOEX succeeded but its bar did not contain the press; final hit was not caption. Candidate origin/route remained unknown and Core declined it.",
- "unresolved":"Whether the actual hit child window exposes HTCAPTION, or Explorer uses an independent custom drag region, remains unknown. No input point, geometry, class name or title was retained.",
- "classifierUnchanged":true
+  "session": "session4",
+  "revision": "b22b883d31a618af02bba19d4e6c21e8d2bb4a55",
+  "participantReport": "All three caption trials completed and no notifications appeared",
+  "cases": ["S03-double", "S04-double", "S03-drag"],
+  "commonObservedCause": "Root WM_NCHITTEST returned HTCLIENT for each target press; TITLEBARINFOEX succeeded but its bar did not contain the press; final hit was not caption. Candidate origin/route remained unknown and Core declined it.",
+  "unresolved": "Whether the actual hit child window exposes HTCAPTION, or Explorer uses an independent custom drag region, remains unknown. No input point, geometry, class name or title was retained.",
+  "classifierUnchanged": true
 }

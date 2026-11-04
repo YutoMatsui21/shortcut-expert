@@ -6,19 +6,20 @@ Shortcut Expertを**開発・実行・検証するための手順**。製品の�
 
 対象はWindows x64。Node.js／npmは[package.json](../package.json)、.NET SDKは[global.json](../global.json)の指定に従う。PowerShellでリポジトリのルートから実行する。
 
-~~~powershell
+```powershell
 pwsh -File .\scripts\setup-dotnet.ps1
 npm.cmd run dev:install
 npm.cmd run dev:check -- --require=electron,sdk
 npm.cmd run build
 npm.cmd run dev
-~~~
+```
 
 - `dev:check`はTEMP/cacheの書込と部品の**存在**を確認する。ソースの新しさや実行成功は保証しない。
 - `build`はC# helperのpublish、型検査、Electron bundleを作成する。SDKは`.tools/dotnet`へ導入し、通常はシステムPATHを変更しない。
 - 画面の×はウィンドウを隠し、トレイでの動作を継続する。**完全終了**はトレイの「終了」を使用する。未インストール時と配布版で保存先が異なるので、テストには隔離データを使う。
 
 <a id="development-workflow"></a>
+
 ## 2. 普段の開発フロー
 
 1. `git status --short --branch`、`git worktree list`で作業先を確認し、Issueの受入条件と影響範囲を読む。
@@ -31,33 +32,34 @@ npm.cmd run dev
 
 ## 3. 主なコマンド
 
-| 目的 | コマンド |
-| --- | --- |
-| 環境確認 | `npm.cmd run dev:check` |
-| 開発起動 | `npm.cmd run dev` |
-| 型検査 | `npm.cmd run typecheck` |
-| 速いunitテスト | `npm.cmd run test:unit` |
-| Nativeを含む全テスト | `npm.cmd test` |
-| C# helperの再生成 | `npm.cmd run helper:build` |
-| 隔離Electron試験 | `npm.cmd run smoke` |
-| 配布フォルダー作成 | `npm.cmd run package:dir` |
-| 配布フォルダーの試験 | `npm.cmd run smoke:packaged` |
-| 保存の受入試験 | `npm.cmd run acceptance:storage` |
-| NSISインストーラー作成 | `npm.cmd run package:installer` |
+| 目的                   | コマンド                         |
+| ---------------------- | -------------------------------- |
+| 環境確認               | `npm.cmd run dev:check`          |
+| 開発起動               | `npm.cmd run dev`                |
+| 型検査                 | `npm.cmd run typecheck`          |
+| 速いunitテスト         | `npm.cmd run test:unit`          |
+| Nativeを含む全テスト   | `npm.cmd test`                   |
+| C# helperの再生成      | `npm.cmd run helper:build`       |
+| 隔離Electron試験       | `npm.cmd run smoke`              |
+| 配布フォルダー作成     | `npm.cmd run package:dir`        |
+| 配布フォルダーの試験   | `npm.cmd run smoke:packaged`     |
+| 保存の受入試験         | `npm.cmd run acceptance:storage` |
+| NSISインストーラー作成 | `npm.cmd run package:installer`  |
 
 正確なコマンドと組み合わせ順は[package.json](../package.json)の`scripts`を正本とする。配布版smokeは**その回でbuildしたexeとhelper**を対象に実行する。`package:installer`は配布を自動で承認・公開するものではない。
 
 <a id="修正中のテスト絞り込み"></a>
+
 ### 修正中のテスト絞り込み
 
 関連するテストだけ先に実行し、変更がまとまってから影響する層へ広げる。
 
-~~~powershell
+```powershell
 npm.cmd run test:unit -- --file=app/ipc/ipc-command-handlers.test.ts
 npm.cmd run test:unit -- --file=app/ipc/native-message-protocol.test.ts --test-name-pattern=v2
 npm.cmd run helper:build
 node scripts/test/test.mjs native --file=native/native-operation-policy.test.ts
-~~~
+```
 
 `--file=`は`tests/`からの相対パス、またはsuite内で一意のファイル名を指定する。同名が複数ある場合は相対パスを使う。探索は再帰的に行い、`native/`配下がnative、それ以外がunitとなる（`support/`・`fixtures/`・生成物の`bin/`・`obj/`は探索対象外）。`--test-reporter=spec|tap|dot`と`--test-concurrency=1|2|4|8`も利用できる。**絞り込みの成功を全件合格とは扱わない。** `test:coverage`はimport済みNode対象だけで、RendererやC#を含む全体coverageではない。
 
@@ -65,13 +67,13 @@ node scripts/test/test.mjs native --file=native/native-operation-policy.test.ts
 
 ## 4. 検証の種類と限界
 
-| 検証 | 何を確かめるか |
-| --- | --- |
-| unit / native | 判定・保存・IPC・C# policy・プロトコルの回帰。実入力は観測しない |
-| `smoke` | 隔離候補を通したMain → Preload → React・SQLite・通知adapterの結合 |
-| `smoke:packaged` | 配布用のexe・helper・preloadが同梱され動作すること |
-| 自然入力の実機受入 | 代表アプリで実際のマウス／キー入力と検出結果・案内を照合 |
-| NSIS受入 | インストール／再インストール／通知クリック／アンインストール・データ保護 |
+| 検証               | 何を確かめるか                                                           |
+| ------------------ | ------------------------------------------------------------------------ |
+| unit / native      | 判定・保存・IPC・C# policy・プロトコルの回帰。実入力は観測しない         |
+| `smoke`            | 隔離候補を通したMain → Preload → React・SQLite・通知adapterの結合        |
+| `smoke:packaged`   | 配布用のexe・helper・preloadが同梱され動作すること                       |
+| 自然入力の実機受入 | 代表アプリで実際のマウス／キー入力と検出結果・案内を照合                 |
+| NSIS受入           | インストール／再インストール／通知クリック／アンインストール・データ保護 |
 
 自然入力の観測は**本人の明示的な同意後**に、対象build・操作手順・隔離保存先を確定して実施する。自作fixtureと通常の記録を混ぜず、実測結果には未確認条件も記す。技術調査の判断根拠は[research/](research/)、操作ごとの実装上の制約は[operations/](operations/)、実機・配布の受入条件は[製品要件](ui-requirements.md#release-acceptance)と対応するGitHub Issueを正本とする。検証コードと証拠原本はリポジトリ直下の`tests/`・`scripts/`・`validation/`を参照する。
 

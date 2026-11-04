@@ -1,1 +1,44 @@
-{"sequence":5,"state":"CLOSED","error":false,"results":[{"trial":1,"kind":"mouse","application":"standard","state":"learning","paused":false,"scenario":"direct","completed":true,"valid":true,"interrupted":false,"expired":false,"counts":{"mouse":0,"key":0},"notificationRequests":0,"detectorPassed":false,"notificationRequestPassed":false,"w12Counts":{"mouse":0,"key":0},"coexistencePassed":true},{"trial":2,"kind":"mouse","application":"standard","state":"learning","paused":false,"scenario":"direct","completed":true,"valid":true,"interrupted":false,"expired":false,"counts":{"mouse":0,"key":0},"notificationRequests":0,"detectorPassed":false,"notificationRequestPassed":false,"w12Counts":{"mouse":0,"key":0},"coexistencePassed":true}],"visibleNotification":"unverified; API requests are not visible OS delivery"}
+{
+  "sequence": 5,
+  "state": "CLOSED",
+  "error": false,
+  "results": [
+    {
+      "trial": 1,
+      "kind": "mouse",
+      "application": "standard",
+      "state": "learning",
+      "paused": false,
+      "scenario": "direct",
+      "completed": true,
+      "valid": true,
+      "interrupted": false,
+      "expired": false,
+      "counts": { "mouse": 0, "key": 0 },
+      "notificationRequests": 0,
+      "detectorPassed": false,
+      "notificationRequestPassed": false,
+      "w12Counts": { "mouse": 0, "key": 0 },
+      "coexistencePassed": true
+    },
+    {
+      "trial": 2,
+      "kind": "mouse",
+      "application": "standard",
+      "state": "learning",
+      "paused": false,
+      "scenario": "direct",
+      "completed": true,
+      "valid": true,
+      "interrupted": false,
+      "expired": false,
+      "counts": { "mouse": 0, "key": 0 },
+      "notificationRequests": 0,
+      "detectorPassed": false,
+      "notificationRequestPassed": false,
+      "w12Counts": { "mouse": 0, "key": 0 },
+      "coexistencePassed": true
+    }
+  ],
+  "visibleNotification": "unverified; API requests are not visible OS delivery"
+}

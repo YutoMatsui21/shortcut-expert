@@ -6,16 +6,16 @@
 
 2026-10-28の[#9](https://github.com/YutoMatsui21/shortcut-expert/issues/9)では、自作標準WinForms窓・上下2画面を中心に**33件の自然操作を観測**。その時点では5操作が制約付き着手可、3操作が必要範囲未成立だった。その後[#14の16件追加調査](compound-drag-validation.md)により、**8操作すべて制約付き着手PASS**へ変更された。これは**検出実装・製品受入PASSではない**。
 
-| 操作 | 実測で得た手掛かり | 再調査時の障壁・代替案 |
-| --- | --- | --- |
-| W12 | 主タスクバーの番号・Win+数字 | UIA Buttonの識別・番号の前後一致。secondary／overflow等は不明扱い。[詳細](taskbar-input-validation.md) |
-| W01 | 直接クリック、Alt+Tab後の別窓確定 | foreground変化だけでは因果を示さない。入力対象＋WinEvent＋最後の照会を照合。[詳細](window-switch-validation.md) |
-| W03 | ボタン／ダブルクリック／上端drag→最大化 | 同じ形状でもSnap Layout選択・program変化がある。caption入力・drag終端・結果の相関が必要 |
-| W04 | 復元／最小化、連続Win+↓ | `WM_NCHITTEST`だけでは最小化ボタンをcaptionと誤認した。`TITLEBARINFOEX`の有効矩形を代替根拠にする |
-| W06 | 左右halfのdrag／Win+方向 | `IsWindowArranged`とDWM形状だけでは入力原因不明。終端までの同一対象・物理解放を照合 |
-| W07 | 四隅quarterとWin保持中のhalf→quarter | 中間halfをW06として先に記録しない。上側隅は画面移動を伴い、W02との複合計測が必要 |
-| W02 | 始終monitorの違い、Win+Shift+方向 | monitor番号を左右の物理方向と同一視しない。戻し・取消・画面構成変更を区別 |
-| W11 | ×／Alt+F4と同じ窓の破棄 | クリック・前景変更だけで確定しない。対象・thread・破棄を照合し、hide・確認取消を除外 |
+| 操作 | 実測で得た手掛かり                      | 再調査時の障壁・代替案                                                                                          |
+| ---- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| W12  | 主タスクバーの番号・Win+数字            | UIA Buttonの識別・番号の前後一致。secondary／overflow等は不明扱い。[詳細](taskbar-input-validation.md)          |
+| W01  | 直接クリック、Alt+Tab後の別窓確定       | foreground変化だけでは因果を示さない。入力対象＋WinEvent＋最後の照会を照合。[詳細](window-switch-validation.md) |
+| W03  | ボタン／ダブルクリック／上端drag→最大化 | 同じ形状でもSnap Layout選択・program変化がある。caption入力・drag終端・結果の相関が必要                         |
+| W04  | 復元／最小化、連続Win+↓                 | `WM_NCHITTEST`だけでは最小化ボタンをcaptionと誤認した。`TITLEBARINFOEX`の有効矩形を代替根拠にする               |
+| W06  | 左右halfのdrag／Win+方向                | `IsWindowArranged`とDWM形状だけでは入力原因不明。終端までの同一対象・物理解放を照合                             |
+| W07  | 四隅quarterとWin保持中のhalf→quarter    | 中間halfをW06として先に記録しない。上側隅は画面移動を伴い、W02との複合計測が必要                                |
+| W02  | 始終monitorの違い、Win+Shift+方向       | monitor番号を左右の物理方向と同一視しない。戻し・取消・画面構成変更を区別                                       |
+| W11  | ×／Alt+F4と同じ窓の破棄                 | クリック・前景変更だけで確定しない。対象・thread・破棄を照合し、hide・確認取消を除外                            |
 
 ## 2. 再利用する判断原則
 

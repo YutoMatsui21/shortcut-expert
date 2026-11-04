@@ -5,12 +5,5 @@
   "operatorResult": "not-observed in original panel; user later confirmed all expected",
   "visibleNotification": "not-seen in original panel; user later confirmed all expected including no-notice cases",
   "keyEquivalence": "not-tested",
-  "trials": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6
-  ]
+  "trials": [1, 2, 3, 4, 5, 6]
 }
