@@ -3,7 +3,15 @@
   "revision": "24bd47c4a29ec44b6a87fd748b62943e079b18d4",
   "participantReport": "Completed ten cases; notifications absent for S03-double, S04-double and S03-drag",
   "windowResults": "Participant explicitly confirmed all three windows changed as expected: maximize, restore, maximize",
-  "machinePassedCases": ["P03m", "P04m", "P03k", "P04k", "S04-min-max", "S04-min-normal", "S04-repeat"],
+  "machinePassedCases": [
+    "P03m",
+    "P04m",
+    "P03k",
+    "P04k",
+    "S04-min-max",
+    "S04-min-normal",
+    "S04-repeat"
+  ],
   "machineFailedCases": ["S03-double", "S04-double", "S03-drag"],
   "failureBoundary": "Each failed case received one candidate, but Core classification returned no observation; no persistence or notification request",
   "cause": "unknown; caption input correlation is a hypothesis pending bounded diagnostics"

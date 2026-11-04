@@ -19,9 +19,7 @@
       "samples": 19,
       "workersCompleted": 18,
       "snapshotEnds": 18,
-      "osBuilds": [
-        26340
-      ],
+      "osBuilds": [26340],
       "roots": 325,
       "xamlRoots": 2,
       "ownerMatches": 0,
@@ -44,9 +42,7 @@
       "samples": 11,
       "workersCompleted": 11,
       "snapshotEnds": 11,
-      "osBuilds": [
-        26340
-      ],
+      "osBuilds": [26340],
       "roots": 0,
       "xamlRoots": 0,
       "ownerMatches": 0,
@@ -69,9 +65,7 @@
       "samples": 13,
       "workersCompleted": 13,
       "snapshotEnds": 13,
-      "osBuilds": [
-        26340
-      ],
+      "osBuilds": [26340],
       "roots": 0,
       "xamlRoots": 0,
       "ownerMatches": 0,
@@ -94,9 +88,7 @@
       "samples": 11,
       "workersCompleted": 11,
       "snapshotEnds": 11,
-      "osBuilds": [
-        26340
-      ],
+      "osBuilds": [26340],
       "roots": 0,
       "xamlRoots": 0,
       "ownerMatches": 0,

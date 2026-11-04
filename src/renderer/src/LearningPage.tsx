@@ -87,7 +87,9 @@ export function LearningPage({
                       <div className="rate-line">
                         <span className="key-rate">
                           キー率：
-                          {row?.rate == null ? "ー" : row.rate.toFixed(1) + "%"}{" "}
+                          {row?.rate == null
+                            ? "ー"
+                            : row.rate.toFixed(1) + "%"}{" "}
                           {row?.total == null
                             ? "記録なし"
                             : `（${row.key}/${row.total}）`}

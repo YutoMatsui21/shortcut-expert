@@ -14,18 +14,18 @@
 
 実際に既存60件が全て成功した状態でも、設定保存失敗後の再試行が最新の設定を古い値に戻すケースを隔離データで再現した。まず、この種の具体的な不具合を回帰ケースにし、既存検証をCIに載せ、本番の判定境界をテスト可能にする順序が妥当である。
 
-| 優先 | 不足 | 主な影響 | 最初の対応 |
-| --- | --- | --- | --- |
-| P0・次の開発前 | CIと必須チェックの運用 | ローカルで通る変更しか確認できず、実行漏れを防げない | PR・mainに型検査、純粋テスト、helper/Electronビルドを設定する |
-| P0・次の修正 | 設定保存失敗後の複合遷移 | 再試行で古い通知設定が復活する、実再現あり | 失敗→別の設定変更→再試行の回帰テストと修正 |
-| P0・検出機能の拡張前 | 本番Observerの入力・状態ロジック試験 | マウス／キー由来の誤分類、取りこぼし、重複 | 本番の候補生成を人工イベント列で検証できる小さな境界を設ける |
-| P1・公開前 | helper通信・終了・再開の異常系 | 停止解除失敗、待ち続けるUI、旧世代の通知・記録 | 応答遅延、異常終了、壊れたJSON、古い応答の契約試験 |
-| P1・公開前 | 通知とUI制御の自動回帰 | 設定・削除・停止・日付選択の故障がsmokeを通過 | 利用者操作による少数のUI試験、通知の遅延応答試験 |
-| P1・公開前 | 配布物・導入・再導入・終了の試験 | 開発版だけ起動し、配布物ではhelper不足やデータ消失 | 新規buildから同梱smoke、隔離VMでNSISライフサイクル |
-| P1・公開前 | 実入力と対応条件を結ぶ受入表 | 人工試験成功を認識精度と取り違える | 既存のmouse/key/負例/60分基準を成果物に結び付ける |
-| P1・公開前 | Electron・プライバシー境界の回帰 | IPC権限の広がり、試験データ混入、生データ保存 | 不正sender／payload拒否と許可された保存内容の検証 |
-| P2・段階導入 | coverage、mutation、依存更新、静的解析 | 見逃している分岐や依存リスクが見えにくい | 対象を明示したcoverage、重要条件だけmutation、更新後に再検証 |
-| P2・段階導入 | 性能・耐久・アクセシビリティ・診断 | 入力への影響や長時間の劣化、操作しづらさ、原因不明 | 隔離負荷試験、キーボード操作、内容を含まない診断設計 |
+| 優先                 | 不足                                   | 主な影響                                             | 最初の対応                                                    |
+| -------------------- | -------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------- |
+| P0・次の開発前       | CIと必須チェックの運用                 | ローカルで通る変更しか確認できず、実行漏れを防げない | PR・mainに型検査、純粋テスト、helper/Electronビルドを設定する |
+| P0・次の修正         | 設定保存失敗後の複合遷移               | 再試行で古い通知設定が復活する、実再現あり           | 失敗→別の設定変更→再試行の回帰テストと修正                    |
+| P0・検出機能の拡張前 | 本番Observerの入力・状態ロジック試験   | マウス／キー由来の誤分類、取りこぼし、重複           | 本番の候補生成を人工イベント列で検証できる小さな境界を設ける  |
+| P1・公開前           | helper通信・終了・再開の異常系         | 停止解除失敗、待ち続けるUI、旧世代の通知・記録       | 応答遅延、異常終了、壊れたJSON、古い応答の契約試験            |
+| P1・公開前           | 通知とUI制御の自動回帰                 | 設定・削除・停止・日付選択の故障がsmokeを通過        | 利用者操作による少数のUI試験、通知の遅延応答試験              |
+| P1・公開前           | 配布物・導入・再導入・終了の試験       | 開発版だけ起動し、配布物ではhelper不足やデータ消失   | 新規buildから同梱smoke、隔離VMでNSISライフサイクル            |
+| P1・公開前           | 実入力と対応条件を結ぶ受入表           | 人工試験成功を認識精度と取り違える                   | 既存のmouse/key/負例/60分基準を成果物に結び付ける             |
+| P1・公開前           | Electron・プライバシー境界の回帰       | IPC権限の広がり、試験データ混入、生データ保存        | 不正sender／payload拒否と許可された保存内容の検証             |
+| P2・段階導入         | coverage、mutation、依存更新、静的解析 | 見逃している分岐や依存リスクが見えにくい             | 対象を明示したcoverage、重要条件だけmutation、更新後に再検証  |
+| P2・段階導入         | 性能・耐久・アクセシビリティ・診断     | 入力への影響や長時間の劣化、操作しづらさ、原因不明   | 隔離負荷試験、キーボード操作、内容を含まない診断設計          |
 
 P0は全機能を停止させる緊急度の意味ではなく、次の開発で先に整備する項目。P1は既存の公開条件を満たすための検証基盤を含む。P2は実測・工数に応じて段階導入する。
 
@@ -33,17 +33,17 @@ P0は全機能を停止させる緊急度の意味ではなく、次の開発で
 
 ### 実行結果
 
-| 確認 | 今回の結果 | 言える範囲 |
-| --- | --- | --- |
-| `npm.cmd test` | helper publish成功、60件成功・失敗0・skip0。サブテストを含む | 現行の自動ケースの成功。実入力認識率ではない |
-| `npm.cmd run typecheck` | 成功 | 現行tsconfigの型検査 |
-| `npm.cmd run build` | helper・型検査・main/preload/rendererビルド成功 | 開発環境でのビルド成立 |
-| `npm.cmd run smoke` | 制限環境では出力なしで失敗。GUI起動許可を得た再実行で成功 | 人工mouse1/key1、重複・unknown除外、React反映、focus不変、通知消去、hook停止。`realDisplayContext=false` |
-| 純TSテストのcoverage | 56件成功。読み込まれた対象のline 91.55%、branch 95.15%、function 91.23% | C#・Renderer・Electron制御・observer・notificationを含む製品全体の率ではない |
-| 設定の複合遷移の追加probe | 古い設定の復活を再現 | インメモリーrepositoryによる失敗注入。実入力・通常の保存データは不使用 |
-| GitHub Actions一覧 | `total_count=0` | GitHub APIで確認した登録workflow数 |
-| ローカルCI定義 | `.github`なし。Git追跡ファイルに別CI定義も見当たらない | この作業ツリーで確認した範囲 |
-| リポジトリ情報・rulesets | `main`、private。rulesets照会はプラン要件で403 | rulesets・必須チェックの適用状況は確認できていない。不存在とは断定しない |
+| 確認                      | 今回の結果                                                              | 言える範囲                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `npm.cmd test`            | helper publish成功、60件成功・失敗0・skip0。サブテストを含む            | 現行の自動ケースの成功。実入力認識率ではない                                                             |
+| `npm.cmd run typecheck`   | 成功                                                                    | 現行tsconfigの型検査                                                                                     |
+| `npm.cmd run build`       | helper・型検査・main/preload/rendererビルド成功                         | 開発環境でのビルド成立                                                                                   |
+| `npm.cmd run smoke`       | 制限環境では出力なしで失敗。GUI起動許可を得た再実行で成功               | 人工mouse1/key1、重複・unknown除外、React反映、focus不変、通知消去、hook停止。`realDisplayContext=false` |
+| 純TSテストのcoverage      | 56件成功。読み込まれた対象のline 91.55%、branch 95.15%、function 91.23% | C#・Renderer・Electron制御・observer・notificationを含む製品全体の率ではない                             |
+| 設定の複合遷移の追加probe | 古い設定の復活を再現                                                    | インメモリーrepositoryによる失敗注入。実入力・通常の保存データは不使用                                   |
+| GitHub Actions一覧        | `total_count=0`                                                         | GitHub APIで確認した登録workflow数                                                                       |
+| ローカルCI定義            | `.github`なし。Git追跡ファイルに別CI定義も見当たらない                  | この作業ツリーで確認した範囲                                                                             |
+| リポジトリ情報・rulesets  | `main`、private。rulesets照会はプラン要件で403                          | rulesets・必須チェックの適用状況は確認できていない。不存在とは断定しない                                 |
 
 Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[global.json](../../../global.json)と整合。過去のdesign.mdにある成功記録を今回の成功として転記していない。
 
@@ -51,29 +51,29 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 ### 見つかった既存の良い設計
 
-| 仕組み | 根拠 | 評価 |
-| --- | --- | --- |
-| Coreへの時計・保存・通知の注入 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、[coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 時間境界と失敗を決定的に再現できる。維持すべき |
-| 期限1999/2000/2001ms、頻度10秒/60秒の境界 | [coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 実装の条件式が変わった時に有効 |
-| 世代・sequence・除外候補の消費 | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、関連テスト | 重複と停止後の候補を排除する基盤 |
-| 保存文書の厳格な検証と原本保持 | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)、[repository.test.ts](../../../tests/repository.test.ts) | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
-| 書込み直列化・一時ファイル・sync・rename | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts) | 通常の途中書込みに備える。電源断までの保証は別検証 |
-| SerialQueueの失敗後の継続を試験 | [serial-queue.test.ts](../../../tests/serial-queue.test.ts) | Promise失敗で後続が詰まる回帰を検出する |
-| 隔離データ・入力payloadを読まないfixture | [main/index.ts](../../../src/main/index.ts)、[Observer](https://github.com/YutoMatsui21/shortcut-expert/blob/2a83b76d2fe30cc979dff0f017d9c5e0b98977ea/native-helper/Observer.cs) | 既存データと実入力を使わず接続試験できる |
-| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../../src/main/coach-app.ts)、[notification.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)、[preload](../../../src/preload/index.ts) | 基本防御は実装済み。欠けているのは主に回帰検証 |
-| 人工入力・技術probe・実入力の区別 | [開発・検証ガイド](../../development.md)、[research](../research/research-overview.md#measurements) | 製品の認識精度を過大に説明しない良い方針 |
-| lockfile、依存版、SDKの指定、publish後のhelper置換 | [package.json](../../../package.json)、[build-helper](../../../scripts/dev/build-helper.mjs) | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題 |
+| 仕組み                                                    | 根拠                                                                                                                                                                                                                                                         | 評価                                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Coreへの時計・保存・通知の注入                            | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、[coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts) | 時間境界と失敗を決定的に再現できる。維持すべき           |
+| 期限1999/2000/2001ms、頻度10秒/60秒の境界                 | [coach.test.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/tests/coach.test.ts)                                                                                                                           | 実装の条件式が変わった時に有効                           |
+| 世代・sequence・除外候補の消費                            | [Coach](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)、関連テスト                                                                                                                         | 重複と停止後の候補を排除する基盤                         |
+| 保存文書の厳格な検証と原本保持                            | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)、[repository.test.ts](../../../tests/repository.test.ts)                                                               | 27サブケースを含む異常文書試験。集計の黙った初期化を防ぐ |
+| 書込み直列化・一時ファイル・sync・rename                  | [repository.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/repository.ts)                                                                                                                        | 通常の途中書込みに備える。電源断までの保証は別検証       |
+| SerialQueueの失敗後の継続を試験                           | [serial-queue.test.ts](../../../tests/serial-queue.test.ts)                                                                                                                                                                                                  | Promise失敗で後続が詰まる回帰を検出する                  |
+| 隔離データ・入力payloadを読まないfixture                  | [main/index.ts](../../../src/main/index.ts)、[Observer](https://github.com/YutoMatsui21/shortcut-expert/blob/2a83b76d2fe30cc979dff0f017d9c5e0b98977ea/native-helper/Observer.cs)                                                                             | 既存データと実入力を使わず接続試験できる                 |
+| Electron sandbox・contextIsolation・Node無効・狭いpreload | [coach-app.ts](../../../src/main/coach-app.ts)、[notification.ts](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)、[preload](../../../src/preload/index.ts)                          | 基本防御は実装済み。欠けているのは主に回帰検証           |
+| 人工入力・技術probe・実入力の区別                         | [開発・検証ガイド](../../development.md)、[research](../research/research-overview.md#measurements)                                                                                                                                                          | 製品の認識精度を過大に説明しない良い方針                 |
+| lockfile、依存版、SDKの指定、publish後のhelper置換        | [package.json](../../../package.json)、[build-helper](../../../scripts/dev/build-helper.mjs)                                                                                                                                                                 | 再現性の基盤がある。クリーンCIと配布物の照合が次の課題   |
 
 ## 3. 再現できた不具合：設定の再試行が最新操作を取り消す
 
 対象：[Coach.setMuted / retrySave](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/core/coach.ts)。`setMuted`の保存失敗で`pendingSettings`を保持する一方、後の`setMuted`成功では、その古い保留値を解消しない。
 
-| 手順 | 保存結果・状態 |
-| --- | --- |
-| 1. W03をmuteする設定保存を意図的に失敗させる | 保存済みは通知ON、保留は通知OFF。観測停止・pendingSaveあり |
-| 2. 保存先を復旧し、もう一度W03をmuteして正常保存する | 通知OFFを保存。ただし古い保留が残る |
-| 3. W03のmute解除を正常保存する | 最新の正常保存は通知ON。それでも古い通知OFFの保留が残る |
-| 4. 「保存を再試行」に相当する`retrySave()`を呼ぶ | 古い保留が保存され、通知OFFに戻る |
+| 手順                                                 | 保存結果・状態                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------- |
+| 1. W03をmuteする設定保存を意図的に失敗させる         | 保存済みは通知ON、保留は通知OFF。観測停止・pendingSaveあり |
+| 2. 保存先を復旧し、もう一度W03をmuteして正常保存する | 通知OFFを保存。ただし古い保留が残る                        |
+| 3. W03のmute解除を正常保存する                       | 最新の正常保存は通知ON。それでも古い通知OFFの保留が残る    |
+| 4. 「保存を再試行」に相当する`retrySave()`を呼ぶ     | 古い保留が保存され、通知OFFに戻る                          |
 
 今回の人工repositoryで、手順3後の`settings.muted=[]`、手順4後の`settings.muted=['W03']`をassertして再現した。[UI](../../../src/renderer/src/CoachApp.tsx)もmute操作を`pendingSave`だけでは無効化していないため、この操作列を排除している設計ではない。ただし、実UIでディスク障害を起こす試験は未実施。
 
@@ -91,17 +91,17 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 最初のケース：
 
-| イベント・条件 | 期待する性質 |
-| --- | --- |
-| 標準max button→同一窓の通常→最大化 | mouse候補を一度だけ出す |
-| captionの2click、時間・距離の内外 | 成立時だけdouble-click経路。設定されたWindows条件も確認 |
-| Win+↑、左右Win、不要なmodifier、キーrepeat | 成立経路以外をkeyと断定せず、重複しない |
-| injected／lower integrity injected、mouseとkeyの競合 | 誤通知・誤計上につながる確定候補を作らない |
-| 999/1000/1001ms、配送遅延、イベント重複、順序違い | 入力寿命と実際の状態遷移の契約を守る |
-| 対象窓の破棄、foreground移動、API失敗、arranged不明 | unknownまたは見送り。古い対象へ関連付けない |
-| program最大化、無関係なclickの近接 | 時間的近さだけでユーザー由来を保証しない |
-| move-size開始・終了、途中復元、停止・再開 | 派生変化と旧入力を次世代に持ち越さない |
-| 起動時／起動後に作られた対象窓、HWND再利用 | 別窓・別プロセスの古い状態を流用しない |
+| イベント・条件                                       | 期待する性質                                            |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| 標準max button→同一窓の通常→最大化                   | mouse候補を一度だけ出す                                 |
+| captionの2click、時間・距離の内外                    | 成立時だけdouble-click経路。設定されたWindows条件も確認 |
+| Win+↑、左右Win、不要なmodifier、キーrepeat           | 成立経路以外をkeyと断定せず、重複しない                 |
+| injected／lower integrity injected、mouseとkeyの競合 | 誤通知・誤計上につながる確定候補を作らない              |
+| 999/1000/1001ms、配送遅延、イベント重複、順序違い    | 入力寿命と実際の状態遷移の契約を守る                    |
+| 対象窓の破棄、foreground移動、API失敗、arranged不明  | unknownまたは見送り。古い対象へ関連付けない             |
+| program最大化、無関係なclickの近接                   | 時間的近さだけでユーザー由来を保証しない                |
+| move-size開始・終了、途中復元、停止・再開            | 派生変化と旧入力を次世代に持ち越さない                  |
+| 起動時／起動後に作られた対象窓、HWND再利用           | 別窓・別プロセスの古い状態を流用しない                  |
 
 入力hookの処理時間には別のリスクがある。OnMouse内でplacement、token、hit test等を同期照会し、OnEventでは同じmessage loopからstdoutへ候補を出している。遅い読取側や対象プロセスの状態で、入力処理がどれほど遅れるかは未測定。Microsoftはlow-level hookのタイムアウト時に無通知で解除され得ることを明記している。`Active`は保存したhookハンドルから計算しており、実際の配送が継続している証拠ではない。hookにI/Oや高価な処理をどこまで置くかを計測し、配送欠落時の扱いと限界を設計する。ただし「heartbeatだけでhookの健全性を保証できる」とはしない。[Microsoft mouse hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)、[keyboard hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)
 
@@ -129,18 +129,18 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 Coachには個々の境界試験が充実しているが、設定保存失敗、delete失敗、opened保存失敗を組み合わせた試験は薄い。coverageでも未実行の設定復旧分岐とopenedが見えた。
 
-| 追加する列 | 確認点 |
-| --- | --- |
-| 設定失敗→別の設定変更→retry | 最新意図、保留・error・観測状態の整合。3章の不具合 |
+| 追加する列                                        | 確認点                                                     |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| 設定失敗→別の設定変更→retry                       | 最新意図、保留・error・観測状態の整合。3章の不具合         |
 | counts失敗とsettings失敗が同時に残る→片方だけ復旧 | 成功した片方で他方のエラーを消さない、再開不可を正しく表示 |
-| 保存中→全削除取消／確定→旧候補到着 | 取消時は保持、確定後に古いデータが復活しない、設定は保持 |
-| delete書込み失敗→再試行／再開 | 消去できていない記録を削除済みと表示せず、失敗時停止を維持 |
-| 初回opened保存失敗→再開→再起動 | 初回画面flagとエラーが実際の保存結果に一致 |
-| 稼働→通知停止→全停止→再開 | 停止前の通知設定を保持、旧世代を数えない |
-| 全停止中に通知停止／復帰を操作→再開 | design.mdの「全停止中は通知停止flagを変更しない」と整合 |
-| 23:59完了→00:00配送、月末・年末・閏日、TZ変更 | helperの操作日付へ一度計上、30暦日保持 |
-| 未来日記録あり→tick→日付復帰／全削除 | 記録を黙って消さず、明示した復帰経路で再開 |
-| count最大安全整数からの加算 | 不正整数を正常保存と扱わず、error・pending状態を説明できる |
+| 保存中→全削除取消／確定→旧候補到着                | 取消時は保持、確定後に古いデータが復活しない、設定は保持   |
+| delete書込み失敗→再試行／再開                     | 消去できていない記録を削除済みと表示せず、失敗時停止を維持 |
+| 初回opened保存失敗→再開→再起動                    | 初回画面flagとエラーが実際の保存結果に一致                 |
+| 稼働→通知停止→全停止→再開                         | 停止前の通知設定を保持、旧世代を数えない                   |
+| 全停止中に通知停止／復帰を操作→再開               | design.mdの「全停止中は通知停止flagを変更しない」と整合    |
+| 23:59完了→00:00配送、月末・年末・閏日、TZ変更     | helperの操作日付へ一度計上、30暦日保持                     |
+| 未来日記録あり→tick→日付復帰／全削除              | 記録を黙って消さず、明示した復帰経路で再開                 |
+| count最大安全整数からの加算                       | 不正整数を正常保存と扱わず、error・pending状態を説明できる |
 
 全停止中の通知flagは、現在のMain commandが常に`pauseNotifications`を呼び、Renderer／trayも停止中に操作を禁止していない。現行設計との不整合が静的に見えるため、期待動作の試験を先に書く価値がある。今回はUIでの操作再現をしていない。
 
@@ -172,14 +172,14 @@ smokeの改善は、固定4200ms待ちの成功確認だけでなく、通知開
 
 以下は提案する実行段階であり、workflowファイルや新しいnpm scriptはまだ作っていない。
 
-| 段階 | トリガー | 内容 | 失敗時の扱い |
-| --- | --- | --- | --- |
-| fast | PR・main | `npm ci`、型検査、pure/Core/Repository/契約試験。必要なTS/C#静的検査 | 必須チェック。失敗をtestのretryで隠さない |
-| build/native | PR・main | global.jsonに合うSDK導入、helper publish、native fixture試験、Electron build | 必須チェック。OS/API条件不足でskipした試験を合格と扱わない |
-| app integration | 表示可能な隔離runner／必要なPR | 完成した同じbuildで人工候補smoke、少数の利用者操作E2E | 必須にするならrunner能力を先に確認。表示環境がないなら明示的な別ゲート |
-| packaged | main・公開候補、配布設定変更時のPR | `build`→`package:dir`→同じ出力dirの`smoke:packaged`、helper・runtime同梱確認 | 公開候補の必須。古いreleaseフォルダーを使わない |
-| release acceptance | 公開候補を指定して手動実行 | Windows 11 x64通常権限、NSIS導入／再導入／削除、実入力・2画面・60分確認 | 既存受入条件が未合格なら公開未合格。CI緑で代用しない |
-| maintenance | 定期または依存更新PR | 脆弱性・Electron/.NET更新、選んだmutation、負荷・耐久 | 結果をissue等で追跡。必要性に応じて頻度を決める |
+| 段階               | トリガー                           | 内容                                                                         | 失敗時の扱い                                                           |
+| ------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| fast               | PR・main                           | `npm ci`、型検査、pure/Core/Repository/契約試験。必要なTS/C#静的検査         | 必須チェック。失敗をtestのretryで隠さない                              |
+| build/native       | PR・main                           | global.jsonに合うSDK導入、helper publish、native fixture試験、Electron build | 必須チェック。OS/API条件不足でskipした試験を合格と扱わない             |
+| app integration    | 表示可能な隔離runner／必要なPR     | 完成した同じbuildで人工候補smoke、少数の利用者操作E2E                        | 必須にするならrunner能力を先に確認。表示環境がないなら明示的な別ゲート |
+| packaged           | main・公開候補、配布設定変更時のPR | `build`→`package:dir`→同じ出力dirの`smoke:packaged`、helper・runtime同梱確認 | 公開候補の必須。古いreleaseフォルダーを使わない                        |
+| release acceptance | 公開候補を指定して手動実行         | Windows 11 x64通常権限、NSIS導入／再導入／削除、実入力・2画面・60分確認      | 既存受入条件が未合格なら公開未合格。CI緑で代用しない                   |
+| maintenance        | 定期または依存更新PR               | 脆弱性・Electron/.NET更新、選んだmutation、負荷・耐久                        | 結果をissue等で追跡。必要性に応じて頻度を決める                        |
 
 PRとmainのイベントは信頼境界が異なる。PR品質確認に署名鍵・公開tokenは要らず、公開workflowを別にする。日常PCをPR用self-hosted runnerにしない。trustedな公開候補を隔離VMで扱う方が、このアプリの観測機能と相性がよい。[GitHub Actions security](https://docs.github.com/en/actions/reference/security/secure-use)
 
@@ -229,14 +229,14 @@ fixtureは起動引数で同梱版にも入っている。現状、通常時に�
 node --experimental-test-coverage --test '--test-coverage-include=src/**/*.ts' tests/coach.test.ts tests/detector.test.ts tests/repository.test.ts tests/serial-queue.test.ts
 ```
 
-| 表に現れた対象 | line | branch | function |
-| --- | --- | --- | --- |
-| Core/coach.ts | 85.28% | 91.55% | 85.19% |
-| Core/dates.ts | 83.33% | 100.00% | 66.67% |
-| Core/detector.ts | 100.00% | 100.00% | 100.00% |
-| Core/serial-queue.ts | 100.00% | 100.00% | 100.00% |
-| Main/repository.ts | 100.00% | 96.72% | 100.00% |
-| Shared/coach.ts | 100.00% | 100.00% | 100.00% |
+| 表に現れた対象       | line    | branch  | function |
+| -------------------- | ------- | ------- | -------- |
+| Core/coach.ts        | 85.28%  | 91.55%  | 85.19%   |
+| Core/dates.ts        | 83.33%  | 100.00% | 66.67%   |
+| Core/detector.ts     | 100.00% | 100.00% | 100.00%  |
+| Core/serial-queue.ts | 100.00% | 100.00% | 100.00%  |
+| Main/repository.ts   | 100.00% | 96.72%  | 100.00%  |
+| Shared/coach.ts      | 100.00% | 100.00% | 100.00%  |
 
 表にMain/observer・notification・coach-app、Preload、Renderer、C#がない。`all files`の91.55%を製品全体のcoverageとして報告してはいけない。detectorのbranch100%でも、全ての経路・app・時間・条件の組合せを試験したことにはならない。現在のdetector.testにはkey正例、caption正例、4app別の正例、inputAge1000ms、validDate/sequence境界等の独立ケースが不足している。[Node 24.11.1 test runner](https://nodejs.org/download/release/v24.11.1/docs/api/test.html)
 

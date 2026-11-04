@@ -1,7 +1,7 @@
 {
- "session":"session5",
- "revision":"03b33b841ebc63f701bbab708b7782ced4842bfd",
- "participantReport":"S03-double completed without a visible notification",
- "observedCause":"Both target presses: root returned HTCLIENT, actual hit child under the same root and process returned HTCAPTION. Candidate retained unknown origin and route because production still used the root hit only.",
- "fixDecision":"Use explicit child HTCAPTION only when root validated hit is HTCLIENT and same root/process is revalidated; preserve caption-button priority, unknown rejection and all tracker result checks. No coordinate or app-name inference."
+  "session": "session5",
+  "revision": "03b33b841ebc63f701bbab708b7782ced4842bfd",
+  "participantReport": "S03-double completed without a visible notification",
+  "observedCause": "Both target presses: root returned HTCLIENT, actual hit child under the same root and process returned HTCAPTION. Candidate retained unknown origin and route because production still used the root hit only.",
+  "fixDecision": "Use explicit child HTCAPTION only when root validated hit is HTCLIENT and same root/process is revalidated; preserve caption-button priority, unknown rejection and all tracker result checks. No coordinate or app-name inference."
 }

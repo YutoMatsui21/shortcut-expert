@@ -10,14 +10,41 @@
     <Compile Include="../../../native-helper/Platform/NativeMethods.cs" Link="NativeMethods.cs" />
     <Compile Include="../../../native-helper/Core/CandidateTracker.cs" Link="CandidateTracker.cs" />
     <Compile Include="../../../native-helper/Window/WindowCaption.cs" Link="WindowCaption.cs" />
-    <Compile Include="../../../native-helper/Core/CandidateProtocol.cs" Link="CandidateProtocol.cs" />
-    <Compile Include="../../../native-helper/Snap/SnapInvocationPolicy.cs" Link="SnapInvocationPolicy.cs" />
-    <Compile Include="../../../native-helper/Taskbar/TaskbarInputPolicy.cs" Link="TaskbarInputPolicy.cs" />
-    <Compile Include="../../../native-helper/Window/WindowSwitchPolicy.cs" Link="WindowSwitchPolicy.cs" />
-    <Compile Include="../../../native-helper/Window/WindowClosePolicy.cs" Link="WindowClosePolicy.cs" />
-    <Compile Include="../../../native-helper/Window/WindowTargetPolicy.cs" Link="WindowTargetPolicy.cs" />
-    <Compile Include="../../../native-helper/Window/WindowDiagnostics.cs" Link="WindowDiagnostics.cs" />
-    <Compile Include="../../../native-helper/Window/MonitorMovePolicy.cs" Link="MonitorMovePolicy.cs" />
-    <Compile Include="../../../native-helper/Platform/WindowDockSettings.cs" Link="WindowDockSettings.cs" />
+    <Compile
+      Include="../../../native-helper/Core/CandidateProtocol.cs"
+      Link="CandidateProtocol.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Snap/SnapInvocationPolicy.cs"
+      Link="SnapInvocationPolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Taskbar/TaskbarInputPolicy.cs"
+      Link="TaskbarInputPolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Window/WindowSwitchPolicy.cs"
+      Link="WindowSwitchPolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Window/WindowClosePolicy.cs"
+      Link="WindowClosePolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Window/WindowTargetPolicy.cs"
+      Link="WindowTargetPolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Window/WindowDiagnostics.cs"
+      Link="WindowDiagnostics.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Window/MonitorMovePolicy.cs"
+      Link="MonitorMovePolicy.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Platform/WindowDockSettings.cs"
+      Link="WindowDockSettings.cs"
+    />
   </ItemGroup>
 </Project>

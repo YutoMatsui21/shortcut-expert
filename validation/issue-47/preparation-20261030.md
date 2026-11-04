@@ -15,15 +15,15 @@
 
 ## 実施済み（隔離fixture）
 
-| 試験 | 結果・ローカル証拠 |
-| --- | --- |
-| helper publish／型検査／Electron bundle／同梱 | 成功。`.tools/issue-47-build.log`、`issue-47-bundle.log`、`issue-47-package.log` |
-| 通常同梱smoke | 成功。8操作、複合2件、SQLite、一覧／記録、通知要求、保存失敗復旧。`.tools/issue-47-smoke.log` |
-| settings | 成功。停止／pause、全削除、失敗再試行、4幅。`.tools/issue-47-settings.log` |
-| activation | 3起動成功。既存窓／cold start／初期化失敗。`.tools/issue-47-activation.log` |
-| migration | 2起動成功。原本保全・移行・再起動。`.tools/issue-47-migration.log` |
-| comparison | 成功。4幅・filters・read model。`.tools/issue-47-comparison.log` |
-| 保存受入 | 17ケース成功。`.tools/issue-47-storage.log`、`.tools/validation/v02-FaIFEt/` |
+| 試験                                          | 結果・ローカル証拠                                                                            |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| helper publish／型検査／Electron bundle／同梱 | 成功。`.tools/issue-47-build.log`、`issue-47-bundle.log`、`issue-47-package.log`              |
+| 通常同梱smoke                                 | 成功。8操作、複合2件、SQLite、一覧／記録、通知要求、保存失敗復旧。`.tools/issue-47-smoke.log` |
+| settings                                      | 成功。停止／pause、全削除、失敗再試行、4幅。`.tools/issue-47-settings.log`                    |
+| activation                                    | 3起動成功。既存窓／cold start／初期化失敗。`.tools/issue-47-activation.log`                   |
+| migration                                     | 2起動成功。原本保全・移行・再起動。`.tools/issue-47-migration.log`                            |
+| comparison                                    | 成功。4幅・filters・read model。`.tools/issue-47-comparison.log`                              |
+| 保存受入                                      | 17ケース成功。`.tools/issue-47-storage.log`、`.tools/validation/v02-FaIFEt/`                  |
 
 保存受入にはACK喪失、Worker停止、再起動、SQLite接続のpage limitによるSQLITE_FULL、隔離fixtureのdeny-write ACLと復元が含まれる。物理ディスク枯渇・電源断を確認した意味ではない。
 

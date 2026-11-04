@@ -4,17 +4,17 @@
 
 ## 情報の正本
 
-| 知りたいこと | 最初に参照する場所 |
-| --- | --- |
-| なぜ作るか・どんな成果を重視するか | [プロダクトの目的・思想](product.md) |
-| 何を作るか・MVP・期待動作・公開合格条件 | [製品要件・受入条件](ui-requirements.md) |
-| どういう責務分担で実現するか | [全体設計・アーキテクチャ](design.md) |
-| Windows操作をどう検出・分類するか | [操作別の技術設計](operations/README.md) |
-| UI・通知・ウィンドウ動作の実装設計 | [機能別の設計](features/learning-ui.md)・[記録](features/records-ui.md)・[設定](features/settings-panel.md)・[通知](features/standard-notifications.md)・[窓管理](features/window-lifecycle.md) |
-| 保存・移行・削除の契約 | [永続保存](storage/durable-storage.md)・[旧JSON移行](storage/json-migration.md)・[記録削除](storage/history-deletion.md) |
-| 開発環境・実行・検証コマンド | [開発・検証ガイド](development.md) |
-| 補助ツール・Issue取得・CI監視 | [開発ツール](development-tools.md) |
-| レビュー時の確認観点 | [コードレビュー規則](code-review.md) |
+| 知りたいこと                            | 最初に参照する場所                                                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| なぜ作るか・どんな成果を重視するか      | [プロダクトの目的・思想](product.md)                                                                                                                                                            |
+| 何を作るか・MVP・期待動作・公開合格条件 | [製品要件・受入条件](ui-requirements.md)                                                                                                                                                        |
+| どういう責務分担で実現するか            | [全体設計・アーキテクチャ](design.md)                                                                                                                                                           |
+| Windows操作をどう検出・分類するか       | [操作別の技術設計](operations/README.md)                                                                                                                                                        |
+| UI・通知・ウィンドウ動作の実装設計      | [機能別の設計](features/learning-ui.md)・[記録](features/records-ui.md)・[設定](features/settings-panel.md)・[通知](features/standard-notifications.md)・[窓管理](features/window-lifecycle.md) |
+| 保存・移行・削除の契約                  | [永続保存](storage/durable-storage.md)・[旧JSON移行](storage/json-migration.md)・[記録削除](storage/history-deletion.md)                                                                        |
+| 開発環境・実行・検証コマンド            | [開発・検証ガイド](development.md)                                                                                                                                                              |
+| 補助ツール・Issue取得・CI監視           | [開発ツール](development-tools.md)                                                                                                                                                              |
+| レビュー時の確認観点                    | [コードレビュー規則](code-review.md)                                                                                                                                                            |
 
 画面の**外観・レイアウト・文言**は、[製品要件](ui-requirements.md)からリンクされている正式なFigmaノードも確認する。要件・受入条件は製品要件が正本であり、Figmaのサンプルデータは仕様ではない。
 
@@ -34,18 +34,19 @@
 [過去資料](archive/README.md)は、旧MVP・旧実装・実施当時の調査と振り返り。**現行の正本ではない**。現在の判断へ採用するには、改めて要件・コード・Issueとの整合を確認する。
 
 <a id="documentation-updates"></a>
+
 ## 文書を更新するときの最小ルール
 
 **変更された情報の正本だけを更新**する。タスクに無関係な資料を読んだり、同じ内容を複数箇所に複製したりしない。
 
-| 変更の種類 | 更新・確認する対象 |
-| --- | --- |
-| 目的・成功指標・プロダクトの方針 | [product.md](product.md)。機能の合格条件は製品要件に置く |
+| 変更の種類                          | 更新・確認する対象                                                                              |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 目的・成功指標・プロダクトの方針    | [product.md](product.md)。機能の合格条件は製品要件に置く                                        |
 | MVP・機能・画面の期待動作、受入条件 | [ui-requirements.md](ui-requirements.md)を更新し、影響する個別設計・テスト・Figmaとの整合を確認 |
-| 責務・依存関係・検出方式・保存方式 | [design.md](design.md)と影響する`operations/`・`features/`・`storage/`だけ更新 |
-| 実装の詳細のみの変更 | コード・テストを正本とし、仕様や設計意図が変わらなければ文書更新は不要 |
-| 技術調査・未解決事項・一時的な判断 | Issue・PRへ記録。後の判断に再利用する失敗理由・代替案だけ必要に応じて`research/`へ |
-| ファイルの移動・改名 | 移動先と、旧パスを指す参照元のリンクを修正。索引の案内も必要な場合のみ更新 |
+| 責務・依存関係・検出方式・保存方式  | [design.md](design.md)と影響する`operations/`・`features/`・`storage/`だけ更新                  |
+| 実装の詳細のみの変更                | コード・テストを正本とし、仕様や設計意図が変わらなければ文書更新は不要                          |
+| 技術調査・未解決事項・一時的な判断  | Issue・PRへ記録。後の判断に再利用する失敗理由・代替案だけ必要に応じて`research/`へ              |
+| ファイルの移動・改名                | 移動先と、旧パスを指す参照元のリンクを修正。索引の案内も必要な場合のみ更新                      |
 
 **変更完了前の確認**
 

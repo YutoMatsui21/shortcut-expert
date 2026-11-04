@@ -4,12 +4,12 @@
 
 ## 1. 保存先と責務
 
-| 層 | 所有するもの |
-| --- | --- |
-| Main `SqliteRepository` | 保存先の選択、専用Worker・要求ID・直列queue・書込sessionの寿命・接続 |
-| Worker `StorageStore` | SQLite接続、schema、transaction、日別件数、coverage、checkpoint、epoch |
-| Core `DurableCoach` | 採用候補の世代、未確定差分、観測間隔・日付・再試行 |
-| Renderer | 限定IPCから得た集計・確定状態だけを表示。SQL・DB path・全履歴への直接アクセスなし |
+| 層                      | 所有するもの                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| Main `SqliteRepository` | 保存先の選択、専用Worker・要求ID・直列queue・書込sessionの寿命・接続              |
+| Worker `StorageStore`   | SQLite接続、schema、transaction、日別件数、coverage、checkpoint、epoch            |
+| Core `DurableCoach`     | 採用候補の世代、未確定差分、観測間隔・日付・再試行                                |
+| Renderer                | 限定IPCから得た集計・確定状態だけを表示。SQL・DB path・全履歴への直接アクセスなし |
 
 - 通常起動は`records-v1/`のSQLiteをauthorityとする。初回のみ作成／旧JSONから[安全に移行](json-migration.md)。**既存のauthorityが欠落・破損・未知版でもJSONや空DBへfallbackしない**。旧JSON writerは持たず、移行用の厳格なreaderだけを保持する。
 - SQLiteはElectron同梱`node:sqlite`、専用Workerの**単一writer接続、WAL・`synchronous=FULL`**を使用。Workerと必要chunkをASARからunpackし、DBはASAR外へ置く。保存root単位のOS named pipeで複数writerを排他し、pipeへ記録を流さない。
@@ -35,14 +35,14 @@
 
 ## 4. 失敗・停止・復旧
 
-| 状況 | 守る条件 |
-| --- | --- |
-| 保存／応答不明 | 未確定差分を保持、観測・通知を停止。再接続後に**同一ID**で再試行 |
-| DB読込失敗・破損 | 原本を保持して失敗を示す。空DB作成・旧JSONへのfallback禁止 |
-| 保存保留中の開始要求 | 新しい観測の開始を拒否し、明示的な再開前に未保存を解決 |
-| 保存再試行成功 | 旧通知は再発行しない。**自動では計測再開しない** |
-| observer／時計の別故障 | 保存の回復と独立に故障状態を保持。保存成功だけで解除しない |
-| 削除の失敗 | [履歴削除](history-deletion.md)に従いpending purgeと世代を保持 |
+| 状況                   | 守る条件                                                         |
+| ---------------------- | ---------------------------------------------------------------- |
+| 保存／応答不明         | 未確定差分を保持、観測・通知を停止。再接続後に**同一ID**で再試行 |
+| DB読込失敗・破損       | 原本を保持して失敗を示す。空DB作成・旧JSONへのfallback禁止       |
+| 保存保留中の開始要求   | 新しい観測の開始を拒否し、明示的な再開前に未保存を解決           |
+| 保存再試行成功         | 旧通知は再発行しない。**自動では計測再開しない**                 |
+| observer／時計の別故障 | 保存の回復と独立に故障状態を保持。保存成功だけで解除しない       |
+| 削除の失敗             | [履歴削除](history-deletion.md)に従いpending purgeと世代を保持   |
 
 - `errorKind`は記録保存・設定保存・読込・時計・observerを区別。保留記録・最新設定を先に確定し、残る読込故障を再検査する。Mainからの再読込やRendererの古い非同期応答によって確定データを巻き戻さない。
 - 両画面の保存エラーバナー・retryは[設定パネル](../features/settings-panel.md)／[UI要件](../ui-requirements.md)に従う。再試行可能な保存障害が復旧しても、observer／時計による停止を消さない。

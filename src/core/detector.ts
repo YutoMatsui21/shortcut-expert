@@ -259,7 +259,8 @@ function classifyWindow(
     !candidate.targetMatched ||
     candidate.inputAgeMs < 0 ||
     candidate.inputAgeMs > 1000 ||
-    (candidate.route === "mouse-state-fallback" && candidate.inputAgeMs > 500) ||
+    (candidate.route === "mouse-state-fallback" &&
+      candidate.inputAgeMs > 500) ||
     !["mouse", "key"].includes(candidate.origin)
   )
     return null;
@@ -276,7 +277,12 @@ function classifyWindow(
         (candidate.before.arranged === null && candidate.origin !== "key") ||
         candidate.after.state !== "maximized" ||
         !route(
-          ["max-button", "caption-double-click", "caption-top-drag", "mouse-state-fallback"],
+          [
+            "max-button",
+            "caption-double-click",
+            "caption-top-drag",
+            "mouse-state-fallback",
+          ],
           ["win-up"],
         )
       )
@@ -308,7 +314,10 @@ function classifyWindow(
         candidate.before.state !== "maximized" ||
         candidate.after.state !== "normal" ||
         candidate.afterArranged !== false ||
-        !route(["max-button", "caption-double-click", "mouse-state-fallback"], ["win-down"])
+        !route(
+          ["max-button", "caption-double-click", "mouse-state-fallback"],
+          ["win-down"],
+        )
       )
         return null;
       operation = "W04";

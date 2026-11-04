@@ -16,15 +16,36 @@ test("mouse state fallback is limited to W03/W04 and 500ms with existing safety 
     ["minimize", "normal", "minimized", "W04"],
     ["minimize", "maximized", "minimized", "W04"],
   ]) {
-    const value = candidateFixture({ operation, route: "mouse-state-fallback",
-      before: { state: before, arranged: false }, after: { state: after }, afterArranged: false, inputAgeMs: 500 });
+    const value = candidateFixture({
+      operation,
+      route: "mouse-state-fallback",
+      before: { state: before, arranged: false },
+      after: { state: after },
+      afterArranged: false,
+      inputAgeMs: 500,
+    });
     assert.equal(classify(value)?.operation, expected);
-    for (const invalid of [{ inputAgeMs: 501 }, { inputAgeMs: -1 }, { injected: true },
-      { conflicted: true }, { targetMatched: false }, { moving: true }, { origin: "key" as const },
-      { operation: "close", after: { state: "closed" } }, { operation: "monitor-move" }])
-      assert.equal(classify({ ...value, ...invalid }), null, JSON.stringify(invalid));
+    for (const invalid of [
+      { inputAgeMs: 501 },
+      { inputAgeMs: -1 },
+      { injected: true },
+      { conflicted: true },
+      { targetMatched: false },
+      { moving: true },
+      { origin: "key" as const },
+      { operation: "close", after: { state: "closed" } },
+      { operation: "monitor-move" },
+    ])
+      assert.equal(
+        classify({ ...value, ...invalid }),
+        null,
+        JSON.stringify(invalid),
+      );
   }
-  assert.equal(classify(candidateFixture({ inputAgeMs: 1000 }))?.operation, "W03");
+  assert.equal(
+    classify(candidateFixture({ inputAgeMs: 1000 }))?.operation,
+    "W03",
+  );
 });
 
 test("Win+Up uses confirmed state transition regardless of arranged availability", () => {
@@ -84,9 +105,16 @@ test("W03 top drag requires a confirmed same-monitor terminal result", () => {
     toMonitor: screen,
   });
   assert.equal(classify(drag)?.operation, "W03");
-  const arranged = classify({ ...drag, before: { state: "normal", arranged: true } });
+  const arranged = classify({
+    ...drag,
+    before: { state: "normal", arranged: true },
+  });
   assert.equal(arranged?.operation, "W03");
-  assert.equal(arranged?.shortcut, "Win + ↑", "maximize guidance is a representative key regardless of snapped origin");
+  assert.equal(
+    arranged?.shortcut,
+    "Win + ↑",
+    "maximize guidance is a representative key regardless of snapped origin",
+  );
   for (const invalid of [
     { fromMonitor: null },
     { toMonitor: null },

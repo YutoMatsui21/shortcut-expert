@@ -2213,10 +2213,7 @@
     "migration",
     "comparison"
   ],
-  "finalInstructionOnlyRebundleChecks": [
-    "base",
-    "storage17"
-  ],
+  "finalInstructionOnlyRebundleChecks": ["base", "storage17"],
   "storageEvidence": ".tools/validation/v02-BB57SM",
   "naturalAcceptance": "pending"
 }

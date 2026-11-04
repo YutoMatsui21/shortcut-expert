@@ -1,22 +1,44 @@
-import { parentPort, workerData } from 'node:worker_threads';
-import { StorageStore } from './storage-store.ts';
-import { prepareStorage } from './storage-migration.ts';
+import { parentPort, workerData } from "node:worker_threads";
+import { StorageStore } from "./storage-store.ts";
+import { prepareStorage } from "./storage-migration.ts";
 let store: StorageStore;
-try { prepareStorage(workerData.root); store = new StorageStore(workerData.root); parentPort!.postMessage({ ready: true }); }
-catch { parentPort!.postMessage({ ready: false }); parentPort!.close(); }
-parentPort!.on('message', ({ id, action, args }) => {
+try {
+  prepareStorage(workerData.root);
+  store = new StorageStore(workerData.root);
+  parentPort!.postMessage({ ready: true });
+} catch {
+  parentPort!.postMessage({ ready: false });
+  parentPort!.close();
+}
+parentPort!.on("message", ({ id, action, args }) => {
   try {
     let result;
     switch (action) {
-      case 'load': result = store.load(args[0]); break;
-      case 'query': result = store.query(args[0], args[1]); break;
-      case 'commit': result = store.commit(args[0]); break;
-      case 'claim': result = store.claim(args[0]); break;
-      case 'settings': result = store.saveSettings(args[0]); break;
-      case 'close':
-        store.close(); parentPort!.postMessage({ id, ok: true }); parentPort!.close(); return;
-      default: throw new Error('UNKNOWN_REQUEST');
+      case "load":
+        result = store.load(args[0]);
+        break;
+      case "query":
+        result = store.query(args[0], args[1]);
+        break;
+      case "commit":
+        result = store.commit(args[0]);
+        break;
+      case "claim":
+        result = store.claim(args[0]);
+        break;
+      case "settings":
+        result = store.saveSettings(args[0]);
+        break;
+      case "close":
+        store.close();
+        parentPort!.postMessage({ id, ok: true });
+        parentPort!.close();
+        return;
+      default:
+        throw new Error("UNKNOWN_REQUEST");
     }
     parentPort!.postMessage({ id, ok: true, result });
-  } catch { parentPort!.postMessage({ id, ok: false }); }
+  } catch {
+    parentPort!.postMessage({ id, ok: false });
+  }
 });
