@@ -106,6 +106,9 @@ jobs:
           exit $LASTEXITCODE
       - run: npm.cmd run dev:install
         if: ${{ needs.change-scope.outputs.full == 'true' }}
+      - name: Check formatting
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
+        run: npm.cmd run format:check
       - name: Types
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run typecheck

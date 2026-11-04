@@ -31,7 +31,12 @@
     "probe:sqlite": "node scripts/probes/sqlite-probe.mjs",
     "probe:sqlite:package": "node scripts/dev/dev-run.mjs electron-builder --config validation/probes/sqlite/electron-builder.cjs --dir --win --x64",
     "probe:sqlite:packaged": "node scripts/probes/sqlite-probe.mjs --packaged",
-    "package:installer": "node scripts/dev/dev-run.mjs electron-builder --win nsis --x64"
+    "package:installer": "node scripts/dev/dev-run.mjs electron-builder --win nsis --x64",
+    "prepare": "husky",
+    "format:check": "prettier --check ."
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md,mdx,yml,yaml}": "prettier --write"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -45,6 +50,8 @@
     "electron": "44.10.1",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
+    "husky": "9.1.7",
+    "prettier": "3.9.10",
     "typescript": "7.0.2",
     "vite": "7.3.7"
   }
