@@ -11,7 +11,17 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(PlacementEvidence), "placement")]
 [JsonDerivedType(typeof(WindowCloseEvidence), "window-close")]
 [JsonDerivedType(typeof(CompoundDragEvidence), "compound-drag")]
+[JsonDerivedType(typeof(CaptionClickEvidence), "caption-click")]
 internal abstract record Evidence(string profile);
+
+internal sealed record CaptionClickEvidence(
+    string? terminal,
+    bool switched,
+    bool targetMatched,
+    bool released,
+    long inputAgeMs,
+    MonitorBounds? monitor
+) : Evidence("caption-click-v1");
 
 internal sealed record CompoundDragEvidence(
     string terminal,
@@ -208,6 +218,35 @@ internal sealed class CandidateProtocol(Action<object> emit)
                         true,
                         result.TwoDisplayLayoutConfirmed
                     )
+                )
+            );
+        }
+    }
+
+    internal void CaptionClick(
+        int epoch,
+        int transaction,
+        string date,
+        CaptionClickEvidence evidence
+    )
+    {
+        lock (gate)
+        {
+            if (generation == 0 || epoch != generation)
+                return;
+            emit(
+                new CandidateEnvelope(
+                    "candidate",
+                    2,
+                    generation,
+                    checked(++sequence),
+                    transaction,
+                    date,
+                    "mouse",
+                    "inactive-caption-click",
+                    false,
+                    false,
+                    evidence
                 )
             );
         }

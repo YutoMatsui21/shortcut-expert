@@ -20,6 +20,8 @@ internal sealed class WindowSwitchObserver(
     private uint inputTick;
     private uint shellProcess;
     private Point? mouseDown;
+    internal bool MousePending => mouseDown is not null && policy.Pending;
+    internal bool CaptionPressReady { get; private set; }
 
     // Query only defined key/button codes, not reserved virtual values with undefined state.
     private static readonly int[] neutralKeys = Enum.GetValues<System.Windows.Forms.Keys>()
@@ -46,6 +48,7 @@ internal sealed class WindowSwitchObserver(
         shellProcess = 0;
         policy = new() { Diagnostic = diagnostic };
         mouseDown = null;
+        CaptionPressReady = false;
     }
 
     internal void Cancel()
@@ -57,7 +60,11 @@ internal sealed class WindowSwitchObserver(
     private void Neutral() =>
         policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
 
-    private static SwitchWindow? Read(nint window, Action<WindowDiagnosticReason>? note = null)
+    internal static SwitchWindow? Read(
+        nint window,
+        Action<WindowDiagnosticReason>? note = null,
+        bool requireCaption = true
+    )
     {
         if (
             window == 0
@@ -87,14 +94,22 @@ internal sealed class WindowSwitchObserver(
             note?.Invoke(WindowDiagnosticReason.W01ReadClassRejected);
             return null;
         }
-        long style = GetWindowStyle(window, GWL_STYLE).ToInt64(),
-            extended = GetWindowStyle(window, -20).ToInt64();
+        static long? Style(nint target, int index)
+        {
+            nint value = GetWindowStyleChecked(target, index);
+            return value == 0 && Marshal.GetLastPInvokeError() != 0 ? null : value.ToInt64();
+        }
+        bool? cloaked =
+            DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0
+                ? cloak != 0
+                : null;
         if (
-            (style & 0x40000000) != 0
-            || (style & WS_CAPTION) != WS_CAPTION
-            || (extended & (0x80 | 0x08000000)) != 0
-            || DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloaked, sizeof(int)) != 0
-            || cloaked != 0
+            !WindowSwitchPolicy.AllowsStyle(
+                Style(window, GWL_STYLE),
+                Style(window, -20),
+                cloaked,
+                requireCaption
+            )
         )
         {
             note?.Invoke(WindowDiagnosticReason.W01ReadStyleRejected);
@@ -154,6 +169,8 @@ internal sealed class WindowSwitchObserver(
     {
         if (generation == 0)
             return;
+        if (message == WM_LBUTTONDOWN)
+            CaptionPressReady = policy.CanStartMouse;
         if (message == 0x200 && flags == 0)
         {
             if (
@@ -171,9 +188,9 @@ internal sealed class WindowSwitchObserver(
         policy.Mouse(
             message,
             message is 0x201 or 0x202
-                ? Read(GetAncestor(WindowFromPhysicalPoint(point), GA_ROOT))
+                ? Read(GetAncestor(WindowFromPhysicalPoint(point), GA_ROOT), diagnostic)
                 : null,
-            message == 0x201 ? Read(GetForegroundWindow()) : null,
+            message == 0x201 ? Read(GetForegroundWindow(), diagnostic) : null,
             (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
             new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k =>
                 GetAsyncKeyState(k) < 0

@@ -1,0 +1,1199 @@
+{
+  "revision": "366b101ff289fe3d49f2c43ab5d60de8dae3aa24",
+  "manifestSha256": "e65d7b3ecb0051d48689ff1d985f0d49fc78b7ecae03346a886b5e5a231a0c3d",
+  "scope": "operator physical input; isolated product data",
+  "trials": [
+    {
+      "trial": 1,
+      "caseId": "I152-Chrome-normal-maximize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W03": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "matched",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-maximize": 1,
+        "before-normal": 1,
+        "after-maximized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-invalid": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-compound": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitRoot",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMaxButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 1
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "caseId": "I152-Chrome-normal-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "matched",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-minimize": 1,
+        "before-normal": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-invalid": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-compound": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitRoot",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 1
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "trial": 3,
+      "caseId": "I152-Chrome-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "matched",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-minimize": 1,
+        "before-maximized": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-invalid": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-compound": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitRoot",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryInvalid",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 1
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        },
+        {
+          "reason": "W11GeometryInvalid",
+          "count": 1
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "trial": 4,
+      "caseId": "I152-ChatGPT-normal-maximize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W03": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "matched",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-maximize": 1,
+        "before-normal": 1,
+        "after-maximized": 1,
+        "before-arranged-true": 1,
+        "after-arranged-false": 1,
+        "input-invalid": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-compound": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildOther",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMaxButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 1
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "trial": 5,
+      "caseId": "I152-ChatGPT-normal-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "matched",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-minimize": 1,
+        "before-normal": 1,
+        "after-minimized": 1,
+        "before-arranged-true": 1,
+        "after-arranged-false": 1,
+        "input-invalid": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-compound": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildOther",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 5
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 1
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "trial": 6,
+      "caseId": "I152-ChatGPT-maximized-minimize",
+      "valid": false,
+      "completed": false,
+      "recordsPassed": false,
+      "counts": {},
+      "notificationRequests": 0,
+      "visibleNotification": "not-seen",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-min-button": 1,
+        "operation-minimize": 1,
+        "before-maximized": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "MouseDown",
+          "count": 2
+        },
+        {
+          "reason": "MouseUp",
+          "count": 2
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 1
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildOther",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 2
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 2
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 2
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 2
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "trial": 7,
+      "caseId": "I152-ChatGPT-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": false,
+      "counts": {},
+      "notificationRequests": 0,
+      "visibleNotification": "different",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-min-button": 1,
+        "operation-minimize": 1,
+        "before-maximized": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildOther",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 6
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "trial": 8,
+      "caseId": "I152-Obsidian-normal-maximize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": false,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "visibleNotification": "different",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-maximize": 1,
+        "before-normal": 1,
+        "after-maximized": 1,
+        "before-arranged-true": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1,
+        "kind-switch": 1,
+        "origin-mouse": 1,
+        "route-other": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "W01ForegroundConfirmed",
+          "count": 1
+        },
+        {
+          "reason": "W01Completed",
+          "count": 1
+        },
+        {
+          "reason": "W01ReadAccepted",
+          "count": 1
+        },
+        {
+          "reason": "W01SwitcherUnknownType",
+          "count": 2
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawClient",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalOther",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildClient",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 2
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 6
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 2
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "trial": 9,
+      "caseId": "I152-Obsidian-normal-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": false,
+      "counts": {},
+      "notificationRequests": 0,
+      "visibleNotification": "different",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-minimize": 1,
+        "before-normal": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "W01ForegroundConfirmed",
+          "count": 2
+        },
+        {
+          "reason": "W01ReadAccepted",
+          "count": 2
+        },
+        {
+          "reason": "W01SwitcherUnknownType",
+          "count": 4
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawClient",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalOther",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildClient",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 2
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 6
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 2
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "trial": 10,
+      "caseId": "I152-Obsidian-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "recordsPassed": false,
+      "counts": {},
+      "notificationRequests": 0,
+      "visibleNotification": "different",
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-unknown": 1,
+        "route-unknown": 1,
+        "operation-minimize": 1,
+        "before-maximized": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01Cancelled",
+          "count": 1
+        },
+        {
+          "reason": "W01ForegroundConfirmed",
+          "count": 2
+        },
+        {
+          "reason": "W01ReadAccepted",
+          "count": 2
+        },
+        {
+          "reason": "W01SwitcherUnknownType",
+          "count": 4
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawClient",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalOther",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildClient",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetEligible",
+          "count": 2
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 6
+        },
+        {
+          "reason": "W11GeometryFallback",
+          "count": 2
+        },
+        {
+          "reason": "W11RootHitRejected",
+          "count": 2
+        }
+      ]
+    }
+  ]
+}

@@ -71,6 +71,7 @@ export function finalCandidateDiagnostics(
     window: "kind-window",
     placement: "kind-placement",
     "compound-drag": "kind-compound",
+    "caption-click": "kind-compound",
     "window-close": "kind-close",
     "window-switch": "kind-switch",
     "taskbar-input": "kind-taskbar",

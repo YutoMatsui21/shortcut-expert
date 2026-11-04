@@ -1,0 +1,125 @@
+{
+  "scope": "diagnostic-only; same decisions as 366b101",
+  "manifestSha256": "48f6c8d4e17dd7f276d5d1ef9285a642059d936ddc237b2f6f71b85974750bc5",
+  "trials": [
+    {
+      "caseId": "I152-ChatGPT-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "counts": {},
+      "notificationRequests": 0,
+      "diagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-min-button": 1,
+        "operation-minimize": 1,
+        "before-maximized": 1,
+        "after-minimized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "target-unmatched": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      },
+      "nativeNonzero": [
+        {
+          "reason": "W01ReadWindowRejected",
+          "count": 12
+        },
+        {
+          "reason": "W01ReadStyleRejected",
+          "count": 4
+        },
+        {
+          "reason": "W01ReadAccepted",
+          "count": 2
+        },
+        {
+          "reason": "MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "CaptionInactivePress",
+          "count": 1
+        },
+        {
+          "reason": "CaptionSwitchMissing",
+          "count": 1
+        },
+        {
+          "reason": "CaptionStyleMissing",
+          "count": 1
+        },
+        {
+          "reason": "MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "TargetMissing",
+          "count": 5
+        },
+        {
+          "reason": "RawButton",
+          "count": 1
+        },
+        {
+          "reason": "TitleReadOk",
+          "count": 1
+        },
+        {
+          "reason": "TitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "FinalButton",
+          "count": 1
+        },
+        {
+          "reason": "ForegroundOther",
+          "count": 1
+        },
+        {
+          "reason": "HitChildSameProcess",
+          "count": 1
+        },
+        {
+          "reason": "ChildOther",
+          "count": 1
+        },
+        {
+          "reason": "ChildTitleOutsidePoint",
+          "count": 1
+        },
+        {
+          "reason": "TitleGeometryFallback",
+          "count": 1
+        },
+        {
+          "reason": "RawMinButton",
+          "count": 1
+        },
+        {
+          "reason": "W11MouseDown",
+          "count": 6
+        },
+        {
+          "reason": "W11MouseUp",
+          "count": 6
+        },
+        {
+          "reason": "W11TargetAbsent",
+          "count": 8
+        },
+        {
+          "reason": "W11TargetStyle",
+          "count": 4
+        },
+        {
+          "reason": "W11NotReady",
+          "count": 5
+        }
+      ]
+    }
+  ]
+}

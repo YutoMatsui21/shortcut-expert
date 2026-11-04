@@ -9,6 +9,44 @@ import { validDate } from "./dates.ts";
 
 // One envelope is one gesture. Never expose one half of an invalid compound result.
 export function classifyGesture(value: ObserverCandidate): Observation[] {
+  if (value.protocolVersion === 2 && value.evidence.kind === "caption-click") {
+    const e = value.evidence;
+    if (
+      e.profile !== "caption-click-v1" ||
+      !validDate(value.date) ||
+      value.origin !== "mouse" ||
+      value.route !== "inactive-caption-click" ||
+      value.injected ||
+      value.conflicted ||
+      !e.targetMatched ||
+      !e.released ||
+      !Number.isFinite(e.inputAgeMs) ||
+      e.inputAgeMs < 0 ||
+      e.inputAgeMs > 500 ||
+      !(
+        e.terminal === null ||
+        e.terminal === "maximized" ||
+        e.terminal === "minimized"
+      )
+    )
+      return [];
+    const base = {
+      id: `${value.generation}:t${value.transaction}`,
+      origin: "mouse" as const,
+      date: value.date,
+      monitor: e.monitor,
+    };
+    const results: Observation[] = [];
+    if (e.switched)
+      results.push({ ...base, operation: "W01", shortcut: "Alt + Tab" });
+    if (e.terminal !== null)
+      results.push({
+        ...base,
+        operation: e.terminal === "maximized" ? "W03" : "W04",
+        shortcut: e.terminal === "maximized" ? "Win + ↑" : "Win + ↓",
+      });
+    return results;
+  }
   if (value.protocolVersion !== 2 || value.evidence.kind !== "compound-drag") {
     const single = classify(value);
     return single ? [single] : [];
