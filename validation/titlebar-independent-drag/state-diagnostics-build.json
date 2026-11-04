@@ -1,0 +1,28 @@
+{
+  "detectionFix": "pending state-specific evidence; rejection conditions unchanged",
+  "artifacts": [
+    {
+      "sha256": "d73e1a7922ccdd92947d1795db441b470ac48dfa059d69edb06b3f7f60cd40fd",
+      "path": "release/drag-validation-state-diagnostics/win-unpacked/Shortcut Expert.exe"
+    },
+    {
+      "sha256": "de11fd01b0f7d3becb6eec92c44680c136c9c3982f341aa7992e80fe29552fbf",
+      "path": "release/drag-validation-state-diagnostics/win-unpacked/resources/app.asar"
+    },
+    {
+      "sha256": "b81e5b6e0996cb4ffab61a81e0ec89c7f2e3f00bfee34a36c9b443b7111f3ba3",
+      "path": "release/drag-validation-state-diagnostics/win-unpacked/resources/native-helper/WindowObserver.exe"
+    }
+  ],
+  "validation": {
+    "native": 7,
+    "csharpPolicyCases": 916,
+    "realInput": "not run on this build",
+    "unit": 332,
+    "packagedSmoke": "passed fixture only",
+    "review": "no findings"
+  },
+  "baseHead": "ef29722251ddabda753977343bd37505eb36b82d",
+  "createdAt": "2026-11-04T00:06:22.4036543+09:00",
+  "source": "uncommitted workspace changes"
+}

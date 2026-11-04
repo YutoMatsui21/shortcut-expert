@@ -71,7 +71,7 @@ const env = { ...developmentEnvironment(), COACH_TEST_DATA_DIR: data };
 delete env.ELECTRON_RUN_AS_NODE;
 delete env.ELECTRON_RENDERER_URL;
 const product = spawn(
-  join(packageRoot, "Window Shortcut Coach.exe"),
+  join(packageRoot, "Shortcut Expert.exe"),
   [
     "--final-natural-acceptance",
     ...(nativeDiagnostics ? ["--caption-diagnostics"] : []),

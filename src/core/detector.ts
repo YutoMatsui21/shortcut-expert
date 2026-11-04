@@ -259,6 +259,8 @@ function classifyWindow(
     !candidate.targetMatched ||
     candidate.inputAgeMs < 0 ||
     candidate.inputAgeMs > 1000 ||
+    (candidate.route === "mouse-state-fallback" &&
+      candidate.inputAgeMs > 500) ||
     !["mouse", "key"].includes(candidate.origin)
   )
     return null;
@@ -275,35 +277,35 @@ function classifyWindow(
         (candidate.before.arranged === null && candidate.origin !== "key") ||
         candidate.after.state !== "maximized" ||
         !route(
-          ["max-button", "caption-double-click", "caption-top-drag"],
+          [
+            "max-button",
+            "caption-double-click",
+            "caption-top-drag",
+            "mouse-state-fallback",
+          ],
           ["win-up"],
         )
       )
         return null;
       if (
         candidate.route === "caption-top-drag" &&
-        (candidate.before.arranged !== false ||
-          !candidate.fromMonitor ||
+        (!candidate.fromMonitor ||
           !candidate.toMonitor ||
           !sameMonitor(candidate.fromMonitor, candidate.toMonitor))
       )
         return null;
       operation = "W03";
-      shortcut = candidate.before.arranged === false ? "Win + ↑" : null;
+      // Representative maximize key, not a promise to reproduce the initial snap layout.
+      shortcut = "Win + ↑";
       break;
     case "minimize":
       if (
         !["normal", "maximized"].includes(candidate.before.state) ||
         candidate.after.state !== "minimized" ||
-        !route(["min-button"], ["win-down"])
+        !route(["min-button", "mouse-state-fallback"], ["win-down"])
       )
         return null;
-      shortcut =
-        candidate.before.arranged === false
-          ? candidate.before.state === "maximized"
-            ? "Win + ↓（必要に応じて繰り返す）"
-            : "Win + ↓"
-          : null;
+      shortcut = candidate.before.arranged === false ? "Win + ↓" : null;
       if (candidate.origin === "key" && shortcut === null) return null;
       operation = "W04";
       break;
@@ -312,7 +314,10 @@ function classifyWindow(
         candidate.before.state !== "maximized" ||
         candidate.after.state !== "normal" ||
         candidate.afterArranged !== false ||
-        !route(["max-button", "caption-double-click"], ["win-down"])
+        !route(
+          ["max-button", "caption-double-click", "mouse-state-fallback"],
+          ["win-down"],
+        )
       )
         return null;
       operation = "W04";

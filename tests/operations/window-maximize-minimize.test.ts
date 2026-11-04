@@ -9,6 +9,45 @@ import {
 
 const classify = (value: Candidate) => classifyV2(v2Fixture(value));
 
+test("mouse state fallback is limited to W03/W04 and 500ms with existing safety checks", () => {
+  for (const [operation, before, after, expected] of [
+    ["maximize", "normal", "maximized", "W03"],
+    ["restore", "maximized", "normal", "W04"],
+    ["minimize", "normal", "minimized", "W04"],
+    ["minimize", "maximized", "minimized", "W04"],
+  ]) {
+    const value = candidateFixture({
+      operation,
+      route: "mouse-state-fallback",
+      before: { state: before, arranged: false },
+      after: { state: after },
+      afterArranged: false,
+      inputAgeMs: 500,
+    });
+    assert.equal(classify(value)?.operation, expected);
+    for (const invalid of [
+      { inputAgeMs: 501 },
+      { inputAgeMs: -1 },
+      { injected: true },
+      { conflicted: true },
+      { targetMatched: false },
+      { moving: true },
+      { origin: "key" as const },
+      { operation: "close", after: { state: "closed" } },
+      { operation: "monitor-move" },
+    ])
+      assert.equal(
+        classify({ ...value, ...invalid }),
+        null,
+        JSON.stringify(invalid),
+      );
+  }
+  assert.equal(
+    classify(candidateFixture({ inputAgeMs: 1000 }))?.operation,
+    "W03",
+  );
+});
+
 test("Win+Up uses confirmed state transition regardless of arranged availability", () => {
   for (const arranged of [false, true, null]) {
     const value = candidateFixture({
@@ -66,13 +105,22 @@ test("W03 top drag requires a confirmed same-monitor terminal result", () => {
     toMonitor: screen,
   });
   assert.equal(classify(drag)?.operation, "W03");
+  const arranged = classify({
+    ...drag,
+    before: { state: "normal", arranged: true },
+  });
+  assert.equal(arranged?.operation, "W03");
+  assert.equal(
+    arranged?.shortcut,
+    "Win + ↑",
+    "maximize guidance is a representative key regardless of snapped origin",
+  );
   for (const invalid of [
     { fromMonitor: null },
     { toMonitor: null },
     { toMonitor: { ...screen, y: 0 } },
     { moving: true },
     { conflicted: true },
-    { before: { state: "normal", arranged: true } },
     { after: { state: "normal" } },
     { origin: "key" as const },
     { route: "snap-layout-selection" },
@@ -93,7 +141,7 @@ test("W03 and W04 keep separate learning identities and correct minimize guidanc
     before: { state: "maximized", arranged: false },
   });
   assert.equal(classify(min)?.operation, "W04");
-  assert.equal(classify(min)?.shortcut, "Win + ↓（必要に応じて繰り返す）");
+  assert.equal(classify(min)?.shortcut, "Win + ↓");
   for (const route of ["win-m", "win-d", "caption-drag", "win-shift-down"])
     assert.equal(classify({ ...min, origin: "key", route }), null);
 });

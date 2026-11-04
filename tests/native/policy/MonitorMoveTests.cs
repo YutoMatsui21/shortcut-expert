@@ -17,7 +17,7 @@ internal static partial class Program
         var to = source with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040) };
         foreach (bool inputCaption in new[] { false, true })
             Check(
-                $"monitor move retains caption requirement on input/result: {inputCaption}",
+                $"monitor key retains caption requirement; drag accepts captionless input/result: {inputCaption}",
                 () =>
                 {
                     var before = source with { HasCaption = inputCaption };
@@ -25,15 +25,150 @@ internal static partial class Program
                     var tracker = Tracker();
                     tracker.Key(11, before, VK_RIGHT, true, false, 0, 0, true);
                     tracker.KeyReleased(VK_RIGHT);
-                    Equal<object?>(
-                        null,
+                    Equal(
+                        false,
                         tracker.Complete(11, before, after, 200, 11, "2026-10-28", after.Monitor)
+                            is WindowCandidate { origin: "mouse", targetMatched: true }
                     );
                     tracker = Tracker();
                     tracker.Mouse(11, before, HTCAPTION, default, 0, 500, 0, false, true);
                     tracker.MoveStart(11, 100);
                     tracker.MouseReleased(default, after.Monitor, after.Work, 0);
-                    Equal<object?>(null, tracker.FinishMove(11, after, 200, 11, "2026-10-28"));
+                    Equal(
+                        true,
+                        tracker.FinishMove(11, after, 200, 11, "2026-10-28") is WindowCandidate
+                    );
+                }
+            );
+        foreach (string operation in new[] { "move", "maximize" })
+        foreach (int hit in new[] { HTCAPTION, 1, -1, 10 })
+        foreach (
+            string mode in new[]
+            {
+                "accepted",
+                "no-start",
+                "no-end",
+                "no-down",
+                "no-release",
+                "released-before-start",
+                "injected",
+                "injected-release",
+                "injected-motion",
+                "modifier",
+                "key",
+                "right-click",
+                "foreground-away",
+                "unmatched",
+                "other-window",
+                "process",
+                "expired",
+                "cursor-only",
+                "layout",
+            }
+        )
+            Check(
+                $"independent physical drag {operation}/{hit}/{mode}",
+                () =>
+                {
+                    var before = source with { HasCaption = false };
+                    var after = (
+                        operation == "move" ? to : source with { Show = SW_SHOWMAXIMIZED }
+                    ) with
+                    {
+                        HasCaption = false,
+                    };
+                    if (mode == "process")
+                        after = after with { Process = 88 };
+                    if (mode == "layout")
+                        after = after with { DisplayLayout = "changed" };
+                    if (mode == "cursor-only")
+                        after = before;
+                    var tracker = Tracker();
+                    if (mode != "no-down")
+                        tracker.Mouse(
+                            11,
+                            before,
+                            hit,
+                            default,
+                            0,
+                            500,
+                            mode == "injected" ? LLMHF_INJECTED : 0,
+                            mode == "modifier",
+                            mode != "unmatched"
+                        );
+                    tracker.MouseMoved(
+                        new Point { X = 500, Y = 100 },
+                        mode == "injected-motion" ? LLMHF_INJECTED : 0
+                    );
+                    if (mode == "released-before-start")
+                        tracker.MouseReleased(default, before.Monitor, before.Work, 0);
+                    if (mode == "key")
+                        tracker.Key(11, before, VK_SHIFT, false, false, 50, 0);
+                    if (mode == "right-click")
+                        tracker.MouseMessage(WM_RBUTTONDOWN);
+                    if (mode == "foreground-away")
+                    {
+                        tracker.ForegroundChanged(12);
+                        tracker.ForegroundChanged(11);
+                    }
+                    if (mode != "no-start")
+                        tracker.MoveStart(11, mode == "expired" ? 1001 : 100);
+                    if (mode != "no-release")
+                        tracker.MouseReleased(
+                            new Point
+                            {
+                                X = operation == "move" ? 500 : -500,
+                                Y = operation == "move" ? 400 : 0,
+                            },
+                            mode == "cursor-only" ? to.Monitor : after.Monitor,
+                            mode == "cursor-only" ? to.Work : after.Work,
+                            mode == "injected-release" ? LLMHF_INJECTED : 0
+                        );
+                    if (mode == "no-end")
+                    {
+                        Equal(
+                            false,
+                            tracker.Complete(
+                                11,
+                                before,
+                                after,
+                                200,
+                                11,
+                                "2026-10-28",
+                                after.Monitor
+                            )
+                                is WindowCandidate { origin: "mouse", targetMatched: true }
+                        );
+                        return;
+                    }
+                    var result = tracker.FinishMove(
+                        mode == "other-window" ? 12 : 11,
+                        after,
+                        200,
+                        11,
+                        "2026-10-28"
+                    );
+                    Equal(mode == "accepted" && hit != 10, result is WindowCandidate);
+                    if (result is WindowCandidate value)
+                    {
+                        Equal(operation == "move" ? "monitor-move" : "maximize", value.operation);
+                        Equal(true, value.targetMatched && !value.injected && !value.conflicted);
+                        if (operation == "move")
+                        {
+                            Equal(true, value.moveConfirmed);
+                            monitorMoveSamples.Add(
+                                new
+                                {
+                                    candidate = CandidateProtocol.V2(
+                                        value,
+                                        2000 + monitorMoveSamples.Count,
+                                        2000 + monitorMoveSamples.Count
+                                    ),
+                                    expected = "W02",
+                                }
+                            );
+                        }
+                    }
                 }
             );
         foreach (

@@ -77,13 +77,11 @@ export async function runUiAcceptance(window: BrowserWindow): Promise<void> {
           {
             fixtureOnly: true,
             initial,
-            displays: screen
-              .getAllDisplays()
-              .map((d) => ({
-                bounds: d.bounds,
-                workArea: d.workArea,
-                scaleFactor: d.scaleFactor,
-              })),
+            displays: screen.getAllDisplays().map((d) => ({
+              bounds: d.bounds,
+              workArea: d.workArea,
+              scaleFactor: d.scaleFactor,
+            })),
             samples,
           },
           null,

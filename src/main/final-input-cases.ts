@@ -219,7 +219,7 @@ export const finalInputCases: FinalCase[] = [
     "mouse",
     "最大化窓を最小化",
     "最大化した窓で最小化ボタンをクリック。",
-    "Win + ↓（必要に応じて繰り返す）",
+    "Win + ↓",
   ),
   one(
     "S04-repeat",

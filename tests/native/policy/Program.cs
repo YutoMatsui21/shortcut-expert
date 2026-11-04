@@ -186,12 +186,12 @@ internal static partial class Program
                 }
             );
             Check(
-                "unknown hit test",
+                "unknown hit test waits for release",
                 () =>
                 {
                     var tracker = Tracker();
                     Mouse(tracker, hit: -1);
-                    Equal("unknown", Complete(tracker).GetProperty("origin").GetString());
+                    Equal(JsonValueKind.Null, Complete(tracker).ValueKind);
                 }
             );
             Check(

@@ -1,0 +1,27 @@
+{
+  "source": "uncommitted workspace changes",
+  "artifacts": [
+    {
+      "sha256": "bc3b3632d0e9fd175570c3063e4af2827e44805086c3fc990308294ab6d7ab9e",
+      "path": "release/drag-representative-keys/win-unpacked/Shortcut Expert.exe"
+    },
+    {
+      "sha256": "95625633be0d3aeafa0c993975a8f6d182cbe824f5a55e46b744011a231309b7",
+      "path": "release/drag-representative-keys/win-unpacked/resources/app.asar"
+    },
+    {
+      "sha256": "b81e5b6e0996cb4ffab61a81e0ec89c7f2e3f00bfee34a36c9b443b7111f3ba3",
+      "path": "release/drag-representative-keys/win-unpacked/resources/native-helper/WindowObserver.exe"
+    }
+  ],
+  "createdAt": "2026-11-04T00:44:46.9424599+09:00",
+  "validation": {
+    "unit": 332,
+    "csharpPolicyCases": 917,
+    "review": "no findings",
+    "naturalInput": "not run on this build",
+    "packagedSmoke": "passed fixture only",
+    "native": 7
+  },
+  "guidance": "W03 Win + Up representative key for arranged origins; W04 Win + Down"
+}

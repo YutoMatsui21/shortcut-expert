@@ -70,7 +70,7 @@ const cases: {
       route: "min-button",
     },
     key: "win-down",
-    shortcut: "Win + ↓（必要に応じて繰り返す）",
+    shortcut: "Win + ↓",
   },
   {
     id: "W04",

@@ -1,0 +1,28 @@
+{
+  "baseHead": "ef29722251ddabda753977343bd37505eb36b82d",
+  "validation": {
+    "panelCompile": "passed",
+    "unit": 332,
+    "native": 7,
+    "csharpPolicyCases": 910,
+    "localReview": "no findings",
+    "naturalInput": "not run",
+    "packagedSmoke": "passed fixture only"
+  },
+  "source": "uncommitted workspace changes",
+  "artifacts": [
+    {
+      "sha256": "61a8bb3d53fad5251f89f60e77c8d3b9eb63404ce361fd45d68e38f26de5a105",
+      "path": "release/drag-validation/win-unpacked/Shortcut Expert.exe"
+    },
+    {
+      "sha256": "5ef5f713323beda320e2648dbae20a397686c17ae971ce1be76bbf1f4cd97666",
+      "path": "release/drag-validation/win-unpacked/resources/app.asar"
+    },
+    {
+      "sha256": "b81e5b6e0996cb4ffab61a81e0ec89c7f2e3f00bfee34a36c9b443b7111f3ba3",
+      "path": "release/drag-validation/win-unpacked/resources/native-helper/WindowObserver.exe"
+    }
+  ],
+  "createdAt": "2026-11-03T23:53:43.0740163+09:00"
+}

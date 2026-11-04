@@ -21,6 +21,7 @@ export const finalDiagnosticKeys = [
   "route-caption-drag",
   "route-win-up",
   "route-win-down",
+  "route-mouse-state-fallback",
   "route-unknown",
   "route-other",
   "operation-maximize",
@@ -93,6 +94,7 @@ export function finalCandidateDiagnostics(
     "caption-drag": "route-caption-drag",
     "win-up": "route-win-up",
     "win-down": "route-win-down",
+    "mouse-state-fallback": "route-mouse-state-fallback",
     unknown: "route-unknown",
   };
   keys.push(lookup(routes, value.route, "route-other"));
