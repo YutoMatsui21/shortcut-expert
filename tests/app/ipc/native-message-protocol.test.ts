@@ -234,7 +234,7 @@ test("v2でも既存5操作の条件と同等キーを緩めない", () => {
   const arranged = v2Fixture(
     candidateFixture({ before: { state: "normal", arranged: true } }),
   );
-  assert.equal(classify(arranged)?.shortcut, null);
+  assert.equal(classify(arranged)?.shortcut, "Win + ↑");
 });
 
 async function durableFixture(

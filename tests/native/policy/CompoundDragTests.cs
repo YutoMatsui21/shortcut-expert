@@ -7,6 +7,27 @@ internal static partial class Program
     {
         var start = normal with { Monitor = new(-1920, 0, 1920, 1080), Work = new(-1920, 0, 1920, 1040),
             Dpi = 96, DisplayLayout = "pair", HorizontalPair = true };
+        foreach (int hit in new[] { 1, -1 })
+            Check($"captionless cross-monitor maximize without caption hit: {hit}", () => {
+                var before = start with { HasCaption = false };
+                var after = before with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040), Show = SW_SHOWMAXIMIZED };
+                var tracker = Tracker(); tracker.Mouse(11, before, hit, default, 0, 500, 0, false, true);
+                tracker.MouseMoved(new Point { X = -500, Y = 200 }, 0);
+                tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = 0 }, after.Monitor, after.Work, 0);
+                Equal(true, tracker.FinishMove(11, after, 5000, 11, "2026-10-28") is CompoundMoveResult { Terminal: "maximized" });
+            });
+        Check("arranged origin maximizes across monitors with representative terminal shortcut", () => {
+            var before = start with { Arranged = true };
+            var after = start with { Monitor = new(0, 0, 1920, 1080), Work = new(0, 0, 1920, 1040), Show = SW_SHOWMAXIMIZED };
+            var tracker = Tracker(); tracker.Mouse(11, before, 1, default, 0, 500, 0, false, true);
+            tracker.MoveStart(11, 100); tracker.MouseReleased(new Point { X = 900, Y = 0 }, after.Monitor, after.Work, 0);
+            var result = tracker.FinishMove(11, after, 500, 11, "2026-10-28") as CompoundMoveResult;
+            Equal(true, result is not null);
+            var emitted = new List<object>(); var protocol = new CandidateProtocol(emitted.Add); protocol.Start(1, 2);
+            protocol.Compound(1, "2026-10-28", result!);
+            Equal(true, ((CompoundDragEvidence)((CandidateEnvelope)emitted[0]).evidence).terminalEquivalent);
+            compoundSamples.Add(emitted[0]);
+        });
         foreach (int gap in new[] { 3, 8, 33, 64, 65, 500 })
             Check($"cross-monitor top preview is atomic within OS threshold {gap}", () => {
                 var before = start with { MouseDockThresholdPx = 64 };

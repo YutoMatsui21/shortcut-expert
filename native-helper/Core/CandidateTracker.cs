@@ -6,7 +6,7 @@ internal sealed record WindowState(uint Process, string App, uint Show, bool? Ar
     MonitorBounds? Monitor = null, bool HorizontalPair = false, string? DisplayLayout = null,
     MonitorBounds? Frame = null, MonitorBounds? Work = null, uint Dpi = 0, bool TwoDisplayPair = false, int? MouseDockThresholdPx = null)
 {
-    // Retain the caption requirement for operations other than W03/W04; never sent on the wire.
+    // Retain caption metadata for keyboard moves and placement; never sent on the wire.
     internal bool HasCaption { get; init; } = true;
 }
 // Only verified terminal evidence crosses the protocol; HWND/process stay in the tracker.
@@ -25,16 +25,17 @@ internal sealed class CandidateTracker
     internal nint? MouseStateTarget => input is { Route: "unknown" } ? input.Window : null;
     internal void CancelMouseState() { if (MouseStateTarget is not null) input = null; }
     internal void MouseMessage(nint message) {
-        if (message is not (0x200 or WM_LBUTTONDOWN or WM_LBUTTONUP)) CancelMouseState();
+        if (message is not (0x200 or WM_LBUTTONDOWN or WM_LBUTTONUP)) { CancelMouseState(); dragPress = null; }
     }
     private const int CaptionDoubleClickDistancePx = 4;
     private const long NoCaptionClickAt = -10000;
     private sealed record Input(nint Window, WindowState Before, string Origin, string Route,
-        long At, bool Injected, bool Conflicted, bool Matched, int Transaction, WindowDragReleaseProbe? Probe = null);
+        long At, bool Injected, bool Conflicted, bool Matched, int Transaction, WindowDragReleaseProbe? Probe = null, bool CaptionPress = false);
     private readonly HashSet<nint> moving = new();
     private readonly Dictionary<nint, Input> drags = new();
     private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
     private Input? input;
+    private Input? dragPress;
     private Input? winUp;
     private bool upHeld;
     private readonly HashSet<uint> injectedWin = new();
@@ -63,6 +64,7 @@ internal sealed class CandidateTracker
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal bool HasDrag => drags.Count == 1;
     internal void MouseMoved(Point point, uint flags) {
+        if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0 && (dragPress is not null || HasDrag)) { ClearInput(); return; }
         foreach (var drag in drags.Values) drag.Probe?.Sample(point, flags);
         if (MouseStateTarget is not null &&
             ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0 ||
@@ -91,6 +93,7 @@ internal sealed class CandidateTracker
     }
     internal void ForegroundChanged(nint window) {
         Placement.Foreground(window);
+        if (dragPress?.Window != window) dragPress = null;
         if (winUp?.Window != window) winUp = null;
         if (input is { Route: "win-shift-left" or "win-shift-right" } && input.Window != window) input = null;
         if (drags.Keys.Any(target => target != window)) { Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled); drags.Clear(); release = null; }
@@ -99,16 +102,17 @@ internal sealed class CandidateTracker
 
     internal void Reset(int newGeneration)
     {
-        generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null;
+        generation = newGeneration; sequence = 0; transaction = 0; moving.Clear(); drags.Clear(); input = null; dragPress = null;
         completedWinDown = null; winDownHeld = false; release = null;
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
         Placement.Reset();
         winUp = null; upHeld = false; injectedWin.Clear();
     }
-    internal void ClearInput() { if (drags.Count > 0) Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled); Placement.Cancel(); input = null; winUp = null; drags.Clear(); completedWinDown = null; release = null; }
+    internal void ClearInput() { if (drags.Count > 0) Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled); Placement.Cancel(); input = null; dragPress = null; winUp = null; drags.Clear(); completedWinDown = null; release = null; }
     internal void Forget(nint window)
     {
         Placement.Forget(window);
+        if (dragPress?.Window == window) dragPress = null;
         if (winUp?.Window == window) winUp = null;
         moving.Remove(window);
         drags.Remove(window);
@@ -121,8 +125,10 @@ internal sealed class CandidateTracker
         release = null;
         moving.Add(window);
         winUp = null;
-        if (input is { Route: "caption-press" } && input.Window == window && now - input.At is >= 0 and <= InputMatchWindowMs)
-            drags[window] = input with { Origin = "mouse", Route = "caption-drag", At = now - input.At, Probe = Diagnostic is null ? null : new() };
+        // A live physical left press is independent of click movement/hit-test classification.
+        if (dragPress is { } press && press.Window == window && now - press.At is >= 0 and <= InputMatchWindowMs)
+            drags[window] = press with { Origin = "mouse", Route = "caption-drag", At = now - press.At, Probe = Diagnostic is null ? null : new() };
+        dragPress = null;
         if (input?.Window == window) input = input with { Conflicted = true };
         lastCaption = 0; lastCaptionAt = NoCaptionClickAt;
     }
@@ -130,6 +136,7 @@ internal sealed class CandidateTracker
     internal void MouseReleased(Point point, MonitorBounds? monitor, MonitorBounds? work, uint flags, Point? physicalBefore = null, Point? physicalAfter = null)
     {
         if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0) { ClearInput(); return; }
+        dragPress = null;
         MouseMoved(point, flags);
         clickReleased = true;
         if (drags.Count == 1 && monitor is not null && work is not null && Diagnostic is { } diagnostic)
@@ -156,12 +163,15 @@ internal sealed class CandidateTracker
         lastCaption = hit == HTCAPTION ? window : 0; lastCaptionProcess = before.Process;
         lastCaptionAt = now; lastCaptionPoint = point;
         input = new Input(window, before, route is "unknown" or "caption-press" ? "unknown" : "mouse", route, now,
-            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0, modifiers, foreground, checked(++transaction));
+            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0, modifiers, foreground, checked(++transaction), CaptionPress: route == "caption-press");
+        // Explicit resize borders and caption buttons remain outside window-move detection.
+        dragPress = (route is "unknown" or "caption-press") && hit is not (>= 10 and <= 18) ? input : null;
     }
     internal void Key(nint window, WindowState? before, uint key, bool winDown, bool modifiers, long now, uint flags,
         bool shiftDown = false, bool altDown = false)
     {
         drags.Clear();
+        dragPress = null;
         release = null;
         bool conflict = input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
@@ -214,6 +224,7 @@ internal sealed class CandidateTracker
         var released = release; release = null;
         Forget(window);
         if (drag is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragNoSource); return null; }
+        if (drag.Injected || drag.Conflicted || !drag.Matched) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveInputInvalid); return null; }
         if (after is null) { Diagnostic?.Invoke(WindowDiagnosticReason.DragNoResult); return null; }
         if (drag.Before.Process != after.Process) { Diagnostic?.Invoke(WindowDiagnosticReason.DragTargetChanged); return null; }
         if (drag.Before.DisplayLayout != after.DisplayLayout) { Diagnostic?.Invoke(WindowDiagnosticReason.DragLayoutChanged); return null; }
@@ -221,11 +232,12 @@ internal sealed class CandidateTracker
         if (after.Arranged == true)
         {
             Diagnostic?.Invoke(WindowDiagnosticReason.DragArrangedResult);
+            if (!drag.CaptionPress) return null; // W06/W07 retain their existing input gate.
             if (released is null) Diagnostic?.Invoke(WindowDiagnosticReason.DragReleaseUnknown);
             var placement = released is { } r ? PlacementGeometry.Drag(drag.Before, after, r.Point, r.Monitor, r.Work,
                 drag.At, foreground == window && drag.Matched && !drag.Injected && !drag.Conflicted, Diagnostic) : null;
             if (placement is { monitorChanged: true })
-                return !placement.shape.EndsWith("-half") && StableMove(drag.Before, after)
+                return !placement.shape.EndsWith("-half") && StableMove(drag.Before, after, requireCaption: false)
                     ? Compound(drag, after, placement.shape) : null;
             return placement is null ? null : new PlacementResult(drag.Transaction, "mouse", placement);
         }
@@ -236,8 +248,15 @@ internal sealed class CandidateTracker
             var r = released.Value;
             if (r.Monitor != after.Monitor) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseMonitorMismatch); return null; }
             if (r.Work != after.Work) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxReleaseWorkMismatch); return null; }
-            if (after.Arranged != false || State(drag.Before.Show) != "normal" || drag.Before.Arranged != false)
-                { Diagnostic?.Invoke(WindowDiagnosticReason.MaxStartInvalid); return null; }
+            if (after.Arranged != false || State(drag.Before.Show) != "normal" || drag.Before.Arranged is null)
+                {
+                    Diagnostic?.Invoke(WindowDiagnosticReason.MaxStartInvalid);
+                    // Fixed categories only: distinguish start state from an unknown terminal API result.
+                    if (State(drag.Before.Show) != "normal") Diagnostic?.Invoke(WindowDiagnosticReason.MaxStartNotNormal);
+                    if (drag.Before.Arranged is null) Diagnostic?.Invoke(WindowDiagnosticReason.MaxStartArrangedUnknown);
+                    if (after.Arranged is null) Diagnostic?.Invoke(WindowDiagnosticReason.MaxResultArrangedUnknown);
+                    return null;
+                }
             if (foreground != window) { Diagnostic?.Invoke(WindowDiagnosticReason.MaxForegroundMismatch); return null; }
             long topGap = (long)r.Point.Y - r.Work.y;
             Diagnostic?.Invoke(topGap < 0 ? WindowDiagnosticReason.MaxReleaseYBeforeTop : topGap <= 2 ? WindowDiagnosticReason.MaxReleaseTopWithin2 :
@@ -252,7 +271,7 @@ internal sealed class CandidateTracker
             if (r.Point.Y < r.Work.y || (long)r.Point.Y > (long)r.Work.y + tolerance.Value) return null;
             Diagnostic?.Invoke(WindowDiagnosticReason.MaxAccepted);
             if (drag.Before.Monitor != after.Monitor)
-                return StableMove(drag.Before, after) && drag.Matched && !drag.Injected && !drag.Conflicted
+                return StableMove(drag.Before, after, requireCaption: false) && drag.Matched && !drag.Injected && !drag.Conflicted
                     ? Compound(drag, after, "maximized") : null;
             return Build("maximize", drag.Before, after, drag with { Route = "caption-top-drag" }, drag.At, true, false, date, after.Monitor);
         }
@@ -261,7 +280,7 @@ internal sealed class CandidateTracker
         if (released.Value.Monitor != after.Monitor) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveReleaseMonitorMismatch); return null; }
         if (released.Value.Work != after.Work) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveReleaseWorkMismatch); return null; }
         if (State(after.Show) != "normal" || after.Arranged != false) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveEndStateInvalid); return null; }
-        if (!StableMove(drag.Before, after)) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveUnstable); return null; }
+        if (!StableMove(drag.Before, after, requireCaption: false)) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveUnstable); return null; }
         if (drag.Injected || drag.Conflicted || !drag.Matched) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveInputInvalid); return null; }
         if (foreground != window) { Diagnostic?.Invoke(WindowDiagnosticReason.MoveForegroundMismatch); return null; }
         Diagnostic?.Invoke(WindowDiagnosticReason.MoveAccepted);
@@ -271,7 +290,7 @@ internal sealed class CandidateTracker
 
     private static CompoundMoveResult Compound(Input drag, WindowState after, string terminal) =>
         new(drag.Transaction, drag.Before.Monitor!, after.Monitor!, terminal, drag.At,
-            MoveDirection(drag.Before, after), TwoDisplayLayout(drag.Before, after));
+            MoveDirection(drag.Before, after), TwoDisplayLayout(drag.Before, after, requireCaption: false));
 
     private static string? MoveDirection(WindowState before, WindowState after) =>
         before.HorizontalPair && after.HorizontalPair && before.Monitor is not null && after.Monitor is not null &&
@@ -352,15 +371,15 @@ internal sealed class CandidateTracker
             recent ? candidate!.Origin : "unknown", recent && candidate!.Origin != "unknown" ? candidate.Route : "unknown",
             candidate?.Injected ?? false, candidate?.Conflicted ?? false, isMoving, false,
             recent && candidate!.Matched && target, age, monitor, before.Monitor, after.Monitor, direction,
-            operation == "monitor-move" && StableMove(before, after),
-            operation == "monitor-move" && TwoDisplayLayout(before, after))
+            operation == "monitor-move" && StableMove(before, after, candidate?.Origin != "mouse"),
+            operation == "monitor-move" && TwoDisplayLayout(before, after, candidate?.Origin != "mouse"))
             { Transaction = candidate?.Transaction ?? checked(++transaction) };
     }
-    private static bool TwoDisplayLayout(WindowState before, WindowState after) =>
-        before.TwoDisplayPair && after.TwoDisplayPair && StableMove(before, after) &&
+    private static bool TwoDisplayLayout(WindowState before, WindowState after, bool requireCaption = true) =>
+        before.TwoDisplayPair && after.TwoDisplayPair && StableMove(before, after, requireCaption) &&
         MonitorMovePolicy.Separate(before.Monitor!, after.Monitor!);
-    private static bool StableMove(WindowState before, WindowState after) =>
-        before.HasCaption && after.HasCaption && before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
+    private static bool StableMove(WindowState before, WindowState after, bool requireCaption = true) =>
+        (!requireCaption || before.HasCaption && after.HasCaption) && before.Process == after.Process && before.DisplayLayout is not null && before.DisplayLayout == after.DisplayLayout &&
         before.Monitor is not null && after.Monitor is not null && before.Work is not null && after.Work is not null &&
         before.Dpi > 0 && after.Dpi > 0 && State(before.Show) is "normal" or "maximized" &&
         State(after.Show) is "normal" or "maximized";

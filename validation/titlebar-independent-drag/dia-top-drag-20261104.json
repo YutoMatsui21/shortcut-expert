@@ -1,0 +1,284 @@
+{
+  "sourceSession": ".tools\\validation\\issue-47\\session-uxdHlY",
+  "externalApplication": "Dia (identified by user)",
+  "artifacts": [
+    {
+      "path": "resources/app.asar",
+      "sha256": "5ef5f713323beda320e2648dbae20a397686c17ae971ce1be76bbf1f4cd97666"
+    },
+    {
+      "path": "resources/native-helper/WindowObserver.exe",
+      "sha256": "b81e5b6e0996cb4ffab61a81e0ec89c7f2e3f00bfee34a36c9b443b7111f3ba3"
+    }
+  ],
+  "trials": [
+    {
+      "trial": 1,
+      "caseId": "P02m-unknown",
+      "application": "external",
+      "state": "learning",
+      "secondaryState": "learning",
+      "paused": false,
+      "stopped": false,
+      "slot": 1,
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "counts": {
+        "2026-11-03": {
+          "W02": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "slotMatched": true,
+      "dateChanged": false,
+      "recordsPassed": true,
+      "notificationRequests": 1,
+      "notificationRequestPassed": false,
+      "notificationOperations": {
+        "W02": 1
+      },
+      "candidates": 1,
+      "classified": {
+        "W02": 1
+      },
+      "equivalence": "not-tested",
+      "operatorResult": "matched",
+      "visibleNotification": "matched",
+      "nativeNonzero": {
+        "MouseDown": 6,
+        "MouseUp": 6,
+        "TargetMissing": 5,
+        "RawClient": 1,
+        "TitleReadOk": 1,
+        "TitleOutsidePoint": 1,
+        "FinalOther": 1,
+        "ForegroundMatched": 1,
+        "MoveStart": 1,
+        "MoveEnd": 1,
+        "HitChildSameProcess": 1,
+        "ChildClient": 1,
+        "ChildTitleOutsidePoint": 1,
+        "MoveAccepted": 1,
+        "TitleGeometryFallback": 1,
+        "ReleaseSampled": 1,
+        "ReleaseWorkLeftSame": 1,
+        "DragMotionObserved": 1,
+        "ReleaseWorkLeftAbove512": 1,
+        "ReleaseBeforeEqual": 1,
+        "ReleaseAfterEqual": 1
+      },
+      "candidateDiagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-caption-drag": 1,
+        "operation-other": 1,
+        "before-normal": 1,
+        "after-normal": 1,
+        "before-arranged-true": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "different-monitor": 1,
+        "app-category-known": 1
+      }
+    },
+    {
+      "trial": 2,
+      "caseId": "P02m-unknown",
+      "application": "chrome",
+      "state": "learning",
+      "secondaryState": "learning",
+      "paused": false,
+      "stopped": false,
+      "slot": 1,
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "counts": {
+        "2026-11-03": {
+          "W02": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "slotMatched": true,
+      "dateChanged": false,
+      "recordsPassed": true,
+      "notificationRequests": 1,
+      "notificationRequestPassed": false,
+      "notificationOperations": {
+        "W02": 1
+      },
+      "candidates": 1,
+      "classified": {
+        "W02": 1
+      },
+      "equivalence": "not-tested",
+      "operatorResult": "matched",
+      "visibleNotification": "matched",
+      "nativeNonzero": {
+        "MouseDown": 6,
+        "MouseUp": 6,
+        "TargetMissing": 5,
+        "RawCaption": 1,
+        "TitleReadOk": 1,
+        "TitleOutsidePoint": 1,
+        "FinalCaption": 1,
+        "ForegroundMatched": 1,
+        "MoveStart": 1,
+        "MoveEnd": 1,
+        "HitRoot": 1,
+        "MoveAccepted": 1,
+        "TitleGeometryFallback": 1,
+        "ReleaseSampled": 1,
+        "ReleaseWorkLeftSame": 1,
+        "DragMotionObserved": 1,
+        "ReleaseWorkLeftAbove512": 1,
+        "ReleaseBeforeEqual": 1,
+        "ReleaseAfterEqual": 1
+      },
+      "candidateDiagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-caption-drag": 1,
+        "operation-other": 1,
+        "before-normal": 1,
+        "after-normal": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "different-monitor": 1,
+        "app-category-known": 1
+      }
+    },
+    {
+      "trial": 3,
+      "caseId": "S03-drag",
+      "application": "external",
+      "state": "learning",
+      "secondaryState": "learning",
+      "paused": false,
+      "stopped": false,
+      "slot": 1,
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "counts": {},
+      "slotMatched": true,
+      "dateChanged": false,
+      "recordsPassed": false,
+      "notificationRequests": 0,
+      "notificationRequestPassed": false,
+      "notificationOperations": {},
+      "candidates": 0,
+      "classified": {},
+      "equivalence": "not-tested",
+      "operatorResult": "matched",
+      "visibleNotification": "different",
+      "nativeNonzero": {
+        "MaxStartInvalid": 1,
+        "MouseDown": 6,
+        "MouseUp": 6,
+        "TargetMissing": 5,
+        "RawClient": 1,
+        "TitleReadOk": 1,
+        "TitleOutsidePoint": 1,
+        "FinalOther": 1,
+        "ForegroundMatched": 1,
+        "MoveStart": 1,
+        "MoveEnd": 1,
+        "HitChildSameProcess": 1,
+        "ChildClient": 1,
+        "ChildTitleOutsidePoint": 1,
+        "DragMaximizedResult": 1,
+        "TitleGeometryFallback": 1,
+        "ReleaseSampled": 1,
+        "ReleaseWorkLeftSame": 1,
+        "DragMotionObserved": 1,
+        "ReleaseWorkLeftAbove512": 1,
+        "ReleaseBeforeEqual": 1,
+        "ReleaseAfterEqual": 1
+      },
+      "candidateDiagnostics": {}
+    },
+    {
+      "trial": 4,
+      "caseId": "S03-drag",
+      "application": "chrome",
+      "state": "learning",
+      "secondaryState": "learning",
+      "paused": false,
+      "stopped": false,
+      "slot": 1,
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "counts": {
+        "2026-11-03": {
+          "W03": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "slotMatched": true,
+      "dateChanged": false,
+      "recordsPassed": true,
+      "notificationRequests": 1,
+      "notificationRequestPassed": true,
+      "notificationOperations": {
+        "W03": 1
+      },
+      "candidates": 1,
+      "classified": {
+        "W03": 1
+      },
+      "equivalence": "not-tested",
+      "operatorResult": "matched",
+      "visibleNotification": "matched",
+      "nativeNonzero": {
+        "MaxReleaseTopWithin2": 1,
+        "MaxAccepted": 1,
+        "MouseDown": 6,
+        "MouseUp": 6,
+        "TargetMissing": 5,
+        "RawCaption": 1,
+        "TitleReadOk": 1,
+        "TitleOutsidePoint": 1,
+        "FinalCaption": 1,
+        "ForegroundMatched": 1,
+        "MoveStart": 1,
+        "MoveEnd": 1,
+        "HitRoot": 1,
+        "DragMaximizedResult": 1,
+        "TitleGeometryFallback": 1,
+        "ReleaseSampled": 1,
+        "ReleaseWorkLeftSame": 1,
+        "DragMotionObserved": 1,
+        "ReleaseWorkLeftAbove512": 1,
+        "ReleaseBeforeEqual": 1,
+        "ReleaseAfterEqual": 1
+      },
+      "candidateDiagnostics": {
+        "kind-window": 1,
+        "origin-mouse": 1,
+        "route-caption-top-drag": 1,
+        "operation-maximize": 1,
+        "before-normal": 1,
+        "after-maximized": 1,
+        "before-arranged-false": 1,
+        "after-arranged-false": 1,
+        "input-recent": 1,
+        "same-monitor": 1,
+        "app-category-known": 1
+      }
+    }
+  ]
+}

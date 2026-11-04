@@ -27,7 +27,7 @@ await writeFile(join(directory, 'build.json'), JSON.stringify({ manifestSha256: 
   panelSourceSha256: sha(await readFile(source)), nativeDiagnostics, input: 'manual physical input only', consent: 'explicit user consent; --observe-consented' }, null, 2));
 const env = { ...developmentEnvironment(), COACH_TEST_DATA_DIR: data };
 delete env.ELECTRON_RUN_AS_NODE; delete env.ELECTRON_RENDERER_URL;
-const product = spawn(join(packageRoot, 'Window Shortcut Coach.exe'), ['--final-natural-acceptance', ...(nativeDiagnostics ? ['--caption-diagnostics'] : [])], { env, windowsHide: false, stdio: ['ignore', 'pipe', 'pipe'] });
+const product = spawn(join(packageRoot, 'Shortcut Expert.exe'), ['--final-natural-acceptance', ...(nativeDiagnostics ? ['--caption-diagnostics'] : [])], { env, windowsHide: false, stdio: ['ignore', 'pipe', 'pipe'] });
 console.log('FINAL_SESSION ' + directory);
 let panel, stopTimer, ready = false, ending = false;
 const stop = async () => {

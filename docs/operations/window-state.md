@@ -12,7 +12,7 @@
 
 通常のNative→Main厳格parse→Core→SQLite→学習・記録画面→保存後通知を使用する。W03/W04の学習状態は別に保持し、旧W05を新W04へ合算しない。
 
-対象は実行ファイル名の許可リストではなく、通常の可視root窓・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。W03/W04は入力・結果とも`WS_CAPTION`を必須としない。対象読取はW02／W06／W07と複合dragにも使うが、captionの有無を一時状態として保持し、これらの操作には入力・結果とも従来のcaption条件を維持する。
+対象は実行ファイル名の許可リストではなく、通常の可視root窓・非owned／非tool／非cloaked・非昇格の条件で判定する。Shell／desktop／自己process、判定情報不明は除外する。最小化結果を読むため、結果窓の`IsIconic`だけでは除外しない。Nativeは実行ファイル名を取得・通信せず、固定カテゴリ`ordinary-window`を送る。旧4カテゴリは既存fixtureの互換読取だけに残し、一般アプリ受入の代用にはしない。W03/W04は入力・結果とも`WS_CAPTION`を必須としない。対象読取はW02／W06／W07と複合dragにも使うが、captionの有無を一時状態として保持し、W02のマウス移動・W02＋W03はcaption不要とし、W02のキー経路とW06／W07には従来のcaption条件を維持する。
 
 rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実際のヒット先の子窓を10ms上限で照会する。同じroot祖先・同じprocessを照会前後で確認し、子窓が明示的に`HTCAPTION`を返した場合だけcaptionとして扱う。rootのボタン／resize／不明判定を上書きせず、子窓のclient・不明・別対象・別processも採用しない。子窓のHWND・process・座標は一時照合だけで、通信・保存へ追加しない。W03/W04以外のcaption dragも同じ入力照合を使う。
 
@@ -31,11 +31,11 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 同一HWND／processかつforegroundが一致し、入力後1000ms以内に`SW_SHOWMAXIMIZED`を読めたら1件確定する。WinEventと、候補がある間だけ動く50ms間隔のWinForms timerが同じ確定処理を使う。timerはhook／WinEventと同じmessage-loop thread上で動作し、常時ポーリングや並行した状態更新を行わない。イベント欠落・キー解放後の遅延も期限内なら確認し、期限超過時は棄却する。timerの配送が遅れた場合に期限を延長しない。
 
-↑のrepeatは候補・期限を更新せず、確定で候補と進行中の配置列を消費するため、イベント・再照会・Win解放が重なっても重複しない。別キー／マウス入力・注入・foreground離脱・対象破棄・process不一致・移動開始・画面設定変更・停止／世代変更で取消す。arranged不明でもキー記録は採用するが、マウス操作へのキー案内は従来どおりarranged=falseの確証を必要とする。
+↑のrepeatは候補・期限を更新せず、確定で候補と進行中の配置列を消費するため、イベント・再照会・Win解放が重なっても重複しない。別キー／マウス入力・注入・foreground離脱・対象破棄・process不一致・移動開始・画面設定変更・停止／世代変更で取消す。arranged不明でもキー記録は採用するが、W03の案内は代表キー`Win+↑`とし、arranged=trueの起点からも記録・通知する。arranged不明のマウス起点は引き続き棄却する。
 
 状態APIの根拠：[GetWindowPlacement](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowplacement)は最大化時のshowCmdを`SW_SHOWMAXIMIZED`と定義する。1000ms／50msは実装上の有界な確認期間・頻度であり、一般アプリの実測精度を保証する値ではない。
 
-上端ドラッグはcaption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEEND／最大化を確認し、**終端だけ**1件計上。解放位置は作業域上端から公開API `SPI_GETMOUSEDOCKTHRESHOLD` の検証済み値（1〜256px）と2pxの大きい方以内・作業域内のX、解放先monitorと結果monitorが一致することを必要とする。取得不能／範囲外は従来の2pxへfallbackし、gesture前後で値が変わった場合は採用しない。
+上端ドラッグは通常状態（配置済みも含む）を起点に、物理左押下（HTCAPTION・WS_CAPTION不要）→MOVESIZESTART→物理解放→同一対象のMOVESIZEEND／最大化を確認し、**終端だけ**1件計上。解放位置は作業域上端から公開API `SPI_GETMOUSEDOCKTHRESHOLD` の検証済み値（1〜256px）と2pxの大きい方以内・作業域内のX、解放先monitorと結果monitorが一致することを必要とする。取得不能／範囲外は従来の2pxへfallbackし、gesture前後で値が変わった場合は採用しない。
 
 [SystemParametersInfoWの公開仕様](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)は、mouse dockingの距離と上端・左右端のdocking設定を定義する。getterのDPI context／cache lifecycleは[配置設計](window-placement.md#osの早期スナップ閾値)と共通。これは完全なWindows 11 preview領域を返すAPIではなく、256pxは実装上限でMicrosoftの公表上限ではない。Snap Layoutの内部選択、解放不明・取消・注入・対象変更・構成変更・重複・遅着の未検証結果は採用しない。
 
@@ -48,7 +48,7 @@ rootのボタン矩形照合後も`WM_NCHITTEST`が`HTCLIENT`の場合は、実�
 
 - 同一窓／processへの確定済み`Win+↓`の**物理的な再押下**が1000ms以内なら、最大化解除→最小化を**W04の1操作**へまとめる。キーrepeatは再押下として扱わず、期限を延長しない。
 - 他入力・別対象・foreground変更・停止／世代変更・期限超過で連続関係を終了する。1000msは実装上の境界で、実機精度の統計ではない。
-- 最大化中のマウス最小化には、必要に応じて`Win+↓`を繰り返す案内をする。arranged／不明な起点では操作記録とキー同等性を分離し、確証できないキーは通知しない。arranged起点の`Win+↓`を無条件に最小化として採用しない。
+- 最大化中のマウス最小化にも、代表キー`Win+↓`だけを案内する。arranged／不明な起点では操作記録とキー同等性を分離し、確証できないキーは通知しない。arranged起点の`Win+↓`を無条件に最小化として採用しない。
 
 ## 4. 複合ドラッグとの関係
 

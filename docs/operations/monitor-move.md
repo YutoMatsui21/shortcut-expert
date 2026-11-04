@@ -6,7 +6,7 @@
 
 | 経路 | 採用条件 |
 | --- | --- |
-| マウス | caption押下→MOVESIZESTART→非注入の物理解放→同じ窓／processのMOVESIZEEND。**始終monitorが異なる**通常・非arranged終端と解放位置を照合 |
+| マウス | 物理左押下（HTCAPTION・WS_CAPTION不要）→MOVESIZESTART→非注入の物理解放→同じ窓／processのMOVESIZEEND。**始終monitorが異なる**通常・非arranged終端と解放位置を照合 |
 | キー | Win+Shift+←／→の入力時と解放後の対象・monitor差を照合。保持中の連続移動は起点からの**1操作**として確定 |
 
 - `CandidateTracker`で同一対象、foreground、画面構成・作業域・DPIの整合を確認する。キー側は方向キー解放まで保留し、入力から**1000ms超**の結果や構成変更を除外する。構成変更通知は同じcallbackスレッドの候補を取消す。

@@ -70,10 +70,10 @@ const minimize: Candidate = {
   inputAgeMs: 100,
   monitor: null,
 };
-test("最大化解除と最大化中の最小化ボタンはW04へ帰属し、反復が必要な案内を区別する", () => {
+test("最大化解除と最大化中の最小化ボタンはW04へ帰属し、代表キーを案内する", () => {
   const minimized = classify(minimize);
   assert.equal(minimized?.operation, "W04");
-  assert.match(minimized?.shortcut ?? "", /Win.*↓.*繰り返/);
+  assert.equal(minimized?.shortcut, "Win + ↓");
   const restored = classify({
     ...minimize,
     operation: "restore",

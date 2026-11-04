@@ -34,7 +34,7 @@ export const finalInputCases: FinalCase[] = [
   one('S03-drag', 'W03', 'mouse', '上端drag最大化', '通常窓のcaptionから同じ画面の上端へ直接dragし、最大化で離す。', 'Win + ↑'),
   one('S04-double', 'W04', 'mouse', 'double click復元', '最大化した窓のcaptionをダブルクリック。', 'Win + ↓'),
   one('S04-min-normal', 'W04', 'mouse', '通常窓を最小化', '通常・未配置の窓で最小化ボタンをクリック。', 'Win + ↓'),
-  one('S04-min-max', 'W04', 'mouse', '最大化窓を最小化', '最大化した窓で最小化ボタンをクリック。', 'Win + ↓（必要に応じて繰り返す）'),
+  one('S04-min-max', 'W04', 'mouse', '最大化窓を最小化', '最大化した窓で最小化ボタンをクリック。', 'Win + ↓'),
   one('S04-repeat', 'W04', 'key', '連続Win+↓', '最大化窓でWin+↓を物理的に2回、1000ms以内に再押下して最小化。長押しはしない。', ''),
   one('S01-multi', 'W01', 'key', 'Alt+複数Tab', 'Altを保持したままTabを複数回押し、別の通常窓でAltを離す。', ''),
   one('P02m-two-displays', 'W02', 'mouse', '上下／上端非整列2画面の移動',

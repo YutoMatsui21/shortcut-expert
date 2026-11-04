@@ -84,13 +84,15 @@ test("W03 top drag requires a confirmed same-monitor terminal result", () => {
     toMonitor: screen,
   });
   assert.equal(classify(drag)?.operation, "W03");
+  const arranged = classify({ ...drag, before: { state: "normal", arranged: true } });
+  assert.equal(arranged?.operation, "W03");
+  assert.equal(arranged?.shortcut, "Win + ↑", "maximize guidance is a representative key regardless of snapped origin");
   for (const invalid of [
     { fromMonitor: null },
     { toMonitor: null },
     { toMonitor: { ...screen, y: 0 } },
     { moving: true },
     { conflicted: true },
-    { before: { state: "normal", arranged: true } },
     { after: { state: "normal" } },
     { origin: "key" as const },
     { route: "snap-layout-selection" },
@@ -111,7 +113,7 @@ test("W03 and W04 keep separate learning identities and correct minimize guidanc
     before: { state: "maximized", arranged: false },
   });
   assert.equal(classify(min)?.operation, "W04");
-  assert.equal(classify(min)?.shortcut, "Win + ↓（必要に応じて繰り返す）");
+  assert.equal(classify(min)?.shortcut, "Win + ↓");
   for (const route of ["win-m", "win-d", "caption-drag", "win-shift-down"])
     assert.equal(classify({ ...min, origin: "key", route }), null);
 });

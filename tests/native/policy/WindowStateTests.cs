@@ -139,6 +139,32 @@ internal static partial class Program
             var result = tracker.Complete(11, start, max, 100, 11, "2026-10-28", screen) as WindowCandidate;
             Equal(false, result is { origin: "key", targetMatched: true });
         });
+        foreach (string mode in new[] { "accepted", "start-maximized", "start-arranged", "start-arranged-unknown", "result-arranged-unknown", "combined" })
+            Check($"top drag rejection identifies state without changing decision: {mode}", () => {
+                var before = start with { HasCaption = false };
+                var after = max with { HasCaption = false };
+                if (mode is "start-maximized" or "combined") before = before with { Show = SW_SHOWMAXIMIZED };
+                if (mode is "start-arranged" or "combined") before = before with { Arranged = true };
+                if (mode == "start-arranged-unknown") before = before with { Arranged = null };
+                if (mode is "result-arranged-unknown" or "combined") after = after with { Arranged = null };
+                object? Run(Action<WindowDiagnosticReason>? diagnostic) {
+                    var tracker = Tracker(); tracker.Diagnostic = diagnostic;
+                    tracker.Mouse(11, before, 1, default, 0, 500, 0, false, true);
+                    tracker.MouseMoved(new Point { X = 500, Y = 100 }, 0);
+                    tracker.MoveStart(11, 100);
+                    tracker.MouseReleased(new Point { X = 900, Y = 0 }, screen, screen, 0);
+                    return tracker.FinishMove(11, after, 500, 11, "2026-10-28");
+                }
+                var reasons = new List<string>();
+                Equal(mode is "accepted" or "start-arranged", Run(null) is WindowCandidate);
+                Equal(Run(null), Run(reason => reasons.Add(reason.ToString())));
+                Equal(mode is not ("accepted" or "start-arranged"), reasons.Contains("MaxStartInvalid"));
+                Equal(mode is "start-maximized" or "combined", reasons.Contains("MaxStartNotNormal"));
+                Equal(false, reasons.Contains("MaxStartArranged"));
+                Equal(mode == "start-arranged-unknown", reasons.Contains("MaxStartArrangedUnknown"));
+                Equal(mode is "result-arranged-unknown" or "combined", reasons.Contains("MaxResultArrangedUnknown"));
+                if (mode == "start-arranged") Sample((WindowCandidate)Run(null)!, "W03");
+            });
         foreach (int gap in new[] { -1, 2, 3, 8, 33, 64, 65, 500 })
             Check($"OS docking threshold governs top preview release {gap}", () => {
                 var tracker = Tracker(); var before = start with { MouseDockThresholdPx = 64 };

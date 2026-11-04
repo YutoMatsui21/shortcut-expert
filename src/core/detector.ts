@@ -283,14 +283,14 @@ function classifyWindow(
         return null;
       if (
         candidate.route === "caption-top-drag" &&
-        (candidate.before.arranged !== false ||
-          !candidate.fromMonitor ||
+        (!candidate.fromMonitor ||
           !candidate.toMonitor ||
           !sameMonitor(candidate.fromMonitor, candidate.toMonitor))
       )
         return null;
       operation = "W03";
-      shortcut = candidate.before.arranged === false ? "Win + ↑" : null;
+      // Representative maximize key, not a promise to reproduce the initial snap layout.
+      shortcut = "Win + ↑";
       break;
     case "minimize":
       if (
@@ -299,12 +299,7 @@ function classifyWindow(
         !route(["min-button", "mouse-state-fallback"], ["win-down"])
       )
         return null;
-      shortcut =
-        candidate.before.arranged === false
-          ? candidate.before.state === "maximized"
-            ? "Win + ↓（必要に応じて繰り返す）"
-            : "Win + ↓"
-          : null;
+      shortcut = candidate.before.arranged === false ? "Win + ↓" : null;
       if (candidate.origin === "key" && shortcut === null) return null;
       operation = "W04";
       break;

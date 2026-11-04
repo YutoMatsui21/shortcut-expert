@@ -61,13 +61,13 @@ test("入力由来・同等キーの証拠が不足する最大化は数えな�
     assert.equal(classify(maximize(value)), null, JSON.stringify(value));
 });
 
-test("スナップ窓の最大化結果も記録し、未確認の同等キーは案内しない", () => {
+test("スナップ窓の最大化結果を記録し、代表キーを案内する", () => {
   const result = classify(
     maximize({ before: { state: "normal", arranged: true } }),
   );
   assert.equal(result?.operation, "W03");
   assert.equal(result?.origin, "mouse");
-  assert.equal(result?.shortcut, null);
+  assert.equal(result?.shortcut, "Win + ↑");
 });
 
 for (const app of ["chrome", "obsidian", "code", "chatgpt"]) {
