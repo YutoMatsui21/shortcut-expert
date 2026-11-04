@@ -14,4 +14,4 @@
 
 `InactiveCaptionTests.cs`でNativeのイベント列・取消・停止、`native-operation-policy.test.ts`でC#→TS契約、`inactive-caption-click.test.ts`で厳格parse→Core→SQLite→通知adapterを検証する。人工fixtureは実入力の検出精度やWindows通知の表示成功を証明しない。
 
-実装前のChrome物理クリックでは3ケースの一時前面化を確認した（[証拠](../../validation/evidence/issue-152/chrome-event-order.jsonl)）。これは調査probeの結果で、製品の検出・保存・OS通知の受入結果ではない。ChatGPT・Obsidianと最終buildの製品経路は別途確認する。
+実装前のChrome物理クリックでは3ケースの一時前面化を確認した（[証拠](../../validation/evidence/issue-152/chrome-event-order.jsonl)）。製品の検出・保存・OS通知については、Chrome・ChatGPT・Obsidianの[受入記録とbuildごとの確認範囲](../../validation/issue-152.md)を参照する。

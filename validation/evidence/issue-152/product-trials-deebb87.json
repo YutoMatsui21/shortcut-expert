@@ -1,0 +1,124 @@
+{
+  "revision": "deebb8788e8b2654875ce75eece6a5ac2e7221e7",
+  "sourceTree": "fbaeb3778bcfd6969db6600a75edaa7249cc9519",
+  "manifestSha256": "993589c468a5f1d3876219eb7f0448f6035cda438168c2b7325662f0177d7954",
+  "scope": "operator physical input; isolated product data",
+  "trials": [
+    {
+      "trial": 1,
+      "caseId": "I152-ChatGPT-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "notificationRequestPassed": true,
+      "notificationOperations": {
+        "W01": 1,
+        "W04": 1
+      },
+      "operatorResult": "matched",
+      "visibleNotification": "matched"
+    },
+    {
+      "trial": 2,
+      "caseId": "I152-Obsidian-normal-maximize",
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W03": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "notificationRequestPassed": true,
+      "notificationOperations": {
+        "W01": 1,
+        "W03": 1
+      },
+      "operatorResult": "matched",
+      "visibleNotification": "matched"
+    },
+    {
+      "trial": 3,
+      "caseId": "I152-Obsidian-normal-minimize",
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "notificationRequestPassed": true,
+      "notificationOperations": {
+        "W01": 1,
+        "W04": 1
+      },
+      "operatorResult": "matched",
+      "visibleNotification": "matched"
+    },
+    {
+      "trial": 4,
+      "caseId": "I152-Obsidian-maximized-minimize",
+      "valid": true,
+      "completed": true,
+      "expired": false,
+      "interrupted": false,
+      "recordsPassed": true,
+      "counts": {
+        "2026-11-04": {
+          "W01": {
+            "mouse": 1,
+            "key": 0
+          },
+          "W04": {
+            "mouse": 1,
+            "key": 0
+          }
+        }
+      },
+      "notificationRequests": 1,
+      "notificationRequestPassed": true,
+      "notificationOperations": {
+        "W01": 1,
+        "W04": 1
+      },
+      "operatorResult": "matched",
+      "visibleNotification": "matched"
+    }
+  ]
+}
