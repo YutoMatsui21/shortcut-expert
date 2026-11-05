@@ -37,7 +37,11 @@
     "lint": "oxlint --type-aware src tests scripts"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,css,md,mdx,yml,yaml}": "prettier --write",
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "prettier --write",
+      "oxlint --type-aware"
+    ],
+    "*.{json,css,md,mdx,yml,yaml}": "prettier --write",
     "*.cs": "dotnet csharpier format"
   },
   "dependencies": {
