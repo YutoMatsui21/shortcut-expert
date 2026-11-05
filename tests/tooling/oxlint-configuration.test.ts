@@ -73,3 +73,84 @@ test("parent", async (t) => {
     ),
   );
 });
+
+test("Core and Shared reject Node and Electron imports but allow ordinary modules", (t) => {
+  mkdirSync(".tools/tests", { recursive: true });
+  const root = mkdtempSync(resolve(".tools/tests/oxlint-boundaries-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(
+    join(root, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+      include: ["src"],
+    }),
+  );
+  for (const area of ["core", "shared"]) {
+    const directory = join(root, "src", area);
+    mkdirSync(directory, { recursive: true });
+    const file = join(directory, "probe.ts");
+    writeFileSync(
+      file,
+      `import "node:fs";\nimport "fs";\nimport "node:fs/promises";\nimport "fs/promises";\nimport "electron";\nimport "ordinary-package";\nimport("node:path");\nrequire("node:fs");\n`,
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve("node_modules/oxlint/bin/oxlint"),
+        "--config",
+        resolve(".oxlintrc.json"),
+        "--type-aware",
+        "--format",
+        "json",
+        file,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.notEqual(result.status, 0, result.stderr);
+    const diagnostics = JSON.parse(result.stdout).diagnostics;
+    assert.deepEqual(
+      diagnostics
+        .filter(
+          (d: { code: string }) => d.code === "eslint(no-restricted-imports)",
+        )
+        .map(
+          (d: { labels: { span: { line: number } }[] }) =>
+            d.labels[0].span.line,
+        )
+        .sort((a: number, b: number) => a - b),
+      [1, 2, 3, 4, 5, 7],
+      area,
+    );
+    assert.ok(
+      diagnostics.some(
+        (d: { code: string }) => d.code === "typescript(no-require-imports)",
+      ),
+      area,
+    );
+    const jsFile = join(directory, "probe.js");
+    writeFileSync(jsFile, 'require("fs");\n');
+    const js = spawnSync(
+      process.execPath,
+      [
+        resolve("node_modules/oxlint/bin/oxlint"),
+        "--config",
+        resolve(".oxlintrc.json"),
+        "--format",
+        "json",
+        jsFile,
+      ],
+      { encoding: "utf8", windowsHide: true },
+    );
+    assert.notEqual(js.status, 0, js.stderr);
+    assert.ok(
+      JSON.parse(js.stdout).diagnostics.some(
+        (d: { code: string }) => d.code === "typescript(no-require-imports)",
+      ),
+      area,
+    );
+  }
+});
