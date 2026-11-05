@@ -1,0 +1,183 @@
+{
+  "categories": {
+    "correctness": "error",
+    "suspicious": "off"
+  },
+  "plugins": ["typescript", "react", "jsx-a11y", "import"],
+  "rules": {
+    "eslint/no-unsafe-finally": "error",
+    "eslint/no-unused-vars": "warn",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/jsx-key": "error",
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/aria-props": "error",
+    "jsx-a11y/aria-role": "error",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-unsafe-assignment": "warn",
+    "typescript/no-unsafe-type-assertion": "warn",
+    "import/no-cycle": "warn",
+    "typescript/unbound-method": "warn",
+    "eslint/no-unused-expressions": [
+      "error",
+      {
+        "allowTernary": true
+      }
+    ],
+    "react/immutability": "off",
+    "react/set-state-in-effect": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/no-noninteractive-tabindex": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/tests/**/*"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    },
+    {
+      "files": ["**/scripts/**/*"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off"
+      }
+    },
+    {
+      "files": ["**/src/core/**/*"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)main(/|$)"
+              },
+              {
+                "regex": "^electron(/|$)"
+              }
+            ],
+            "paths": []
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/src/shared/**/*"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^electron(/|$)"
+              }
+            ],
+            "paths": []
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/src/renderer/**/*"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "(^|/)main(/|$)"
+              },
+              {
+                "regex": "^electron(/|$)"
+              },
+              {
+                "regex": "^node:"
+              }
+            ],
+            "paths": [
+              "_http_agent",
+              "_http_client",
+              "_http_common",
+              "_http_incoming",
+              "_http_outgoing",
+              "_http_server",
+              "_stream_duplex",
+              "_stream_passthrough",
+              "_stream_readable",
+              "_stream_transform",
+              "_stream_wrap",
+              "_stream_writable",
+              "_tls_common",
+              "_tls_wrap",
+              "assert",
+              "assert/strict",
+              "async_hooks",
+              "buffer",
+              "child_process",
+              "cluster",
+              "console",
+              "constants",
+              "crypto",
+              "dgram",
+              "diagnostics_channel",
+              "dns",
+              "dns/promises",
+              "domain",
+              "events",
+              "fs",
+              "fs/promises",
+              "http",
+              "http2",
+              "https",
+              "inspector",
+              "inspector/promises",
+              "module",
+              "net",
+              "os",
+              "path",
+              "path/posix",
+              "path/win32",
+              "perf_hooks",
+              "process",
+              "punycode",
+              "querystring",
+              "readline",
+              "readline/promises",
+              "repl",
+              "stream",
+              "stream/consumers",
+              "stream/promises",
+              "stream/web",
+              "string_decoder",
+              "sys",
+              "timers",
+              "timers/promises",
+              "tls",
+              "trace_events",
+              "tty",
+              "url",
+              "util",
+              "util/types",
+              "v8",
+              "vm",
+              "wasi",
+              "worker_threads",
+              "zlib",
+              "sea",
+              "sqlite",
+              "test",
+              "test/reporters"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "options": {
+    "typeAware": true
+  }
+}

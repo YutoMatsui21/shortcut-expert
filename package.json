@@ -33,7 +33,8 @@
     "probe:sqlite:packaged": "node scripts/probes/sqlite-probe.mjs --packaged",
     "package:installer": "node scripts/dev/dev-run.mjs electron-builder --win nsis --x64",
     "prepare": "husky",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "lint": "oxlint --type-aware src tests scripts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,mdx,yml,yaml}": "prettier --write",
@@ -52,6 +53,8 @@
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "husky": "9.1.7",
+    "oxlint": "1.91.0",
+    "oxlint-tsgolint": "7.0.2005",
     "prettier": "3.9.10",
     "typescript": "7.0.2",
     "vite": "7.3.7"
