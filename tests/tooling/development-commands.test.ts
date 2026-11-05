@@ -171,6 +171,7 @@ test("smoke sets local cache before Electron module can trigger its first downlo
   for (const [dir, name] of [
     ["test", "smoke.mjs"],
     ["dev", "dev-environment.mjs"],
+    ["dev", "cleanup.mjs"],
     ["test", "smoke-result.mjs"],
   ])
     copyFileSync(

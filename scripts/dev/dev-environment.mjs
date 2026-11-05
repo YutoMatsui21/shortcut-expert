@@ -7,6 +7,7 @@ import {
   rmdirSync,
 } from "node:fs";
 import { resolve, join } from "node:path";
+import { withCleanup } from "./cleanup.mjs";
 
 // Each child receives these values; a previous shell's environment is never required.
 export function developmentEnvironment(
@@ -45,18 +46,21 @@ export function checkWritableDirectories(env) {
     const probe = mkdtempSync(join(directory, "write-check-"));
     const from = join(probe, "from"),
       to = join(probe, "to");
-    try {
-      writeFileSync(from, "fixture");
-      renameSync(from, to);
-    } finally {
-      for (const file of [from, to]) {
-        try {
-          unlinkSync(file);
-        } catch (error) {
-          if (error.code !== "ENOENT") throw error;
+    withCleanup(
+      () => {
+        writeFileSync(from, "fixture");
+        renameSync(from, to);
+      },
+      () => {
+        for (const file of [from, to]) {
+          try {
+            unlinkSync(file);
+          } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+          }
         }
-      }
-      rmdirSync(probe);
-    }
+        rmdirSync(probe);
+      },
+    );
   }
 }

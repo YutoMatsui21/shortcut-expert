@@ -24,7 +24,7 @@ npm.cmd run dev
 
 1. `git status --short --branch`、`git worktree list`で作業先を確認し、Issueの受入条件と影響範囲を読む。
 2. [テスト設計Skill](../.agents/skills/test-shortcut-coach/SKILL.md)で変更に合う先行テスト・必要な検証を決める。動作変更・バグ修正は原則テストファースト。
-3. 実装後、関連unit/native → 影響層の結合・smoke → 必要な同梱版確認の順に実行する。**隔離fixtureのPASSを実入力精度の証拠にしない。**
+3. 実装後、関連unit/native → 影響層の結合・smoke → 必要な同梱版確認の順に実行する。PR前に`npm.cmd run lint`を実行して新たなerrorを修正し、warnは内容を確認して必要な場合に対応する。警告を消すだけの変更は行わない。Nodeのトップレベル`test()`登録に対する既知の警告は、未awaitのサブテストを見逃さないため維持する。**隔離fixtureのPASSを実入力精度の証拠にしない。**
 4. PR前に[コードレビュー規則](code-review.md)と[GitHub操作Skill](../.agents/skills/github-workflow/SKILL.md)に従いローカルレビューを行う（文書のみ等の例外を除く）。
 5. PRで最新headの必須CI `windows-quality`を確認してからmerge。失敗後は修正範囲を再検証し、重要なロジック変更は必要な再レビューを行う。GitHub上の`@codex review`は依頼しない。
 

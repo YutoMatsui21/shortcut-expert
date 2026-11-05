@@ -10,6 +10,7 @@ import {
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
+import { withCleanup } from "./cleanup.mjs";
 
 function validateTarget(repo, number) {
   if (
@@ -29,16 +30,19 @@ function readJson(file) {
 }
 function writeJson(file, data) {
   const temporary = file + "." + randomUUID() + ".tmp";
-  try {
-    writeFileSync(temporary, JSON.stringify(data) + "\n", "utf8");
-    renameSync(temporary, file);
-  } finally {
-    try {
-      unlinkSync(temporary);
-    } catch (error) {
-      if (error.code !== "ENOENT") throw error;
-    }
-  }
+  withCleanup(
+    () => {
+      writeFileSync(temporary, JSON.stringify(data) + "\n", "utf8");
+      renameSync(temporary, file);
+    },
+    () => {
+      try {
+        unlinkSync(temporary);
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    },
+  );
 }
 export function githubJson(args) {
   const result = spawnSync("gh", args, {

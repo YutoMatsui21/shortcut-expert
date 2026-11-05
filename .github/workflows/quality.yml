@@ -118,6 +118,9 @@ jobs:
       - name: Types
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run typecheck
+      - name: Lint (Oxlint)
+        if: ${{ needs.change-scope.outputs.full == 'true' }}
+        run: npm.cmd run lint
       - name: Fast tests
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: |
