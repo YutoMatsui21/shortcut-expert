@@ -1,5 +1,7 @@
 # 04 目標アーキテクチャ案（Step 2）
 
+> **後続決定（2026-11-06）**：本書は当時の検討案。未確定だったDispatcher/Handler/調停API・状態所有・移行境界は[10 確定判断](10-architecture-decisions.md)・[11 配送と所有権](11-routing-and-ownership.md)・[12 移行ゲート](12-migration-and-gates.md)で具体化した。**新しい実装Issueでは10〜12を優先**する。
+
 > **ステータス：設計案。** 2026-11-06にStep 1を踏まえて作成。コード変更・採用・実機検証は未実施。現行の製品仕様・設計正本は[製品要件](../../ui-requirements.md)・[現行設計](../../design.md)。実装着手前にStep 3（回帰条件）とStep 4（Issue）で契約を確定する。
 
 ## 1. 目標

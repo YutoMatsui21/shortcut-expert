@@ -1,5 +1,7 @@
 # 05 コンポーネント間の契約・インターフェース・状態所有（Step 2）
 
+> **後続決定（2026-11-06）**：本書の`IEvidenceHandler.OnEvent()`等は検討途中の形。**調停・所有権・CandidateDraftの採用契約は[10](10-architecture-decisions.md)・[11](11-routing-and-ownership.md)を優先**。この文書の未確定・注意書きを単独でIssue仕様にしない。
+
 > **設計案・擬似コード**。実在するC#の型やファイルをそのまま示すものではない。基準：[Step 1の現状調査](03-dependencies.md)。採用順・既存動作の固定はStep 3/4で確定する。
 
 ## 1. 主要な4種類のデータを分ける
