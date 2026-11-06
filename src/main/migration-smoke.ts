@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { app, type BrowserWindow } from "electron";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { app, type BrowserWindow } from "electron";
 import type { DurableCoach } from "../core/durable-coach";
+import { selectPage } from "./learning-smoke";
 import { SqliteRepository } from "./sqlite-repository";
 import { waitFor } from "./storage-smoke";
-import { selectPage } from "./learning-smoke";
 
 export async function runMigrationSmoke({
   coach,

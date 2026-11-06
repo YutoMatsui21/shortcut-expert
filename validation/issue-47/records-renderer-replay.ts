@@ -1,14 +1,14 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { resolve, join, sep } from "node:path";
 // Fixture-only replay of approved daily totals through the unchanged packaged renderer/preload.
 // No native helper, real input observation, screenshot, original DB write or product repackaging.
 import { app, BrowserWindow } from "electron";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { resolve, join, sep } from "node:path";
-import { createHash } from "node:crypto";
-import assert from "node:assert/strict";
-import { registerCoachIpc } from "../../src/main/coach-ipc.ts";
-import { recordsReadModel } from "../../src/core/records.ts";
-import { learningReadModel } from "../../src/core/learning.ts";
 import { localDate } from "../../src/core/dates.ts";
+import { learningReadModel } from "../../src/core/learning.ts";
+import { recordsReadModel } from "../../src/core/records.ts";
+import { registerCoachIpc } from "../../src/main/coach-ipc.ts";
 import { selectPage, waitForLearning } from "../../src/main/learning-smoke.ts";
 import type { Counts, Settings, Snapshot } from "../../src/shared/coach.ts";
 

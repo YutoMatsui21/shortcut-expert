@@ -1,20 +1,20 @@
-import { v2Fixture } from "../../support/fixtures.ts";
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
-import * as path from "node:path";
 import { tmpdir } from "node:os";
-import type { registerCoachIpc } from "../../../src/main/coach-ipc.ts";
-import type { ObserverCandidate, Snapshot } from "../../../src/shared/coach.ts";
-import { candidateFixture } from "../../support/fixtures.ts";
+import * as path from "node:path";
+import { test, mock } from "node:test";
 import { localDate } from "../../../src/core/dates.ts";
-import { SqliteRepository } from "../../../src/main/sqlite-repository.ts";
-import { startupMode } from "../../../src/main/startup-mode.ts";
+import type { registerCoachIpc } from "../../../src/main/coach-ipc.ts";
 import {
   loginItemName,
   loginItemArgs,
 } from "../../../src/main/login-startup.ts";
+import { SqliteRepository } from "../../../src/main/sqlite-repository.ts";
+import { startupMode } from "../../../src/main/startup-mode.ts";
+import type { ObserverCandidate, Snapshot } from "../../../src/shared/coach.ts";
+import { v2Fixture } from "../../support/fixtures.ts";
+import { candidateFixture } from "../../support/fixtures.ts";
 
 test("normal composition migrates without pruning, records via SQLite IPC, recovers stopped and closes the writer", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "coach-composition-"));

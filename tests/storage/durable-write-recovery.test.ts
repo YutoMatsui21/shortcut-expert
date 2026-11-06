@@ -1,10 +1,10 @@
-import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { mkdtemp, rm, writeFile, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { spawn } from "node:child_process";
+import { test, type TestContext } from "node:test";
 import { Worker } from "node:worker_threads";
 import { DurableCoach, type Capability } from "../../src/core/durable-coach.ts";
 import {

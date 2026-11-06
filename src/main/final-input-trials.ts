@@ -1,3 +1,4 @@
+import { classifyGesture } from "../core/detector.ts";
 import type {
   Snapshot,
   OperationId,
@@ -11,13 +12,12 @@ import {
   learningState,
   isLearningState,
 } from "../shared/learning.ts";
-import { classifyGesture } from "../core/detector.ts";
+import type { WindowDiagnosticCounts } from "../shared/window-diagnostics.ts";
 import { finalInputCases, type FinalCase } from "./final-input-cases.ts";
 import {
   finalCandidateDiagnostics,
   type FinalDiagnosticKey,
 } from "./final-input-diagnostics.ts";
-import type { WindowDiagnosticCounts } from "../shared/window-diagnostics.ts";
 
 type Plan = {
   caseId: string;

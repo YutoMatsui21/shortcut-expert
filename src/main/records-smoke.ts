@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, type BrowserWindow } from "electron";
-import { selectPage, waitForLearning } from "./learning-smoke";
 import { learningOperations } from "../shared/learning";
+import { selectPage, waitForLearning } from "./learning-smoke";
 
 export async function runRecordsSmoke(window: BrowserWindow) {
   await selectPage(window, "記録");

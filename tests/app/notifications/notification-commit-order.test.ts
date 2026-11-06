@@ -1,12 +1,12 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { DurableCoach } from "../../../src/core/durable-coach.ts";
+import { test } from "node:test";
 import { localDate } from "../../../src/core/dates.ts";
-import { SqliteRepository } from "../../../src/main/sqlite-repository.ts";
+import { DurableCoach } from "../../../src/core/durable-coach.ts";
 import { runNotificationAcceptance } from "../../../src/main/notification-acceptance.ts";
+import { SqliteRepository } from "../../../src/main/sqlite-repository.ts";
 import type { ShortcutNotice } from "../../../src/shared/coach.ts";
 
 test("V01 artificial candidates commit twice for maximize and once for restore before individual delivery", async () => {

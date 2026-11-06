@@ -1,8 +1,8 @@
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { resolve, join, normalize } from "node:path";
-import { createHash } from "node:crypto";
-import assert from "node:assert/strict";
 import { extractFile } from "@electron/asar";
 import { developmentEnvironment } from "../dev/dev-environment.mjs";
 

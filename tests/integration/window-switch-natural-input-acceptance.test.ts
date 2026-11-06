@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { NaturalInputTrials } from "../../src/main/natural-input-acceptance.ts";
 import type { Snapshot } from "../../src/shared/coach.ts";
 

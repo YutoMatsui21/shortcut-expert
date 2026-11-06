@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { app, dialog, Notification, type BrowserWindow } from "electron";
-import { startupMode } from "./startup-mode.ts";
-import { configureStartupData } from "./startup-data.ts";
 import { runCoach, showCoach } from "./coach-app.ts";
+import { configureStartupData } from "./startup-data.ts";
+import { startupMode } from "./startup-mode.ts";
 
 const mode = startupMode(process.argv);
 configureStartupData(mode);

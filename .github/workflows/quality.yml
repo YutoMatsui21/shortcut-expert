@@ -109,7 +109,7 @@ jobs:
       - name: Restore .NET tools
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: dotnet tool restore
-      - name: Check formatting（Prettier）
+      - name: Check formatting（Oxfmt）
         if: ${{ needs.change-scope.outputs.full == 'true' }}
         run: npm.cmd run format:check
       - name: Check formatting (CSharpier)

@@ -1,9 +1,9 @@
 // Open only disposable own windows. No input observation and no taskbar settings changes.
 import { execFile, spawn } from "node:child_process";
-import { promisify } from "node:util";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const count = Number(process.argv[2] ?? 3);
 if (

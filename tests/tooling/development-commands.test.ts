@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -8,7 +8,7 @@ import {
   copyFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import {
   developmentEnvironment,

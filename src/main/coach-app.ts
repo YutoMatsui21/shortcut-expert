@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
   app,
   type BrowserWindow,
@@ -8,19 +9,18 @@ import {
   Tray,
   powerMonitor,
 } from "electron";
-import { join } from "node:path";
-import { DurableCoach } from "../core/durable-coach.ts";
-import { selectRepositoryWithRetry } from "./sqlite-repository.ts";
-import { SerialQueue } from "../core/serial-queue.ts";
 import { localDate } from "../core/dates.ts";
+import { DurableCoach } from "../core/durable-coach.ts";
+import { SerialQueue } from "../core/serial-queue.ts";
 import type { Snapshot } from "../shared/coach.ts";
-import { ObserverClient } from "./observer.ts";
-import { StandardNotifications } from "./standard-notification.ts";
-import { CoachWindow } from "./coach-window.ts";
 import { registerCoachIpc } from "./coach-ipc.ts";
 import { coachTrayMenu } from "./coach-tray.ts";
-import type { StartupMode } from "./startup-mode.ts";
+import { CoachWindow } from "./coach-window.ts";
 import { LoginStartup } from "./login-startup.ts";
+import { ObserverClient } from "./observer.ts";
+import { selectRepositoryWithRetry } from "./sqlite-repository.ts";
+import { StandardNotifications } from "./standard-notification.ts";
+import type { StartupMode } from "./startup-mode.ts";
 
 const coachWindow = new CoachWindow();
 let quitting = false;

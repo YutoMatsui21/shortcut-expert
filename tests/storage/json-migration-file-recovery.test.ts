@@ -1,8 +1,8 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { test, mock } from "node:test";
 
 let deniedPath = "",
   interruptMarker = false;

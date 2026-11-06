@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { createHash } from "node:crypto";
 import {
   openSync,
   closeSync,
@@ -10,7 +10,8 @@ import {
   rmSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
-import { createHash } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
+import { validDate } from "../core/dates.ts";
 import {
   operations,
   type OperationId,
@@ -23,10 +24,9 @@ import type {
   StorageState,
 } from "../shared/storage.ts";
 import { daysBefore } from "../shared/storage.ts";
-import { validDate } from "../core/dates.ts";
-import type { LegacyImport } from "./storage-migration.ts";
-import { fileExists } from "./storage-files.ts";
 import { isNormalBounds } from "../shared/window.ts";
+import { fileExists } from "./storage-files.ts";
+import type { LegacyImport } from "./storage-migration.ts";
 
 const ids = [...operations.map((op) => op.id), "W12", "W13", "W14"];
 const check = (ok: unknown, message: string): void => {

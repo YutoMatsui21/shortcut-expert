@@ -1,5 +1,5 @@
-import type { DurableCoach } from "../core/durable-coach";
 import { localDate } from "../core/dates.ts";
+import type { DurableCoach } from "../core/durable-coach";
 import type { CandidateV2 } from "../shared/coach";
 import type { ObserverClient } from "./observer";
 

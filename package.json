@@ -2,14 +2,10 @@
   "name": "window-shortcut-coach",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Windows window-operation shortcut coach",
   "license": "MIT",
+  "type": "module",
   "main": "out/main/index.cjs",
-  "engines": {
-    "node": ">=24.11.1 <25",
-    "npm": ">=10"
-  },
   "scripts": {
     "dev:check": "node scripts/dev/dev-run.mjs check",
     "dev:install": "node scripts/dev/dev-run.mjs npm-ci",
@@ -33,16 +29,9 @@
     "probe:sqlite:packaged": "node scripts/probes/sqlite-probe.mjs --packaged",
     "package:installer": "node scripts/dev/dev-run.mjs electron-builder --win nsis --x64",
     "prepare": "husky",
-    "format:check": "prettier --check .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "lint": "oxlint --type-aware src tests scripts"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs}": [
-      "prettier --write",
-      "oxlint --type-aware"
-    ],
-    "*.{json,css,md,mdx,yml,yaml}": "prettier --write",
-    "*.cs": "dotnet csharpier format"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -58,10 +47,22 @@
     "electron-vite": "5.0.0",
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
+    "oxfmt": "^0.76.0",
     "oxlint": "1.91.0",
     "oxlint-tsgolint": "7.0.2005",
-    "prettier": "3.9.10",
     "typescript": "7.0.2",
     "vite": "7.3.7"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxfmt --no-error-on-unmatched-pattern",
+      "oxlint --type-aware"
+    ],
+    "*.{json,css,md,mdx,yml,yaml}": "oxfmt --no-error-on-unmatched-pattern",
+    "*.cs": "dotnet csharpier format"
+  },
+  "engines": {
+    "node": ">=24.11.1 <25",
+    "npm": ">=10"
   }
 }

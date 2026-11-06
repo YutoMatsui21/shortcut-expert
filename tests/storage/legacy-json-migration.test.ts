@@ -1,4 +1,3 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdtempSync,
@@ -13,12 +12,13 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { test } from "node:test";
+import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
 import {
   prepareStorage,
   readLegacy,
 } from "../../src/main/storage-migration.ts";
 import { StorageStore } from "../../src/main/storage-store.ts";
-import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
 
 function fixture(t: import("node:test").TestContext) {
   const root = mkdtempSync(join(tmpdir(), "coach-migration-"));

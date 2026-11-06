@@ -1,6 +1,6 @@
-import { Notification } from "electron";
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
+import { Notification } from "electron";
 import type { ShortcutNotice } from "../shared/coach.ts";
 
 export type NotificationResult = {

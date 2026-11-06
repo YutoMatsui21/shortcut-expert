@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { withCleanup } from "../../scripts/dev/cleanup.mjs";
 
 test("cleanup preserves the operation and cleanup failures", () => {

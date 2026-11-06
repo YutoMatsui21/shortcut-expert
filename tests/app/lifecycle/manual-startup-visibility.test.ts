@@ -1,6 +1,6 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { test, mock } from "node:test";
 import { deferred } from "../../support/fixtures.ts";
 
 test("manual cold startup requests the list without notification activation; repeat launch only restores the existing window", async () => {

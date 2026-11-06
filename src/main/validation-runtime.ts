@@ -1,32 +1,32 @@
-import { app, type BrowserWindow } from "electron";
-import { join } from "node:path";
 import { EventEmitter } from "node:events";
-import { DurableCoach, type Capability } from "../core/durable-coach";
+import { join } from "node:path";
+import { app, type BrowserWindow } from "electron";
 import { localDate } from "../core/dates";
+import { DurableCoach, type Capability } from "../core/durable-coach";
 import type { SerialQueue } from "../core/serial-queue";
-import { SqliteRepository } from "./sqlite-repository";
+import { runActivationSmoke } from "./activation-smoke";
+import { FinalInputTrials } from "./final-input-trials";
+import { loginItemName } from "./login-startup";
+import { runMigrationSmoke } from "./migration-smoke";
+import {
+  runNaturalInputAcceptance,
+  runTrialControl,
+} from "./natural-input-acceptance";
+import { runNotificationAcceptance } from "./notification-acceptance";
 import type { ObserverClient } from "./observer";
+import {
+  seedComparisonCoverage,
+  runRecordsComparisonSmoke,
+} from "./records-comparison-smoke";
+import { runSettingsSmoke } from "./settings-smoke";
+import { SqliteRepository } from "./sqlite-repository";
 import type {
   StandardNotifications,
   NotificationResult,
 } from "./standard-notification";
 import type { StartupMode } from "./startup-mode.ts";
 import { runStorageSmoke } from "./storage-smoke";
-import { runMigrationSmoke } from "./migration-smoke";
-import {
-  seedComparisonCoverage,
-  runRecordsComparisonSmoke,
-} from "./records-comparison-smoke";
-import { runSettingsSmoke } from "./settings-smoke";
-import { runActivationSmoke } from "./activation-smoke";
-import { runNotificationAcceptance } from "./notification-acceptance";
 import { runUiAcceptance } from "./ui-acceptance";
-import {
-  runNaturalInputAcceptance,
-  runTrialControl,
-} from "./natural-input-acceptance";
-import { FinalInputTrials } from "./final-input-trials";
-import { loginItemName } from "./login-startup";
 
 type ValidationContext = {
   coach: DurableCoach;

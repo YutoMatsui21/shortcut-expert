@@ -1,8 +1,8 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { test, mock } from "node:test";
 import { setImmediate } from "node:timers/promises";
-import { deferred } from "../support/fixtures.ts";
 import type { Snapshot } from "../../src/shared/coach.ts";
+import { deferred } from "../support/fixtures.ts";
 
 let readNext: () => Promise<string>;
 let lastStatus: { results: { valid: boolean }[] };

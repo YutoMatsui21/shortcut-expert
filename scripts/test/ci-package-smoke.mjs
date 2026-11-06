@@ -1,5 +1,5 @@
-import { mkdirSync, createWriteStream, readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { mkdirSync, createWriteStream, readFileSync } from "node:fs";
 
 mkdirSync(".tools/test-results", { recursive: true });
 async function run(name, args) {

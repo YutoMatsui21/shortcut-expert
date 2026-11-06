@@ -1,5 +1,5 @@
-import { join, basename } from "node:path";
 import { mkdirSync, mkdtempSync, readdirSync } from "node:fs";
+import { join, basename } from "node:path";
 import { app } from "electron";
 import type { StartupMode } from "./startup-mode.ts";
 

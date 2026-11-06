@@ -1,13 +1,13 @@
-import { test, mock, type TestContext } from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { EventEmitter } from "node:events";
 import { DatabaseSync } from "node:sqlite";
+import { test, mock, type TestContext } from "node:test";
+import { classifyGesture } from "../../src/core/detector.ts";
 import { DurableCoach } from "../../src/core/durable-coach.ts";
 import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
-import { classifyGesture } from "../../src/core/detector.ts";
 mock.module("electron", { namedExports: { app: {}, Notification: class {} } });
 const { candidateV2 } = await import("../../src/main/observer.ts");
 const { StandardNotifications } =

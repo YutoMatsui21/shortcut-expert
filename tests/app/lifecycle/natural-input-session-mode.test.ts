@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { naturalInputOperation } from "../../../src/main/natural-input-mode.ts";
 test("bootstrap isolation and ARM controller share exactly the documented opt-in flags", () => {
   assert.equal(naturalInputOperation(["--w08-natural-acceptance"]), "W08");

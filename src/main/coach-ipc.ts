@@ -1,9 +1,9 @@
-import { defaultRecordsQuery, isRecordsQuery } from "../shared/records.ts";
 import { ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
-import { type CoachBridge } from "../shared/coach.ts";
 import { validDate } from "../core/dates.ts";
-import { daysBefore } from "../shared/storage.ts";
+import { type CoachBridge } from "../shared/coach.ts";
 import { isLearningState, learningOperations } from "../shared/learning.ts";
+import { defaultRecordsQuery, isRecordsQuery } from "../shared/records.ts";
+import { daysBefore } from "../shared/storage.ts";
 import { DeleteConfirmation } from "./delete-confirmation.ts";
 
 type Requests = Pick<

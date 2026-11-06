@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { resolve, join } from "node:path";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { resolve, join } from "node:path";
 import { developmentEnvironment } from "../dev/dev-environment.mjs";
 import { smokeSucceeded, smokeFailureSummary } from "./smoke-result.mjs";
 

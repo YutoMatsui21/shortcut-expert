@@ -1,6 +1,6 @@
+import { validDate } from "../core/dates.ts";
 import type { Counts, Settings } from "../shared/coach.ts";
 import { operations } from "../shared/coach.ts";
-import { validDate } from "../core/dates.ts";
 import { isLearningState } from "../shared/learning.ts";
 import { recordOperations } from "../shared/storage.ts";
 import { isNormalBounds } from "../shared/window.ts";

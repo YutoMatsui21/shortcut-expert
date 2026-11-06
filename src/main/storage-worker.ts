@@ -1,6 +1,6 @@
 import { parentPort, workerData } from "node:worker_threads";
-import { StorageStore } from "./storage-store.ts";
 import { prepareStorage } from "./storage-migration.ts";
+import { StorageStore } from "./storage-store.ts";
 let store: StorageStore;
 try {
   prepareStorage(workerData.root);

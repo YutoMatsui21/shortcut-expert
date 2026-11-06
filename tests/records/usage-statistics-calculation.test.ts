@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { recordsReadModel } from "../../src/core/records.ts";
 import type { RecordRange } from "../../src/shared/storage.ts";
 
@@ -112,13 +112,13 @@ test("BigInt rounding, unrounded bar and aggregate overflow across operations", 
   );
 });
 import { recordRanges } from "../../src/core/records.ts";
+import type { Settings } from "../../src/shared/coach.ts";
+import { learningOperations } from "../../src/shared/learning.ts";
 import {
   defaultRecordsQuery,
   type RecordsQuery,
 } from "../../src/shared/records.ts";
-import { learningOperations } from "../../src/shared/learning.ts";
 import { daysBefore } from "../../src/shared/storage.ts";
-import type { Settings } from "../../src/shared/coach.ts";
 const empty = (): RecordRange => ({ counts: {}, coverage: {}, revision: 3 });
 const query = (value: Partial<RecordsQuery>): RecordsQuery => ({
   ...defaultRecordsQuery,

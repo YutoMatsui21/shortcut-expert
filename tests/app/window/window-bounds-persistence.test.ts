@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { visibleNormalBounds } from "../../../src/main/window-bounds.ts";
 import { isNormalBounds } from "../../../src/shared/window.ts";
 

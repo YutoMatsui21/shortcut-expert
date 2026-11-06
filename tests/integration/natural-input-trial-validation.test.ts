@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { Snapshot } from "../../src/shared/coach.ts";
+import { test } from "node:test";
 import { FinalInputTrials } from "../../src/main/final-input-trials.ts";
+import type { Snapshot } from "../../src/shared/coach.ts";
 import { learningOperations } from "../../src/shared/learning.ts";
 import {
   windowDiagnosticKeys,

@@ -1,15 +1,15 @@
 import { Fragment, useEffect, useState } from "react";
+import { localDate } from "../../core/dates";
+import { learningOperations } from "../../shared/learning";
+import { learningState } from "../../shared/learning";
 import {
   isRecordsQuery,
   type RecordsQuery,
   type RecordsReadModel,
 } from "../../shared/records";
-import { learningOperations } from "../../shared/learning";
-import { localDate } from "../../core/dates";
-import { useCoach } from "./useCoach";
 import { Icon } from "./icons";
-import { learningState } from "../../shared/learning";
 import { SaveErrorBanner } from "./SaveErrorBanner";
+import { useCoach } from "./useCoach";
 
 const count = (value: number | null | undefined) =>
   value == null ? "ー" : value.toLocaleString("ja-JP") + "回";

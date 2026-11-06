@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   mkdtempSync,
@@ -9,7 +9,7 @@ import {
   rmSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { test } from "node:test";
 
 test("Snap Layout source archives retain their recorded hashes after Git stages them with autocrlf enabled", (t) => {
   mkdirSync(".tools/tests", { recursive: true });

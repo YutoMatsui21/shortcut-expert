@@ -1,15 +1,15 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
+import { classifyGesture } from "../../src/core/detector.ts";
 import {
   finalCandidateDiagnostics,
   finalDiagnosticKeys,
 } from "../../src/main/final-input-diagnostics.ts";
-import { classifyGesture } from "../../src/core/detector.ts";
-import { candidateFixture, v2Fixture } from "../support/fixtures.ts";
 import {
   parseWindowDiagnostics,
   windowDiagnosticKeys,
 } from "../../src/shared/window-diagnostics.ts";
+import { candidateFixture, v2Fixture } from "../support/fixtures.ts";
 
 test("native diagnostic schema accepts only the complete bounded fixed taxonomy", () => {
   const counts = Object.fromEntries(
