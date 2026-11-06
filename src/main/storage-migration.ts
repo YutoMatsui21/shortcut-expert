@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
@@ -9,11 +10,10 @@ import {
   renameSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
-import { createHash } from "node:crypto";
-import { countsDocument, settingsDocument } from "./legacy-documents.ts";
-import { StorageStore } from "./storage-store.ts";
-import { fileExists } from "./storage-files.ts";
 import type { Counts, Settings } from "../shared/coach.ts";
+import { countsDocument, settingsDocument } from "./legacy-documents.ts";
+import { fileExists } from "./storage-files.ts";
+import { StorageStore } from "./storage-store.ts";
 
 export type LegacyImport = {
   identity: string;

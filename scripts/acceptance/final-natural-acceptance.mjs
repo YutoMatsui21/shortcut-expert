@@ -1,11 +1,11 @@
 import { spawn, execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, writeFile, rename } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+import { finalInputCases } from "../../src/main/final-input-cases.ts";
 import { developmentEnvironment } from "../dev/dev-environment.mjs";
 import { packageManifest } from "./ui-acceptance-runtime.mjs";
-import { finalInputCases } from "../../src/main/final-input-cases.ts";
 
 const option = process.argv.indexOf("--package-dir");
 if (option < 0 || !process.argv[option + 1])

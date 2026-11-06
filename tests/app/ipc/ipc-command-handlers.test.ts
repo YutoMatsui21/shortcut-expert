@@ -1,6 +1,6 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { test, mock } from "node:test";
 import type { CoachBridge, Snapshot } from "../../../src/shared/coach.ts";
 
 type Handler = (

@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { validDate, localDate } from "../../src/core/dates.ts";
 
 test("日付形式と実在する閏日・月境界を区別する", () => {

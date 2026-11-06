@@ -3,10 +3,10 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, type BrowserWindow } from "electron";
 import { localDate } from "../core/dates";
-import { daysBefore, type RecordMutation } from "../shared/storage";
 import { learningOperations } from "../shared/learning";
-import type { SqliteRepository } from "./sqlite-repository";
+import { daysBefore, type RecordMutation } from "../shared/storage";
 import { selectPage, waitForLearning } from "./learning-smoke";
+import type { SqliteRepository } from "./sqlite-repository";
 
 // Called only by --storage-smoke --comparison-smoke, before the fixture Coach is created.
 export async function seedComparisonCoverage(repository: SqliteRepository) {

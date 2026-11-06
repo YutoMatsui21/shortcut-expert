@@ -1,6 +1,6 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
+import { test, mock } from "node:test";
 import { startupMode } from "../../../src/main/startup-mode.ts";
 
 test("bootstrap preserves normal storage and requires isolated packaged natural acceptance", async () => {

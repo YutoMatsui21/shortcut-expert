@@ -1,5 +1,6 @@
 import { readFile, writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
+import { classify } from "../core/detector.ts";
 import type {
   Snapshot,
   LearningState,
@@ -7,7 +8,6 @@ import type {
   ObserverCandidate,
   ShortcutNoticeItem,
 } from "../shared/coach.ts";
-import { classify } from "../core/detector.ts";
 import { learningState } from "../shared/learning.ts";
 import type { WindowDiagnosticCounts } from "../shared/window-diagnostics.ts";
 

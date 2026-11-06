@@ -1,13 +1,13 @@
 import { Fragment } from "react";
+import type { OperationId } from "../../shared/coach";
 import {
   learningGroups,
   learningOperations,
   type LearningReadModel,
   type LearningState,
 } from "../../shared/learning";
-import { Icon, type IconName } from "./icons";
-import type { OperationId } from "../../shared/coach";
 import { isLearningState } from "../../shared/learning";
+import { Icon, type IconName } from "./icons";
 
 const states: { value: LearningState; label: string; icon: IconName }[] = [
   { value: "learning", label: "学習中", icon: "imgStatusIcon" },

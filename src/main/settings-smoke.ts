@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, type BrowserWindow } from "electron";
+import type { DurableCoach } from "../core/durable-coach";
 import type { CoachBridge, Snapshot } from "../shared/coach";
 import { coachTrayMenu } from "./coach-tray";
+import { runDeleteSmoke } from "./delete-smoke";
 import { selectPage, waitForLearning } from "./learning-smoke";
 import { SqliteRepository } from "./sqlite-repository";
-import { runDeleteSmoke } from "./delete-smoke";
-import type { DurableCoach } from "../core/durable-coach";
 
 export async function runSettingsSmoke(
   window: BrowserWindow,

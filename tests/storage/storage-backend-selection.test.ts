@@ -1,7 +1,7 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
-import * as filesystem from "node:fs/promises";
 import type { PathLike } from "node:fs";
+import * as filesystem from "node:fs/promises";
+import { test, mock } from "node:test";
 let denied = true;
 let denialCode = "EACCES";
 let authority = false;

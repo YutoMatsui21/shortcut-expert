@@ -1,11 +1,11 @@
 // Opt-in research runner. Default compiles and self-tests without live observation.
 import { execFile, spawn } from "node:child_process";
-import { promisify } from "node:util";
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));

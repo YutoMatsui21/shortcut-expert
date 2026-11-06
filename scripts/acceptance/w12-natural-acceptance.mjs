@@ -1,5 +1,4 @@
 import { spawn, execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import {
   mkdir,
@@ -10,6 +9,7 @@ import {
   rename,
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { developmentEnvironment } from "../dev/dev-environment.mjs";
 import { packageManifest } from "./ui-acceptance-runtime.mjs";
 

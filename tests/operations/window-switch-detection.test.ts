@@ -1,12 +1,12 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
-import { classify } from "../../src/core/detector.ts";
-import { switchFixture } from "../support/fixtures.ts";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { test, mock } from "node:test";
+import { classify } from "../../src/core/detector.ts";
 import { DurableCoach } from "../../src/core/durable-coach.ts";
 import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
+import { switchFixture } from "../support/fixtures.ts";
 mock.module("electron", { namedExports: { app: {} } });
 const { candidateV2 } = await import("../../src/main/observer.ts");
 

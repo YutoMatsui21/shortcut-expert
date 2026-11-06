@@ -1,12 +1,12 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { NaturalInputTrials } from "../../src/main/natural-input-acceptance.ts";
-import type { Snapshot } from "../../src/shared/coach.ts";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { test } from "node:test";
 import { DurableCoach } from "../../src/core/durable-coach.ts";
+import { NaturalInputTrials } from "../../src/main/natural-input-acceptance.ts";
 import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
+import type { Snapshot } from "../../src/shared/coach.ts";
 import {
   taskbarFixture,
   snapFixture,

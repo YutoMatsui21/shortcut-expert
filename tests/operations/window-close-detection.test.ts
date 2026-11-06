@@ -1,5 +1,5 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { test, mock } from "node:test";
 import { classify } from "../../src/core/detector.ts";
 mock.module("electron", { namedExports: { app: {} } });
 const { candidateV2 } = await import("../../src/main/observer.ts");

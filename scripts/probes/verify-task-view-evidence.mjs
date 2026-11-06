@@ -1,6 +1,6 @@
+import { createHash } from "node:crypto";
 // Offline source-integrity check; never compile or execute historical probe sources.
 import { readFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
 const evidence = new URL("../../validation/evidence/", import.meta.url);
 try {
   const summary = JSON.parse(

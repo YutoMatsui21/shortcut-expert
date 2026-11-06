@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { app, screen, powerMonitor, type BrowserWindow } from "electron";
+import { localDate } from "../core/dates";
+import { DurableCoach } from "../core/durable-coach";
+import { daysBefore } from "../shared/storage";
 import {
   runLearningSmoke,
   selectPage,
   waitForLearning,
 } from "./learning-smoke";
+import type { ObserverClient } from "./observer";
 import { runRecordsSmoke } from "./records-smoke";
 import { SqliteRepository } from "./sqlite-repository";
-import { DurableCoach } from "../core/durable-coach";
-import type { ObserverClient } from "./observer";
-import { localDate } from "../core/dates";
-import { daysBefore } from "../shared/storage";
 
 export async function waitFor(
   window: BrowserWindow,

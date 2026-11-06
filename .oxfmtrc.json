@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [],
+  "printWidth": 80,
+  "sortImports": {
+    "partitionByNewline": true,
+    "newlinesBetween": false,
+    "sortSideEffects": false
+  }
+}

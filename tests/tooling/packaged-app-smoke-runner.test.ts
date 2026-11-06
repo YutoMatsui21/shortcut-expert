@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -9,7 +9,7 @@ import {
   rmSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { test } from "node:test";
 
 const runner = resolve("scripts/test/ci-package-smoke.mjs");
 for (const failing of ["none", "smoke", "package", "log"]) {

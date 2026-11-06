@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { app, BrowserWindow } from "electron";
 import type { EventEmitter } from "node:events";
 import { setTimeout } from "node:timers/promises";
+import { app, BrowserWindow } from "electron";
 import type { Snapshot } from "../shared/coach";
-import type { StandardNotifications } from "./standard-notification";
 import { selectPage, waitForLearning } from "./learning-smoke";
+import type { StandardNotifications } from "./standard-notification";
 
 // OS notification delivery is replaced at the boundary; all window, IPC, Core,
 // helper lifecycle and SQLite behavior below belongs to the packaged app.

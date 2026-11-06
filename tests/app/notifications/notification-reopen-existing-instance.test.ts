@@ -1,6 +1,6 @@
-import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { test, mock } from "node:test";
 
 test("a process losing the instance lock never initializes COM, a window or a helper", async () => {
   const exits: number[] = [];

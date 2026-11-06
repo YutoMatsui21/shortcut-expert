@@ -1,9 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { createInterface } from "node:readline";
 import { resolve } from "node:path";
+import { createInterface } from "node:readline";
+import { test } from "node:test";
 import { candidateFixture, v2Fixture } from "../support/fixtures.ts";
 
 test("Windows helperはhookを登録・解除でき、テスト中は入力payloadを読まない", () => {

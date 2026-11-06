@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { app, BrowserWindow } from "electron";
-import type { Bounds, Snapshot } from "../shared/coach";
-import { visibleNormalBounds } from "./window-bounds.ts";
-import { isNormalBounds } from "../shared/window.ts";
 import { SerialQueue } from "../core/serial-queue.ts";
+import type { Bounds, Snapshot } from "../shared/coach";
+import { isNormalBounds } from "../shared/window.ts";
+import { visibleNormalBounds } from "./window-bounds.ts";
 
 type WindowPreferences = {
   saved?: Bounds;

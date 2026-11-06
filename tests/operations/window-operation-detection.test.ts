@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { classify as classifyV2 } from "../../src/core/detector.ts";
 import type { OperationId } from "../../src/shared/coach.ts";
 import { v2Fixture, type Candidate } from "../support/fixtures.ts";

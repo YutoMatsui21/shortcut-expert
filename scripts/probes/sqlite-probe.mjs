@@ -1,4 +1,6 @@
+import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
@@ -9,14 +11,12 @@ import {
   copyFile,
   unlink,
 } from "node:fs/promises";
-import { resolve, join, relative, normalize } from "node:path";
 import { release } from "node:os";
-import { createHash } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
+import { resolve, join, relative, normalize } from "node:path";
 import { performance } from "node:perf_hooks";
-import assert from "node:assert/strict";
-import electron from "electron";
+import { setTimeout as delay } from "node:timers/promises";
 import { extractFile } from "@electron/asar";
+import electron from "electron";
 import { assertRuntime } from "../../validation/probes/sqlite/runtime.cjs";
 
 const packaged = process.argv.includes("--packaged");

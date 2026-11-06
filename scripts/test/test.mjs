@@ -1,5 +1,5 @@
-import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 import { posix } from "node:path";
 import { developmentEnvironment } from "../dev/dev-environment.mjs";
 

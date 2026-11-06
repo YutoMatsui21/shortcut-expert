@@ -1,4 +1,3 @@
-import { defaultRecordsQuery, type RecordsQuery } from "../shared/records.ts";
 import type {
   ObserverCandidate,
   ShortcutNotice,
@@ -7,23 +6,24 @@ import type {
   Snapshot,
   SnapshotErrorKind,
 } from "../shared/coach.ts";
-import type {
-  DurableRepository,
-  RecordMutation,
-  StorageState,
-} from "../shared/storage.ts";
-import { daysBefore, recordOperations } from "../shared/storage.ts";
-import { classifyGesture } from "./detector.ts";
-import { validDate } from "./dates.ts";
-import { SerialQueue } from "./serial-queue.ts";
 import {
   learningOperations,
   learningState,
   withLearningState,
   type LearningState,
 } from "../shared/learning.ts";
+import { defaultRecordsQuery, type RecordsQuery } from "../shared/records.ts";
+import type {
+  DurableRepository,
+  RecordMutation,
+  StorageState,
+} from "../shared/storage.ts";
+import { daysBefore, recordOperations } from "../shared/storage.ts";
+import { validDate } from "./dates.ts";
+import { classifyGesture } from "./detector.ts";
 import { learningReadModel } from "./learning.ts";
 import { recordRanges, recordsReadModel } from "./records.ts";
+import { SerialQueue } from "./serial-queue.ts";
 
 export type Capability = { operation: OperationId; revision: string };
 type Dependencies = {

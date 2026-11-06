@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { app, type BrowserWindow } from "electron";
+import { localDate } from "../core/dates";
 import type { DurableCoach } from "../core/durable-coach";
 import type { CoachBridge, CandidateV2 } from "../shared/coach";
-import { localDate } from "../core/dates";
-import { SqliteRepository } from "./sqlite-repository";
 import { waitForLearning, selectPage } from "./learning-smoke";
+import { SqliteRepository } from "./sqlite-repository";
 
 export async function runDeleteSmoke(
   window: BrowserWindow,

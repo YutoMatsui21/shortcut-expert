@@ -1,14 +1,14 @@
-import { defaultRecordsQuery, type RecordsQuery } from "../../shared/records";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LearningReadModel } from "../../shared/learning";
 import { localDate } from "../../core/dates";
-import { useCoach } from "./useCoach";
-import { RecordsPage } from "./RecordsPage";
-import { LearningPage, LearningSummary } from "./LearningPage";
-import { Icon } from "./icons";
-import { SettingsPopover } from "./SettingsPopover";
+import type { LearningReadModel } from "../../shared/learning";
+import { defaultRecordsQuery, type RecordsQuery } from "../../shared/records";
 import { DeleteDialog } from "./DeleteDialog";
+import { Icon } from "./icons";
+import { LearningPage, LearningSummary } from "./LearningPage";
+import { RecordsPage } from "./RecordsPage";
 import { SaveErrorBanner } from "./SaveErrorBanner";
+import { SettingsPopover } from "./SettingsPopover";
+import { useCoach } from "./useCoach";
 
 export function CoachApp() {
   const coach = useCoach();

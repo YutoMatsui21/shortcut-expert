@@ -1,6 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { dotnet, dotnetEnvironment } from "./dotnet.mjs";
 
 const root = resolve(".");

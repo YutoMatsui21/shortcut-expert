@@ -1,4 +1,3 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdirSync,
@@ -9,13 +8,14 @@ import {
 } from "node:fs";
 import { resolve, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { test } from "node:test";
+import { assertRuntime } from "../../validation/probes/sqlite/runtime.cjs";
 import {
   connect,
   write,
   reset,
   migrate,
 } from "../../validation/probes/sqlite/store.cjs";
-import { assertRuntime } from "../../validation/probes/sqlite/runtime.cjs";
 
 function fixture() {
   const base = resolve(".tools/tests");

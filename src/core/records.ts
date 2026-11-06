@@ -1,5 +1,5 @@
 import type { OperationId, Settings } from "../shared/coach.ts";
-import { daysBefore, type RecordRange } from "../shared/storage.ts";
+import { learningOperations, learningState } from "../shared/learning.ts";
 import {
   defaultRecordsQuery,
   type RecordComparison,
@@ -7,7 +7,7 @@ import {
   type RecordsQuery,
   type RecordsReadModel,
 } from "../shared/records.ts";
-import { learningOperations, learningState } from "../shared/learning.ts";
+import { daysBefore, type RecordRange } from "../shared/storage.ts";
 
 type Fraction = { numerator: bigint; denominator: bigint };
 function rateFraction(value: RecordMetrics): Fraction | null {

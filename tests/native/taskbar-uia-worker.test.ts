@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { test } from "node:test";
 test("taskbar production query transport bounds blocked providers, reuses and restarts its isolated worker", () => {
   const result = spawnSync(
     resolve("resources/native-helper/WindowObserver.exe"),

@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { DeleteConfirmation } from "../../../src/main/delete-confirmation.ts";
 
 test("confirmation is frame-bound, expires, cancels and is consumed before async deletion", () => {

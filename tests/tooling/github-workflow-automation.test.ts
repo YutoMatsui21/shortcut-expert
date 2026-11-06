@@ -1,4 +1,3 @@
-import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdirSync,
@@ -8,6 +7,7 @@ import {
   rmSync,
 } from "node:fs";
 import { resolve, join } from "node:path";
+import { test, type TestContext } from "node:test";
 import {
   cacheIssue,
   issueSection,

@@ -1,7 +1,7 @@
-import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import { test, type TestContext } from "node:test";
 import { readLegacy } from "../../src/main/storage-migration.ts";
 
 async function directory(t: TestContext) {

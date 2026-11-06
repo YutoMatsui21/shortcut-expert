@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { startupMode } from "../../../src/main/startup-mode.ts";
 
 test("sign-in startup is an explicit background route; fixture and manual entries remain separate", () => {

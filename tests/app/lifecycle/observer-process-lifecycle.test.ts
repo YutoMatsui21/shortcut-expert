@@ -1,11 +1,11 @@
-import { test, mock, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { HelperProcess } from "../../support/helper-process.ts";
-import { candidateFixture, v2Fixture } from "../../support/fixtures.ts";
+import { test, mock, type TestContext } from "node:test";
 import {
   windowDiagnosticKeys,
   type WindowDiagnosticCounts,
 } from "../../../src/shared/window-diagnostics.ts";
+import { candidateFixture, v2Fixture } from "../../support/fixtures.ts";
+import { HelperProcess } from "../../support/helper-process.ts";
 
 let launched: HelperProcess[] = [];
 let spawnedArguments: string[][] = [];
