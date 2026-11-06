@@ -68,8 +68,9 @@ flowchart TD
 | 切替の前後対象・Alt+Tabキー系列・settle待ち | `WindowSwitchObserver/WindowSwitchPolicy` | W01 |
 | 閉じる対象・Alt+F4系列・destroy確認待ち | `WindowCloseObserver/WindowClosePolicy` | W11 |
 | タスクバーsnapshot・slot・確認待ち・非同期読取 | `TaskbarInputObserver/TaskbarKeys/TaskbarConfirmation` | W12 |
-| Nativeのtransaction番号 | `CandidateTracker.NextTransaction()`、専用Observerへcallback提供 | 複数の候補生成経路で共有する識別子 |
-| Nativeの送信`sequence`/`generation`と直列化lock | `CandidateProtocol` | 候補の送信順序と世代一致 |
+| Nativeのtransaction番号 | `CandidateTracker`（`NextTransaction()`に加え、`Mouse`/`Key`/`Build`内の`++transaction`）、専用Observerへcallback提供 | 複数の候補生成経路で共有する識別子。後で採番を移すなら**内部の直接インクリメントも含め全経路を対象にする** |
+| Nativeの送信`sequence`/`generation`と候補発行ロック（`gate`） | `CandidateProtocol` | 候補発行の順序と世代一致を保つ |
+| JSONLの標準出力書込ロック（`outputLock`） | `ObserverHost.Emit` | 書込みを互いに混在させない。`CandidateProtocol.gate`とは別の排他 |
 | Mainのhelperプロセス・世代・JSON行buffer・コマンド応答 | `ObserverClient` | 受信境界・失敗時停止 |
 | Coreの受理`generation/sequence`・処理済み`transaction`・SerialQueue | `DurableCoach` | 重複採用・再配送防止 |
 

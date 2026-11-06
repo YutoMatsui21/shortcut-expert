@@ -11,7 +11,7 @@
 | Observerの責務 | Win32 callback・入力の正規化と状態読み取り、Handlerへの配送 | 操作追加に伴う分岐増加を抑制 | Observerが全操作のMethodを直呼びする方式を継続しない |
 | Dispatcher | **採用候補**：同期・順序付き登録Handler配信 | 扱うイベント種別とhandler登録を分離 | 非同期イベントバス・並行fan-outはhook時間/順序/競合の危険がある |
 | C# Handler interface | **採用候補**：`IEvidenceHandler.OnEvent` / `Reset` | 個別実装をObserverが知らなくてよい | 全Handlerに操作固有のメソッドを公開しない |
-| Candidate出力 | **採用候補**：`ICandidateSink.Emit(CandidateDraft)` | CandidateProtocolとの依存を一箇所に集約 | Nativeの各検出器がv2用メソッドを直接呼ばない |
+| Candidate出力 | **採用候補**：`ICandidateSink.Emit(CandidateDraft)` | CandidateProtocolとの依存を一箇所に集約 | Nativeの各検出器がv2用メソッドを直接呼ばない。候補発行gateとstdout書込lockは別の所有者 |
 | 状態管理 | 各Handlerは自分のpending状態を所有し、共有ID・競合だけを別管理 | 変更の局所性が高い | 巨大な単一Gesture Coordinatorへ全状態を集約しない |
 | TypeScript classifier | `classifyGesture`を共通入口に保って、Evidence群別の純粋関数へ分割 | 追加箇所が明確、テスト単位が小さい | W IDごとの1対1制約は複合操作に合わない |
 | Snapの扱い | 初回対象外のコードは新しいHandler登録へ含めない | 現行の検出対象を変えない | ついでに機能追加しない |
@@ -70,11 +70,13 @@
 
 1. **Handlerをどの粒度で分けるか**：WindowState/Move/Placementを論理上分けたが、窓の復元・最大化・ドラッグ・caption clickの所有権が跨る。Step 3でイベント列と競合条件を固定し、Step 4で最小の切り出し単位を決める。
 2. **Arbitration/Compatibility PolicyのAPI**：入力ごとの優先順位・Cancel/Resetの因果関係を確認してから契約を決める。根拠なくglobal stateを移動しない。
-3. **Dispatcherの配信順**：現在のコード順序や所有権を維持するため、操作の追加が順序に依存するケースを列挙・テストする。登録配列順だけに安全性を依存させない。
+3. **Dispatcherの配信順と調停API（実装前ブロッカー）**：現在のコード順序、専有、取消、複合操作を維持するため、G01の入力列で確認し、Handlerの処理結果・所有権・競合通知をどう表現するか決める。**擬似`IEvidenceHandler.OnEvent()`だけでは十分な契約にならない**。登録配列順だけに安全性を依存させず、APIが未確定ならDispatcherの本実装Issueを開始しない。
 4. **ObservedEvent内のsnapshot**：不要なWin32 API呼び出しを増やさず、各Handlerが必要な時点の情報を得る方式を選択する。すべてのマウス移動で完全なwindow snapshotを取得しない。
-5. **CandidateDraftとEvidenceの内部型**：現行C#の`Evidence` record階層をそのまま使うか、wire DTOとの境界を分けるかは依存分析後に決定する。
+5. **CandidateDraftとEvidenceの内部型**：現行C#の`Evidence` record階層をそのまま使うか、wire DTOとの境界を分けるかは依存分析後に決定する。**1gestureの複合証拠は1つの最終所有Handlerから送る**ことを維持し、同一transactionで複数Handlerが個別に送る構成は許容しない。
 6. **既存の「Win+↓ 2回で1操作」等の意味移動**：TypeScriptに移す場合、何を別候補として送るか、重複除外の順序と照合して独立設計する。
 7. **プロトコルの将来形**：v3への変更の必要性が明確になるまではv2維持。将来の拡張のためだけの汎用raw-event schemaは作らない。
+8. **transaction採番の全経路**：`tracker.NextTransaction()`のdelegateだけでなく、Tracker内の`++transaction`や`PlacementPolicy`経由の発番、各専用Observerの発番を同じsession採番器へ移す。**候補の取消によりtransactionが欠番になる現行の性質は維持し、連番を強制しない**。採用済み番号の重複・世代跨ぎを含めNative→TSの重複排除結果を変えない。
+9. **コンポジションルート**：Handlerの生成・登録はObserverの操作分岐とは別の1か所に集約。将来追加時に既存Handlerを変更しないことを、G04でテストする。
 
 **結論**：Step 2の設計軸は「ObserverをOS観測へ、Evidence Handlerを相関へ、TS Classifierを製品上の採用へ」分割すること。ただし**Dispatcher導入そのものや抽象化量より、競合と同一ジェスチャの意味が変わらず拡張しやすいか**を優先する。
 

@@ -46,15 +46,15 @@
 
 | 優先度 | ID | 追加・補強するテスト仕様 | いつ必要か / 理由 |
 | --- | --- | --- | --- |
-| **P0** | **G01** | **Observer相当のイベント入力列→複数Handlerの配信・競合・取消の回帰**。キー/マウス/foreground/MOVESIZESTART/END/最小化/Destroyを、順序違い・期限・注入・対象変更込みで表現し、`CandidateEnvelope`の数・種類・transactionを比較する。Win+数字→W12のみ、ドラッグ中の派生窓状態を重複採用しない、非アクティブcaptionと通常switch/Trackerの干渉を防ぐ。 | **Dispatcher / Arbitrationを変更する前**。既存の操作別Policy単体テストだけではObserver内の順序が保護しきれない |
+| **P0** | **G01** | **本番の配送/調停ロジックを通るイベント入力列→複数Handlerの競合・取消回帰**。キー/マウス/foreground/MOVESIZESTART/END/最小化/Destroyを、順序違い・期限・注入・対象変更込みで表現し、`CandidateEnvelope`の数・種類・transactionを比較する。**テスト専用の別実装Dispatcherで代用せず、Windows APIや時計等の外側だけをfakeにする**。Win+数字→W12のみ、ドラッグ中の派生窓状態を重複採用しない、非アクティブcaptionと通常switch/Trackerの干渉を防ぐ。 | **Dispatcher / Arbitrationを変更する前**。既存の操作別Policy単体テストだけではObserver内の順序が保護しきれない |
 | **P0** | **G02** | **全Native出口のCandidate JSON互換性**。state/drag/placement/switch/close/taskbar/inactive-captionの正・負例を、`generation`/`transaction`/`sequence`/`origin`/`route`/`evidence`・不許可fieldについて検証。日時・sequenceの揺らぎは、意味を保つ正規化を明示して比較。1transactionを分割して2Candidate送らないことも確認。 | **Candidate Sink / Protocolを変更する前**。現在も多くのvariantにテストがあるため、既存を再利用し不足caseだけ追加 |
 | **P1** | **G03** | **start/stop/resetと非同期結果・timerの境界**。stop直前の保留slot照会、Win+↑のtimer確定、切替settle、close破棄確認、世代切替で旧結果が`Emit`されない | handlerの寿命/非同期処理を移動する前 |
 | **P1** | **G04** | **新検出器追加の拡張性契約**。仮のHandlerを1つ登録し、Observerや既存Handlerの分岐を書き換えずにObservedEventを受け取れること、意図しない既存Handlerは影響されないことを確認 | **Dispatcher実装と一緒に追加**する設計テスト。現行コードで実行するテストではない |
 | **P1** | **G05** | **新しいTS Classifierを追加する登録/型のテスト**。既存`classifyGesture`の候補→Observation結果を表で固定し、新`evidence.kind`の追加時にParserとshared schemaを安全に更新できることを確認 | TSファイル分割時。既存の操作別assertの再利用を優先 |
-| **P1** | **G06** | **安全なデータ境界**。Candidate/JSON LinesにHWND・PID・ウィンドウ名・キー列・座標・禁止文字列が追加されない。Native内部のObservedEventの値が直接`ICandidateSink`へ渡らない | 新ObservedEvent / CandidateDraft導入時 |
+| **P1** | **G06** | **安全なデータ境界**。**Nativeが出した生のCandidate JSONL**と、TS parserが投影したCandidateの双方に、HWND・PID・ウィンドウ名・キー列・**生のカーソル座標や軌跡**・禁止文字列が追加されないことを確認する。ただし、**既存Evidenceのモニター境界`x/y/width/height`は必要な幾何情報**であり、禁止対象と誤認しない。`candidateV2`は未知fieldを捨てる場合があるため、**TSで消えることだけをプライバシー検証の根拠にしない**。Native内部のObservedEventの値が直接`ICandidateSink`へ渡らない | 新ObservedEvent / CandidateDraft導入時 |
 | **手動/必要に応じて** | **G07** | 同一最終buildで、独自captionを含む代表アプリ、異なるモニター/DPI、W01/W12/複合drag・captionの自然入力と実通知を確認。build SHA・操作・条件・不合格を別途記録 | Hook、ウィンドウ状態読取、hit test、非同期timerの意味が変わるリスクのある変更。本人の明示同意が必須 |
 
-**P0の意味**：「必ず全ケースを新規追加する」ではなく、**既存テストが同じ境界を既に保護しているかを再確認し、足りない最小限だけ先行追加する**。Observer/Coordinatorに変更がないStepではG01を形式的に追加しない。
+**P0の意味**：「必ず全ケースを新規追加する」ではなく、**既存テストが同じ境界を既に保護しているかを再確認し、足りない最小限だけ先行追加する**。Observer/Dispatcher/調停に変更がないStepではG01を形式的に追加しない。**G03は通常P1だが、Handlerのstart/stop/reset、timerや非同期照会の所有者を移すIssueではP0の前提条件に格上げする**。
 
 ## 4. Codex向けのテスト選択ガイド（Step 4でIssueに割り当てる）
 
