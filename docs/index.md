@@ -9,6 +9,7 @@
 | なぜ作るか・どんな成果を重視するか      | [プロダクトの目的・思想](product.md)                                                                                                                                                            |
 | 何を作るか・MVP・期待動作・公開合格条件 | [製品要件・受入条件](ui-requirements.md)                                                                                                                                                        |
 | どういう責務分担で実現するか            | [全体設計・アーキテクチャ](design.md)                                                                                                                                                           |
+| 検出処理の現行構成・改修後の構成・移行順 | [検出アーキテクチャ](research/detection-architecture/README.md) |
 | Windows操作をどう検出・分類するか       | [操作別の技術設計](operations/README.md)                                                                                                                                                        |
 | UI・通知・ウィンドウ動作の実装設計      | [機能別の設計](features/learning-ui.md)・[記録](features/records-ui.md)・[設定](features/settings-panel.md)・[通知](features/standard-notifications.md)・[窓管理](features/window-lifecycle.md) |
 | 保存・移行・削除の契約                  | [永続保存](storage/durable-storage.md)・[旧JSON移行](storage/json-migration.md)・[記録削除](storage/history-deletion.md)                                                                        |
