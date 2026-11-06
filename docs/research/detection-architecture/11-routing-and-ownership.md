@@ -109,6 +109,8 @@ interface ICandidateSink
 
 **評価順序**：`Plan(event, phase, statuses)` → DispatchStepを1つ実行 → `HandlerResult`と**更新された**HandlerStatusを反映 → **次のphaseを再評価** → 完了した候補を`AllowPublish`で審査してSinkへ発行。計画を**イベントの開始時に一度だけ計算し、古いsnapshotで最後まで配信することは禁止**。`ArbitrationPolicy`はHandlerのprivate状態を読まず、Handlerが公開する**限定した状態ビュー**だけを参照する。`ClaimTransition`はイベント固有の一時結果で、グローバルな入力ログを作らない。
 
+**デフォルト配送**：特別な競合が登録されていないイベントは、関心を宣言したHandlerへ**同期的に順序付き配信**する。新しいHandlerの`Interests`に登録したイベントが自動で届くようにし、Observer側へ追加の操作別`if`を要求しない。`TimerObserved`は**該当するHandler ID・generation**へだけ届き、無関係な購読者へbroadcastしない。**既存の相互作用は下表の明示規則がデフォルトより優先**する。
+
 **所有権とtransactionの区別**：HandlerStatus/ClaimはNative内部での候補の競合抑制を表す。`CandidateDraft.Transaction`は**確定した候補の識別子**であり、複数Handler間の入力専有ロックの代用には使わない。複数の仮候補が違うtransactionを採番していても、Policyは**配信・Claimの履歴**で余分な候補を拒否する。
 
 ## 3. 既存Observerの順序を再現する配信表
