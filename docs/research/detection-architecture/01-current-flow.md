@@ -67,8 +67,8 @@ flowchart TD
 
 `CandidateProtocol` は候補種別を `CandidateEnvelope` に包む。主なフィールドは `type`, `protocolVersion`, `generation`, `sequence`, `transaction`, `date`, `origin`, `route`, `injected`, `conflicted`, `evidence`。`evidence` は `window`、`window-switch`、`placement`、`compound-drag`、`caption-click`、`window-close`、`taskbar-input` 等の種別を持つ。古い窓状態候補は `evidence.kind="window"` の `result.operation="maximize"` 等を含む。
 
-- `CandidateProtocol`：送信順序の`sequence`を付与し、`generation`を確認。操作の発生源に応じた`route`と証拠を組み立てる。
-- `ObserverHost.Emit`：`JsonSerializer.Serialize` → `Console.WriteLine`。標準出力で1行ずつ送る（ディスク上のJSONLファイルではない）。
+- `CandidateProtocol`：送信順序の`sequence`を付与し、`generation`を確認。操作の発生源に応じた`route`と証拠を組み立てる。**自身の`gate`で候補発行順序を保護する**。
+- `ObserverHost.Emit`：**別の`outputLock`で標準出力への書込みを保護**し、`JsonSerializer.Serialize` → `Console.WriteLine`。標準出力で1行ずつ送る（ディスク上のJSONLファイルではない）。
 - `ObserverClient`：child processのstdoutを行ごとにバッファし`JSON.parse`、`candidateV2`で必須項目と`evidence.kind`を厳格検証してからコールバックへ渡す。
 - `coach-app.ts`：`coach.accept(candidate)` を呼び出す。
 - `DurableCoach.accept`：観測中か、世代一致、sequence順、transaction未処理かを確認してから`classifyGesture`を呼ぶ。
