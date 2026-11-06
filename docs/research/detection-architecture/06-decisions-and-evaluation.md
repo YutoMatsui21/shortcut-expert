@@ -75,7 +75,7 @@
 5. **CandidateDraftとEvidenceの内部型**：現行C#の`Evidence` record階層をそのまま使うか、wire DTOとの境界を分けるかは依存分析後に決定する。**1gestureの複合証拠は1つの最終所有Handlerから送る**ことを維持し、同一transactionで複数Handlerが個別に送る構成は許容しない。
 6. **既存の「Win+↓ 2回で1操作」等の意味移動**：TypeScriptに移す場合、何を別候補として送るか、重複除外の順序と照合して独立設計する。
 7. **プロトコルの将来形**：v3への変更の必要性が明確になるまではv2維持。将来の拡張のためだけの汎用raw-event schemaは作らない。
-8. **transaction採番の全経路**：`tracker.NextTransaction()`のdelegateだけでなく、Tracker内の`++transaction`や`PlacementPolicy`経由の発番、各専用Observerの発番を同じsession採番器へ移す。**番号重複・欠番・世代跨ぎを含め、Native→TSの重複排除結果を変えない**。
+8. **transaction採番の全経路**：`tracker.NextTransaction()`のdelegateだけでなく、Tracker内の`++transaction`や`PlacementPolicy`経由の発番、各専用Observerの発番を同じsession採番器へ移す。**候補の取消によりtransactionが欠番になる現行の性質は維持し、連番を強制しない**。採用済み番号の重複・世代跨ぎを含めNative→TSの重複排除結果を変えない。
 9. **コンポジションルート**：Handlerの生成・登録はObserverの操作分岐とは別の1か所に集約。将来追加時に既存Handlerを変更しないことを、G04でテストする。
 
 **結論**：Step 2の設計軸は「ObserverをOS観測へ、Evidence Handlerを相関へ、TS Classifierを製品上の採用へ」分割すること。ただし**Dispatcher導入そのものや抽象化量より、競合と同一ジェスチャの意味が変わらず拡張しやすいか**を優先する。
