@@ -86,7 +86,7 @@ interface ICandidateSink
 | WindowStateの時点付きsnapshot/キャッシュ | Native WindowFacts | Detector間で同じイベントのsnapshotを共有し、不用意な再取得や競合を避ける |
 | イベントの順序・配信・登録済みHandler一覧 | Dispatcher | 操作名を知らず順序を制御 |
 | `generation`とプロセス観測の開始停止 | ObserverHost＋Observer session | 停止後の古い結果を無効化 |
-| **共通transactionの採番** | **ITransactionIds**（CandidateTrackerから分離） | 専用Observerの`tracker.NextTransaction`依存だけでなく、**CandidateTracker内の`++transaction`**（`Mouse`/`Key`/`Build`等）をすべて移す必要がある。世代切替でリセットし、全Handlerで番号の一意性を保つ |
+| **共通transactionの採番** | **ITransactionIds**（CandidateTrackerから分離） | 専用Observerの`tracker.NextTransaction`依存だけでなく、**CandidateTracker内の`++transaction`**（`Mouse`/`Key`/`Build`等）をすべて移す必要がある。世代切替でリセットし、全Handlerで番号の一意性を保つ。**候補未確定・取消によるtransactionの欠番は許容し、連番を強制しない** |
 | マウスの最大化候補、drag状態、switch/close、タスクバー照会など**固有のpending** | それぞれのEvidence Handler | 独立した操作は独立した状態で持ち、巨大な全局stateに統合しない |
 | 複数Handler間の取消・所有権・複合確定 | 明示的な**Arbitration/Compatibility Policy**（小さい共通制御） | 現行の優先順序と抑制を**変えず**移す。勝手に全件fan-outしてはいけない |
 | Candidate送信順`sequence`、CandidateEnvelope、候補発行の`gate` | CandidateProtocol / Sink | 各HandlerがJSONLと送信順を知らない。標準出力への書込lockは`ObserverHost`に分ける |
