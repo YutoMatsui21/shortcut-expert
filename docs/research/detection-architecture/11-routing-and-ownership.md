@@ -96,6 +96,21 @@ interface ICandidateSink
 
 **処理結果**`ClaimTransition`は「このイベントでの候補開始／取消／確定」を宣言する値。**共有のClaimとPendingの二重管理**を増やさず、Routerが必要とする**最小限の処理状態（HandlerStatus）**だけを提供する。任意の`string`プロトコルを使わず、登録IDと定義済みClaim種別を型で検証する。実装名は変えてよいが「どのHandlerが何を所有し、他を取消できるか」を`ArbitrationPolicy`へ隠れた副作用なしで伝える。
 
+### 調停で用いる状態とアクションの確定範囲
+
+**実装する意味（列挙子名は変更可）**：
+
+| 種類 | ケース | 動作 |
+| --- | --- | --- |
+| `HandlerStatus` | `None` / `SharedPending` / `ExclusivePending` / `Completed` | 他Handlerに見せる**現在の候補状態**。`SharedPending`は例外的な並行追跡（caption Fallback＋drag）を意味する。`ExclusivePending`でも配信全面停止を自動化せず、**Policyの許可した対象**だけを抑制 |
+| `ClaimTransition` | `Unchanged` / `StartedShared` / `StartedExclusive` / `Yielded` / `Released` / `Completed` | `Handle`処理前後の所有権変化。`Yielded`はMOVESIZESTART等で別Handlerへ所有を移したことを示す。`Completed`には候補`Proposals`が付く |
+| `DispatchStep` | `Deliver(handler)` / `Cancel(handler, reason)` / `Skip(handler)` | Routerが**順番通りに**実行するアクション。`Cancel`後はHandlerStatusを再取得 |
+| `PublishDecision` | `Allow` / `Reject` | Source Handlerと提案・このイベントまでのClaim履歴から発行を許可。**同一gestureから別Handlerの部分候補が既に確定しているならReject** |
+
+**評価順序**：`Plan(event, phase, statuses)` → DispatchStepを1つ実行 → `HandlerResult`と**更新された**HandlerStatusを反映 → **次のphaseを再評価** → 完了した候補を`AllowPublish`で審査してSinkへ発行。計画を**イベントの開始時に一度だけ計算し、古いsnapshotで最後まで配信することは禁止**。`ArbitrationPolicy`はHandlerのprivate状態を読まず、Handlerが公開する**限定した状態ビュー**だけを参照する。`ClaimTransition`はイベント固有の一時結果で、グローバルな入力ログを作らない。
+
+**所有権とtransactionの区別**：HandlerStatus/ClaimはNative内部での候補の競合抑制を表す。`CandidateDraft.Transaction`は**確定した候補の識別子**であり、複数Handler間の入力専有ロックの代用には使わない。複数の仮候補が違うtransactionを採番していても、Policyは**配信・Claimの履歴**で余分な候補を拒否する。
+
 ## 3. 既存Observerの順序を再現する配信表
 
 **重要**：全購読者へのfan-out／先着Handlerのexclusive獲得は禁止。次の**依存する順序**をRouter/Policyで再現する。
