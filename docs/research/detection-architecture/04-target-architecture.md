@@ -30,9 +30,9 @@
 | --- | --- | --- | --- |
 | **Observer / OS Adapter**（C#） | Win32 callback、OSへの照会 | **ObservedEvent** | Hook・snapshot・hit test・基本フィルタ。操作の採否を決めない |
 | **Event Dispatcher**（C#） | ObservedEvent、登録Handler | 各Handlerへの同期呼出し | イベント配信順序・寿命。最大化などの判定を持たない |
-| **Evidence Handler群**（C#） | ObservedEvent＋必要なOS照会・前後状態 | **CandidateDraft** またはなし | 入力と結果を関連付け、各操作固有の一時状態・期限を持つ。W IDを決めない |
+| **Evidence Handler群**（C#） | ObservedEvent＋必要なOS照会・前後状態 | **CandidateDraft** またはなし | 入力と結果を関連付け、各操作固有の一時状態・期限を持つ。W IDを決めない。**複合操作では一つのHandlerが最終Evidence全体を確定させる** |
 | **Detection Context**（C#） | session、対象、共通時刻 | transaction ID、読み取りサービス、候補の出力先 | 共通サービス。全検出器の個別状態を一元化しない |
-| **Candidate Sink / CandidateProtocol**（C#） | CandidateDraft | protocol v2のCandidateEnvelope | generation・sequence・送信順の付与。操作ごとの窓照合を持たない |
+| **Candidate Sink / CandidateProtocol**（C#） | CandidateDraft | protocol v2のCandidateEnvelope | generation・sequence・候補発行順の保護。**stdoutへのJSONシリアライズと書込ロックはObserverHost**。操作ごとの窓照合を持たない |
 | **ObserverHost**（C#） | CandidateEnvelope・制御コマンド | JSON Lines / stdout、開始・停止結果 | 直列化とプロセス制御 |
 | **ObserverClient / Parser**（TS） | 1行JSON | 検証済みObserverCandidate | schema・protocol・世代検査。W IDを決めない |
 | **Operation Classifier群**（TS） | ObserverCandidate＋Evidence | **Observation[]** | 採用ルール・W ID・同等ショートカット |
@@ -77,9 +77,11 @@ flowchart TD
 
 現行の`Observer`は`captionClick`と`switching`の競合抑制、`tracker`のドラッグ占有、Win+数字などの入力専有、キー入力による取消を**順序付き**で実施する。全Handlerへの無条件配信は誤採用・二重記録につながり得る。
 
-- **イベントの配信**と**操作同士の競合・所有権**を別責務として扱う。
+- **イベントの配信**と**操作同士の競合・所有権**を別責務として扱う。Dispatcherを導入する前に、既存経路の**専有・取消・同時採用**を誰が判定し、その結果が配信と候補発行へどう伝わるかの契約を確定する。
 - すべての操作を一つの巨大なGesture Coordinatorへ移す案は採用しない。現行の互換条件を維持して、**共有の必要が証明されたルールだけ**後から移す。
-- 同一gestureからW01＋W03やW02＋W07が成立できることは維持する。
+- 同一gestureからW01＋W03やW02＋W07が成立できることは維持する。**同じジェスチャを複数Handlerが別々のCandidateとして送信してよいという意味ではない**。初期構造案では、非アクティブcaptionの複合操作はその専用Handler、別画面複合ドラッグはWindowMove系Handlerが**最終結果全体のオーナー**になり、1Candidateから複数Observationを生成する。
 - 将来のテキスト操作では必要なOS Adapterを追加してよい。窓の`WindowState`を万能な共通型にしない。
+
+**未解決の実装前ブロッカー**：`IEvidenceHandler.OnEvent()`（現行の擬似インターフェース案）は候補の専有・取消・他Handlerの抑制を返す契約を持っていない。このままでは既存の複合/競合動作を再現できる保証がなく、**Dispatcher導入Issueの実装仕様としては未完成**。Step 3のG01で実際の入力列を固定してから、誰が所有権を裁定し、Handlerへどう伝えるかをStep 4で確定する。
 
 詳しいインターフェース案は[05 契約と状態所有](05-contracts-and-state.md)、意思決定と評価基準は[06 設計判断](06-decisions-and-evaluation.md)。
