@@ -50,5 +50,13 @@
       Include="../../../native-helper/Platform/WindowDockSettings.cs"
       Link="WindowDockSettings.cs"
     />
+    <Compile
+      Include="../../../validation/probes/MouseDetectionShadow.cs"
+      Link="MouseDetectionShadow.cs"
+    />
+    <Compile
+      Include="../../../validation/probes/MouseShadowClicks.cs"
+      Link="MouseShadowClicks.cs"
+    />
   </ItemGroup>
 </Project>

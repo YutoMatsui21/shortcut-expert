@@ -28,27 +28,27 @@ flowchart TD
 
 ### 入出力・責務
 
-| 要素 | 入力 → 出力 | 責務 |
-| --- | --- | --- |
-| **Observer / OS Adapter**（C#） | Win32 callback・必要な照会 → `ObservedEvent` | HookとWindowFacts、押下時/結果時のsnapshot。**個別Handlerを直呼びしない** |
-| **DetectionRouter**（C#） | `ObservedEvent` → Handler呼出しと候補提案 | 登録、順序、調停の適用。**操作成立を判定しない** |
-| **ArbitrationPolicy**（C#） | イベント＋Handlerの公開状態 → 配信・取消・送信可否 | 複数Handler間の競合、専有、複合の所有権を集中管理 |
-| **Evidence Handler**（C#） | 観測イベント＋必要なWindowFacts → `CandidateDraft`（またはなし） | OS入力と結果の関連付け・期限・操作固有のpending状態。**W IDは決めない** |
-| **Candidate Sink / Protocol**（C#） | `CandidateDraft` → v2 `CandidateEnvelope` | 共通のgeneration/sequence・送信順。stdoutの直列化はしない |
-| **ObserverHost**（C#） | Envelope → JSON Lines/stdout | JSON直列化、stdoutの書込排他、プロセス制御 |
-| **Parser**（TypeScript Main） | JSON Lines → 検証済みCandidate | v2型・必須項目・世代の検証 |
-| **Classifier**（TypeScript Core） | Candidate → `Observation[]` | 製品上の操作ID・採否・案内ショートカット。Win32に依存しない |
-| **DurableCoach**（TypeScript Core） | Candidate/Observation → 記録・通知 | transaction重複排除、0〜2件の原子保存、保存後通知の適格性判断 |
+| 要素                                | 入力 → 出力                                                      | 責務                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Observer / OS Adapter**（C#）     | Win32 callback・必要な照会 → `ObservedEvent`                     | HookとWindowFacts、押下時/結果時のsnapshot。**個別Handlerを直呼びしない** |
+| **DetectionRouter**（C#）           | `ObservedEvent` → Handler呼出しと候補提案                        | 登録、順序、調停の適用。**操作成立を判定しない**                          |
+| **ArbitrationPolicy**（C#）         | イベント＋Handlerの公開状態 → 配信・取消・送信可否               | 複数Handler間の競合、専有、複合の所有権を集中管理                         |
+| **Evidence Handler**（C#）          | 観測イベント＋必要なWindowFacts → `CandidateDraft`（またはなし） | OS入力と結果の関連付け・期限・操作固有のpending状態。**W IDは決めない**   |
+| **Candidate Sink / Protocol**（C#） | `CandidateDraft` → v2 `CandidateEnvelope`                        | 共通のgeneration/sequence・送信順。stdoutの直列化はしない                 |
+| **ObserverHost**（C#）              | Envelope → JSON Lines/stdout                                     | JSON直列化、stdoutの書込排他、プロセス制御                                |
+| **Parser**（TypeScript Main）       | JSON Lines → 検証済みCandidate                                   | v2型・必須項目・世代の検証                                                |
+| **Classifier**（TypeScript Core）   | Candidate → `Observation[]`                                      | 製品上の操作ID・採否・案内ショートカット。Win32に依存しない               |
+| **DurableCoach**（TypeScript Core） | Candidate/Observation → 記録・通知                               | transaction重複排除、0〜2件の原子保存、保存後通知の適格性判断             |
 
 ## 5つのEvidence Handler
 
-| Handler | 現在の処理をまとめる単位 | 最終候補 |
-| --- | --- | --- |
-| **WindowGesture** | `CandidateTracker`＋配置Policy：最大化、復元/最小化、半分・四隅、ドラッグ、画面移動 | `window` / `placement` / `compound-drag` |
-| **InactiveCaption** | 非アクティブ窓の最大化・最小化ボタン／ボタン不明fallback | `caption-click` |
-| **WindowSwitch** | クリック切替、Alt+Tabの確定 | `window-switch` |
-| **WindowClose** | 閉じるボタン、Alt+F4とDESTROY確認 | `window-close` |
-| **Taskbar** | タスクバー・Win+数字とslot照合 | `taskbar-input` |
+| Handler             | 現在の処理をまとめる単位                                                            | 最終候補                                 |
+| ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| **WindowGesture**   | `CandidateTracker`＋配置Policy：最大化、復元/最小化、半分・四隅、ドラッグ、画面移動 | `window` / `placement` / `compound-drag` |
+| **InactiveCaption** | 非アクティブ窓の最大化・最小化ボタン／ボタン不明fallback                            | `caption-click`                          |
+| **WindowSwitch**    | クリック切替、Alt+Tabの確定                                                         | `window-switch`                          |
+| **WindowClose**     | 閉じるボタン、Alt+F4とDESTROY確認                                                   | `window-close`                           |
+| **Taskbar**         | タスクバー・Win+数字とslot照合                                                      | `taskbar-input`                          |
 
 **WindowGestureを最初からさらに3つの独立Handlerへ分割しない**。共有する押下・ドラッグ・取消状態をその内部に閉じ込める。内部Policyの整理は可能。初回対象外のSnap Invocationは登録しない。
 
@@ -113,15 +113,15 @@ Handlerの状態ビューは、例えば「候補なし／並行追跡中／専�
 
 ### 維持する特殊な優先順位
 
-| イベント・競合 | 変えてはいけない扱い |
-| --- | --- |
-| **非アクティブcaption** | ボタン既知なら専用候補が通常切替・状態変更を抑制。**ボタン不明fallbackはWindowGestureのドラッグ追跡と並行可能**。MOVESIZESTARTではcaptionを取消・dragへ譲る |
-| **通常マウス入力** | Trackerの入力補助 → Taskbar → WindowSwitch → WindowClose → WindowGestureの解放/移動。左押下は対象確認後、caption専用経路が成立すれば切替/閉じるを取消 |
-| **キー入力** | captionと不明マウス候補を取消 → Taskbar → WindowSwitch → WindowClose → WindowGesture。**Win+数字はTaskbar専属** |
-| **foreground/WinEvent** | caption・closeの保留を先に整合 → WindowGestureの前景/窓状態 → WindowSwitchの確認など、既存の早期return・取消順序を維持 |
-| **MOVESIZESTART/END** | startでcaption取消・switch取消、WindowGestureがドラッグを所有。endで最終結果をまとめ**1Candidate**を提案し、派生復元や途中配置を別計上しない |
-| **timer・非同期結果** | 既存の個別timer/worker・検出期限を維持。結果は**元のmessage-loop thread**でRouterへ返し、generationを再確認。専用timerは対象Handlerへだけ配送 |
-| **Stop/再起動/表示変更** | 既存のCancel範囲・Reset順・旧世代無効化を維持。例外時は誤採用せずfail closed。無関係なpendingまで無差別に消さない |
+| イベント・競合           | 変えてはいけない扱い                                                                                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **非アクティブcaption**  | ボタン既知なら専用候補が通常切替・状態変更を抑制。**ボタン不明fallbackはWindowGestureのドラッグ追跡と並行可能**。MOVESIZESTARTではcaptionを取消・dragへ譲る |
+| **通常マウス入力**       | Trackerの入力補助 → Taskbar → WindowSwitch → WindowClose → WindowGestureの解放/移動。左押下は対象確認後、caption専用経路が成立すれば切替/閉じるを取消       |
+| **キー入力**             | captionと不明マウス候補を取消 → Taskbar → WindowSwitch → WindowClose → WindowGesture。**Win+数字はTaskbar専属**                                             |
+| **foreground/WinEvent**  | caption・closeの保留を先に整合 → WindowGestureの前景/窓状態 → WindowSwitchの確認など、既存の早期return・取消順序を維持                                      |
+| **MOVESIZESTART/END**    | startでcaption取消・switch取消、WindowGestureがドラッグを所有。endで最終結果をまとめ**1Candidate**を提案し、派生復元や途中配置を別計上しない                |
+| **timer・非同期結果**    | 既存の個別timer/worker・検出期限を維持。結果は**元のmessage-loop thread**でRouterへ返し、generationを再確認。専用timerは対象Handlerへだけ配送               |
+| **Stop/再起動/表示変更** | 既存のCancel範囲・Reset順・旧世代無効化を維持。例外時は誤採用せずfail closed。無関係なpendingまで無差別に消さない                                           |
 
 **複合候補の発行者は1つ**：非アクティブcaptionのW01＋W03/W04はInactiveCaption、画面移動＋最大化/四隅のW02＋W03/W07はWindowGestureが最終候補を作る。**同じtransactionで2個のCandidateを送り、TypeScriptで合成する方式は採らない**。
 

@@ -1,0 +1,48 @@
+{
+  "kind": "consented-physical-mouse-shadow",
+  "productChanged": false,
+  "osVersion": "10.0.26340.0",
+  "sourceRevision": "b87d7b0bf5b654907da6b1d77f45af9c5d93a245",
+  "phases": [
+    {
+      "source": "uncommitted prototype based on 4476060",
+      "limitation": "quarter evaluation delayed after END; exclude those two trials",
+      "file": "drag-preliminary.jsonl",
+      "dllSha256": "5AD690E0F736AF402B8500D6872407CE0BDDA6606799622C7BE5315F308C7AF9"
+    },
+    {
+      "source": "uncommitted prototype based on 4476060",
+      "limitation": "later final adapter adds explicit caption/press-foreground propagation; current accepted input evidence remains separate",
+      "file": "drag-end-snapshot.jsonl",
+      "dllSha256": "A89FB785E9C75B4C11AF7E4D62708014519007F19F287499B4A68C13839478A2"
+    },
+    {
+      "source": "01fdb46",
+      "corrections": {
+        "trial17": "actual app chrome per participant; original manual label obsidian retained"
+      },
+      "file": "clicks-and-negatives.jsonl",
+      "dllSha256": "6C88EA2CF9AA325AE7A8FE3DED71E4BD2BAD4BE0DFB239E87F6C8B6EED03D06C"
+    },
+    {
+      "source": "b97920da22dcc3a256f0af1ccd96503e5a973669",
+      "file": "final-checks.jsonl",
+      "dllSha256": "7742D55D890C44BF33F664374371A8DB0915C0478835259B6B6940B005E9CE88",
+      "corrections": {
+        "trial5": "actual app obsidian per participant; original manual label dia retained"
+      }
+    },
+    {
+      "file": "click-target-diagnostic.jsonl",
+      "dllSha256": "0B1A063D5DC2C7305AC8DA7E9412877E2CD0919DB16C9D239567426771416715",
+      "source": "b87d7b0bf5b654907da6b1d77f45af9c5d93a245",
+      "limitation": "Evaluate trials 3/4 only per participant; trials 1/2 excluded as operation noise. Original earlier miss remains causally unproven"
+    }
+  ],
+  "notes": [
+    "Physical operations by consenting participant; no synthetic input used",
+    "App/scenario labels are manually selected fixed categories",
+    "No HWND/process IDs/coordinates/input timestamps/titles/URLs/images stored",
+    "Early prototype source snapshots were not retained; use their hashes and limitations, not final-build acceptance claims"
+  ]
+}
