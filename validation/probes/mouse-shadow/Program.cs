@@ -595,6 +595,25 @@ internal sealed class ShadowPanel : Form
             shadow = shadow.Operations,
             shadowReason = shadow.Reason,
             clicks = comparison,
+            clickDiagnostic = moving
+                ? null
+                : new
+                {
+                    count = clicks.Count == 0 ? "none"
+                    : clicks.Count == 1 ? "single"
+                    : "double",
+                    foregroundAtPress = clicks.Count > 0 && clicks[^1].ForegroundAtPress,
+                    candidatePresent = actualClick is not null,
+                    route = actualClick?.route ?? "none",
+                    origin = actualClick?.origin ?? "none",
+                    targetMatched = actualClick?.targetMatched ?? false,
+                    inputAge = actualClick is null || actualClick.inputAgeMs < 0 ? "unknown"
+                    : actualClick.inputAgeMs <= 500 ? "within-500ms"
+                    : actualClick.inputAgeMs <= 1000 ? "501-1000ms"
+                    : "expired",
+                    conflicted = conflict,
+                    injected = injected,
+                },
             monitorChanged = before?.Monitor is not null
                 && after?.Monitor is not null
                 && before.Monitor != after.Monitor,
