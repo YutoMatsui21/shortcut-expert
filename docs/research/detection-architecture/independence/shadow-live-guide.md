@@ -37,3 +37,5 @@ dragは本番と同じMOVESIZEEND callbackでCurrentを確定し、その時のs
 期待と異なる場合、入力未取得、snapshot取得不能、始終状態不一致、foreground、解放/終端順序、配置形状、解放位置、取消/競合の順に固定カテゴリで切り分ける。ラベルだけを信じて成功扱いしない。別原因の状態変更との因果をAPIが保証するものではない。
 
 本文double-click＋別原因最大化の反例は人工試験で再現する。通常本文の無変化負例が成功しても、因果の識別不能性は解決しない。W02+W06はShadowの研究結果に限り、本番仕様へ追加しない。
+
+クリックの3方式結果はclicks.Standard/Fallback/Doubleを読む。clickDiagnosticはクリック数カテゴリ、押下時foreground、候補の有無、固定route/origin、対象一致、期限カテゴリ、注入/競合booleanだけを追加出力する。Current/Shadowの最上位配列はdrag用である。
