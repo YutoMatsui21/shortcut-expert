@@ -194,5 +194,18 @@ internal static partial class Program
                 Equal(0, MouseDetectionShadow.Evaluate(d).Operations.Length);
             }
         );
+        Check(
+            "W02 survives unknown placement without inventing W06 W07",
+            () =>
+            {
+                var d = cases[0].Item2 with
+                {
+                    Before = cases[0].Item2.Before with { Arranged = null },
+                };
+                Equal("W02", string.Join(',', MouseDetectionShadow.Evaluate(d).Operations));
+                d = d with { Before = d.Before with { Arranged = true, Frame = null } };
+                Equal("W02", string.Join(',', MouseDetectionShadow.Evaluate(d).Operations));
+            }
+        );
     }
 }

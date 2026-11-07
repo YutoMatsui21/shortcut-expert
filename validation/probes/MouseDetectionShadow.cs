@@ -62,9 +62,9 @@ internal static class MouseDetectionShadow
         // Reuse all current release/shape/target gates, relaxing only the known arranged origin.
         string? initial = PlacementGeometry.Shape(a);
         if (a.Arranged == true && initial is null)
-            return Reject("start-shape-unknown");
+            return new(operations.ToArray(), "start-shape-unknown");
         if (a.Arranged is null)
-            return Reject("start-state-unknown");
+            return new(operations.ToArray(), "start-state-unknown");
         var placement = PlacementGeometry.Drag(
             a with
             {
