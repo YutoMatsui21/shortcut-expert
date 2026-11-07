@@ -79,7 +79,7 @@ mock.module("electron", {
 });
 const { CoachWindow } = await import("../../../src/main/coach-window.ts");
 
-test("読込中も窓を重複作成せず、closeで隠し同じ窓を復元する", async () => {
+test("読込中もウィンドウを重複作成せず、closeで隠し同じウィンドウを復元する", async () => {
   const manager = new CoachWindow();
   manager.show();
   const loading = deferred<void>();
@@ -225,7 +225,7 @@ test("a rejected bounds save can retry the same value and accept later moves", a
   assert.equal(saved.length, 2);
 });
 
-test("窓の隔離設定と外部遷移拒否を維持する", async () => {
+test("ウィンドウの隔離設定と外部遷移拒否を維持する", async () => {
   const manager = new CoachWindow();
   await manager.create(
     async (_window, mode) => {

@@ -43,7 +43,7 @@ hashは動作・安全性・ソース対応の証明ではない。過去の承�
 
 1. 対象hostを明示し、まずexplorer所有の既知Shell rootに限定する。対象外hostが必要になったら、候補と必要性を提示して再承認を得る。デスクトップ全体の無制限なUIA descendants探索をしない。
 2. プロセス別worker、全体timeout、root数・深さ・node数の上限と、読取失敗・除外理由・打切りを設ける。timeout・provider不応答・上限到達はclosedではなくunknownとする。
-3. Name、窓タイトル、文字、URL、パス、画像、任意AutomationId、入力時刻列、生入力を保存・送信しない。selector照合に必要な値は一時利用し、結果は事前定義したroleと試行単位の集約だけにする。
+3. Name、ウィンドウタイトル、文字、URL、パス、画像、任意AutomationId、入力時刻列、生入力を保存・送信しない。selector照合に必要な値は一時利用し、結果は事前定義したroleと試行単位の集約だけにする。
 4. 本体selectorが未知の間は、候補snapshotと本人の目視回答を比較する段階に留める。buttonやWin+Tabだけでopenを立てない。開閉の連続観測、表示結果と入力の一時照合が成立するまで自然入力検出済みとはしない。
 5. hookが必要なら対象経路だけをメモリ上で照合し、保存は試行の由来・注入有無・集約結果に限定する。手動ラベルと実測値を分け、失敗・競合・期限超過はunknown。probe終了時にはhookを解除する。
 
@@ -88,7 +88,7 @@ node scripts/probes/task-view-sample.mjs --seconds=60
 
 実施済みの出力は `TASK_VIEW_PROBE_SELF_TEST_OK (no live observation)`。self-testは入口buttonと本体仮説の分離、候補0・不完全な観測をunknownにする境界を確認する。OS上の表示検出や入力精度の試験ではない。`npm.cmd run dev:check` は依存部品の存在とSDK 10.0.401の解決を確認しただけで、製品受入ではない。
 
-snapshotはexplorer所有の既知5クラスのtop-level窓だけを対象に、最大24root、rootごと256node・深さ8までRawViewを読む。異なるprocessのnodeは探索せず不完全な観測とする。未対象rootは除外件数だけを残す。host-discoveryはDesktop直下の最大128要素のPIDを一時照合し、explorer/ShellHost/ShellExperienceHost/StartMenuExperienceHost/ApplicationFrameHostだけのhost名・class・offscreenを残す。他アプリの内容・任意host内部・自動入力は探索/実装しない。許可classと仮説roleは研究用で、安定selectorの根拠ではない。
+snapshotはexplorer所有の既知5クラスのtop-levelウィンドウだけを対象に、最大24root、rootごと256node・深さ8までRawViewを読む。異なるprocessのnodeは探索せず不完全な観測とする。未対象rootは除外件数だけを残す。host-discoveryはDesktop直下の最大128要素のPIDを一時照合し、explorer/ShellHost/ShellExperienceHost/StartMenuExperienceHost/ApplicationFrameHostだけのhost名・class・offscreenを残す。他アプリの内容・任意host内部・自動入力は探索/実装しない。許可classと仮説roleは研究用で、安定selectorの根拠ではない。
 
 Name/titleは読まず、AutomationIdは一時的に固定roleへ分類し原文を出さない。保存するのはcontrolType、既知hostClass、固定role、tree内index/深さ、offscreen、失敗/打切りの集約。出力は `.tools/validation/task-view/` に隔離する。子processは15秒で打ち切り、途中出力を保存してcompleted=falseとする。完走してもsnapshot全体のverdictはunknown、selectorVerified/originMeasuredはfalseのままである。
 
@@ -114,7 +114,7 @@ PR #78の初回CIは成功。初回Codexレビューの6指摘（OS版、探索�
 
 結果の正本は [匿名化した試行集約](../../../validation/evidence/task-view-summary-20261022.json)。ローカルJSONLのSHA-256と当時のsource/exe hashを含む。個々のsnapshotに手動ラベルを貼っておらず、本人の回答は各session全体の目視oracleである。採取ごとの表示時刻・開閉時刻・入力由来は測定していない。
 
-当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・窓名等の観測内容を含むソースではない。
+当時の3版のソースを `validation/evidence/task-view-sources/<sourceSha256>.cs.txt` に保存した。中間版は前後のcommit差分から復元し、採取時に記録したSHA-256との完全一致を確認した。改行も含めて保持するため、このディレクトリの`.cs.txt`だけGitのtext変換を無効にしている。これらは過去の挙動を監査するための不活性な資料であり、最新の実行入口からコンパイルしない。生入力・ウィンドウ名等の観測内容を含むソースではない。
 
 `node scripts/probes/verify-task-view-evidence.mjs` で、3採取の記録済みsource hashと保存したsource bytesの一致を実機観測なしで確認できる。これはソース同一性の確認であり、exeとの対応や採取結果の正しさの証明ではない。
 

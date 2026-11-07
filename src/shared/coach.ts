@@ -254,7 +254,7 @@ export const operations: {
     id: "W01",
     label: "ウィンドウの切替",
     shortcut: "Alt + Tab",
-    condition: "通常窓の直接クリック／Alt+Tab確定。実機受入は別途",
+    condition: "通常ウィンドウの直接クリック／Alt+Tab確定。実機受入は別途",
     implemented: true,
   },
   {
@@ -268,7 +268,7 @@ export const operations: {
     id: "W04",
     label: "最大化解除・最小化",
     shortcut: "Win + ↓",
-    condition: "同じ窓で必要に応じて繰り返す",
+    condition: "同じウィンドウで必要に応じて繰り返す",
     implemented: true,
   },
   {

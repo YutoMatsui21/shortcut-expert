@@ -45,8 +45,8 @@ export const finalInputCases: FinalCase[] = [
         const operation = maximize ? "W03" : "W04";
         return {
           id: `I152-${application}-${action}`,
-          label: `${application}: ${action}（背後窓）`,
-          instruction: `${application}を${action === "maximized-minimize" ? "最大化" : "通常"}状態に準備。ARM後の待機中に別窓を前面へ。ARMED後、背後に見える${application}の${maximize ? "最大化" : "最小化"}ボタンを1回直接クリック。2操作が各1件、通知は1つに2行であることを確認してFINISH。キーで複合動作を再現する試験は不要。`,
+          label: `${application}: ${action}（背後ウィンドウ）`,
+          instruction: `${application}を${action === "maximized-minimize" ? "最大化" : "通常"}状態に準備。ARM後の待機中に別ウィンドウを前面へ。ARMED後、背後に見える${application}の${maximize ? "最大化" : "最小化"}ボタンを1回直接クリック。2操作が各1件、通知は1つに2行であることを確認してFINISH。キーで複合動作を再現する試験は不要。`,
           origin: "mouse",
           records: ["W01", operation],
           notices: [
@@ -77,8 +77,8 @@ export const finalInputCases: FinalCase[] = [
     "P01m",
     "W01",
     "mouse",
-    "通常窓を直接click",
-    "背後に見える別の通常窓を1回クリックして切り替える。タスクバーは使わない。",
+    "通常ウィンドウを直接click",
+    "背後に見える別の通常ウィンドウを1回クリックして切り替える。タスクバーは使わない。",
     "Alt + Tab",
   ),
   one(
@@ -86,7 +86,7 @@ export const finalInputCases: FinalCase[] = [
     "W01",
     "key",
     "Alt+Tab",
-    "Alt+Tabで別の通常窓へ切り替え、全キーを離す。",
+    "Alt+Tabで別の通常ウィンドウへ切り替え、全キーを離す。",
     "",
   ),
   one(
@@ -94,7 +94,7 @@ export const finalInputCases: FinalCase[] = [
     "W03",
     "mouse",
     "最大化ボタン",
-    "通常・未配置の窓の最大化ボタンを1回クリック。",
+    "通常・未配置のウィンドウの最大化ボタンを1回クリック。",
     "Win + ↑",
   ),
   one(
@@ -102,7 +102,7 @@ export const finalInputCases: FinalCase[] = [
     "W03",
     "key",
     "Win+↑",
-    "通常・未配置の窓でWin+↑を1回、全キーを離す。",
+    "通常・未配置のウィンドウでWin+↑を1回、全キーを離す。",
     "",
   ),
   one(
@@ -110,7 +110,7 @@ export const finalInputCases: FinalCase[] = [
     "W04",
     "mouse",
     "復元ボタン",
-    "最大化した窓の復元ボタンを1回クリック。",
+    "最大化したウィンドウの復元ボタンを1回クリック。",
     "Win + ↓",
   ),
   one(
@@ -118,7 +118,7 @@ export const finalInputCases: FinalCase[] = [
     "W04",
     "key",
     "Win+↓ 復元",
-    "最大化した窓でWin+↓を1回、全キーを離す。",
+    "最大化したウィンドウでWin+↓を1回、全キーを離す。",
     "",
   ),
   ...(["left", "right"] as const).flatMap((side) => {
@@ -130,7 +130,7 @@ export const finalInputCases: FinalCase[] = [
         "W06",
         "mouse",
         `${label}半分drag`,
-        `通常窓のcaptionから同じ画面の${label}端へ直接dragし、half配置で離す。`,
+        `通常ウィンドウのcaptionから同じ画面の${label}端へ直接dragし、half配置で離す。`,
         `Win + ${arrow}`,
       ),
       one(
@@ -138,7 +138,7 @@ export const finalInputCases: FinalCase[] = [
         "W06",
         "key",
         `Win+${arrow}`,
-        `通常窓でWin+${arrow}を1回、全キーを離す。`,
+        `通常ウィンドウでWin+${arrow}を1回、全キーを離す。`,
         "",
       ),
       one(
@@ -146,7 +146,7 @@ export const finalInputCases: FinalCase[] = [
         "W02",
         "mouse",
         `別画面へ${label}移動`,
-        `横並び・上端一致の2画面で、通常窓を${label}の別画面の通常位置へdrag。端に配置しない。`,
+        `横並び・上端一致の2画面で、通常ウィンドウを${label}の別画面の通常位置へdrag。端に配置しない。`,
         `Win + Shift + ${arrow}`,
       ),
       one(
@@ -178,7 +178,7 @@ export const finalInputCases: FinalCase[] = [
           "W07",
           "key",
           `${label}quarter key`,
-          `通常窓でWinを保持したまま${arrow}、続けて${up}。最後にWinを離す。`,
+          `通常ウィンドウでWinを保持したまま${arrow}、続けて${up}。最後にWinを離す。`,
           "",
         ),
       ];
@@ -189,7 +189,7 @@ export const finalInputCases: FinalCase[] = [
     "W11",
     "mouse",
     "閉じるボタン",
-    "保存不要の通常窓の閉じるボタンをクリック。窓自体の閉鎖を確認。",
+    "保存不要の通常ウィンドウの閉じるボタンをクリック。ウィンドウ自体の閉鎖を確認。",
     "Alt + F4",
   ),
   one(
@@ -197,7 +197,7 @@ export const finalInputCases: FinalCase[] = [
     "W11",
     "key",
     "Alt+F4",
-    "保存不要の通常窓でAlt+F4。窓自体の閉鎖を確認。",
+    "保存不要の通常ウィンドウでAlt+F4。ウィンドウ自体の閉鎖を確認。",
     "",
   ),
   one(
@@ -205,7 +205,7 @@ export const finalInputCases: FinalCase[] = [
     "W03",
     "mouse",
     "double click最大化",
-    "通常窓のcaptionをダブルクリック。",
+    "通常ウィンドウのcaptionをダブルクリック。",
     "Win + ↑",
   ),
   one(
@@ -213,7 +213,7 @@ export const finalInputCases: FinalCase[] = [
     "W03",
     "mouse",
     "上端drag最大化",
-    "通常窓のcaptionから同じ画面の上端へ直接dragし、最大化で離す。",
+    "通常ウィンドウのcaptionから同じ画面の上端へ直接dragし、最大化で離す。",
     "Win + ↑",
   ),
   one(
@@ -221,23 +221,23 @@ export const finalInputCases: FinalCase[] = [
     "W04",
     "mouse",
     "double click復元",
-    "最大化した窓のcaptionをダブルクリック。",
+    "最大化したウィンドウのcaptionをダブルクリック。",
     "Win + ↓",
   ),
   one(
     "S04-min-normal",
     "W04",
     "mouse",
-    "通常窓を最小化",
-    "通常・未配置の窓で最小化ボタンをクリック。",
+    "通常ウィンドウを最小化",
+    "通常・未配置のウィンドウで最小化ボタンをクリック。",
     "Win + ↓",
   ),
   one(
     "S04-min-max",
     "W04",
     "mouse",
-    "最大化窓を最小化",
-    "最大化した窓で最小化ボタンをクリック。",
+    "最大化ウィンドウを最小化",
+    "最大化したウィンドウで最小化ボタンをクリック。",
     "Win + ↓",
   ),
   one(
@@ -245,7 +245,7 @@ export const finalInputCases: FinalCase[] = [
     "W04",
     "key",
     "連続Win+↓",
-    "最大化窓でWin+↓を物理的に2回、1000ms以内に再押下して最小化。長押しはしない。",
+    "最大化ウィンドウでWin+↓を物理的に2回、1000ms以内に再押下して最小化。長押しはしない。",
     "",
   ),
   one(
@@ -253,7 +253,7 @@ export const finalInputCases: FinalCase[] = [
     "W01",
     "key",
     "Alt+複数Tab",
-    "Altを保持したままTabを複数回押し、別の通常窓でAltを離す。",
+    "Altを保持したままTabを複数回押し、別の通常ウィンドウでAltを離す。",
     "",
   ),
   one(
@@ -261,7 +261,7 @@ export const finalInputCases: FinalCase[] = [
     "W02",
     "mouse",
     "上下／上端非整列2画面の移動",
-    "画面上端の高さが異なる非重複2画面専用。通常・未配置窓をもう一方の画面の通常位置へdragし、端に配置せず離す。W02の案内を確認。",
+    "画面上端の高さが異なる非重複2画面専用。通常・未配置ウィンドウをもう一方の画面の通常位置へdragし、端に配置せず離す。W02の案内を確認。",
     "Win + Shift + ←",
   ),
   {
@@ -269,7 +269,7 @@ export const finalInputCases: FinalCase[] = [
     label: "上下／上端非整列2画面の移動＋最大化",
     origin: "mouse",
     instruction:
-      "画面上端の高さが異なる非重複2画面専用。通常・未配置窓をもう一方の画面上端へ1回で直接dragし最大化。1つの通知に移動・最大化の2行を確認。",
+      "画面上端の高さが異なる非重複2画面専用。通常・未配置ウィンドウをもう一方の画面上端へ1回で直接dragし最大化。1つの通知に移動・最大化の2行を確認。",
     records: ["W02", "W03"],
     notices: [
       { operation: "W02", shortcut: "Win + Shift + ←" },
@@ -281,7 +281,7 @@ export const finalInputCases: FinalCase[] = [
     label: "上下／上端非整列2画面の移動＋四隅",
     origin: "mouse",
     instruction:
-      "画面上端の高さが異なる非重複2画面専用。通常・未配置窓をもう一方の画面左上隅へ1回で直接dragしquarter配置。1つの通知に移動・四隅の2行を確認。",
+      "画面上端の高さが異なる非重複2画面専用。通常・未配置ウィンドウをもう一方の画面左上隅へ1回で直接dragしquarter配置。1つの通知に移動・四隅の2行を確認。",
     records: ["W02", "W07"],
     notices: [
       { operation: "W02", shortcut: "Win + Shift + ←" },
@@ -293,7 +293,7 @@ export const finalInputCases: FinalCase[] = [
     label: "キー同等性不明の別画面へ移動",
     origin: "mouse",
     instruction:
-      "2画面確証も左右方向確証もない構成専用。通常窓を別画面へdragし通常位置で離す。W02記録のみを確認。",
+      "2画面確証も左右方向確証もない構成専用。通常ウィンドウを別画面へdragし通常位置で離す。W02記録のみを確認。",
     records: ["W02"],
     notices: [],
   },
@@ -302,7 +302,7 @@ export const finalInputCases: FinalCase[] = [
     "W02",
     "key",
     "上下／非整列 Win+Shift+←",
-    "通常窓からWin+Shift+←で別画面へ移動し全キー解放。実結果を確認する。",
+    "通常ウィンドウからWin+Shift+←で別画面へ移動し全キー解放。実結果を確認する。",
     "",
   ),
   one(
@@ -310,7 +310,7 @@ export const finalInputCases: FinalCase[] = [
     "W02",
     "key",
     "上下／非整列 Win+Shift+→",
-    "通常窓からWin+Shift+→で別画面へ移動し全キー解放。実結果を確認する。",
+    "通常ウィンドウからWin+Shift+→で別画面へ移動し全キー解放。実結果を確認する。",
     "",
   ),
   {
@@ -318,7 +318,7 @@ export const finalInputCases: FinalCase[] = [
     label: "方向不明＋別画面quarter",
     origin: "mouse",
     instruction:
-      "2画面確証も左右方向確証もない構成専用。通常窓を別画面左上隅へ直接drag。W02は記録のみ、W07だけ案内。",
+      "2画面確証も左右方向確証もない構成専用。通常ウィンドウを別画面左上隅へ直接drag。W02は記録のみ、W07だけ案内。",
     records: ["W02", "W07"],
     notices: [{ operation: "W07", shortcut: quarter("←", "↑") }],
   },
@@ -329,7 +329,7 @@ export const finalInputCases: FinalCase[] = [
         id: `C03-${side}`,
         label: `別画面${arrow}＋最大化`,
         origin: "mouse" as const,
-        instruction: `通常窓を${side === "left" ? "左" : "右"}の別画面の上端へ1回で直接dragし、最大化して離す。`,
+        instruction: `通常ウィンドウを${side === "left" ? "左" : "右"}の別画面の上端へ1回で直接dragし、最大化して離す。`,
         records: ["W02", "W03"] as OperationId[],
         notices: [
           { operation: "W02" as const, shortcut: `Win + Shift + ${arrow}` },
@@ -340,7 +340,7 @@ export const finalInputCases: FinalCase[] = [
         id: `C07-${side}`,
         label: `別画面${arrow}＋quarter`,
         origin: "mouse" as const,
-        instruction: `通常窓を${side === "left" ? "左" : "右"}の別画面の左上隅へ1回で直接dragし、quarterで離す。`,
+        instruction: `通常ウィンドウを${side === "left" ? "左" : "右"}の別画面の左上隅へ1回で直接dragし、quarterで離す。`,
         records: ["W02", "W07"] as OperationId[],
         notices: [
           { operation: "W02" as const, shortcut: `Win + Shift + ${arrow}` },
@@ -352,7 +352,7 @@ export const finalInputCases: FinalCase[] = [
         label: `方向不明${arrow}＋最大化`,
         origin: "mouse" as const,
         instruction:
-          "2画面確証も左右方向確証もない構成専用。通常窓を別画面上端へdragし最大化。",
+          "2画面確証も左右方向確証もない構成専用。通常ウィンドウを別画面上端へdragし最大化。",
         records: ["W02", "W03"] as OperationId[],
         notices: [{ operation: "W03" as const, shortcut: "Win + ↑" }],
       },
@@ -361,18 +361,22 @@ export const finalInputCases: FinalCase[] = [
   negative(
     "N01-escape",
     "Alt+Tab取消",
-    "Alt+Tabを開きEscで取消し、元の通常窓に戻る。",
+    "Alt+Tabを開きEscで取消し、元の通常ウィンドウに戻る。",
   ),
   negative(
     "N01-return",
-    "Alt+Tab元窓",
-    "Altを保持したまま元の通常窓を選び直してAlt解放。",
+    "Alt+Tab元ウィンドウ",
+    "Altを保持したまま元の通常ウィンドウを選び直してAlt解放。",
   ),
-  negative("N01-same", "同窓click", "既に前面の通常窓の本文をクリック。"),
+  negative(
+    "N01-same",
+    "同ウィンドウclick",
+    "既に前面の通常ウィンドウの本文をクリック。",
+  ),
   negative(
     "N01-tab",
     "ブラウザー内タブ切替",
-    "同じブラウザー窓内のタブだけをクリックして切り替える。",
+    "同じブラウザーウィンドウ内のタブだけをクリックして切り替える。",
   ),
   negative(
     "N12-empty",
@@ -394,15 +398,19 @@ export const finalInputCases: FinalCase[] = [
   negative(
     "N11-dialog",
     "閉鎖確認取消",
-    "保存確認の出る試験用窓を閉じる操作後、確認dialogで取消す。",
+    "保存確認の出る試験用ウィンドウを閉じる操作後、確認dialogで取消す。",
   ),
   negative(
     "N11-tab",
     "タブの×",
-    "複数タブのブラウザーでタブの×だけをクリック。窓は残す。",
+    "複数タブのブラウザーでタブの×だけをクリック。ウィンドウは残す。",
   ),
   negative("N08", "Win+Z", "Win+ZでSnap Layoutを開き、Escで閉じる。"),
-  negative("N10", "Win+Tab", "Win+TabでTask Viewを開き、元の窓へ戻る。"),
+  negative(
+    "N10",
+    "Win+Tab",
+    "Win+TabでTask Viewを開き、元のウィンドウへ戻る。",
+  ),
   negative(
     "N-layout",
     "Snap Layout内部選択",

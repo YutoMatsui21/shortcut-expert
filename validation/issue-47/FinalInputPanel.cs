@@ -153,7 +153,7 @@ class FinalInputPanel
                 Width = 770,
                 Height = 100,
                 Text =
-                    "1. IDLE中に起点の窓を準備し、ケースとアプリ種別を選択。\n2. ARMを押し、4秒以内に対象窓をクリック。その後は全キーを離す。\n3. ARMEDを確認して2秒待ち、指定操作を1回だけ実施。3秒待つ。\n4. 下の実結果・Toast・キー同等性を選びFINISH。未実施はCANCEL。\n1試行45秒、session20分。閉じると観測停止。自動キー送出なし。",
+                    "1. IDLE中に起点のウィンドウを準備し、ケースとアプリ種別を選択。\n2. ARMを押し、4秒以内に対象ウィンドウをクリック。その後は全キーを離す。\n3. ARMEDを確認して2秒待ち、指定操作を1回だけ実施。3秒待つ。\n4. 下の実結果・Toast・キー同等性を選びFINISH。未実施はCANCEL。\n1試行45秒、session20分。閉じると観測停止。自動キー送出なし。",
             }
         );
         selected = new ComboBox
@@ -237,7 +237,7 @@ class FinalInputPanel
                 Top = 330,
                 Width = 770,
                 Text =
-                    "実際の窓の結果               Toastの目視確認                 代替キーの結果同等性",
+                    "実際のウィンドウの結果               Toastの目視確認                 代替キーの結果同等性",
             }
         );
         result = Choice(new[] { "not-observed", "matched", "different" }, 15, 355, 230, form);
@@ -301,7 +301,7 @@ class FinalInputPanel
             arm.Enabled = false;
             enable(false);
             result.SelectedIndex = notice.SelectedIndex = equivalence.SelectedIndex = 0;
-            status.Text = "COUNTDOWN: 4秒以内に対象窓をclick。hooks OFF";
+            status.Text = "COUNTDOWN: 4秒以内に対象ウィンドウをclick。hooks OFF";
             Send("arm");
         };
         finish.Click += (s, e) =>

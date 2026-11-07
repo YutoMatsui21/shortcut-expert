@@ -20,7 +20,7 @@
 | helper publish／型検査／Electron bundle／同梱 | 成功。`.tools/issue-47-build.log`、`issue-47-bundle.log`、`issue-47-package.log`              |
 | 通常同梱smoke                                 | 成功。8操作、複合2件、SQLite、一覧／記録、通知要求、保存失敗復旧。`.tools/issue-47-smoke.log` |
 | settings                                      | 成功。停止／pause、全削除、失敗再試行、4幅。`.tools/issue-47-settings.log`                    |
-| activation                                    | 3起動成功。既存窓／cold start／初期化失敗。`.tools/issue-47-activation.log`                   |
+| activation                                    | 3起動成功。既存ウィンドウ／cold start／初期化失敗。`.tools/issue-47-activation.log`           |
 | migration                                     | 2起動成功。原本保全・移行・再起動。`.tools/issue-47-migration.log`                            |
 | comparison                                    | 成功。4幅・filters・read model。`.tools/issue-47-comparison.log`                              |
 | 保存受入                                      | 17ケース成功。`.tools/issue-47-storage.log`、`.tools/validation/v02-FaIFEt/`                  |
@@ -33,6 +33,6 @@
 
 - [受入計画](README.md)の全自然入力ケース、6契約、代表外部アプリ／一般環境、実Toast表示は `unknown`。
 - W01／W12専用の既存計測では全8操作・複合の受入証拠を採れない。本人同意後の観測開始前に、有界な8操作計測入口を用意し、テストと必要なローカルレビューを行う。製品bundleを変更した場合は候補hashを更新し、同じ新候補で必要なfixtureを再実行する。
-- 試験前に環境カテゴリと対象窓・起点・操作列を確定し、本人が各ケースを物理操作する。隔離データ、手動ARM/FINISH、期限、終了時helper停止を守る。
+- 試験前に環境カテゴリと対象ウィンドウ・起点・操作列を確定し、本人が各ケースを物理操作する。隔離データ、手動ARM/FINISH、期限、終了時helper停止を守る。
 - NSIS／通知センター起動の実OS受入、#48への最終結果引継ぎ、#47完了は未実施。
 - 今回の差分は試験計画・準備記録のMarkdownのみ。Skillの文書例外により専用コードレビューを省略。製品変更や自然入力受入のレビューを済ませた意味ではない。記録はローカル未コミットで保持。

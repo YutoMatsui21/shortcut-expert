@@ -5,13 +5,13 @@
 - 製品revision：`f22db85e9199a93a39a5e67f208ccb9ccf5b6d21`。以後は証拠／文書だけを更新し、本番コード・同梱物を変えない。
 - 同梱先：`release/issue-47-top-threshold/win-unpacked`。
 - 全550ファイルのmanifest SHA-256：`7369ba5f0ceba5e5a47ddf9aafb09a9f5343ebca237fe3d0e833ce1c13bb6070`。[manifest](../evidence/issue-47/top-threshold-build.json)。Native全473ファイルはbuild生成物と一致。
-- session25／26は診断OFF・本人による物理入力・新規の隔離データ。通常userDataを使用せず、ARM以外は観測停止。入力・窓の生データや画像は証拠へ追加しない。
+- session25／26は診断OFF・本人による物理入力・新規の隔離データ。通常userDataを使用せず、ARM以外は観測停止。入力・ウィンドウの生データや画像は証拠へ追加しない。
 
 ## 同一buildの自然入力
 
 [session25原本](../evidence/issue-47/session25-status.json)の6件は全てvalid/completed、記録・通知要求・本人の結果報告が期待一致。上端previewでの同monitor最大化2アプリ、別monitor最大化、複数Tab切替2アプリ、Snap Layout選択負例を確認した。W01判定の変更はなく、以前の単発の未記録原因が解決したという主張はしない。
 
-[session26原本](../evidence/issue-47/session26-status.json)の20件も全てvalid/completed、記録・通知要求20/20一致。8組の比較も含む結果報告を依頼し、本人は「全て期待通り」と回答した。パネルの個別確認欄は初期値のまま保持し、[一括本人報告](../evidence/issue-47/session26-participant.json)と機械照合を分ける。W02のapplication欄は予定standardに対してchromeだったため、そのカテゴリを勝手に補正しない。窓と実行ファイルの個別の対応を保存／確証したものではない。
+[session26原本](../evidence/issue-47/session26-status.json)の20件も全てvalid/completed、記録・通知要求20/20一致。8組の比較も含む結果報告を依頼し、本人は「全て期待通り」と回答した。パネルの個別確認欄は初期値のまま保持し、[一括本人報告](../evidence/issue-47/session26-participant.json)と機械照合を分ける。W02のapplication欄は予定standardに対してchromeだったため、そのカテゴリを勝手に補正しない。ウィンドウと実行ファイルの個別の対応を保存／確証したものではない。
 
 | 操作                         | mouse／keyのケース                   | 各入力の基本記録 | mouse通知／key通知 |
 | ---------------------------- | ------------------------------------ | ---------------- | ------------------ |
@@ -44,13 +44,13 @@ UI replayは `node scripts/acceptance/records-renderer-replay.mjs` で再実行�
 
 ## 環境と証拠の限界
 
-[静的環境](../evidence/issue-47/environment-final-20261031.json)：Windows 11 build 26340、物理解像度2880×1800/200%と2560×1440/100%の非重複上下2画面。Chrome version156.0.8078.74、Explorer version10.0.26100.9949（静的metadataで、試行窓との個別の実行ファイル対応ではない）。Windowsの配置・scale・設定は変更していない。WinFormsの旧osBuild9200とsystem-awareの論理boundsを実OS build／物理解像度と混同しない。
+[静的環境](../evidence/issue-47/environment-final-20261031.json)：Windows 11 build 26340、物理解像度2880×1800/200%と2560×1440/100%の非重複上下2画面。Chrome version156.0.8078.74、Explorer version10.0.26100.9949（静的metadataで、試行ウィンドウとの個別の実行ファイル対応ではない）。Windowsの配置・scale・設定は変更していない。WinFormsの旧osBuild9200とsystem-awareの論理boundsを実OS build／物理解像度と混同しない。
 
-実アプリの通常窓・標準UI・複数窓、同画面操作と画面移動を含む条件での機能確認であり、全環境／全DPI／認識率95%以上を保証しない。異常・未完了・追加操作・本人報告との対応不明の原本は[診断経緯](corner-release-diagnosis-20261030.md)と各session別添へ保持する。session19のSIGTERM原因は未確定だが、session25/26はcode0で正常終了した。
+実アプリの通常ウィンドウ・標準UI・複数ウィンドウ、同画面操作と画面移動を含む条件での機能確認であり、全環境／全DPI／認識率95%以上を保証しない。異常・未完了・追加操作・本人報告との対応不明の原本は[診断経緯](corner-release-diagnosis-20261030.md)と各session別添へ保持する。session19のSIGTERM原因は未確定だが、session25/26はcode0で正常終了した。
 
 ## #48への引継ぎ
 
-製品の公開・配布・署名・NSIS導入／再導入／削除・通常60分の受入は実施しておらず、#47の結果で代替しない。トレイアイコンはユーザーが見つけられず、今回は既知の最小化窓を直接開いて一覧を確認した。実トレイからの発見・再表示と通知activationは#48の実機確認へ明示して渡す。また現行記録画面の既存footnoteに「11操作とも検出精度は未検証」という旧文言が残るため、8操作の正式UI文言との整合も#48で修正・確認する。後続mainや別PRで本番動作が変わった場合も、このhashを新しいbuildの成功へ読み替えない。
+製品の公開・配布・署名・NSIS導入／再導入／削除・通常60分の受入は実施しておらず、#47の結果で代替しない。トレイアイコンはユーザーが見つけられず、今回は既知の最小化ウィンドウを直接開いて一覧を確認した。実トレイからの発見・再表示と通知activationは#48の実機確認へ明示して渡す。また現行記録画面の既存footnoteに「11操作とも検出精度は未検証」という旧文言が残るため、8操作の正式UI文言との整合も#48で修正・確認する。後続mainや別PRで本番動作が変わった場合も、このhashを新しいbuildの成功へ読み替えない。
 
 ## 最終レビューの保留条件
 
@@ -64,11 +64,11 @@ UI replayは `node scripts/acceptance/records-renderer-replay.mjs` で再実行�
 
 終了済みsession26のrecords-v1をbyte単位で新しい隔離rootへ複製し、変更していないf22db85同梱exeを `--ui-acceptance --ui-acceptance-exit` で起動した。`COACH_TEST_DATA_DIR`は複製root。本番のMain／Store／SQLite Worker／Core／IPC／renderer／preloadを通し、Nativeだけ既存fixtureモードにして実入力hookを使わない。Main handlersの置換や合成countsの注入は行わない。
 
-[本番DB経路の結果](../evidence/issue-47/session26-original-db-ui.json)は一覧／記録各8条件の計16条件を完走、全条件8行・横overflowなし・要求viewport一致、code0で正常終了。16枚はcontact sheetと原寸の記録画面で確認し、全体40.0%・shortcut8回・mouse12回、見えている操作別の率・分数、前期間の欠測「—」と注意表示を照合した。全8行の値と欠測flagは、[元DB／複製DBの本番public read model一致](../evidence/issue-47/session26-original-db-ui-model.json)でも確認した。copied sessionと窓位置保存でrevisionは増えるが、全8行のmouse/key/total/rate/previous/comparisonとsummaryは元DBと完全一致する。元DB SHA-256とpackage全550ファイルのmanifestは実行前後で不変、複製DB integrity=ok、count変化0。画面画像は.tools配下だけに保持し、Git／GitHubへ含めない。
+[本番DB経路の結果](../evidence/issue-47/session26-original-db-ui.json)は一覧／記録各8条件の計16条件を完走、全条件8行・横overflowなし・要求viewport一致、code0で正常終了。16枚はcontact sheetと原寸の記録画面で確認し、全体40.0%・shortcut8回・mouse12回、見えている操作別の率・分数、前期間の欠測「—」と注意表示を照合した。全8行の値と欠測flagは、[元DB／複製DBの本番public read model一致](../evidence/issue-47/session26-original-db-ui-model.json)でも確認した。copied sessionとウィンドウ位置保存でrevisionは増えるが、全8行のmouse/key/total/rate/previous/comparisonとsummaryは元DBと完全一致する。元DB SHA-256とpackage全550ファイルのmanifestは実行前後で不変、複製DB integrity=ok、count変化0。画面画像は.tools配下だけに保持し、Git／GitHubへ含めない。
 
 初回は最初の一覧800×600の本文y=243（期待191）で中断し、画像0枚。原因となる表示本文を取得できず、[初回部分結果](../evidence/issue-47/session26-original-db-ui-first-attempt.json)を保持する。同じ元DBから新たに複製した再試験では起動失敗の固定カテゴリなし・全16条件成功。終了後の値比較はSQLiteのnull-prototype rowとJSON objectの型差だけで一度失敗し、値を変えず通常objectへ正規化して後検査を回収した。UI撮影の追加再試行で隠さない。初回の一過性の位置差は原因解決と主張せず、#48の起動／通常利用で監視する。
 
-補足のUIA text確認用に保持したfixtureは、ツールで窓を選択できず所有者制御で終了した。Native実hookなし、元DB不変、画像hashは正常終了した試験と全16枚一致、fixture終了後のapp/helper/panel残存0。この制御終了を、上記16条件の正常終了や自然入力session26の正常終了と混同しない。
+補足のUIA text確認用に保持したfixtureは、ツールでウィンドウを選択できず所有者制御で終了した。Native実hookなし、元DB不変、画像hashは正常終了した試験と全16枚一致、fixture終了後のapp/helper/panel残存0。この制御終了を、上記16条件の正常終了や自然入力session26の正常終了と混同しない。
 
 P1が指摘した「fixture Main handlersでは本番DB→IPC→記録画面を代替できない」という点を、この実DB複製＋変更していない本番Mainで埋めた。元の本人の曖昧な目視申告を成功へ書き換えず、本番経路の追加証拠で受入を判断する。P1対応の再レビューを依頼し、その結果と最新head CIを確認してからmerge／Closeする。
 

@@ -81,7 +81,7 @@ ElectronはIPCの送信者検証を求め、contextBridgeから汎用的なIPC�
 helper／Main／Preloadは実装言語や実行環境の違う境界なので、入力を`unknown`として検証し、双方が共有するfixtureで契約を確認する。大きいschema生成基盤は必須でなく、現行の小さい型ガードと契約fixtureから始められる。
 
 - C#が実際にserializeしたcandidate・fault・ready・displayContextをTSが受理する。TSからのstart／stop／shutdown／queryの命令をhelperが受理する。手書きのTS fixtureだけに閉じない。
-- protocol版、requestId、世代、sequence、操作ID、由来、時刻、窓・画面の識別、整数範囲と有限値を確認する。型不足、null、NaN相当、負数、桁あふれ、未対応版、余分な機密項目を負例へ入れる。
+- protocol版、requestId、世代、sequence、操作ID、由来、時刻、ウィンドウ・画面の識別、整数範囲と有限値を確認する。型不足、null、NaN相当、負数、桁あふれ、未対応版、余分な機密項目を負例へ入れる。
 - JSON Linesの分割chunk、複数行chunk、末尾未完、空行、不正JSON、巨大行、stdoutへの診断混入、EOF、stderr、異常exitを試験する。上限と不正メッセージへの動作を先に定める。
 - 応答の遅延・重複・不一致、停止後のcandidate、helper再起動前の世代が、数値や通知を変えないことを確認する。
 - IPCは不正command、非boolean設定、未定義operation、想定外sender／frameを拒否する。rendererが生の`ipcRenderer`、Node、ファイルI/O、任意のchannelを使えないことを実行環境でも確認する。
@@ -149,7 +149,7 @@ WindowsのDPI認識と座標系はプロセス／threadのDPI awarenessに影響
 
 NativeMethodsの宣言確認、純粋な候補生成、実APIの配線、常用アプリ精度を分ける。fixtureモードでhook callbackをバイパスした試験は、そのcallbackが正しいとの証拠にしない。
 
-先に必要な確認は、ボタン／double-click／キーと状態変化の対応、競合・注入・欠落、対象窓一致、hook登録失敗・解除・再登録、親EOF／異常終了時の終了である。Win32の戻り値失敗、窓消滅、識別子再利用、display照会失敗、message loop終了などをadapterや専用fixtureから与え、推測で採用しないことを確認する。
+先に必要な確認は、ボタン／double-click／キーと状態変化の対応、競合・注入・欠落、対象ウィンドウ一致、hook登録失敗・解除・再登録、親EOF／異常終了時の終了である。Win32の戻り値失敗、ウィンドウ消滅、識別子再利用、display照会失敗、message loop終了などをadapterや専用fixtureから与え、推測で採用しないことを確認する。
 
 本番入力の収集を広げる前に、callbackが受け取った必要最小限の事象からcandidateを作る部分を純粋なfixtureで試せるか検討する。全OSをmockする大きな抽象化は不要だが、状態変化・時間・対象照会の境界を少数の入力として扱えると再現性が高い。
 
@@ -303,7 +303,7 @@ Electron crashReporterは調査時点の既定でuploadToServerがtrueであり�
 
 追加diagnosticsが必要なら、まずfixture CIに限ってstage・匿名なversion・error分類を出す。実利用用に診断ファイルを保存する案は、通常保存の契約を変えるため、許可項目・保存期間・消去・見せ方を具体化して相談する。dumpは文字やpathを含まないと仮定せず、要件確認なしに有効化しない。
 
-実機バグ報告には、app版、Windows版、対象operation、mouse/key、通常／最大化／snap等の状態、画面数・倍率、期待／結果、再現回数、時刻条件を求める。窓タイトル・URL・入力文字・全画面録画を必須にしない。利用者の報告を匿名fixtureへ落として再現・修正・回帰テストへつなげる。
+実機バグ報告には、app版、Windows版、対象operation、mouse/key、通常／最大化／snap等の状態、画面数・倍率、期待／結果、再現回数、時刻条件を求める。ウィンドウタイトル・URL・入力文字・全画面録画を必須にしない。利用者の報告を匿名fixtureへ落として再現・修正・回帰テストへつなげる。
 
 ## 15. 個人MVPでの導入順序
 

@@ -15,7 +15,7 @@
 
 `native-helper/Core/Observer.cs`の`Read`がプロセス名を取得し、Chrome／Obsidian／Code／ChatGPT以外を除外していた。`src/core/detector.ts`の`classifyWindow`にも同じ旧制限が残っていた。Explorerを案内した受入準備ではこの制限を見落としていた。
 
-live経路のプロセス名取得・許可リストを通常窓の構造判定に置き換えた。可視root窓、caption、非owned／非tool／非noactivate／非cloaked、非昇格、Shell／desktop／自己process除外、API結果不明の棄却を必要とし、送信するアプリ欄は固定カテゴリ`ordinary-window`とする。最小化結果も読めるよう、`IsIconic`だけで結果窓を棄却しない。Coreは固定カテゴリを追加で受理する。入力・同一対象・結果・時間・画面構成の確証条件、Win+↓の注入flagマスク、W03/W04の別IDは維持する。
+live経路のプロセス名取得・許可リストを通常ウィンドウの構造判定に置き換えた。可視rootウィンドウ、caption、非owned／非tool／非noactivate／非cloaked、非昇格、Shell／desktop／自己process除外、API結果不明の棄却を必要とし、送信するアプリ欄は固定カテゴリ`ordinary-window`とする。最小化結果も読めるよう、`IsIconic`だけで結果ウィンドウを棄却しない。Coreは固定カテゴリを追加で受理する。入力・同一対象・結果・時間・画面構成の確証条件、Win+↓の注入flagマスク、W03/W04の別IDは維持する。
 
 同じ`Read`を使うW02／W06／W07・複合dragにも影響するため、局所のW03/W04だけで全面受入とはしない。
 
@@ -23,7 +23,7 @@ live経路のプロセス名取得・許可リストを通常窓の構造判定�
 
 - 修正前に`ordinary-window`のW03/W04回帰テストのassert失敗を確認。
 - 修正後に関連unit47件、全unit293件、型検査、本番C# policy538検証とC#→Main→Core→実SQLiteのnative-policy結合試験が成功。
-- 専用ローカルCodexレビューで、追加レビュー規則の4観点と通常窓除外・最小化・privacy・複合操作の影響を確認し、追加指摘なし。
+- 専用ローカルCodexレビューで、追加レビュー規則の4観点と通常ウィンドウ除外・最小化・privacy・複合操作の影響を確認し、追加指摘なし。
 - 同梱fixtureと修正版の自然入力は別証拠。修正版のW03/W04自然入力はこの記録時点では未実施。最終buildを変更するため、既存成功ケースを含む#47の同一build条件を再確認する。
 
 環境は上下配置の1440×900と2560×1440。Windows buildはmanifest-aware PowerShellの`Environment.OSVersion.Version.Build`で26340を確認。既存WinFormsパネルの`environment.json`にある9200は互換APIの報告値であり、実OS buildの根拠には使わない。OS／registry設定は変更していない。

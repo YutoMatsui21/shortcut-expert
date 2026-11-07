@@ -217,7 +217,7 @@ class TaskbarProbe
                                     result.Slot > 0
                                         ? "候補は Win+"
                                             + key
-                                            + "。実際に同じ窓へ戻れるか本人が確認します。\n試験中はタスクバーの並びを変更しないでください。"
+                                            + "。実際に同じウィンドウへ戻れるか本人が確認します。\n試験中はタスクバーの並びを変更しないでください。"
                                         : "この環境では自分のタスクバーボタン／順位を確認できませんでした。下のログを残して終了してください。";
                                 Log(
                                     "{\"kind\":\"taskbar-snapshot\",\"appButtons\":"
@@ -351,7 +351,7 @@ class TaskbarProbe
         help.Width = 800;
         help.Height = 65;
         help.Text =
-            "mouse-switch：他の窓へ切り替え、このアプリ自身のタスクバーボタンをクリック。\nkey-switch：ラベルを変えて他の窓へ切り替え、上に出たWin+数字でこの窓へ戻る。\nUIAの順位は候補です。結果で対応を確かめます。終わったら×でログ保存。";
+            "mouse-switch：他のウィンドウへ切り替え、このアプリ自身のタスクバーボタンをクリック。\nkey-switch：ラベルを変えて他のウィンドウへ切り替え、上に出たWin+数字でこのウィンドウへ戻る。\nUIAの順位は候補です。結果で対応を確かめます。終わったら×でログ保存。";
         form.Controls.Add(help);
         trace = new TextBox();
         trace.Left = 12;

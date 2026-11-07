@@ -412,7 +412,7 @@ class ExternalWindowProbe
         instructions.Width = 810;
         instructions.Height = 55;
         instructions.Text =
-            "対象選択を押し、5秒以内に調べたいアプリを手前にしてください。選んだ窓の状態だけを観測します。\n操作前にラベルを選択。文字・タイトル・URLは保存しません。×で監視解除・ログ保存。";
+            "対象選択を押し、5秒以内に調べたいアプリを手前にしてください。選んだウィンドウの状態だけを観測します。\n操作前にラベルを選択。文字・タイトル・URLは保存しません。×で監視解除・ログ保存。";
         panel.Controls.Add(instructions);
         label = new ComboBox();
         label.Left = 12;

@@ -42,7 +42,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - 通常起動は`DurableCoach`と`SqliteRepository`を使う。`sqlite-repository.ts`が単一writer／`storage-worker.ts`を管理し、`storage-store.ts`だけがSQLiteへアクセスする。
 - 件数・観測範囲・checkpoint等の一貫性を維持し、ACK喪失時の再送でも二重計上しない。複合操作の複数カウントは原子的に保存する設計とする。
 - 記録は無期限に保持し、UI/IPCの取得は最大60日へ制限。旧JSONの厳格検証・staging移行・再照合は`storage-migration.ts`が担当する。失敗を空記録への初期化で隠さない。
-- 通常起動・隔離smokeともに同じSQLite／標準通知経路を使う。旧JSON writer・30日prune・独自通知窓は設けない。旧JSONの読み取り検証だけを`legacy-documents.ts`に保持する。
+- 通常起動・隔離smokeともに同じSQLite／標準通知経路を使う。旧JSON writer・30日prune・独自通知ウィンドウは設けない。旧JSONの読み取り検証だけを`legacy-documents.ts`に保持する。
 
 詳細：[保存契約](storage/durable-storage.md)、[移行](storage/json-migration.md)、[削除](storage/history-deletion.md)。
 

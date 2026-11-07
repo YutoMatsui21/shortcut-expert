@@ -231,7 +231,8 @@ internal sealed class Panel : Form
             Height = 90,
             Text = trial switch
             {
-                "key-close" => "4秒待つ → このA窓でAltを押しながらF4 → 両方離す → Aが閉じたらF8。",
+                "key-close" =>
+                    "4秒待つ → このAウィンドウでAltを押しながらF4 → 両方離す → Aが閉じたらF8。",
                 "cancel" => "4秒待つ → A右上の通常の× → 確認で「いいえ/No」 → Aが残ったらF8。",
                 "hide" => "4秒待つ → A右上の通常の× → Aが非表示になったらF8。閉鎖とは数えません。",
                 "other-destroy" => "4秒待つ → A右上の通常の× → Bだけが閉じ、Aが残ったらF8。",
@@ -241,7 +242,7 @@ internal sealed class Panel : Form
                     "4秒待つ → A右上の通常の× → 確認で2秒以上待つ → 「はい/Yes」 → Aが閉じたらF8。",
                 "tab-close" =>
                     "4秒待つ → 下のTAB Xをクリック（右上×は使わない） → ボタンだけ消えたらF8。",
-                _ => "4秒待つ → このA窓の右上の通常の×をクリック → Aが閉じたらF8。",
+                _ => "4秒待つ → このAウィンドウの右上の通常の×をクリック → Aが閉じたらF8。",
             },
         };
         a.Controls.Add(instruction);

@@ -43,12 +43,12 @@ Start-Process -FilePath $trialPanel -ArgumentList ('"' + $trialData + '"'),('"' 
 ```
 
 1. パネルがIDLEになったら、Dia／Obsidianはapplication=`external`、Chromeは`chrome`を選ぶ。stateとsecondaryStateは`learning`、pausedとstoppedはOFF。
-2. 試行前に対象窓を通常・未配置または最大化へ準備する。ARM後4秒以内に対象窓を前面にし、**ARMED表示後**に物理マウスで1操作だけ行う。準備操作をARMED中に混ぜない。
+2. 試行前に対象ウィンドウを通常・未配置または最大化へ準備する。ARM後4秒以内に対象ウィンドウを前面にし、**ARMED表示後**に物理マウスで1操作だけ行う。準備操作をARMED中に混ぜない。
 3. 最大化は`P03m`、復元は`P04m`、通常から最小化は`S04-min-normal`、最大化から最小化は`S04-min-max`。各アプリで各1回以上行う。各試行の期限は45秒、セッションは20分。再開時は新しい隔離ディレクトリを作る。
-4. 実際の窓状態と通知を目視して、result／notificationを該当する値にし、FINISHを押す。キー同等性を試していなければequivalence=`not-tested`を選ぶ。未確認をmatchedにしない。
-5. 各アプリで前面の通常窓の本文をクリックする`N01-same`も実施する。状態変化・W03/W04分類・記録・通知がすべて0件であることを確認する。誤検出の評価を広げる場合は、状態が変わらない別の本文位置でも繰り返す。
+4. 実際のウィンドウ状態と通知を目視して、result／notificationを該当する値にし、FINISHを押す。キー同等性を試していなければequivalence=`not-tested`を選ぶ。未確認をmatchedにしない。
+5. 各アプリで前面の通常ウィンドウの本文をクリックする`N01-same`も実施する。状態変化・W03/W04分類・記録・通知がすべて0件であることを確認する。誤検出の評価を広げる場合は、状態が変わらない別の本文位置でも繰り返す。
 6. パネルを閉じて観測とアプリを終了する。`$trialData/status.json`の各resultを確認する。`valid=true`、`classified`が期待するW03/W04だけ各1件、`recordsPassed=true`、`notificationRequestPassed=true`を必要とする。目視結果とWindows通知表示は`operatorResult`／`visibleNotification`で別に確認する。
 
-`diagnostics`ではbefore/afterの固定状態カテゴリと`route-mouse-state-fallback`を確認できる。Chrome等で従来の`route-max-button`／`route-min-button`が使われても正常。入力・候補・HWND・process・窓タイトル・座標の生ログを保存しない。結果表にはbuild hash、アプリ別の試行数、状態・Core分類・記録・通知の成否、本文クリック誤検出件数だけを転記する。
+`diagnostics`ではbefore/afterの固定状態カテゴリと`route-mouse-state-fallback`を確認できる。Chrome等で従来の`route-max-button`／`route-min-button`が使われても正常。入力・候補・HWND・process・ウィンドウタイトル・座標の生ログを保存しない。結果表にはbuild hash、アプリ別の試行数、状態・Core分類・記録・通知の成否、本文クリック誤検出件数だけを転記する。
 
-クリック直後にアプリ内処理が同一窓の状態を変えた場合を厳密に区別できない点は許容リスク。500ms以内でも解放前に4pxを超えて移動した操作や長押しは棄却する。実機データがない段階で時間閾値を広げない。
+クリック直後にアプリ内処理が同一ウィンドウの状態を変えた場合を厳密に区別できない点は許容リスク。500ms以内でも解放前に4pxを超えて移動した操作や長押しは棄却する。実機データがない段階で時間閾値を広げない。

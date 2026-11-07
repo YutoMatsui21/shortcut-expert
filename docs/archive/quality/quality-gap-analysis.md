@@ -91,17 +91,17 @@ Node.jsは24.11.1、npmは10.9.2、ローカル.NET SDKは10.0.401。SDKは[glob
 
 最初のケース：
 
-| イベント・条件                                       | 期待する性質                                            |
-| ---------------------------------------------------- | ------------------------------------------------------- |
-| 標準max button→同一窓の通常→最大化                   | mouse候補を一度だけ出す                                 |
-| captionの2click、時間・距離の内外                    | 成立時だけdouble-click経路。設定されたWindows条件も確認 |
-| Win+↑、左右Win、不要なmodifier、キーrepeat           | 成立経路以外をkeyと断定せず、重複しない                 |
-| injected／lower integrity injected、mouseとkeyの競合 | 誤通知・誤計上につながる確定候補を作らない              |
-| 999/1000/1001ms、配送遅延、イベント重複、順序違い    | 入力寿命と実際の状態遷移の契約を守る                    |
-| 対象窓の破棄、foreground移動、API失敗、arranged不明  | unknownまたは見送り。古い対象へ関連付けない             |
-| program最大化、無関係なclickの近接                   | 時間的近さだけでユーザー由来を保証しない                |
-| move-size開始・終了、途中復元、停止・再開            | 派生変化と旧入力を次世代に持ち越さない                  |
-| 起動時／起動後に作られた対象窓、HWND再利用           | 別窓・別プロセスの古い状態を流用しない                  |
+| イベント・条件                                              | 期待する性質                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------- |
+| 標準max button→同一ウィンドウの通常→最大化                  | mouse候補を一度だけ出す                                 |
+| captionの2click、時間・距離の内外                           | 成立時だけdouble-click経路。設定されたWindows条件も確認 |
+| Win+↑、左右Win、不要なmodifier、キーrepeat                  | 成立経路以外をkeyと断定せず、重複しない                 |
+| injected／lower integrity injected、mouseとkeyの競合        | 誤通知・誤計上につながる確定候補を作らない              |
+| 999/1000/1001ms、配送遅延、イベント重複、順序違い           | 入力寿命と実際の状態遷移の契約を守る                    |
+| 対象ウィンドウの破棄、foreground移動、API失敗、arranged不明 | unknownまたは見送り。古い対象へ関連付けない             |
+| program最大化、無関係なclickの近接                          | 時間的近さだけでユーザー由来を保証しない                |
+| move-size開始・終了、途中復元、停止・再開                   | 派生変化と旧入力を次世代に持ち越さない                  |
+| 起動時／起動後に作られた対象ウィンドウ、HWND再利用          | 別ウィンドウ・別プロセスの古い状態を流用しない          |
 
 入力hookの処理時間には別のリスクがある。OnMouse内でplacement、token、hit test等を同期照会し、OnEventでは同じmessage loopからstdoutへ候補を出している。遅い読取側や対象プロセスの状態で、入力処理がどれほど遅れるかは未測定。Microsoftはlow-level hookのタイムアウト時に無通知で解除され得ることを明記している。`Active`は保存したhookハンドルから計算しており、実際の配送が継続している証拠ではない。hookにI/Oや高価な処理をどこまで置くかを計測し、配送欠落時の扱いと限界を設計する。ただし「heartbeatだけでhookの健全性を保証できる」とはしない。[Microsoft mouse hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc)、[keyboard hook](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)
 
@@ -152,7 +152,7 @@ property/model-based testingは、この状態列と「停止中は新規観測�
 
 現行smokeはReactのmouse1/key1と通知の文字をDOMから確認するが、pause/start/mute/delete/day選択のボタン・select操作は行わない。fixtureではtray・通常起動の初回画面経路も通らない。過去の手動検証記録はあり、未実装とは言えないが、継続的な回帰検出にはなっていない。
 
-提案するUIの最小ケースは、日付選択と合計、通知停止でも記録継続、全停止と再開、muteと再起動後の保持、削除取消／確定と設定保持、保存エラーと再試行、窓を閉じても常駐、trayから再表示、二重起動、正常終了である。Rendererの細かい状態はbridge fixtureで試験し、Main/Preloadを含む少数のElectron E2Eで結線を確認する。PlaywrightのElectron支援はexperimentalなので、現行Electron版・sandboxと組み合わせて小さく互換性を確かめる。[Playwright Electron](https://playwright.dev/docs/api/class-electron)
+提案するUIの最小ケースは、日付選択と合計、通知停止でも記録継続、全停止と再開、muteと再起動後の保持、削除取消／確定と設定保持、保存エラーと再試行、ウィンドウを閉じても常駐、trayから再表示、二重起動、正常終了である。Rendererの細かい状態はbridge fixtureで試験し、Main/Preloadを含む少数のElectron E2Eで結線を確認する。PlaywrightのElectron支援はexperimentalなので、現行Electron版・sandboxと組み合わせて小さく互換性を確かめる。[Playwright Electron](https://playwright.dev/docs/api/class-electron)
 
 [NotificationWindow](https://github.com/YutoMatsui21/shortcut-expert/blob/5baf55569f2589ba5b50b213ad88ced3e000412f/src/main/notification.ts)では、表示前と後の再照会、期限、epoch、画面消失、poll、focus、click-through、4秒消去を分けて確認する。人工画面adapterと遅延応答を使い、次の条件を再現する。
 
@@ -189,7 +189,7 @@ CIで最初から必要な設定は以下。
 2. Node 24系の採用patch、SDK実版、runner image、実行commitを結果に残す。global.jsonは`latestPatch`なので、指定版と実際に選ばれた版の違いも記録する。
 3. `npm ci`とlockfileを使い、キャッシュはnpm/NuGet等の取得データを中心にする。`.tools/tests`や通常データ、古いout/releaseを共有しない。
 4. jobとプロセスにtimeout、同じPRの古い実行をcancelするconcurrencyを設ける。中断でも今回起動したhelperとElectronを片付ける。
-5. 失敗時にテスト結果、buildログ、fixtureの診断・必要な自アプリ画像を短期間artifact保存する。人の窓タイトル・入力・画面や通常保存フォルダーをuploadしない。
+5. 失敗時にテスト結果、buildログ、fixtureの診断・必要な自アプリ画像を短期間artifact保存する。人のウィンドウタイトル・入力・画面や通常保存フォルダーをuploadしない。
 6. 小さなworkflowは全PRに実行し、PRイベントで判定対象を明記する。path filterでrequired checkが未実行のまま待つ設計を避ける。
 7. 許可されたプランでbranch protection/rulesetsのrequired checksへ結び付ける。今回rulesetsは確認できていないため、実装時に利用条件を確認する。
 
@@ -211,7 +211,7 @@ W03以外の10候補は現在準備中であり、「不足テスト」と「未
 
 ## 10. セキュリティ・プライバシー・依存更新
 
-Electronの基本防御は既にある。追加するのは、未知sender／別frame／通知窓からの制御、未知command、operation、誤型のmuteを拒否し、拒否前後で保存・観測状態が変わらない試験。contextIsolation、sandbox、nodeIntegration無効、window open/navigation拒否、CSP、狭いpreloadの実行時assertも有効。型定義だけではIPC payloadを検証したことにならない。[Electron security](https://www.electronjs.org/docs/latest/tutorial/security)
+Electronの基本防御は既にある。追加するのは、未知sender／別frame／通知ウィンドウからの制御、未知command、operation、誤型のmuteを拒否し、拒否前後で保存・観測状態が変わらない試験。contextIsolation、sandbox、nodeIntegration無効、window open/navigation拒否、CSP、狭いpreloadの実行時assertも有効。型定義だけではIPC payloadを検証したことにならない。[Electron security](https://www.electronjs.org/docs/latest/tutorial/security)
 
 プライバシーは、counts/settingsのschemaが厳格という強みを、通常実行・失敗経路・試験artifactへ広げる。隔離fixtureの正常・保存失敗・helper失敗・終了で書き出された全ファイルを調べ、許可した集計と設定のみか確認する。アプリ自身の通信を確認する際は、OSや他アプリの通信と区別する。自動crash uploadや外部telemetryを新設する案は、外部送信なしの現要件と合わない。
 

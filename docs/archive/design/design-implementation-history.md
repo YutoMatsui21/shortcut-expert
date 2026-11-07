@@ -50,12 +50,12 @@ Electron＋TypeScript／React＋C#／Win32 helperを採用。既存のhelper→T
 
 C#は一般に最良と断定した選択ではない。この作業では既にWindows観測・UIA・TS接続のC#試作があり、実装の見通しを引き継げるため推奨する。既存probeの誤分類は引き継がず修正する。言語を分けることでhelperのビルド・配布確認が必要になる。
 
-| Module         | 責務／Interface                                                                                                                                                   |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Windows観測    | helper内で入力候補・対象窓・開始／終了状態・画面・UI識別をまとめる。start／stopと、完了した操作候補・稼働状態をJSON Linesで交換。キー生ログや窓タイトルは送らない |
-| 操作判定       | TS内で候補を評価し、採用可能な操作ID・mouse/key・同等キー・通知画面、または見送り理由を返す。操作ごとの前提と複合変化の扱いをここへ集める                         |
-| 利用制御・記録 | main内で稼働状態・セッション世代・通知間隔・操作別mute・日別数値・保存を一元管理。判定された1操作を1回だけ受理する                                                |
-| 表示           | Reactの数値／設定画面と通知画面。狭いIPCを介して状態取得・設定変更・削除を要求する。OS観測やファイル書込みを直接行わない                                          |
+| Module         | 責務／Interface                                                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows観測    | helper内で入力候補・対象ウィンドウ・開始／終了状態・画面・UI識別をまとめる。start／stopと、完了した操作候補・稼働状態をJSON Linesで交換。キー生ログやウィンドウタイトルは送らない |
+| 操作判定       | TS内で候補を評価し、採用可能な操作ID・mouse/key・同等キー・通知画面、または見送り理由を返す。操作ごとの前提と複合変化の扱いをここへ集める                                         |
+| 利用制御・記録 | main内で稼働状態・セッション世代・通知間隔・操作別mute・日別数値・保存を一元管理。判定された1操作を1回だけ受理する                                                                |
+| 表示           | Reactの数値／設定画面と通知画面。狭いIPCを介して状態取得・設定変更・削除を要求する。OS観測やファイル書込みを直接行わない                                                          |
 
 helperがOSの時間順序と入力候補の寿命を管理し、TSが操作の意味・通知するキーを判断する。判定の試験は同じ候補入力と結果出力を使い、既存probeを製品へそのまま移さない。
 
@@ -63,7 +63,7 @@ helperがOSの時間順序と入力候補の寿命を管理し、TSが操作の�
 
 流れ：OSの入力・状態変化 → helperで操作候補を完結 → TSで対象／由来／結果／同等キーを照合 → 日別数値更新 → mouseなら通知条件を確認。
 
-- 候補にはprotocol版、セッション世代、単調な候補ID、開始／終了時刻、実行中のみ有効な窓識別子、対象アプリ識別、入力経路・競合／注入／欠落flag、前後のplacement／arranged／可視矩形／画面情報、必要時だけUI識別の結果を持たせる。入力は該当操作の経路とショートカット種別に絞り、文字・キー生ログを渡さない。永続化は日別数値と設定だけ。
+- 候補にはprotocol版、セッション世代、単調な候補ID、開始／終了時刻、実行中のみ有効なウィンドウ識別子、対象アプリ識別、入力経路・競合／注入／欠落flag、前後のplacement／arranged／可視矩形／画面情報、必要時だけUI識別の結果を持たせる。入力は該当操作の経路とショートカット種別に絞り、文字・キー生ログを渡さない。永続化は日別数値と設定だけ。
 - 近接した入力だけで確定しない。注入・競合・対象不一致・観測欠落はunknownとして通知／集計を見送る。OS因果関係の保証とは呼ばない。
 - dragは開始と終端を比較。最大化から復元して別画面へ移動した場合はW02の1操作。途中の復元・境界往復を別計上せず、元画面終了は移動0。
 - 四隅への連続キーはTSの判定で途中の左右半分を保留して一連の操作として解決する。helperの候補IDを消費し、同一対象・連続する前後状態・対応したキー経路の候補だけを統合する。競合・欠落・終端が決まらない候補を推測で計上しない。一定時間後に独立したW06の条件が成立していれば1回として確定する。具体的な時間値は実装時の配送観測から設定し、全停止・日付変更時の未完了列は破棄する。
@@ -108,7 +108,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 1. 環境準備後、W03の成立条件で観測→判定→通知→保存→数値表示を縦につなぐ。
 2. 停止・mute・削除・保存失敗・helper終了と復帰を通す。
 3. 状態変更W04/W05/W11、複合移動W02、配置W06/W07へ拡張。
-4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../../research/window-switch-validation.md)で自作通常窓の基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象窓・入力・Snap設定から呼び出しを推定する（[W08新仕様](../../ui-requirements.md#excluded-operations)、[#83の実測](../research/research-snap-invocation-validation.md)）。製品精度の確認は別途必要。
+4. W01は直接クリック/Alt+Tabの入力と最終foreground HWNDの一致で切替を判定し、タスクバーアプリアイコンのクリック/Win+数字はW12のみ（[#7の実測・採用条件](../../research/window-switch-validation.md)で自作通常ウィンドウの基本経路は制約付き着手可、製品は#29で未実装。番号対応はunknown）。W09/W10はUI識別情報を確認しながら接続。W08はメニュー表示の直接検出を前提にせず、対象ウィンドウ・入力・Snap設定から呼び出しを推定する（[W08新仕様](../../ui-requirements.md#excluded-operations)、[#83の実測](../research/research-snap-invocation-validation.md)）。製品精度の確認は別途必要。
 5. 要件書の公開前試験・通常利用60分・配布物確認。3日で全候補成立を保証しない。
 
 ### 合意・確認と次工程
@@ -138,7 +138,7 @@ helperは.NET 10 LTS、net10.0-windows／win-x64のself-contained配布を基準
 - 未知・注入・競合・drag中・対象不一致・期限外は通知／集計を除外。近接は1000msの初期値で、因果関係のOS保証とは呼ばない。button hit testは10msで打ち切る。独自UIは推測で扱わない。
 - 正しく受理した候補だけを1回集計。世代＋単調sequenceで重複・再開前の候補を除外し、保存と通知を直列化。
 - 保存・IPC・描画待ちで受信から2秒を超えた候補は記録だけを残して通知を見送る。通知ウィンドウでも表示直前に期限・停止世代を再確認し、遅れた通知をqueueしない。
-- mouseの通知は操作名＋Win＋↑。対象画面右下、focusable=false、showInactive、クリック透過、4秒、全体10秒／同じ操作60秒、同時1件、queueなし。物理座標→DIP変換、表示前／表示中に画面全体を覆う窓を照会し、不明は抑制。
+- mouseの通知は操作名＋Win＋↑。対象画面右下、focusable=false、showInactive、クリック透過、4秒、全体10秒／同じ操作60秒、同時1件、queueなし。物理座標→DIP変換、表示前／表示中に画面全体を覆うウィンドウを照会し、不明は抑制。
 - 数値UI：当日／保存日の合計・操作別mouse/key、11候補一覧、操作別通知ON/OFF、通知停止／全停止、全日分削除。未実装候補を準備中として区別。
 - トレイ常駐。画面の×はhide、トレイから終了。停止は再起動で解除、muteを保存。自動起動登録なし。
 - counts.json（schemaVersion＋日付→ID→mouse/key）とsettings.json（mute＋初回画面表示flag）。一時ファイルへ書込み・flush後に置換、形式検査、30暦日保持、未知の生データを拒否。
@@ -161,24 +161,24 @@ fixtureはNativeのテスト専用経路から人工候補を送る。hookは登
 
 ### 2026-10-11 本人報告後の修正
 
-本人報告：Chrome／ChatGPTの通常窓のマウス最大化は数値が増えるが通知なし。左右スナップからの最大化は数値も増えない。
+本人報告：Chrome／ChatGPTの通常ウィンドウのマウス最大化は数値が増えるが通知なし。左右スナップからの最大化は数値も増えない。
 
-- 通知：実際の2画面で`--display-check`がともにknown=true／fullscreen=true。画面1はcovering=1／cloakedCovering=1、画面2はcovering=1／maximizedCovering=1。表示されていないDWM cloaked窓と、通常最大化窓を矩形だけで全画面扱いしていた。元の判定で通知可のassertionが失敗することを確認。cloaked窓を除外し、最大化かつcaptionありの窓を通常窓として扱う。borderless全画面・状態不明は引き続き抑制する。
+- 通知：実際の2画面で`--display-check`がともにknown=true／fullscreen=true。画面1はcovering=1／cloakedCovering=1、画面2はcovering=1／maximizedCovering=1。表示されていないDWM cloakedウィンドウと、通常最大化ウィンドウを矩形だけで全画面扱いしていた。元の判定で通知可のassertionが失敗することを確認。cloakedウィンドウを除外し、最大化かつcaptionありのウィンドウを通常ウィンドウとして扱う。borderless全画面・状態不明は引き続き抑制する。
 - 集計：before.arranged=trueをW03から除外していた。入力と実際の最大化結果が一致する場合は、スナップからの最大化も集計する。スナップ中のWin＋↑は配置になる場合があるので、同等キー未確認のマウス操作は記録のみとし案内しない。未知の入力由来や移動中の派生変化は引き続き除外。
 - 回帰試験17件・build成功。全画面判定の通常最大化／cloaked／borderless全画面／unknownと、スナップ最大化の集計・無通知を追加。判定の失敗を見てから修正。
 - 修正後の実画面判定は両画面known=true／fullscreen=false。元の再現assertionも成功。同梱版で人工候補＋実際のWindows画面状態を使う通知表示試験成功（realDisplayContext=true、focus不変、4秒消去、hook解除）。人工候補なので本人の実操作の認識率合格とは区別する。
 - 更新先の旧版が起動中で上書きできず、修正版は`release/fix-20261011/win-unpacked/Window Shortcut Coach.exe`へ作成。旧版を「終了」してから修正版を起動する。通常保存先は同じなので既存記録・設定を引き継ぐ。旧版プロセスを強制終了していない。
-- `--display-check`は画面ごとの判定と件数だけ出力し、hookを開始せず、窓名・タイトル・キー・画像を保存しない。表示試験の`--real-display`も入力候補は人工であり実入力を読まない。
+- `--display-check`は画面ごとの判定と件数だけ出力し、hookを開始せず、ウィンドウ名・タイトル・キー・画像を保存しない。表示試験の`--real-display`も入力候補は人工であり実入力を読まない。
 
 記録できた区間16:47:20→16:55:59 JST、8分39秒。調査開始から16:47:20までと末尾の文書保存・応答は未計測。回答・build・権限・表示待ちを含む。既存実装の修正2件。配布手順の手戻りはsandbox cache EPERM1件、旧版ロックEBUSY1件→別フォルダー作成で解消。
 
-根拠：[IsZoomed](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iszoomed)、[DWMWA_CLOAKED](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)、[Windowsのキー](https://support.microsoft.com/en-us/windows/keyboard-shortcuts-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec)、[Snap](https://support.microsoft.com/en-gb/windows/experience/snap-your-windows)。caption＋最大化で通常窓と区別する条件は製品側の合成であり、全アプリの全画面状態を保証するAPIとは扱わない。
+根拠：[IsZoomed](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iszoomed)、[DWMWA_CLOAKED](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)、[Windowsのキー](https://support.microsoft.com/en-us/windows/keyboard-shortcuts-in-windows-dcc61a57-8ff0-cffe-9796-cb9706c75eec)、[Snap](https://support.microsoft.com/en-gb/windows/experience/snap-your-windows)。caption＋最大化で通常ウィンドウと区別する条件は製品側の合成であり、全アプリの全画面状態を保証するAPIとは扱わない。
 
 ### 未確認・制約
 
 - 新しい実装でのChrome／Obsidian／VS Code／ChatGPTの実mouse/key認識率は未測定。既存probeの実測を新実装の合格へ流用しない。
 - mixed DPI・負座標・画面変更・全画面の実アプリ試験、管理者／remote除外の実機負例、負荷・通常利用60分、保存失敗時の実ディスク／強制終了は公開前に確認する。
-- 全画面判定はDWM cloak・最大化・caption style・矩形の合成。desktop／taskbarはclassで除外し、Explorerのアプリ窓も抑制判定へ含める。OS／アプリ固有の全画面状態、captionを残す独自全画面、背景のborderless窓の実機確認は残る。
+- 全画面判定はDWM cloak・最大化・caption style・矩形の合成。desktop／taskbarはclassで除外し、Explorerのアプリウィンドウも抑制判定へ含める。OS／アプリ固有の全画面状態、captionを残す独自全画面、背景のborderlessウィンドウの実機確認は残る。
 - low-level hookにはタイムアウトによるsilent removalがあり、登録成功を継続配送の保証と扱わない。callbackの負荷と取りこぼしは実利用確認に残す。
 - その他10候補、UIA識別、複合移動／snapの判定は次の実装区間。候補を削る場合は相談する。
 - インストーラーの導入・削除、コマンド導入、npx追加工数、正式名称・OSSライセンス・署名・README公開対応表は未完。公開MVP完成とは扱わない。
@@ -220,7 +220,7 @@ TDDの意図したred→greenは欠陥の手戻りと別に扱う。手戻りは
 
 helperのhealth応答はprotocolVersion=1、runtime=.NET 10.0.12、architecture=X64、monitorCount=2、ownWindowPlacement=true、ownWindowRect=true、uiAutomationLinked=true、observationActive=false。
 
-healthは自分の非表示窓のplacement／rect取得とUIAアセンブリのリンクだけ。全体入力hook・外部窓の観測・ユーザー入力の収集を開始しない。画面2枚は今回の通常権限での実行セッションの結果であり、以前の別実行セッションの1枚と同一条件と扱わない。UIA識別精度・操作判定精度を証明しない。
+healthは自分の非表示ウィンドウのplacement／rect取得とUIAアセンブリのリンクだけ。全体入力hook・外部ウィンドウの観測・ユーザー入力の収集を開始しない。画面2枚は今回の通常権限での実行セッションの結果であり、以前の別実行セッションの1枚と同一条件と扱わない。UIA識別精度・操作判定精度を証明しない。
 
 手順は[README.md](../../../README.md)。smokeのElectronデータは`.tools`内。公開アプリの記録形式の実装ではない。ローカルSDK・NuGet／npmキャッシュ・生成物は.gitignoreで除外し、既存probeと観測原本は保持した。
 

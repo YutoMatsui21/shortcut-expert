@@ -8,7 +8,7 @@ PR・merge・公開は行わない。Chrome/Diaの自然入力は利用者が確
 - 変更前：caption押下をMOVESIZESTARTへ引き継ぎ、W02では入力・結果のWS_CAPTIONも要求。
 - 変更後：クリック判定とは別に左押下を一時保持し、1000ms以内の同一HWNDのMOVESIZESTARTへ引き継ぐ。HTCLIENTやhit test不明でも対象。移動によるクリック取消でドラッグの押下証拠は失わない。
 - 物理解放前の移動開始とMOVESIZEEND、同一HWND/process、前景整合、画面・作業域・DPI等の既存判定を維持。注入、修飾キー、競合キー、取消、既知のresize境界・captionボタンは採用しない。
-- W02は実際の窓の始終monitorが異なる場合だけ。W03は通常→最大化と上端解放。W02＋W03もcaption不要。W06/W07とW02キー経路のcaption条件は維持。
+- W02は実際のウィンドウの始終monitorが異なる場合だけ。W03は通常→最大化と上端解放。W02＋W03もcaption不要。W06/W07とW02キー経路のcaption条件は維持。
 - protocolの`caption-drag` / `caption-top-drag`というroute名は互換性のため維持し、実際のcaption hitを保証する意味には使わない。
 
 ## 起動
@@ -23,20 +23,20 @@ node scripts/acceptance/final-natural-acceptance.mjs --package-dir release/drag-
 通常データとは別の `.tools/validation/issue-47/session-*/data` を使う。
 Chromeはアプリ種別chrome、Diaはexternalを選び、対応関係を手元で控える。
 
-1. IDLEで通常・未配置の起点窓を準備する。
+1. IDLEで通常・未配置の起点ウィンドウを準備する。
 2. W02は`P02m-left` / `P02m-right`、W03は`S03-drag`を選ぶ。
-3. ARMを押し、4秒以内に対象窓を前面へ。ARMED後2秒待つ。
+3. ARMを押し、4秒以内に対象ウィンドウを前面へ。ARMED後2秒待つ。
 4. 物理マウスで指定操作を1回行い、解放して3秒待つ。
 5. 実際の結果と通知を選んでFINISH。Chrome/DiaそれぞれW02/W03を確認。
 6. panelを閉じて観測とプロセスを終了する。1試行45秒・session20分の制限がある。
 
-W02は別画面の中央の通常位置へ移し、端への配置を避ける。W03は同じ画面の上端へ通常窓をドラッグする。
+W02は別画面の中央の通常位置へ移し、端への配置を避ける。W03は同じ画面の上端へ通常ウィンドウをドラッグする。
 追加負例はカーソルだけを別画面へ移す、`N02-return`（元画面へ戻す）、`N02-cancel`（Esc取消）。W02は0件を期待。
 
 ## 失敗時の確認
 
 セッションパスはコンソールの`FINAL_SESSION`に出る。`data/status.json`の`results`に試行ごとの`counts`、`classified`、`diagnostics`、`nativeDiagnostics`がある。
-窓タイトル・URL・入力生ログは追加しない。
+ウィンドウタイトル・URL・入力生ログは追加しない。
 
 - `MouseDown` / `MouseUp`、`MoveStart` / `MoveEnd`：物理入力・Windowsイベントの到達。
 - `TargetMissing` / `TargetRejected`：入力対象のcache／適格性。今回の変更だけでは解決しない場合がある。
@@ -80,7 +80,7 @@ DiaのW03は`MoveStart=1`・`MoveEnd=1`・`DragMaximizedResult=1`まで到達し
 node scripts/acceptance/final-natural-acceptance.mjs --package-dir release/drag-validation-state-diagnostics --diagnostics --observe-consented
 ```
 
-Diaを通常サイズに戻し、画面中央へ移動して解放した窓を起点に`S03-drag`を1回確認する。次にChromeでも同じ条件で比較する。配置済み起点での成功は今回保証しない。
+Diaを通常サイズに戻し、画面中央へ移動して解放したウィンドウを起点に`S03-drag`を1回確認する。次にChromeでも同じ条件で比較する。配置済み起点での成功は今回保証しない。
 新ログに上の理由が出れば、状態読取失敗・配置済み起点・最大化済み起点を区別して次の修正を判断できる。現時点ではDiaの不検出を直したとは扱わない。
 
 診断追加後の検証：unit 332件、native 7件（C# policy 916ケース）、型検査・build・package・同梱版fixture smokeが成功。未コミット差分全体の専用ローカルレビューは指摘なし。新build識別情報は`state-diagnostics-build.json`。新buildの自然入力は未実施。
