@@ -381,6 +381,10 @@ function classifyWindow(
         sameMonitor(from, to) ||
         candidate.before.state === "minimized" ||
         (candidate.origin === "mouse" &&
+          !(
+            candidate.before.state === "maximized" &&
+            candidate.after.state === "maximized"
+          ) &&
           (candidate.after.state !== "normal" ||
             candidate.afterArranged !== false)) ||
         !["normal", "maximized"].includes(candidate.before.state) ||
