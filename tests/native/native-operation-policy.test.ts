@@ -238,5 +238,50 @@ test(
       expectedNotices + 7,
       "each compound gesture requests only one notification",
     );
+    assert.equal(report.independence.globalInputCollected, false);
+    assert.equal(report.independence.rows.length, 49);
+    assert.equal(report.independence.minimalComposerMismatches, 3);
+    for (const row of report.independence.rows) {
+      assert.deepEqual(
+        row.composed,
+        row.baseline,
+        `${row.name}: full v2 parity`,
+      );
+      if (row.composed === null) {
+        assert.deepEqual(row.expected, [], row.name);
+        continue;
+      }
+      const parsed = candidateV2({ ...row.composed, date: "2026-10-28" });
+      assert.ok(parsed, row.name);
+      const observations = classifyGesture(parsed);
+      assert.deepEqual(
+        observations.map((o) => o.operation).sort(),
+        row.expected,
+        `${row.name}: final operation IDs`,
+      );
+      coach.begin(1);
+      const before = await repository.query("2026-10-28", "2026-10-28");
+      const previousNotices = notices;
+      for (const observation of observations)
+        (totals[observation.operation] ??= { mouse: 0, key: 0 }).mouse++;
+      await coach.accept(parsed);
+      await Promise.all(deliveries);
+      const saved = await repository.query("2026-10-28", "2026-10-28");
+      assert.deepEqual(saved.counts["2026-10-28"], totals, row.name);
+      assert.equal(
+        saved.revision,
+        before.revision + 1,
+        "one atomic transaction",
+      );
+      assert.equal(notices, previousNotices + 1, "one notification request");
+      await coach.accept({ ...parsed, sequence: parsed.sequence + 1 });
+      await Promise.all(deliveries);
+      assert.deepEqual(
+        await repository.query("2026-10-28", "2026-10-28"),
+        saved,
+        "transaction replay cannot change storage",
+      );
+      assert.equal(notices, previousNotices + 1);
+    }
   },
 );

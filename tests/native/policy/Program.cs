@@ -481,6 +481,7 @@ internal static partial class Program
                         monitorMoveSamples,
                         compoundSamples,
                         closeSamples,
+                        independence = IndependentDetection.Run(),
                         windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
                         globalInputCollected = false,
                     }
