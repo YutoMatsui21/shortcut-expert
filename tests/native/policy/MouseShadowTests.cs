@@ -186,5 +186,13 @@ internal static partial class Program
                 "shadow click " + name,
                 () => Equal(expected, MouseDetectionShadow.DoubleClick(c).Operations.Length)
             );
+        Check(
+            "live W03 never reconstructs a failed current maximize",
+            () =>
+            {
+                var d = cases[2].Item2 with { CurrentMaximizeConfirmed = false };
+                Equal(0, MouseDetectionShadow.Evaluate(d).Operations.Length);
+            }
+        );
     }
 }

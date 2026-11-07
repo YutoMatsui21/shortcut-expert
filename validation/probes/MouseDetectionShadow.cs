@@ -1,4 +1,5 @@
 using static NativeMethods;
+using Point = NativeMethods.Point;
 
 // Research only. No protocol, persistence, notification, or installed hooks.
 internal static class MouseDetectionShadow
@@ -18,7 +19,8 @@ internal static class MouseDetectionShadow
         bool Terminal = true,
         long StartAge = 100,
         MonitorBounds? ReleaseMonitor = null,
-        MonitorBounds? ReleaseWork = null
+        MonitorBounds? ReleaseWork = null,
+        bool? CurrentMaximizeConfirmed = null
     );
 
     internal sealed record Result(string[] Operations, string Reason);
@@ -80,12 +82,14 @@ internal static class MouseDetectionShadow
         // B deliberately delegates its complete terminal validation to the current tracker.
         if (a.Show == SW_SHOWNORMAL && b.Show == SW_SHOWMAXIMIZED)
         {
-            var current = Current(d);
-            if (
-                current
-                is WindowCandidate { operation: "maximize" }
-                    or CompoundMoveResult { Terminal: "maximized" }
-            )
+            bool confirmed =
+                d.CurrentMaximizeConfirmed
+                ?? (
+                    Current(d)
+                    is WindowCandidate { operation: "maximize" }
+                        or CompoundMoveResult { Terminal: "maximized" }
+                );
+            if (confirmed)
                 operations.Add("W03");
         }
         return new(

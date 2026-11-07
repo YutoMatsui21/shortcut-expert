@@ -457,6 +457,7 @@ internal static partial class Program
             CheckMonitorMoves();
             CheckCompoundDrags();
             CheckMouseShadow();
+            CheckClickComparison();
             CheckProtocol();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
