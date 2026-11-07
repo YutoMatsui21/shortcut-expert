@@ -28,34 +28,34 @@ flowchart TD
 
 ## 各コンポーネントの入力・出力
 
-| 現行コンポーネント | 入力 | 出力・役割 |
-| --- | --- | --- |
-| `Observer.cs` | `OnMouse`（低レベルマウス）、`OnKey`（低レベルキー）、`OnEvent`（foreground／位置／移動開始・終了／最小化／破棄等）、timer | Win32で窓状態・押下対象等を読み、各Tracker/Observer/Policyの**具体的なメソッドを順序付きで呼ぶ**。状態キャッシュも保持 |
-| `CandidateTracker.cs` | 入力、押下時の窓状態、WinEventによる状態変化・経過時間 | `WindowCandidate`／`PlacementResult`／`CompoundMoveResult`。最大化・復元／最小化、配置、ドラッグ・画面移動の候補 |
-| `WindowSwitchObserver/Policy` | キー・クリック・foreground・timer | 切替が成立すれば`protocol.Switch` |
-| `WindowCloseObserver/Policy` | 閉じる入力・窓の存続/DESTROY・timer | 閉じる確証があれば`protocol.Close` |
-| `TaskbarInputObserver`等 | タスクバークリック／Win+数字・UIA snapshot・非同期確認 | `protocol.Taskbar` |
-| `InactiveCaptionPolicy` | 非アクティブ窓クリック・foreground・最終窓状態 | `Observer`のtimer経由で`protocol.CaptionClick` |
-| `CandidateProtocol.cs` | 上記の各種候補結果 | Evidenceを含むv2 `CandidateEnvelope`、generation・sequence・発行順（`gate`） |
-| `ObserverHost.cs` | Envelope・制御コマンド | JSON直列化とstdoutへの書込み（`outputLock`） |
-| `src/main/observer.ts` | helperのstdout行 | `candidateV2`で形式を検証した`ObserverCandidate` |
-| `src/core/durable-coach.ts` | 検証済みCandidate | generation／sequence／transactionの重複を確認し、分類後の原子保存・通知判定 |
-| `src/core/detector.ts` | Candidateと`evidence.kind` | 0～2件の`Observation`（操作ID、入力由来、案内キー等） |
+| 現行コンポーネント            | 入力                                                                                                                       | 出力・役割                                                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `Observer.cs`                 | `OnMouse`（低レベルマウス）、`OnKey`（低レベルキー）、`OnEvent`（foreground／位置／移動開始・終了／最小化／破棄等）、timer | Win32で窓状態・押下対象等を読み、各Tracker/Observer/Policyの**具体的なメソッドを順序付きで呼ぶ**。状態キャッシュも保持 |
+| `CandidateTracker.cs`         | 入力、押下時の窓状態、WinEventによる状態変化・経過時間                                                                     | `WindowCandidate`／`PlacementResult`／`CompoundMoveResult`。最大化・復元／最小化、配置、ドラッグ・画面移動の候補       |
+| `WindowSwitchObserver/Policy` | キー・クリック・foreground・timer                                                                                          | 切替が成立すれば`protocol.Switch`                                                                                      |
+| `WindowCloseObserver/Policy`  | 閉じる入力・窓の存続/DESTROY・timer                                                                                        | 閉じる確証があれば`protocol.Close`                                                                                     |
+| `TaskbarInputObserver`等      | タスクバークリック／Win+数字・UIA snapshot・非同期確認                                                                     | `protocol.Taskbar`                                                                                                     |
+| `InactiveCaptionPolicy`       | 非アクティブ窓クリック・foreground・最終窓状態                                                                             | `Observer`のtimer経由で`protocol.CaptionClick`                                                                         |
+| `CandidateProtocol.cs`        | 上記の各種候補結果                                                                                                         | Evidenceを含むv2 `CandidateEnvelope`、generation・sequence・発行順（`gate`）                                           |
+| `ObserverHost.cs`             | Envelope・制御コマンド                                                                                                     | JSON直列化とstdoutへの書込み（`outputLock`）                                                                           |
+| `src/main/observer.ts`        | helperのstdout行                                                                                                           | `candidateV2`で形式を検証した`ObserverCandidate`                                                                       |
+| `src/core/durable-coach.ts`   | 検証済みCandidate                                                                                                          | generation／sequence／transactionの重複を確認し、分類後の原子保存・通知判定                                            |
+| `src/core/detector.ts`        | Candidateと`evidence.kind`                                                                                                 | 0～2件の`Observation`（操作ID、入力由来、案内キー等）                                                                  |
 
 C#側の`WindowCandidate`内部に古い`protocolVersion=1`表記があっても、外部送信前に`CandidateProtocol`が**v2へ変換する**。この内部型と通信形式を混同しない。
 
 ## どこで状態を保持しているか
 
-| 状態 | 現在の所有者 |
-| --- | --- |
-| Hook、窓状態のキャッシュ、入力ルーティング・取消順序、50ms poll | `Observer` |
-| 入力／ドラッグ／Win+↑・↓の候補、配置シリーズ、transaction採番 | `CandidateTracker`（配置は`PlacementPolicy`も状態を持つ） |
-| 背後窓captionのクリック候補 | `InactiveCaptionPolicy` |
-| 切替・閉じる・タスクバーの候補、専用timer/worker | 各専用Observer／Policy |
-| generation、送信sequence、Envelopeの発行 | `CandidateProtocol` |
-| stdout書込・helperの起動制御 | `ObserverHost` |
-| 子プロセス、行バッファ | `ObserverClient` |
-| 再配送排除、記録、通知の適格性 | `DurableCoach` |
+| 状態                                                            | 現在の所有者                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------- |
+| Hook、窓状態のキャッシュ、入力ルーティング・取消順序、50ms poll | `Observer`                                                |
+| 入力／ドラッグ／Win+↑・↓の候補、配置シリーズ、transaction採番   | `CandidateTracker`（配置は`PlacementPolicy`も状態を持つ） |
+| 背後窓captionのクリック候補                                     | `InactiveCaptionPolicy`                                   |
+| 切替・閉じる・タスクバーの候補、専用timer/worker                | 各専用Observer／Policy                                    |
+| generation、送信sequence、Envelopeの発行                        | `CandidateProtocol`                                       |
+| stdout書込・helperの起動制御                                    | `ObserverHost`                                            |
+| 子プロセス、行バッファ                                          | `ObserverClient`                                          |
+| 再配送排除、記録、通知の適格性                                  | `DurableCoach`                                            |
 
 ## 機能追加時に変更が広がりやすい理由
 

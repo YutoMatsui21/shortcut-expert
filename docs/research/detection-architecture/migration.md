@@ -4,15 +4,15 @@
 
 ## 進める順番
 
-| 順番 | 作業 | 終了条件 |
-| --- | --- | --- |
-| **1. テスト基準の固定** | [回帰条件](verification.md)を既存テストと照合。**配送/競合**・**全Candidate出口**の不足ケースを先に追加 | 本番の検出・分類経路に対する比較可能な入力列と、変更前の期待値がある |
-| **2. Candidate出力の統一** | `CandidateDraft`／`ICandidateSink`を導入し、Tracker戻り値と専用Observerからの候補を共通の送信窓口へ寄せる | すべての**外部v2 JSONL**が変更前と同等。既存`CandidateProtocol.gate`・`ObserverHost.outputLock`を維持 |
-| **3. transaction採番の分離** | `DetectionSession`／`ITransactionIds`へ統一。`NextTransaction`だけでなく、Tracker内の直接`++transaction`、配置・専用Observerの全callbackを移す | 同一generation内で衝突なし、取消による欠番は許容、旧世代無効化・重複排除が不変 |
-| **4. Handlerの境界を作る** | `WindowGesture`にTracker/Placementの共通状態を閉じ込め、InactiveCaption・Switch・Close・Taskbarの専用Observerを`IEvidenceHandler`へ適合。必要な`WindowFacts`抽出 | Handlerごとのpending・timeoutが独立。**旧Observerの配信順は暫定互換コードで残してよい**。JSONLと操作結果は変更しない |
-| **5. Router/調停へ切替** | `DetectionComposition`で登録し、`DetectionRouter`＋`ArbitrationPolicy`へ配信・Cancelを移す。専用timer/workerの結果もRouterを通す | **本番配送経路の競合回帰とstop/再起動の寿命テストが合格**。Observerから操作固有の呼び出しを除去。複合候補は単一Handlerが所有 |
-| **6. TypeScript Classifierを分割** | `classifyGesture`を公開入口として残し、Evidence種別ごとの純粋な分類関数へ抽出 | 同じCandidateで0～2件のObservation、W ID、shortcut、保存・通知結果が一致する |
-| **7. 仕上げ・拡張性の検証** | 一時的な互換コード/重複配信を除去し、実装・型・docs・テストを照合 | 既存Handlerを変更せず**新Handlerの登録だけで独立した検出経路を追加できる**。Windows CI・必要な自然入力受入を記録 |
+| 順番                               | 作業                                                                                                                                                             | 終了条件                                                                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **1. テスト基準の固定**            | [回帰条件](verification.md)を既存テストと照合。**配送/競合**・**全Candidate出口**の不足ケースを先に追加                                                          | 本番の検出・分類経路に対する比較可能な入力列と、変更前の期待値がある                                                         |
+| **2. Candidate出力の統一**         | `CandidateDraft`／`ICandidateSink`を導入し、Tracker戻り値と専用Observerからの候補を共通の送信窓口へ寄せる                                                        | すべての**外部v2 JSONL**が変更前と同等。既存`CandidateProtocol.gate`・`ObserverHost.outputLock`を維持                        |
+| **3. transaction採番の分離**       | `DetectionSession`／`ITransactionIds`へ統一。`NextTransaction`だけでなく、Tracker内の直接`++transaction`、配置・専用Observerの全callbackを移す                   | 同一generation内で衝突なし、取消による欠番は許容、旧世代無効化・重複排除が不変                                               |
+| **4. Handlerの境界を作る**         | `WindowGesture`にTracker/Placementの共通状態を閉じ込め、InactiveCaption・Switch・Close・Taskbarの専用Observerを`IEvidenceHandler`へ適合。必要な`WindowFacts`抽出 | Handlerごとのpending・timeoutが独立。**旧Observerの配信順は暫定互換コードで残してよい**。JSONLと操作結果は変更しない         |
+| **5. Router/調停へ切替**           | `DetectionComposition`で登録し、`DetectionRouter`＋`ArbitrationPolicy`へ配信・Cancelを移す。専用timer/workerの結果もRouterを通す                                 | **本番配送経路の競合回帰とstop/再起動の寿命テストが合格**。Observerから操作固有の呼び出しを除去。複合候補は単一Handlerが所有 |
+| **6. TypeScript Classifierを分割** | `classifyGesture`を公開入口として残し、Evidence種別ごとの純粋な分類関数へ抽出                                                                                    | 同じCandidateで0～2件のObservation、W ID、shortcut、保存・通知結果が一致する                                                 |
+| **7. 仕上げ・拡張性の検証**        | 一時的な互換コード/重複配信を除去し、実装・型・docs・テストを照合                                                                                                | 既存Handlerを変更せず**新Handlerの登録だけで独立した検出経路を追加できる**。Windows CI・必要な自然入力受入を記録             |
 
 **途中で意味を変えない**。Win+↓連続の統合、ウィンドウ対象の除外条件、既存protocol v2、検出対象8操作、複合0～2件の計数、通知条件は据え置く。製品上の意味を移動する必要が生じたら**別の仕様変更**として扱う。
 

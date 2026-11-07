@@ -26,7 +26,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
 
-操作ごとの成立条件は[operations/](operations/)、技術検証の原本は[research/](research/)を参照。**検出処理の現在の構成と、実装前のリファクタリング設計は[検出アーキテクチャ](research/detection-architecture/README.md)に分けて記載する。****W02（画面移動）とW03（最大化）／W07（四隅配置）の同時成立**は、1ジェスチャから異なる操作IDをそれぞれ1件採用し、同じIDを重複させない設計とする。実装・最終受入が完了した意味ではない（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）。1操作への複数代替キー案内は将来の[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)で扱う。
+操作ごとの成立条件は[operations/](operations/)、技術検証の原本は[research/](research/)を参照。**検出処理の現在の構成と、実装前のリファクタリング設計は[検出アーキテクチャ](research/detection-architecture/README.md)に分けて記載する。\*\*\*\*W02（画面移動）とW03（最大化）／W07（四隅配置）の同時成立**は、1ジェスチャから異なる操作IDをそれぞれ1件採用し、同じIDを重複させない設計とする。実装・最終受入が完了した意味ではない（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）。1操作への複数代替キー案内は将来の[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)で扱う。
 
 ## 3. 起動・画面・IPC
 
