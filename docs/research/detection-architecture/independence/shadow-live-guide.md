@@ -9,7 +9,7 @@ node scripts/probes/mouse-detection-shadow.mjs --build
 node scripts/probes/mouse-detection-shadow.mjs --observe-consented
 ```
 
-appはchrome/dia/obsidianの手動ラベル。実行ファイル名で対象アプリを推測しない。scenarioを選び、開始状態を作ってからARM。5秒以内に対象へ戻り、ARMED後に1操作。FINISH表示とhooksRemoved=trueを確認する。1試行20秒、session20分で自動停止。FINISH/STOPまたは窓を閉じてもhookを解除する。timeoutは成功ではない。
+appはchrome/dia/obsidianの手動ラベル。実行ファイル名で対象アプリを推測しない。scenarioを選び、開始状態を作ってからARM。5秒以内に対象へ戻り、ARMED後に1操作。FINISH表示とhooksRemoved=trueを確認する。1試行20秒、session20分で自動停止。FINISH/STOPまたはウィンドウを閉じてもhookを解除する。timeoutは成功ではない。
 
 | scenario                      | 物理操作                                               | 期待                        |
 | ----------------------------- | ------------------------------------------------------ | --------------------------- |

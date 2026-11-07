@@ -20,7 +20,7 @@ mock.module("electron", {
 });
 const { registerCoachIpc } = await import("../../../src/main/coach-ipc.ts");
 
-test("正規の要求だけ実行し、別窓・子frame・不正な引数を副作用の前に拒否する", async () => {
+test("正規の要求だけ実行し、別ウィンドウ・子frame・不正な引数を副作用の前に拒否する", async () => {
   // Only Electron's identity boundary is faked; registration and validation are production code.
   const mainFrame = {};
   const contents = Object.assign(new EventEmitter(), { id: 1, mainFrame });

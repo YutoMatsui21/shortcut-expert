@@ -10,14 +10,14 @@
 
 `SnapInvocationObserver`が既存Observerのhookを共用し、同じmessage threadの50ms timerで照会する。
 fixture起動ではtimerを開始せず、実入力payloadも読まない。停止でtimer・pending・キー状態を破棄する。
-Win+Zは入力時のforeground rootとprocessを保持する。desktop/taskbar、不可視・最小化・子窓、
+Win+Zは入力時のforeground rootとprocessを保持する。desktop/taskbar、不可視・最小化・子ウィンドウ、
 最大化ボタン/可変枠styleなし、権限不明・管理者・helper自身は対象外。
 追加Ctrl/Alt/Shift、repeat、開始時の押下、注入入力を除外し、注入後は全対象キー解放確認まで再採用しない。
-pendingは200ms以内に同じprocessの適格窓として再確認する。
+pendingは200ms以内に同じprocessの適格ウィンドウとして再確認する。
 
 hoverは物理cursorとPer Monitor V2 contextで対象rootを取得し、有効なTITLEBARINFOEX矩形を優先する。
 3ボタンすべてゼロ矩形の成功応答だけ、30ms期限のHTMAXBUTTON照会へ進む。
-不正矩形、DPI失敗、timeout、対象/process/窓外形の変化はunknown。
+不正矩形、DPI失敗、timeout、対象/process/ウィンドウ外形の変化はunknown。
 ボタンを押したままの時間、注入mouseによる位置、物理mouse移動を一度も観測していない起動状態は採用しない。
 注入mouse後は物理移動が必要。入力・座標は一時状態としてのみ使い、通信・保存しない。
 
@@ -28,7 +28,7 @@ hoverにはEnableSnapAssistFlyout（DWORD 0/1）も必要。欠落・型不一�
 poll間に終わる退出・再入場は分離できない。
 
 新variant `snap-invocation/snap-invocation-v1`は由来・route、適格性・対象照合、設定判定、
-ボタンAPI・滞在時間・入力経過時間・対象monitorを送る。窓handle/process IDは送らない。
+ボタンAPI・滞在時間・入力経過時間・対象monitorを送る。ウィンドウhandle/process IDは送らない。
 既存5操作と同じtransaction採番器と最終sequence採番器を共有し、v1へは送らない。
 Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけをW08/Win+Zへ変換する。
 既存のSQLite日別保存、3学習状態、pause/stop、保存成功後通知と再送防止へ接続する。
@@ -48,7 +48,7 @@ Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけ�
 
 2026-10-23のローカル検証：型検査・helper/Electron build、unit 240件、native 6件（本番C# policy 127ケース）、
 通常版と修正後同梱版の隔離smokeが成功。押下中の退出で再入場できない不具合は回帰assert失敗→修正後成功を確認した。
-専用ローカルレビューのP2 3件（最終設定不成立時の誤latch、対象外の別窓への退出、押下中の退出）を修正し、
+専用ローカルレビューのP2 3件（最終設定不成立時の誤latch、対象外の別ウィンドウへの退出、押下中の退出）を修正し、
 全体再レビューと最後の差分に対する重点再レビューを実施した。最終重点レビューの追加指摘は0。
 全unitの初回は既存JSON保存試験1件が保存エラーとなったが、単独実行と全240件再実行は成功した。原因は未特定。
 同梱版全347ファイルのhashはGit対象外の`.tools/issue-34-build-hashes.json`に記録する。
@@ -58,16 +58,16 @@ Mainが必須fieldを検査し、Coreが既知ON・確証済みの入力だけ�
 2026-10-24に本人が自然入力試験へ同意。`--w08-natural-acceptance`は同梱版と新しい空の隔離userDataを必須とし、
 通常のObserver/DurableCoach/SQLite/OS通知adapterを使用する。人工候補は注入しない。起動時・試行間は観測停止。
 操作パネルのARMからFINISH/CANCELまでだけ観測し、1試行45秒、session20分で終了する。
-通常画面の開始操作からは観測を開始できない。パネルはhookや人工入力を持たず、別processに標準captionの対象窓を用意する。
+通常画面の開始操作からは観測を開始できない。パネルはhookや人工入力を持たず、別processに標準captionの対象ウィンドウを用意する。
 
 ```powershell
 node scripts/acceptance/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --compile-only
-# 本人同意後だけ。ARM後は本人が対象窓で1操作し、FINISHを押す。
+# 本人同意後だけ。ARM後は本人が対象ウィンドウで1操作し、FINISHを押す。
 node scripts/acceptance/w08-natural-acceptance.mjs --package-dir release/issue-34-natural --observe-consented
 ```
 
 生成先は`.tools/validation/w08-natural/session-*`。同梱全体hash、panelソースhash、本人が指定する試行の期待値と
-W08の日別集計の差分、通知要求数、取消/timeout・保存障害等による無効判定を保持する。キー列・入力時刻列・座標・窓名・他アプリ画像は保存しない。
+W08の日別集計の差分、通知要求数、取消/timeout・保存障害等による無効判定を保持する。キー列・入力時刻列・座標・ウィンドウ名・他アプリ画像は保存しない。
 keyはmouse0/key1、mouseはmouse1/key0、負例は両0が正解。学習中・通知有効のmouseだけ通知要求1を期待し、
 習得済み/対象外/通知pauseでは0を期待する。通知要求をOS可視表示の合格へ読み替えない。
 キャンセル・timeoutは機能確認の合格に数えず、未完了として残す。予想外の結果も除外せず、実施結果を記録する。

@@ -45,7 +45,7 @@ flowchart TD
 | Handler             | 現在の処理をまとめる単位                                                            | 最終候補                                 |
 | ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
 | **WindowGesture**   | `CandidateTracker`＋配置Policy：最大化、復元/最小化、半分・四隅、ドラッグ、画面移動 | `window` / `placement` / `compound-drag` |
-| **InactiveCaption** | 非アクティブ窓の最大化・最小化ボタン／ボタン不明fallback                            | `caption-click`                          |
+| **InactiveCaption** | 非アクティブウィンドウの最大化・最小化ボタン／ボタン不明fallback                    | `caption-click`                          |
 | **WindowSwitch**    | クリック切替、Alt+Tabの確定                                                         | `window-switch`                          |
 | **WindowClose**     | 閉じるボタン、Alt+F4とDESTROY確認                                                   | `window-close`                           |
 | **Taskbar**         | タスクバー・Win+数字とslot照合                                                      | `taskbar-input`                          |
@@ -118,7 +118,7 @@ Handlerの状態ビューは、例えば「候補なし／並行追跡中／専�
 | **非アクティブcaption**  | ボタン既知なら専用候補が通常切替・状態変更を抑制。**ボタン不明fallbackはWindowGestureのドラッグ追跡と並行可能**。MOVESIZESTARTではcaptionを取消・dragへ譲る |
 | **通常マウス入力**       | Trackerの入力補助 → Taskbar → WindowSwitch → WindowClose → WindowGestureの解放/移動。左押下は対象確認後、caption専用経路が成立すれば切替/閉じるを取消       |
 | **キー入力**             | captionと不明マウス候補を取消 → Taskbar → WindowSwitch → WindowClose → WindowGesture。**Win+数字はTaskbar専属**                                             |
-| **foreground/WinEvent**  | caption・closeの保留を先に整合 → WindowGestureの前景/窓状態 → WindowSwitchの確認など、既存の早期return・取消順序を維持                                      |
+| **foreground/WinEvent**  | caption・closeの保留を先に整合 → WindowGestureの前景/ウィンドウ状態 → WindowSwitchの確認など、既存の早期return・取消順序を維持                              |
 | **MOVESIZESTART/END**    | startでcaption取消・switch取消、WindowGestureがドラッグを所有。endで最終結果をまとめ**1Candidate**を提案し、派生復元や途中配置を別計上しない                |
 | **timer・非同期結果**    | 既存の個別timer/worker・検出期限を維持。結果は**元のmessage-loop thread**でRouterへ返し、generationを再確認。専用timerは対象Handlerへだけ配送               |
 | **Stop/再起動/表示変更** | 既存のCancel範囲・Reset順・旧世代無効化を維持。例外時は誤採用せずfail closed。無関係なpendingまで無差別に消さない                                           |

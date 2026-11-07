@@ -24,7 +24,7 @@
 
 新たに最大化A→最大化BをW02のみと評価できる。配置済み終端も情報上は評価可能だが、W02+W06は既存契約外で採用しない。不正な既存複合証拠をW02だけに部分採用する変更も別の仕様判断。
 
-未解決：MOVESIZEはmove/resize共通。HTCLIENTの独自タイトルバーで、resize開始を確実に除外できるか。MonitorFromWindowのmonitorは最大交差面積であり、カーソルmonitorとは異なる。解放先と結果monitor照合を保つと、大きな跨ぎ窓は意図的に見逃し得る。追加実機検証が必要。
+未解決：MOVESIZEはmove/resize共通。HTCLIENTの独自タイトルバーで、resize開始を確実に除外できるか。MonitorFromWindowのmonitorは最大交差面積であり、カーソルmonitorとは異なる。解放先と結果monitor照合を保つと、大きな跨ぎウィンドウは意図的に見逃し得る。追加実機検証が必要。
 
 ### B
 

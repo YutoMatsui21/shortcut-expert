@@ -77,7 +77,7 @@ session19の終了はcode=null／SIGTERM、最終Main statusはCLOSED/error=true
 | 5    | Explorer実端解放、learning／learning      | 同              | 1件、2行     |
 | 6    | Chrome上部中央のSnap Layout選択           | 0               | 0            |
 
-全6件valid/completed、期限切れ・中断・日付変更なし。通知可視結果と窓の結果は本人の一括報告で期待一致。Main CLOSED/error=false、exit code0、read-only SQLite integrity=ok、build hash不変。停止後の当該app／helper／panelの残存0も確認した。session19の異常終了原本は消さず、今回の正常終了で以前の原因が判明したとは扱わない。
+全6件valid/completed、期限切れ・中断・日付変更なし。通知可視結果とウィンドウの結果は本人の一括報告で期待一致。Main CLOSED/error=false、exit code0、read-only SQLite integrity=ok、build hash不変。停止後の当該app／helper／panelの残存0も確認した。session19の異常終了原本は消さず、今回の正常終了で以前の原因が判明したとは扱わない。
 
 今回で早期preview解放と代表状態混在の未達は解消したが、#47全体の同一最終buildによる基本16操作・重要境界・pause/stop・UI/環境条件は未完了。以前のbuildの成功を転記せず、必要な影響範囲と残る受入を次にまとめて整理する。6d82358のwindows-qualityはSUCCESS。今回の文書・証拠のみの追記は本番動作変更がなく、専用再レビューとbuild再作成を省略する。
 
@@ -98,18 +98,18 @@ session21と同じ製品revision `6d82358`／同じpackage manifest、通常obse
 同じ製品6d82358・同じpackage hash、診断OFF。`../evidence/issue-47/session23-status.json` 等に原本を保持。20件全てvalid/completed、記録照合18/20、通知要求照合19/20。
 
 - P03m/P03kの明確な未配置起点での再試行は各W03 mouse/key1、mouse通知1／key通知0。本人も今回この2件の相違を報告しておらず、他は期待どおりと報告。以前の起点unknown・余分操作の原本は書き換えない。
-- S03-double、S04-double、通常／最大化起点の最小化、連続Win+Downは各1件で期待一致。11負例（Alt+Tab取消／元窓／同窓／tab切替、追加修飾、移動戻り／取消、配置取消、tab閉鎖、Win+Z、Win+Tab）は全て候補・記録・通知0。
+- S03-double、S04-double、通常／最大化起点の最小化、連続Win+Downは各1件で期待一致。11負例（Alt+Tab取消／元ウィンドウ／同ウィンドウ／tab切替、追加修飾、移動戻り／取消、配置取消、tab閉鎖、Win+Z、Win+Tab）は全て候補・記録・通知0。
 - S03-dragは候補0・記録0・通知要求0。本人は通知なしと報告。実際の最大化結果と解放位置は質問中であり、上端2px条件だけが原因と推測して変更しない。
-- S01-multiも候補0・記録0・通知0。本人の「それ以外は期待どおり」は窓の実結果の報告と分け、機械上の記録未達を隠さない。終了時に開始と異なる通常窓が前面になったか質問中。
+- S01-multiも候補0・記録0・通知0。本人の「それ以外は期待どおり」はウィンドウの実結果の報告と分け、機械上の記録未達を隠さない。終了時に開始と異なる通常ウィンドウが前面になったか質問中。
 - 正常終了code0、Main CLOSED/error=false、read-only DB integrity=ok、hash不変、自身のapp/helper/panel残存0。パネルの初期確認欄は変更せず、一括本人報告はparticipant別添へ残す。
 
 この時点で製品修正・再buildをしない。2件の実操作条件を確認し、既存診断で区別できる失敗は同じbinaryの診断ONで確認する。既存診断だけで区別できないときだけ、必要な失敗境界の有界カテゴリを追加する。
 
-本人の追加回答：S03-dragは上端より手前の最大化previewで解放し、窓自体は最大化した。S01-multiも開始時と異なる通常窓が最後に前面になった。両方とも実結果に対する記録未達であり、操作結果不明や同窓戻りへ付け替えない。
+本人の追加回答：S03-dragは上端より手前の最大化previewで解放し、ウィンドウ自体は最大化した。S01-multiも開始時と異なる通常ウィンドウが最後に前面になった。両方とも実結果に対する記録未達であり、操作結果不明や同ウィンドウ戻りへ付け替えない。
 
 Microsoft SystemParametersInfoWのSPI_GETMOUSEDOCKTHRESHOLDはmouseのmonitor端docking閾値、SPI_GETDOCKMOVINGは上端・左右端を対象とする。上端にも公開getterの利用根拠がある一方、完全なWin11 preview領域やhysteresisを返すものではない。今回は先に採否を変えない診断を追加し、2px gate以外の起点／release／foreground不整合を区別する。
 
-session22を保存した3618b00以降の診断変更：上端最大化のrelease有無・monitor/work・起点・foreground・X範囲・上端距離の固定区分と、W01のAlt開始・Tab・解放・前面確認・取消／期限／最終結果・ターゲット適格性の固定理由を追加。既存の明示的診断起動だけで有効、通常起動はdelegate=null。判定・timeout・対象照合・allowlistは変更しない。HWND/PID/座標/窓名/キー列/時刻列を新たに保存しない。Native enumとMain allowlistを同期し、1000上限を維持する。
+session22を保存した3618b00以降の診断変更：上端最大化のrelease有無・monitor/work・起点・foreground・X範囲・上端距離の固定区分と、W01のAlt開始・Tab・解放・前面確認・取消／期限／最終結果・ターゲット適格性の固定理由を追加。既存の明示的診断起動だけで有効、通常起動はdelegate=null。判定・timeout・対象照合・allowlistは変更しない。HWND/PID/座標/ウィンドウ名/キー列/時刻列を新たに保存しない。Native enumとMain allowlistを同期し、1000上限を維持する。
 
 診断追加の検証：型検査、関連unit32件、Native全7件（C#本番policy assertions626）、helper build、同梱base smoke、保存受入17件が成功。専用レビューは3618b00以降の全tracked/untracked差分を4観点で確認し、対応が必要な指摘なし。保存受入は初回にCLI引数形式を誤り既定pathのENOENTで起動前失敗、正しい `--package-dir=.../win-unpacked` で同一packageを再実行して成功した。これを製品の保存障害とは扱わない。NU1900警告は継続。
 
@@ -121,7 +121,7 @@ Native全473ファイル一致、package全550ファイルを `../evidence/issue
 
 本人は「Chromeは通知なし・Explorerは通知あり」と再回答し、Chromeは端、Explorerは手前previewで離したと思うと報告。機械の通知要求の行対応とは逆で、理由未確定。application欄・原本・本人報告を入れ替えず保持する。本人申告を機械要求の表示確認に自動対応させず、OS Toastの成功はこの比較では確定しない。
 
-複数TabはChrome（TabDown4）／standard（TabDown2）ともW01 key1・通知0。KnownStagingを通過しForegroundConfirmed／Completedを各1観測。直前session23の別窓への実切替で候補0となった原因は今回再現せず、診断追加だけで修正されたとは扱わない。
+複数TabはChrome（TabDown4）／standard（TabDown2）ともW01 key1・通知0。KnownStagingを通過しForegroundConfirmed／Completedを各1観測。直前session23の別ウィンドウへの実切替で候補0となった原因は今回再現せず、診断追加だけで修正されたとは扱わない。
 
 本人完了報告後もパネルはIDLEだったため、観測停止を確認して既存end制御を送った。正常終了code0／Main CLOSED/error=false、read-only DB integrityとhash不変を確認する。試行・診断・確認欄の原本は変更しない。
 
@@ -145,7 +145,7 @@ Native全473ファイル一致、package全550ファイルを `../evidence/issue
 
 f22db85の同一最終package・診断OFF。全20件valid/completed、記録・通知要求20/20一致、本人は全て期待どおりと報告。[受入一覧](final-build-acceptance-20261031.md)へ8入力対と追加4条件、静的環境、read-only DB、画面確認の限界をまとめた。通常終了code0・DB integrity=ok・hash不変・当該プロセス残存0。
 
-一覧は実セッションの窓を最小化から復帰してUIAで8行の値を確認。記録画面の本人報告はW番号・key/total表示の対応が不明で未確定。source recordsReadModelと同一renderer fixtureは全値一致するが、最終レビューはそれでは実DB→本番Main/IPC→記録UIの受入を代替しないとP1指摘。#47の残る必須ゲートとして維持する。本人の画像保存許可後に、隔離した元DB複製と変更していない製品パッケージで既存UI試験を実行する準備を済ませた。
+一覧は実セッションのウィンドウを最小化から復帰してUIAで8行の値を確認。記録画面の本人報告はW番号・key/total表示の対応が不明で未確定。source recordsReadModelと同一renderer fixtureは全値一致するが、最終レビューはそれでは実DB→本番Main/IPC→記録UIの受入を代替しないとP1指摘。#47の残る必須ゲートとして維持する。本人の画像保存許可後に、隔離した元DB複製と変更していない製品パッケージで既存UI試験を実行する準備を済ませた。
 
 P1対応：本人の明示画像許可後、元session26のSQLite一式のbyte一致複製を使い、同じf22db85の本番Main/Store/Worker/IPC/画面で16条件を実施した。Nativeのみfixtureで実入力hookなし、fake Main handlers／合成countsなし。全16条件成功・正常終了・元DB/package不変・全8行のpublic modelと欠測条件一致を確認。初回1条件のy差、後検査のnull-prototype型差、補足UIA保持fixtureの制御終了はそれぞれ原本／説明を保持する。16枚はローカル確認のみで公開しない。[P1の根拠と対応](final-build-acceptance-20261031.md#p1対応元db複製を本番mainipcで確認)を再レビュー対象にする。
 

@@ -1,6 +1,6 @@
 # Windows標準通知
 
-**責務**：保存済みの適格なマウス操作をWindows標準トーストで案内し、通知センターからの起動・既存窓の復元を安全に扱う。通知条件の正本は[製品要件](../ui-requirements.md)、画面の再表示・終了は[窓のライフサイクル](window-lifecycle.md)。
+**責務**：保存済みの適格なマウス操作をWindows標準トーストで案内し、通知センターからの起動・既存ウィンドウの復元を安全に扱う。通知条件の正本は[製品要件](../ui-requirements.md)、画面の再表示・終了は[ウィンドウのライフサイクル](window-lifecycle.md)。
 
 ## 1. 発行までの流れ
 
@@ -21,13 +21,13 @@
 
 - 通知イベントを受けるため、Mainで強参照を**最大256件・60秒**まで保持。これは通知を間引く上限ではない。
 - 結果不明のまま期限・上限に達した参照は`unknown`として解放。`timedOut`だけで即時解放せず、click／取消／failedや保持期限に応じてlistenerを整理する。
-- アプリ側で通知履歴や操作履歴を保存せず、旧独自通知窓は通常経路へ接続しない。旧経路は隔離JSONの回帰用に限る。
+- アプリ側で通知履歴や操作履歴を保存せず、旧独自通知ウィンドウは通常経路へ接続しない。旧経路は隔離JSONの回帰用に限る。
 
 ## 3. クリック時の起動・復元
 
 - 起動中：通知click、トレイ、`second-instance`を共通の`showCoach`に集約し、**同じウィンドウ**をrestore／show／focusする。観測を二重開始したり停止状態を勝手に解除しない。
-- 完全終了後：通知センターからのcold起動では一覧画面を表示し、通常の起動経路で計測を一度だけ開始する。窓の準備前に届いた表示要求は保持して後で適用する。
-- Windowsでは`single-instance lock`取得後、`Notification.handleActivation`を窓生成より前に登録。通知を表示しない`Notification`インスタンスを保持し、COM presenter初期化を始める。ただし**OS側の登録完了との競合は未検証**。
+- 完全終了後：通知センターからのcold起動では一覧画面を表示し、通常の起動経路で計測を一度だけ開始する。ウィンドウの準備前に届いた表示要求は保持して後で適用する。
+- Windowsでは`single-instance lock`取得後、`Notification.handleActivation`をウィンドウ生成より前に登録。通知を表示しない`Notification`インスタンスを保持し、COM presenter初期化を始める。ただし**OS側の登録完了との競合は未検証**。
 - 既存の`appId`（`local.window-shortcut-coach`）、Start Menu shortcut、ToastActivatorCLSID、`userData`との互換を維持する。新規CLSIDの安易な発行や、表示名変更に伴う保存先切替をしない。
 
 API根拠：[Electron Notification](https://github.com/electron/electron/blob/v44.7.0/docs/api/notification.md)、[Windows presenter](https://github.com/electron/electron/blob/v44.7.0/shell/browser/notifications/win/notification_presenter_win.cc)。

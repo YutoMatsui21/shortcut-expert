@@ -26,7 +26,7 @@
 | #19   | #19を実装する     | 01a156a6-66e1-7972-a617-b540877534a8 | [#62](https://github.com/YutoMatsui21/shortcut-expert/pull/62) |
 | #20   | #20を実装する     | 01a156c7-3bc6-75f2-a7e3-2cbaeef81841 | [#63](https://github.com/YutoMatsui21/shortcut-expert/pull/63) |
 
-Grafana Lokiの `grafanacloud-logs`、`service_name="codex-app-server"` を使用し、会話履歴の全ターンと照合した。今回の固定窓は**2026-10-18 22:20〜2026-10-20 10:20 JST（36時間）**。5件とも開始から最終報告までこの窓に入る。前回は2026-10-18 02:35〜10-19 14:35 JST（36時間）。今回の分析チャットは除外した。
+Grafana Lokiの `grafanacloud-logs`、`service_name="codex-app-server"` を使用し、会話履歴の全ターンと照合した。今回の固定ウィンドウは**2026-10-18 22:20〜2026-10-20 10:20 JST（36時間）**。5件とも開始から最終報告までこのウィンドウに入る。前回は2026-10-18 02:35〜10-19 14:35 JST（36時間）。今回の分析チャットは除外した。
 
 - トークン：`codex.sse_event` / `event_kind="response.completed"` の各countを合計。
 - コマンド・非0終了：会話履歴のcommandExecution。包みのfunctions.execを重ねて数えない。
@@ -232,7 +232,7 @@ sum by (conversation_id) (
 
 cached_token_count / output_token_count / reasoning_token_countも同様。非キャッシュはinputとcachedの差分。応答件数はunwrap以降を外してcount_over_timeを使う。
 
-ツール失敗の例（range窓は冒頭の固定36時間）：
+ツール失敗の例（rangeウィンドウは冒頭の固定36時間）：
 
 ```logql
 {service_name="codex-app-server"}

@@ -99,7 +99,7 @@ Chromeの最小化はclicks-and-negatives index3でnormal→minimized・Standard
 
 ともに物理解放・normal→minimized・API取得・同process、非注入・非競合を確認。背後条件の0は通常Trackerの押下時foreground照合に由来する。製品には別途InactiveCaptionPolicyがあるため、この0を製品の最小化不具合と扱わない。製品全経路を含めない比較境界を実機でも確認した。
 
-原試行final-checks index3には押下時foregroundが残っていないため、同じ原因だったとは断定しない。追加の成功を使って過去の未確定な見逃しをノイズへ変更しない。単クリック最小化を2クリック方式へ置換すると、前面窓でも拾えなくなることは確認できた。
+原試行final-checks index3には押下時foregroundが残っていないため、同じ原因だったとは断定しない。追加の成功を使って過去の未確定な見逃しをノイズへ変更しない。単クリック最小化を2クリック方式へ置換すると、前面ウィンドウでも拾えなくなることは確認できた。
 
 全72行のtrialでhooksRemoved=true。apiAvailable=falseは操作前manual-stopの1行のみ。人工試験と物理試験は別の証拠であり、この件数は検出精度の統計ではない。
 

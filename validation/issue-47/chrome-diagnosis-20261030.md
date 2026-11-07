@@ -9,9 +9,9 @@
 - trial7 P04m：最大化→通常・非arrangedのrestore候補1。input-recentだがorigin/routeがunknown。Core分類0、W04記録0、通知0。
 - trial15 P11m：候補0、W11記録0、通知0。
 - trial20 S04-double：trial7と同じrestore候補1・由来不明、分類・記録・通知0。
-- 本人は上記3件で窓自体は期待どおり復元／閉鎖したと明示。
+- 本人は上記3件でウィンドウ自体は期待どおり復元／閉鎖したと明示。
 - trial9 P06m-left：本人は2回つかみ損ねたと申告。機械側はplacement候補1、W06 mouse+1、通知1で、他操作の余分な計上は0。失敗入力がなかったとは主張しない。
-- trial17/18：P11の後に追加したChromeのP12m/P12k。trial17は本人が見えているChrome窓を直接clickしたと明示。W01 mouse+1と通知1はその操作に一致するが、タスクバーW12の試行としては手順不一致であり成功に付け替えない。trial18はW12 key+1、通知0だがパネルslot1と不一致。実際の数字は未回答で、追加試行の番号確認を保留する。基本W12のtrial1/2を無効化しない。
+- trial17/18：P11の後に追加したChromeのP12m/P12k。trial17は本人が見えているChromeウィンドウを直接clickしたと明示。W01 mouse+1と通知1はその操作に一致するが、タスクバーW12の試行としては手順不一致であり成功に付け替えない。trial18はW12 key+1、通知0だがパネルslot1と不一致。実際の数字は未回答で、追加試行の番号確認を保留する。基本W12のtrial1/2を無効化しない。
 - 終了code0、read-only integrity_check=ok、build hash不変、起動した同梱プロセス残存0。現在のPR head CIは成功。
 
 ## 境界と次の検証
@@ -24,7 +24,7 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 
 ## 既存診断の結果（session13）
 
-同じ製品revision `b80e645`・同じhash、Native診断ON。原本は `../evidence/issue-47/session13-*.json`。panelは全件standardだが、本人は3件ともChrome窓を操作したと明示。`application`は手動結果の分類メタデータで、検出器選択には使っていない。原本は変更せず、別添でChromeとして区別する。ラベルの誤りだけを理由に操作を繰り返さない。
+同じ製品revision `b80e645`・同じhash、Native診断ON。原本は `../evidence/issue-47/session13-*.json`。panelは全件standardだが、本人は3件ともChromeウィンドウを操作したと明示。`application`は手動結果の分類メタデータで、検出器選択には使っていない。原本は変更せず、別添でChromeとして区別する。ラベルの誤りだけを理由に操作を繰り返さない。
 
 - P04m：RawButton1→FinalOther1、TitleReadOk1／TitleOutsidePoint1。対象はforeground一致。復元候補1だが由来・route不明、件数・通知0。本人の無駄なクリックは別添で注記し、MouseDown3／TargetMissing2のどれだったかは推測しない。余分な計上は0。
 - S04-double：RawCaption2→FinalOther2、TitleReadOk2／TitleOutsidePoint2、HitRoot2。復元候補1だが由来・route不明、件数・通知0。
@@ -35,7 +35,7 @@ W04は結果観測までは成立し、入力の意味付けの境界で失敗�
 
 ## 追加する診断と次の仮説判別
 
-新しい根拠なく採否を緩和しない。WindowCaption.Hitの各戻りを変えず、title geometryのvalid／fallback／invalid、無効状態、ヒットと矩形の不一致を固定集計する。rootのmin/max/closeも固定分類する。閉鎖側は既存CloseReasonとgeometryの固定理由を同じ世代付きwindow診断へW11 prefixで投影する。Root/closeのWindows読取り回数・順序は維持し、座標・矩形・状態値・HWND・窓名・時刻列は保存しない。
+新しい根拠なく採否を緩和しない。WindowCaption.Hitの各戻りを変えず、title geometryのvalid／fallback／invalid、無効状態、ヒットと矩形の不一致を固定集計する。rootのmin/max/closeも固定分類する。閉鎖側は既存CloseReasonとgeometryの固定理由を同じ世代付きwindow診断へW11 prefixで投影する。Root/closeのWindows読取り回数・順序は維持し、座標・矩形・状態値・HWND・ウィンドウ名・時刻列は保存しない。
 
 通常--observeでは新しいclose診断callbackも設定しない。既存のclose専用validationモードは保持。すべて1カテゴリ上限1000・start世代reset・Takeで退役する集計へ入り、停止後や次の試行へ流用しない。
 
@@ -60,7 +60,7 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 
 修正前の回帰試験は、captionヒット2が-1に捨てられるassertで失敗した。修正後は不正矩形＋明示的root判定を実CandidateTrackerのrestore2経路へ通し、Main／Core／SQLiteにも接続してW04を確認する。空／不正close矩形のroot証拠有無、client/tab/resize/不明、root/process/thread不一致、有効矩形の無効状態・範囲外を回帰試験にする。旧「不正矩形＋root min」棄却の期待は、今回確証した明示的hit保持へ変更し、root不明時の棄却を別途維持する。受入期待値を実装都合で弱めたものではない。
 
-修正後の自然入力は未実施。3件の再確認に加え、窓が残る複数タブのtab×でW11誤計上0を同じバッチで確認する。
+修正後の自然入力は未実施。3件の再確認に加え、ウィンドウが残る複数タブのtab×でW11誤計上0を同じバッチで確認する。
 
 修正のローカル検証：関連unit34件、Native全7件、型検査、helper buildが成功。専用ローカルレビューは4観点で指摘なし。Nativeの新診断キーは114個でC#/TS一致。初回の同梱先 `release/issue-47-chrome-hit-fixed` はelectron展開後のフォルダーrenameでEPERMとなり、未完成のため受入に使わない。ACL等を変えず、別出力先で同じコードを同梱する。
 
@@ -73,13 +73,13 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 - P04m：max-button/mouseのrestore候補1、W04 mouse+1、対応する通知要求1。
 - S04-double：caption-double-click/mouseのrestore候補1、W04 mouse+1、対応する通知要求1。
 - P11m：window-close候補1、W11 mouse+1、対応する通知要求1。
-- N11-tab原本：window-close候補1、W11 mouse+1、通知1で、負例の期待値はfalse。本人は「2つのChrome窓を開き、1つの窓の右上×で窓自体を閉じた」と明示。これは予定したtab-only操作と異なるため、原本を変えず別添で実操作W11の正しい反応と区別する。誤通知バグとして通知を抑制せず、N11-tabの負例成功にも付け替えない。
+- N11-tab原本：window-close候補1、W11 mouse+1、通知1で、負例の期待値はfalse。本人は「2つのChromeウィンドウを開き、1つのウィンドウの右上×でウィンドウ自体を閉じた」と明示。これは予定したtab-only操作と異なるため、原本を変えず別添で実操作W11の正しい反応と区別する。誤通知バグとして通知を抑制せず、N11-tabの負例成功にも付け替えない。
 - 本人は全件完了とtrial4の通知表示を報告。trial1〜3の目視確認は新たな個別申告として補完しない。
 - 終了code0、read-only integrity_check=ok、hash不変、起動した同梱プロセス残存0。最新製品headのwindows-quality／change-scopeは成功。
 
-根拠は製品要件W11の「閉じるボタンと対象窓の破棄」と、学習中の確証済みmouse操作の保存後通知。Chrome窓がもう1つ開いていても、閉じた対象窓のW11成立は変わらない。N11-tabで意図した操作は、**1つのChrome窓にCtrl+Tで2つ以上のタブを作り、ページ名の横の小さい×を押して1タブだけ閉じ、窓は残す**こと。窓右上の×は使わない。窓破棄が起きないのでW11を記録・通知しない負例である。
+根拠は製品要件W11の「閉じるボタンと対象ウィンドウの破棄」と、学習中の確証済みmouse操作の保存後通知。Chromeウィンドウがもう1つ開いていても、閉じた対象ウィンドウのW11成立は変わらない。N11-tabで意図した操作は、**1つのChromeウィンドウにCtrl+Tで2つ以上のタブを作り、ページ名の横の小さい×を押して1タブだけ閉じ、ウィンドウは残す**こと。ウィンドウ右上の×は使わない。ウィンドウ破棄が起きないのでW11を記録・通知しない負例である。
 
-次は同じ製品build・診断OFFで、N11-tabと、タブ切替／同窓click／Alt+Tab取消・元窓／配置drag取消／Win+Z／Win+Tabの8負例をまとめて行う。成功した修正3件は繰り返さない。この追記は文書・証拠のみなのでSkillの例外で追加コードレビュー・再build・製品自動試験は省略する。
+次は同じ製品build・診断OFFで、N11-tabと、タブ切替／同ウィンドウclick／Alt+Tab取消・元ウィンドウ／配置drag取消／Win+Z／Win+Tabの8負例をまとめて行う。成功した修正3件は繰り返さない。この追記は文書・証拠のみなのでSkillの例外で追加コードレビュー・再build・製品自動試験は省略する。
 
 ## 重要負例の結果（session16）
 
@@ -91,11 +91,11 @@ close専用ルートは、矩形が空／不整合のときだけrootへ10ms上�
 
 Nativeへ学習状態は送らず、状態による保存・通知適格性は共通Coreの責務である。自然入力では同じbuildで、最大化4組（L/L、L/M、M/L、M/E）、四隅4組（L/L、L/E、E/L、E/M）を代表として行い、両操作・全3状態が混ざった際の2行／片方／通知なしと、保存2件を確認する。L=learning、M=mastered、E=excluded。全9組の自然入力を行ったという主張にはしない。全9組のfixtureと代表自然入力の根拠を区別して受入へ渡す。
 
-本人は後続の保存確認取消用の保存不要窓を用意できると回答した。上記8組とN11-dialog（例：新規ペイント画像に線を描いてから、ARM後Alt+F4→保存確認をキャンセル）を次の1バッチで確認する。準備の描画は観測停止中に行い、画像や文字を観測データへ保存しない。窓は残り、N11-dialogでは記録・通知0が期待値。pause／全停止と最終基本マトリクスは別途残す。
+本人は後続の保存確認取消用の保存不要ウィンドウを用意できると回答した。上記8組とN11-dialog（例：新規ペイント画像に線を描いてから、ARM後Alt+F4→保存確認をキャンセル）を次の1バッチで確認する。準備の描画は観測停止中に行い、画像や文字を観測データへ保存しない。ウィンドウは残り、N11-dialogでは記録・通知0が期待値。pause／全停止と最終基本マトリクスは別途残す。
 
 製品コード・同梱binaryは変更しない。追加の共通状態fixtureを含むcompound suite49件と型検査が成功。追加試験は既存の成立する契約の網羅であり、修正前の失敗を作るテストファーストの対象ではない。保存失敗・再送・停止等の既存ケースは維持する。
 
-状態マトリクスの専用ローカルレビューは4観点で指摘なし。製品コード・binaryの再buildは行っていない。環境の補助記録 `../evidence/issue-47/environment-versions-20261030.json` はmanifest-aware PowerShellのWindows version 10.0.26340.0と、既知のchrome processのProductVersion集合156.0.8078.74だけを取得した。process ID・path・窓情報は保存せず、個別試行窓と実行ファイルの対応を確証したとは扱わない。旧WinForms panelのosBuild9200はlegacy manifest値として実OS buildの根拠に使わない。
+状態マトリクスの専用ローカルレビューは4観点で指摘なし。製品コード・binaryの再buildは行っていない。環境の補助記録 `../evidence/issue-47/environment-versions-20261030.json` はmanifest-aware PowerShellのWindows version 10.0.26340.0と、既知のchrome processのProductVersion集合156.0.8078.74だけを取得した。process ID・path・ウィンドウ情報は保存せず、個別試行ウィンドウと実行ファイルの対応を確証したとは扱わない。旧WinForms panelのosBuild9200はlegacy manifest値として実OS buildの根拠に使わない。
 
 ## 状態混在と閉鎖取消の自然入力（session17）
 
@@ -109,11 +109,11 @@ Nativeへ学習状態は送らず、状態による保存・通知適格性は�
 
 C03が全状態で正常な一方、C07はCoreの学習状態判定以前に候補がない。保存／通知適格性の変更では直らない。Native診断OFFなので、起点、入力対応、終端形状、解放位置、構成整合のどの条件が失敗したかは未確定。本人へ、実際のquarter成立と各試行前の準備を質問中。回答前にどちらかを原因と断定しない。
 
-次の試行は同じbinary・既存診断ONで、C07-two-displaysのL/LだけをChrome／Explorer各1回とする。開始は毎回通常・非配置、移動元画面内へ窓全体を収め、もう一方の画面左上へ1回で直接dragする。異なるappの比較と棄却理由で、同じ未達4組の反復を避ける。自然入力の全9組を再試行せず、成功済みC03や取消負例も繰り返さない。コード変更・新buildはない。
+次の試行は同じbinary・既存診断ONで、C07-two-displaysのL/LだけをChrome／Explorer各1回とする。開始は毎回通常・非配置、移動元画面内へウィンドウ全体を収め、もう一方の画面左上へ1回で直接dragする。異なるappの比較と棄却理由で、同じ未達4組の反復を避ける。自然入力の全9組を再試行せず、成功済みC03や取消負例も繰り返さない。コード変更・新buildはない。
 
 この追加は文書・証拠だけであり、Skillの例外で追加コードレビュー・再build・製品自動試験は省略する。Issue #47はC07の未成立と残りの受入を未達のまま保持する。
 
-本人の追加回答：C07全4件は実際に別画面左上のquarterになり、毎回IDLE中に通常・未配置、移動元画面へ窓全体を収めてからARMしたと明示。準備ミスを原因と扱わず、正しい起点・実結果に対する候補未生成として既存Native診断で調べる。原本は変更しない。
+本人の追加回答：C07全4件は実際に別画面左上のquarterになり、毎回IDLE中に通常・未配置、移動元画面へウィンドウ全体を収めてからARMしたと明示。準備ミスを原因と扱わず、正しい起点・実結果に対する候補未生成として既存Native診断で調べる。原本は変更しない。
 
 ## session18の解放位置の差
 

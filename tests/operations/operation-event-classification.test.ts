@@ -29,7 +29,7 @@ export function maximize(overrides: Partial<Candidate> = {}): Candidate {
   };
 }
 
-test("通常窓の最大化ボタンと最大化結果が対応するとW03を返す", () => {
+test("通常ウィンドウの最大化ボタンと最大化結果が対応するとW03を返す", () => {
   assert.deepEqual(classify(maximize()), {
     id: "1:t1",
     operation: "W03",
@@ -61,7 +61,7 @@ test("入力由来・同等キーの証拠が不足する最大化は数えな�
     assert.equal(classify(maximize(value)), null, JSON.stringify(value));
 });
 
-test("スナップ窓の最大化結果を記録し、代表キーを案内する", () => {
+test("スナップウィンドウの最大化結果を記録し、代表キーを案内する", () => {
   const result = classify(
     maximize({ before: { state: "normal", arranged: true } }),
   );

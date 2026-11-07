@@ -8,7 +8,7 @@
 - 最大化は通常起点（配置済みも含む）と上端近傍の解放、quarterは通常／最大化起点（arranged起点は既知shapeとの配置差を要求）と最終shapeに対応した側端近傍の解放を要求する。[W03](window-state.md)／[W07](window-placement.md)は同じ公開mouse docking閾値を使い、取得不能時fallback／下限は上端2px、側端8px。gesture中の設定値変更は全体棄却する。WindowsのSnap領域や一般環境での精度を保証する境界ではない。
 - `compound-drag-v1`をprotocol v2の追加variantとする。envelopeのgeneration／transactionがgestureを識別する。証拠は終端shape、対象一致・物理解放・画面構成の照合結果、押下→移動開始の経過、始終monitor、確証された左右方向、終端キーの同等性だけ。Mainは必須型・許可値を検査し、許可fieldのみをCoreへ渡す。
 - Coreはmouse由来・専用route・注入／競合なし・全照合成立・異なる始終monitor・入力経過0〜1000msを再確認する。不正な複合証拠は全体を棄却し、一方だけ採用しない。
-- 途中の復元W04／half W06、元画面へ戻した移動、取消・別窓・program変更・Snap Layout内部選択は複合として採用しない。cross-monitor half（W02＋W06）は対象外。
+- 途中の復元W04／half W06、元画面へ戻した移動、取消・別ウィンドウ・program変更・Snap Layout内部選択は複合として採用しない。cross-monitor half（W02＋W06）は対象外。
 
 ## 原子保存と通知
 

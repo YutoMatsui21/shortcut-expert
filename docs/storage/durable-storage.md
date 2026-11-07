@@ -30,8 +30,8 @@
 - `counts`と`coverage`は区別する。**件数の根拠なし＝未観測**、観測済みの0回＝既知0回。取得済み件数はcoverage不足を理由に非表示へ変えない。表示上の集計・欠損判定は[記録画面](../features/records-ui.md)が担当する。
 - capabilityが実証されない経路は未知のまま。連続した`monotonic`間隔が**0超〜2500ms**かつ同日・同じ能力revision・観測継続中のときだけ`activeMs`へ加算する。停止／suspend／helper異常、長い空白、能力変更や日付境界の不確実な時間は既知時間にしない。部分日・停止・gapを保持する。
 - 起動・候補受理・毎秒tickでローカル日付と**時計の高水位**を検査。無操作・停止中も時計を監視し、日付後退／未来日候補では既存記録を消さず安全停止する。timezone変更に応じた過去の集計日付の再配分は行わない。
-- `normalBounds`だけのsettings変更は記録ReadModelの`revision`を進めない。学習状態等と記録変更は通常どおり更新する。[窓の設計](../features/window-lifecycle.md)。
-- `settings.recordingEnabled`は明示的な計測停止／再開の希望値。未設定の旧データは開始許可として扱い、falseなら起動時も停止する。通知pauseは永続化しない。停止は即時、再開は設定保存成功・故障解消後のみ。削除・窓位置・学習設定の保存でも保持する。
+- `normalBounds`だけのsettings変更は記録ReadModelの`revision`を進めない。学習状態等と記録変更は通常どおり更新する。[ウィンドウの設計](../features/window-lifecycle.md)。
+- `settings.recordingEnabled`は明示的な計測停止／再開の希望値。未設定の旧データは開始許可として扱い、falseなら起動時も停止する。通知pauseは永続化しない。停止は即時、再開は設定保存成功・故障解消後のみ。削除・ウィンドウ位置・学習設定の保存でも保持する。
 
 ## 4. 失敗・停止・復旧
 

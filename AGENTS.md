@@ -3,8 +3,8 @@
 ## 不変条件
 
 - 依頼と[要件書](docs/ui-requirements.md)の受入条件を満たす最小変更とする。リリース対象・受入条件を変える場合は事前相談する。
-- 対象はWindows全体の窓管理操作。アプリ固有キーは明示要件がある場合のみ扱う。入力由来・操作結果・代替キーの同等性を推測で記録しない。ElectronのcontextIsolation・sandbox・限定preload APIを維持する。
-- 保存は[現行の製品要件](docs/ui-requirements.md)・[永続保存設計](docs/storage/durable-storage.md)に従う。過去のIssueや旧Specの保存条件は現行仕様を上書きしない。文字・キー生ログ・入力時刻列・活動履歴・URL・窓タイトル・ファイル名/パス・clipboard・画面画像は保存・外部送信しない。
+- 対象はWindows全体のウィンドウ管理操作。アプリ固有キーは明示要件がある場合のみ扱う。入力由来・操作結果・代替キーの同等性を推測で記録しない。ElectronのcontextIsolation・sandbox・限定preload APIを維持する。
+- 保存は[現行の製品要件](docs/ui-requirements.md)・[永続保存設計](docs/storage/durable-storage.md)に従う。過去のIssueや旧Specの保存条件は現行仕様を上書きしない。文字・キー生ログ・入力時刻列・活動履歴・URL・ウィンドウタイトル・ファイル名/パス・clipboard・画面画像は保存・外部送信しない。
 - 自動試験は隔離fixtureのみ。実入力の観測には本人の明示同意が必要。fixtureの成功を実入力精度の証拠にしない。
 - 変更に応じて必要なローカルレビュー・再レビューを行い、最新headのCIを確認する（文書のみ等のレビュー例外もGitHub操作Skillに従う）。条件を満たさなければmergeしない。公開・配布は別途承認が必要。
 
