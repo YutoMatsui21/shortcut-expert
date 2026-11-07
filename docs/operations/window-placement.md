@@ -9,10 +9,10 @@
 
 ## 2. マウス・キーの判定
 
-| 経路   | 判定上の約束                                                                                                 |
-| ------ | ------------------------------------------------------------------------------------------------------------ |
-| マウス | caption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEENDと最終形状を照合。通常／最大化・非arranged起点を扱う |
-| キー   | `Win`保持中の物理方向入力を一連の列として保留し、**両Winキーの解放後**に最終形状を確認                       |
+| 経路   | 判定上の約束                                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| マウス | caption押下→MOVESIZESTART→物理解放→同一対象のMOVESIZEENDと最終形状を照合。通常／最大化起点。arranged起点は既知の開始形状と終了配置が異なる場合のみ扱う |
+| キー   | `Win`保持中の物理方向入力を一連の列として保留し、**両Winキーの解放後**に最終形状を確認                                                                 |
 
 - **マウス**：解放位置は、最終形状に対応する作業域側端から公開mouse docking閾値と8物理pxの大きい方以内（取得不能時8px）。quarterでは上下側も照合。旧2pxは、入力・対象・quarter形状が成立した自然入力の「端から3〜8px」の区分を棄却したため修正した。8pxはこの区分を取りこぼさないためのfallback／下限で、WindowsのSnap領域を実測・保証した値ではない。Snap Layout内部の配置選択、端から離れた解放、結果遅着、独自captionの任意実装は一般対応未証明。
 - **キー**：同じWin保持列のhalf→quarterは途中W06を計上せず、**最終W07の1件だけ**。Win解放でW06が確定した後の独立した入力でquarterになれば、別のW07として計上する。入力方向と最終形状が違うもの、起点が不明なものは採用しない。
@@ -29,7 +29,7 @@ Nativeの`placement-v1`証拠へ終端shape・対象一致・入力の経過・m
 
 - `tests/native/policy/PlacementTests.cs`：DPI・作業域・負座標・形状・サイズ制限、同一Win列と独立操作、取消・途中状態・注入・重複の人工列。
 - `tests/operations/window-snap-placement.test.ts`、`tests/native/native-operation-policy.test.ts`、`tests/integration/candidate-to-page-model-data-flow.test.ts`：v2 parse→Core→SQLite、mouse／keyと3学習状態、保存後通知、停止・ACK喪失・再配送、一覧／記録の整合。隔離smokeで本番Rendererへ接続する。
-- **未確認**：側端8pxの上限で一般Windowsの自然ドラッグを十分に扱えるか、実機の結果遅着／混在DPI／画面構成変更、実OS通知、最終buildのR02／J04。配置済み起点は現在のmouse判定で除外される制約として残し、通常サイズ起点の受入と混同しない。単独W06/W07の局所実装と[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)を区別する。
+- **未確認**：側端8pxの上限で一般Windowsの自然ドラッグを十分に扱えるか、実機の結果遅着／混在DPI／画面構成変更、実OS通知、最終buildのR02／J04。配置済み起点は開始shape不明なら棄却し、同monitor・同shapeへの戻しも記録しない。異なるmonitorのquarterは既存複合契約、halfは対象外。採用条件と実機検証の範囲は[本番改善検証](../research/detection-architecture/independence/production-reposition-validation-20261107.md)を参照。単独W06/W07の局所実装と[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)を区別する。
 
 ## OSの早期スナップ閾値
 

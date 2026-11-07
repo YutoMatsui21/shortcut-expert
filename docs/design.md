@@ -21,7 +21,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 
 `Windows API → Native候補 → Mainの型・世代検証 → Coreの採用判定 → 保存 → 必要なら通知`
 
-- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateProtocol`で送信順を確定する。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
+- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateProtocol`で送信順を確定する。最大化したままの画面移動は単独W02、既知配置からの再配置は`PlacementGeometry`で配置差を確認する。既存のTracker・Policy・複合契約を使用し、独立検出器やAggregatorは追加しない。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
 - **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。

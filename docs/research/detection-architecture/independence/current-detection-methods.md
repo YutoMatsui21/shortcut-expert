@@ -1,5 +1,7 @@
 # 現行8操作の検出方法
 
+> 本書は本番条件改善前の調査・Shadow記録。W02の最大化維持移動とW06/W07の既知配置からの再配置は、後続の[本番改善検証](production-reposition-validation-20261107.md)と現行操作仕様を参照。過去のCurrent結果は当時のrevisionに対する証拠であり、現在のリンク済みprobeのCurrent出力とは区別する。その他の提案は採用を意味しない。
+
 **位置づけ**：独立検出を検討する前に、**今のコードが何を根拠にCandidateを発行するか**を整理した静的調査。製品として望ましい検出条件の提案ではない。
 
 **確認対象**：2026-11-07の`main` [33f6b403](https://github.com/YutoMatsui21/shortcut-expert/tree/33f6b403df8b409170432dd4bc7f3017998f4cdb)。C# Observer/Policy、TypeScript `classifyGesture`・`classifyWindow`。**テスト実行・自然入力確認は未実施**。仕様の正本は[製品要件](../../../ui-requirements.md)と[操作別設計](../../../operations/README.md)。

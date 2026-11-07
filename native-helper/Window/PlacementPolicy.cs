@@ -110,7 +110,13 @@ internal static class PlacementGeometry
             diagnostic?.Invoke(WindowDiagnosticReason.PlacementIncompatible);
             return null;
         }
-        if (before.Arranged != false || before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED))
+        string? initial = Shape(before);
+        if (
+            before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED)
+            || before.Arranged is null
+            || before.Arranged == true && initial is null
+            || initial is not null && before.Monitor == after.Monitor && initial == shape
+        )
         {
             diagnostic?.Invoke(WindowDiagnosticReason.PlacementStartInvalid);
             return null;

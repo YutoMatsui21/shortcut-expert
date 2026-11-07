@@ -605,6 +605,29 @@ internal sealed class CandidateTracker
             Diagnostic?.Invoke(WindowDiagnosticReason.DragMonitorUnknown);
             return null;
         }
+        // Moving an already maximized window does not maximize it again. Keep this
+        // separate from compound validation so an invalid compound is never split.
+        if (
+            State(drag.Before.Show) == "maximized"
+            && State(after.Show) == "maximized"
+            && drag.Before.Monitor != after.Monitor
+            && released is { } maxRelease
+            && maxRelease.Monitor == after.Monitor
+            && maxRelease.Work == after.Work
+            && foreground == window
+            && StableMove(drag.Before, after, requireCaption: false)
+        )
+            return Build(
+                "monitor-move",
+                drag.Before,
+                after,
+                drag,
+                drag.At,
+                true,
+                false,
+                date,
+                after.Monitor
+            );
         if (after.Arranged == true)
         {
             Diagnostic?.Invoke(WindowDiagnosticReason.DragArrangedResult);

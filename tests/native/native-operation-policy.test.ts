@@ -200,9 +200,9 @@ test(
     assert.ok(totals.W04.key > 0);
     assert.ok(totals.W04.mouse > 0);
     assert.equal(totals.W05, undefined);
-    assert.deepEqual(totals.W06, { mouse: 2, key: 3 });
-    assert.deepEqual(totals.W07, { mouse: 4, key: 6 });
-    assert.deepEqual(totals.W02, { mouse: 8, key: 5 });
+    assert.deepEqual(totals.W06, { mouse: 4, key: 3 });
+    assert.deepEqual(totals.W07, { mouse: 6, key: 6 });
+    assert.deepEqual(totals.W02, { mouse: 15, key: 5 });
     assert.deepEqual(totals.W11, { mouse: 1, key: 1 });
     for (const sample of report.compoundSamples) {
       // Each sample starts its own native observer session; reset the Core session as well.
