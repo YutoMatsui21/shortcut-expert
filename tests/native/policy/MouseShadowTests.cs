@@ -37,7 +37,7 @@ internal static partial class Program
             (
                 "max-max",
                 new MouseDetectionShadow.Drag(max, otherMax, new Point { X = 2800, Y = 0 }),
-                "",
+                "W02",
                 "W02"
             ),
             (
@@ -69,7 +69,7 @@ internal static partial class Program
                     Shape("left-half"),
                     new Point { X = 0, Y = 500 }
                 ),
-                "",
+                "W06",
                 "W06"
             ),
             (
@@ -79,7 +79,7 @@ internal static partial class Program
                     Shape("right-top"),
                     new Point { X = 1919, Y = 0 }
                 ),
-                "",
+                "W07",
                 "W07"
             ),
             (

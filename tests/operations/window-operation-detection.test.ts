@@ -170,3 +170,29 @@ test("two-display vertical standalone move preserves actual key route and requir
   );
   assert.equal(classify({ ...move, moveConfirmed: false }), null);
 });
+
+test("最大化のまま別画面へ移動した確証はW02のみ、他の複合終端は救済しない", () => {
+  const move = addedCases[3].candidate;
+  for (const arranged of [false, true, null]) {
+    const candidate: Candidate = {
+      ...move,
+      before: { state: "maximized", arranged },
+      after: { state: "maximized" },
+      afterArranged: arranged,
+    };
+    assert.equal(classify(candidate)?.operation, "W02");
+    for (const invalid of [
+      { moveConfirmed: false },
+      { targetMatched: false },
+      { injected: true },
+      { conflicted: true },
+      { moving: true },
+      { inputAgeMs: 1001 },
+      { toMonitor: move.fromMonitor },
+      { route: "client-click" },
+      { before: { state: "normal", arranged: false } },
+    ])
+      assert.equal(classify({ ...candidate, ...invalid }), null);
+  }
+  assert.equal(classify({ ...move, afterArranged: true }), null);
+});

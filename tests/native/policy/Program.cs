@@ -456,6 +456,7 @@ internal static partial class Program
             var placementSamples = CheckPlacement();
             CheckMonitorMoves();
             CheckCompoundDrags();
+            CheckMouseReposition(placementSamples);
             CheckMouseShadow();
             CheckClickComparison();
             CheckProtocol();
