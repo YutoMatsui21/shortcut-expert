@@ -20,7 +20,8 @@ internal static class MouseDetectionShadow
         long StartAge = 100,
         MonitorBounds? ReleaseMonitor = null,
         MonitorBounds? ReleaseWork = null,
-        bool? CurrentMaximizeConfirmed = null
+        bool? CurrentMaximizeConfirmed = null,
+        bool InputCaption = true
     );
 
     internal sealed record Result(string[] Operations, string Reason);
@@ -65,18 +66,20 @@ internal static class MouseDetectionShadow
             return new(operations.ToArray(), "start-shape-unknown");
         if (a.Arranged is null)
             return new(operations.ToArray(), "start-state-unknown");
-        var placement = PlacementGeometry.Drag(
-            a with
-            {
-                Arranged = false,
-            },
-            b,
-            d.Release,
-            b.Monitor,
-            b.Work,
-            d.StartAge,
-            true
-        );
+        var placement = d.InputCaption
+            ? PlacementGeometry.Drag(
+                a with
+                {
+                    Arranged = false,
+                },
+                b,
+                d.Release,
+                b.Monitor,
+                b.Work,
+                d.StartAge,
+                true
+            )
+            : null;
         if (placement is not null && (changed || initial != placement.shape))
             operations.Add(placement.shape.EndsWith("-half") ? "W06" : "W07");
         // B deliberately delegates its complete terminal validation to the current tracker.
@@ -105,7 +108,9 @@ internal static class MouseDetectionShadow
         tracker.Mouse(
             11,
             d.Before,
-            d.Resize ? 10 : HTCAPTION,
+            d.Resize ? 10
+                : d.InputCaption ? HTCAPTION
+                : 1,
             default,
             0,
             500,

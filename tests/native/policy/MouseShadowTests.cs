@@ -207,5 +207,26 @@ internal static partial class Program
                 Equal("W02", string.Join(',', MouseDetectionShadow.Evaluate(d).Operations));
             }
         );
+        Check(
+            "placement retains explicit caption input gate",
+            () =>
+            {
+                Equal(
+                    0,
+                    MouseDetectionShadow
+                        .Evaluate(cases[4].Item2 with { InputCaption = false })
+                        .Operations.Length
+                );
+                Equal(
+                    "W02",
+                    string.Join(
+                        ',',
+                        MouseDetectionShadow
+                            .Evaluate(cases[0].Item2 with { InputCaption = false })
+                            .Operations
+                    )
+                );
+            }
+        );
     }
 }

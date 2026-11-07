@@ -510,7 +510,8 @@ internal sealed class ShadowPanel : Form
                     after,
                     release,
                     Physical: clicks.Count == 1,
-                    Target: endForeground == target,
+                    Target: endForeground == target
+                        && clicks.All(p => p.SameTarget && p.ForegroundAtPress),
                     Stable: terminalStable && before.DisplayLayout == after.DisplayLayout,
                     Cancelled: conflict || dragForegroundLost,
                     Resize: resize,
@@ -521,6 +522,7 @@ internal sealed class ShadowPanel : Form
                     StartAge: moveAge,
                     ReleaseMonitor: releaseMonitor,
                     ReleaseWork: releaseWork,
+                    InputCaption: hit == HTCAPTION,
                     CurrentMaximizeConfirmed: actualDrag
                         is WindowCandidate { operation: "maximize" }
                             or CompoundMoveResult { Terminal: "maximized" }
