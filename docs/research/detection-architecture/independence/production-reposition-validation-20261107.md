@@ -29,8 +29,11 @@ PR #166は`ab3dd734`としてmainへマージ済み。そのrevisionを基点に
 - 修正前：追加した最大化A→最大化B試験が`expected W02, actual empty`で失敗。
 - 修正後：右half→左half、左上→右上、最大化A→最大化Bと、未知shape/arranged、resize、取消、構成・process不一致、未解放、期限、foreground、重複の本番policy回帰を追加。
 - C#→Main→Core→SQLiteの試験では新しいW02/W06/W07候補を保存・通知要求まで通し、同一候補の再配送が重複加算しないことを確認。
-- unit全367件成功。既存W01＋W03/W04、W02＋W03/W07、Win+↓連続操作、Win保持中の方向キー列の回帰を含む。native全8件成功。最終追加負例を含むC# assertion数・build/smoke・レビュー・最新head CIはPR本文へ記録する。
-- 既存構成のNuGet脆弱性メタデータ取得でNU1900警告あり。build初回はsandboxの親directory読取り拒否で停止し、通常権限で再実行する。
+- unit全367件成功。既存W01＋W03/W04、W02＋W03/W07、Win+↓連続操作、Win保持中の方向キー列の回帰を含む。native全8件成功。最終追加負例を含むC# policyは1,280 assertion成功。型検査・build・lint（既存warningあり）・CSharpier成功。通常/storage隔離smoke成功。最新head CIはPRで確認する。
+- 既存構成のNuGet脆弱性メタデータ取得でNU1900警告あり。build初回はsandboxの親directory読取り拒否で停止し、通常権限での再実行は成功。
+
+- storage smokeの初回は30秒timeout。範囲外日付の拒否は意図した負例と確認し、コードを変えず通常/storage smokeを再実行してともに成功。初回timeoutの原因は未確定。全体format checkは既存の未追跡`.vscode/settings.json`のみ失敗し、変更対象は別途確認。
+- コード全体の専用ローカルレビュー：`bdc55b8`をmainと比較し、追加レビュー規則の4観点と安全性・複合契約・Native→TS→SQLiteを確認。対応が必要な指摘なし。後続はこの検証記録の文書更新のみ。
 
 ## 物理試験の境界
 
