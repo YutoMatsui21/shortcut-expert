@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile
+      Include="../../../validation/independence/IndependentDetection.cs"
+      Link="IndependentDetection.cs"
+    />
+    <Compile
       Include="../../../native-helper/Window/InactiveCaptionPolicy.cs"
       Link="InactiveCaptionPolicy.cs"
     />
