@@ -1,143 +1,124 @@
 # 目標アーキテクチャ
 
-**これはリファクタリング後に実現する設計**。現在のコードの説明は[現行構成](current.md)。採用条件・記録・通知の意味は変えない。
+**状態：採用する目標構成。実装は未着手。** 現行コードは[現行構成](current.md)、実装順序は[移行計画](migration.md)を参照する。
 
-## 目的と構成
+## 目的と基本方針
 
-**新しい操作を追加しても、Observerや既存の操作別検出器を原則変更しない**。共通化するのはイベント配信・候補送信・ID発行などの境界であり、操作固有の状態機械を無理に統合しない。
+Windows上の一連の入力から各操作の成立を**独立に判定**できるようにする。新しい操作を追加するとき、既存検出器やObserverの変更を原則不要にする。
+
+- まずシンプルな「共通Gesture管理 → 各操作の独立判定 → 結果統合」を採用する。
+- 各検出器は、他の検出器の内部状態・成立結果を参照しない。
+- 共有するのは入力の由来、対象、時系列、開始・終了状態、取消・確定などの観測事実。
+- 操作ごとの検出条件は個別に修正できるようにする。現行の判定結果を無条件に再現することを目的にしない。
+- **独立したArbitrationPolicyは最初から設けない。** 実装・実機検証で具体的な競合を確認した場合のみ、最小限の調整を追加する。
+
+## 全体構成
 
 ```mermaid
 flowchart TD
-    OS["Windows API"]
-    OBS["Observer / OS Adapter<br/>Win32 → ObservedEvent"]
-    ROUTER["DetectionRouter<br/>登録済みHandlerへ順序付き配送"]
-    POLICY["ArbitrationPolicy<br/>競合・取消・送信許可"]
-    H["Evidence Handler群<br/>観測イベント＋OS事実 → CandidateDraft"]
-    SINK["Candidate Sink / CandidateProtocol<br/>Draft → CandidateEnvelope v2"]
-    HOST["ObserverHost<br/>Envelope → JSON Lines"]
-    PARSE["TypeScript ObserverClient<br/>JSON → 検証済みCandidate"]
-    DUR["DurableCoach<br/>順序・再配送検査"]
-    CLASS["Operation Classifier群<br/>Candidate → Observation[]"]
-    STORE["SQLite保存 → 条件付き通知"]
-    OS --> OBS --> ROUTER
-    ROUTER <--> POLICY
-    ROUTER --> H -->|"候補の提案"| ROUTER
-    ROUTER --> SINK --> HOST --> PARSE --> DUR --> CLASS
-    CLASS --> DUR --> STORE
+    OS[Windows API] --> OBS[Observer / OS Adapter]
+    OBS --> GEST[GestureManager / WindowFacts]
+    GEST --> ROUTER[DetectionRouter]
+    ROUTER --> D1[W01 / W02 / W03 / W04]
+    ROUTER --> D2[W06 / W07 / W11 / W12]
+    D1 --> COMP[ResultComposer]
+    D2 --> COMP
+    GEST --> COMP
+    COMP --> SINK[Candidate Sink / Protocol]
+    SINK --> HOST[ObserverHost / JSON Lines]
+    HOST --> MAIN[TypeScript Main / strict parser]
+    MAIN --> CLASS[Core / classify results]
+    CLASS --> STORE[DurableCoach / SQLite / notification]
 ```
 
-### 入出力・責務
+この図のW番号は**独立した判定責務**を表す。必ずしも各W番号につき1クラス・1ファイルを作るわけではない。マウスとキーの判定を共通化できるかも操作ごとに決める。
 
-| 要素                                | 入力 → 出力                                                      | 責務                                                                      |
-| ----------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Observer / OS Adapter**（C#）     | Win32 callback・必要な照会 → `ObservedEvent`                     | HookとWindowFacts、押下時/結果時のsnapshot。**個別Handlerを直呼びしない** |
-| **DetectionRouter**（C#）           | `ObservedEvent` → Handler呼出しと候補提案                        | 登録、順序、調停の適用。**操作成立を判定しない**                          |
-| **ArbitrationPolicy**（C#）         | イベント＋Handlerの公開状態 → 配信・取消・送信可否               | 複数Handler間の競合、専有、複合の所有権を集中管理                         |
-| **Evidence Handler**（C#）          | 観測イベント＋必要なWindowFacts → `CandidateDraft`（またはなし） | OS入力と結果の関連付け・期限・操作固有のpending状態。**W IDは決めない**   |
-| **Candidate Sink / Protocol**（C#） | `CandidateDraft` → v2 `CandidateEnvelope`                        | 共通のgeneration/sequence・送信順。stdoutの直列化はしない                 |
-| **ObserverHost**（C#）              | Envelope → JSON Lines/stdout                                     | JSON直列化、stdoutの書込排他、プロセス制御                                |
-| **Parser**（TypeScript Main）       | JSON Lines → 検証済みCandidate                                   | v2型・必須項目・世代の検証                                                |
-| **Classifier**（TypeScript Core）   | Candidate → `Observation[]`                                      | 製品上の操作ID・採否・案内ショートカット。Win32に依存しない               |
-| **DurableCoach**（TypeScript Core） | Candidate/Observation → 記録・通知                               | transaction重複排除、0〜2件の原子保存、保存後通知の適格性判断             |
+## 責務の分担
 
-## 5つのEvidence Handler
+### Observer / OS Adapter
 
-| Handler             | 現在の処理をまとめる単位                                                            | 最終候補                                 |
-| ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
-| **WindowGesture**   | `CandidateTracker`＋配置Policy：最大化、復元/最小化、半分・四隅、ドラッグ、画面移動 | `window` / `placement` / `compound-drag` |
-| **InactiveCaption** | 非アクティブウィンドウの最大化・最小化ボタン／ボタン不明fallback                    | `caption-click`                          |
-| **WindowSwitch**    | クリック切替、Alt+Tabの確定                                                         | `window-switch`                          |
-| **WindowClose**     | 閉じるボタン、Alt+F4とDESTROY確認                                                   | `window-close`                           |
-| **Taskbar**         | タスクバー・Win+数字とslot照合                                                      | `taskbar-input`                          |
+- Win32のhook・WinEvent・必要なUIA照会を担当し、観測イベントを生成する。
+- 押下時と結果確定時のWindowFactsを区別する。
+- 個別操作の成立判定や、別検出器の直接呼び出しはしない。
+- hook内に重い照会を追加せず、非同期結果は世代と対象を検証して戻す。
 
-**WindowGestureを最初からさらに3つの独立Handlerへ分割しない**。共有する押下・ドラッグ・取消状態をその内部に閉じ込める。内部Policyの整理は可能。初回対象外のSnap Invocationは登録しない。
+### GestureManager
 
-## インターフェースの契約
+「ウィンドウの形状」ではなく**物理入力系列のライフサイクル**を管理する。
 
-以下は**概念上のC#型**。型名やenum名は調整してよいが、責務と入出力は維持する。
+- ジェスチャID、generation、対象ウィンドウ・process、入力源（タスクバー／caption／本文など）、物理性・修飾キー・競合を保持する。
+- 入力前snapshot、解放、MOVESIZESTART/END、終端snapshot、foregroundの時系列を関連付ける。
+- `observing → awaiting-result → completed / cancelled / expired` のように、取消と最終確定を管理する。実際の状態名は実装時に調整可能。
+- Win保持中の方向キー列、ドラッグ中の一時復元・中間配置は**同じジェスチャの途中状態**として扱い、途中結果を外部送信しない。
+- 重複確定やStop/Reset後の旧世代の送信を防ぐ。
+- W11のDESTROY確認やW12のUIA確認など、操作固有の保留・期限は各検出器の内部に残せる。全操作を単一のタイムアウトへ統一しない。
 
-```csharp
-interface IEvidenceHandler
-{
-    string Id { get; }
-    EventInterest Interests { get; }
-    HandlerStatus Status { get; }            // 読み取り専用の最小状態
-    HandlerResult Handle(ObservedEvent e, IDetectionContext context);
-    void Cancel(CancelReason reason);
-    void Reset(int generation);
-}
+**共通Gesture情報には、操作固有の成功・失敗を格納しない。** W03が不成立であることを理由にW02を自動的に取り消さない。
 
-record HandlerResult(ClaimTransition Claim, IReadOnlyList<CandidateDraft> Proposals);
+### DetectionRouter
 
-interface IArbitrationPolicy
-{
-    DispatchPlan Plan(ObservedEvent e, DispatchPhase phase,
-        IReadOnlyDictionary<string, HandlerStatus> statuses);
-    bool AllowPublish(string handlerId, CandidateDraft draft,
-        IReadOnlyDictionary<string, HandlerStatus> statuses);
-}
+- イベントを、必要な入力種別を購読する検出器へ配送する。
+- 登録・配送・完了通知だけを担当し、操作の成立や優先順位を判断しない。
+- 通常はイベントの同期配送を基本とし、非同期照会が必要な検出器の完了状態も追跡する。
+- 検出器同士の直接呼出し、相互Cancel、先着勝ちの専有制御を設けない。
 
-interface IDetectionContext
-{
-    IWindowFacts WindowFacts { get; }
-    ITransactionIds Transactions { get; }
-    int Generation { get; }
-    long NowMs { get; }
-}
+### 独立した操作検出器
 
-interface ICandidateSink
-{
-    void Publish(CandidateDraft draft);
-}
-```
+検出器は自身の操作について、共通Gesture情報と必要なOS事実から**成立／不成立／判定待ち**を返す。
 
-**データの境界**：
+初回対象はW01（切替）、W02（別画面移動）、W03（最大化）、W04（復元・最小化）、W06（左右半分）、W07（四隅）、W11（閉じる）、W12（タスクバー）。
 
-- `ObservedEvent`：C#内部のみ。入力種別、時刻、対象、必要な入力フラグ、時点付きsnapshot/照会手段を持つ。生イベントをJSONLへ渡さない。
-- `CandidateDraft`：HandlerからRouterに渡す内部候補。**既存C#の`Evidence`派生型を再利用**し、transaction/date/origin/route/injected/conflicted等を持つ。Routerで承認されるまで送信しない。
-- `CandidateEnvelope`：通信専用の**既存protocol v2**（generation/sequence/transaction/evidence等）。当面スキーマ・意味とも変更しない。
-- `Observation[]`：TSが製品の操作IDと案内キーへ変換した結果。複合候補から2件返せる。
+- W02は入力と始終monitor差を判定する。W03/W07の成功を前提にしない。
+- W03/W04は対応する入力と窓状態変化を判定する。別操作の採否を参照しない。
+- W06/W07はジェスチャ**最終形状**を判定し、同じ入力列の中間配置を採用しない。
+- W01は入力源を確認する。タスクバー操作や閉じる操作に伴うforeground変化を、結果だけからW01と推定しない。
+- W11は閉じる入力と対象窓のDESTROY／消滅の確認を要する。
+- W12はタスクバー入力とUIA slotの照合を要する。不成立でもW01へのフォールバックをしない。
+- 非アクティブ窓のボタン操作は、共有された入力・foreground・状態変化の証拠をW01とW03/W04が各自で評価する。
 
-**Dispatcher（Router）とinterfaceは別物**。interfaceはHandlerの受け取り方、Routerは実際の配送役。Handlerは`CandidateProtocol`や`Console.WriteLine`を直接呼ばない。
+**独立性は「他検出器の結果に依存しない」という意味。** OS観測やGestureManagerの共通情報を利用することは許容する。
 
-## 配送・調停のルール
+### ResultComposer
 
-**単純な全件broadcastも、「最初に候補を作ったHandlerが必ず独占」も禁止**。Routerは**同じ観測スレッドで同期・順序付きに**動き、Policyがイベントごとに配送と取消を判断する。
+同じジェスチャで**確定した検出結果**を束ね、共通の出力単位に変換する。
 
-1. `Plan(event, phase, statuses)`で次に実行する**Deliver / Cancel / Skip**を決める。
-2. 1アクション実行して`HandlerResult`と`HandlerStatus`を更新し、**次のphaseの計画を再評価**する。最初の計画を最後まで使い回さない。
-3. Handlerの最終提案に対して`AllowPublish`を確認し、許可されたものだけSinkへ送る。別Handlerの候補が同じジェスチャを重複確定しない。
-4. **特別な競合がない**独立Handlerは購読イベントを受け取れる。登録は`DetectionComposition`の1か所に集約。競合がある新操作だけPolicyへ交差ルールを追加する。
+- ジェスチャID・generation・対象を照合し、別の入力の結果を混ぜない。
+- すべての購読検出器が完了したか、操作固有の期限・取消が確定してから結果を発行する。
+- 同じ操作の重複を排除し、1ジェスチャの出力を一度だけ確定する。
+- W02が成立しW03が不成立なら、**W02のみ採用**する。現行の「不正な複合Evidenceは全体棄却」は新目標では引き継がない。
+- 入力・対象・世代・終端の**共通証拠が不正**な場合は、関連する結果を採用しない。
+- 特定の操作組合せを先験的に禁じる大規模なallowlistや、全検出器の相互依存をここに作らない。
 
-Handlerの状態ビューは、例えば「候補なし／並行追跡中／専有中／確定」と、開始・解除・譲渡・確定の変化を表す。これは**transactionと別**。候補を先行採番して取消した結果の番号欠番は許容する。
+W02＋W06など現行未対応の組合せは、独立検出へ移行する中で**個別に製品仕様と通信・表示を検証して採否を決める**。未検証の複合を自動的に製品へ追加しない。
 
-### 維持する特殊な優先順位
+## 通信・TypeScriptとの境界
 
-| イベント・競合           | 変えてはいけない扱い                                                                                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **非アクティブcaption**  | ボタン既知なら専用候補が通常切替・状態変更を抑制。**ボタン不明fallbackはWindowGestureのドラッグ追跡と並行可能**。MOVESIZESTARTではcaptionを取消・dragへ譲る |
-| **通常マウス入力**       | Trackerの入力補助 → Taskbar → WindowSwitch → WindowClose → WindowGestureの解放/移動。左押下は対象確認後、caption専用経路が成立すれば切替/閉じるを取消       |
-| **キー入力**             | captionと不明マウス候補を取消 → Taskbar → WindowSwitch → WindowClose → WindowGesture。**Win+数字はTaskbar専属**                                             |
-| **foreground/WinEvent**  | caption・closeの保留を先に整合 → WindowGestureの前景/ウィンドウ状態 → WindowSwitchの確認など、既存の早期return・取消順序を維持                              |
-| **MOVESIZESTART/END**    | startでcaption取消・switch取消、WindowGestureがドラッグを所有。endで最終結果をまとめ**1Candidate**を提案し、派生復元や途中配置を別計上しない                |
-| **timer・非同期結果**    | 既存の個別timer/worker・検出期限を維持。結果は**元のmessage-loop thread**でRouterへ返し、generationを再確認。専用timerは対象Handlerへだけ配送               |
-| **Stop/再起動/表示変更** | 既存のCancel範囲・Reset順・旧世代無効化を維持。例外時は誤採用せずfail closed。無関係なpendingまで無差別に消さない                                           |
+現行の外部Protocol v2は、任意の独立検出結果リストを表現できない。**独立検出への移行には通信契約の設計・実装が必要**であり、既存`compound-drag`等のEvidenceを単純に流用しただけでは完了しない。
 
-**複合候補の発行者は1つ**：非アクティブcaptionのW01＋W03/W04はInactiveCaption、画面移動＋最大化/四隅のW02＋W03/W07はWindowGestureが最終候補を作る。**同じtransactionで2個のCandidateを送り、TypeScriptで合成する方式は採らない**。
+- C#からは**同一ジェスチャにつき原則1つのEnvelope**を送り、複数の確定結果を同一出力単位にまとめる。
+- Envelopeのgeneration・sequence・transaction・再配送防止の意味を維持する。
+- 既存v2に新しいEvidence variantを追加する案を第一候補とする。破壊的変更が必要ならプロトコルバージョンを更新する。どちらも型・厳格parser・Core分類・テストを同時に更新する。
+- C#が製品上のW IDを断定するのではなく、検証済みの操作別EvidenceをTypeScriptが分類する責務を維持する。
+- DurableCoachでは**同一ジェスチャの0件以上の操作を原子的に保存**する。初回公開では既存の0〜2件と単一通知の範囲を基準とし、3件以上が発生する場合の仕様は別途決める。
+- ACK喪失後の再配送、保存失敗時rollback、通知の学習状態・入力由来・キー同等性判定を維持する。
 
-## 状態の所有者とOS依存
+既存の複合操作について**一部だけ成立した結果も記録できる**点は意図的な仕様変更。単なるリファクタリングとして既存テストの期待値を黙って書き換えず、新仕様を検証したうえで明示的に更新する。
 
-- **WindowFacts**：`Observer.states`とWin32読取の境界。クリック時のbeforeと結果時のafterを区別し、必要時のみ照会。全マウス移動で全面snapshotを作らない。
-- **各Handler**：個別pending、time window、独自timer/worker。各Policyの確証条件・timeoutを一本化しない。
-- **DetectionSession**：generationと**全経路のtransaction採番**。`NextTransaction()`だけでなく`CandidateTracker`内の直接`++transaction`も移す。候補取消による欠番可。
-- **CandidateProtocol**：v2 Envelopeのgeneration/sequence/発行順の`gate`。
-- **ObserverHost**：`outputLock`によるstdout書込排他（Protocolの`gate`とは別）。
-- **TS Core**：操作の採用・ショートカット同等性・再配送防止・記録・通知。
+## 安全性と検証の原則
 
-生の文字、キー列、ウィンドウタイトル、HWND/PID、URL、ファイル名、clipboard、生カーソル軌跡などを**通信・保存しない**。ただし既存Evidenceのモニター境界（x/y/width/height）は必要な表示幾何なので維持する。TSのparserは未知のfieldを捨てる場合があるため、**生JSONLもプライバシー検査する**。
+- 「検出しなかった」場合と「まだ結果待ち」を区別する。期限切れ・対象不一致・旧世代・未解放・非物理入力を成功と推測しない。
+- 誤検出や検出漏れが判明したら、まず対象の独立検出器の入力・状態・確定条件を修正する。**必要性が実証されるまでArbitrationPolicyを追加しない。**
+- 入力源の区別や途中状態の抑制は、まずGestureManagerと各検出器自身の条件で解決する。
+- 移行時は、独立判定→統合→通信→保存・通知まで回帰する。従来と結果が変わるケースは「意図した仕様変更」と「意図しない回帰」を区別する。
+- 生のキー列・タイトル・HWND/PID・URL・clipboard・カーソル軌跡は通信・保存しない。必要なモニター幾何は限定して保持する。
+- 合成入力・CI成功と、Windows実機での入力・OS通知の確認を区別する。
 
-## TypeScript側の分割
+## 根拠と未確定事項
 
-`src/core/detector.ts`の`classifyGesture`を互換入口として残し、`evidence.kind`ごとの分類関数を独立させる。複合の1Candidate→2Observationを維持し、`DurableCoach`の永続化契約は変えない。**操作IDごとに1Handler/1ファイルへ分割する必要はない**。
+[PR #169の独立検出実験](independence/composition-experiment-20261107.md)では、W02/W03/W07・W01/W03/W04の成立述語を独立評価できた。ただし、旧複合の全体棄却を再現するには追加の採否処理が必要だった。**旧仕様の完全再現を目標から外す**ことで、単純な結果統合を第一案とする。
 
-→ **作業順序は[移行計画](migration.md)、変更前後の保証は[回帰テスト](verification.md)**。
+- 全8操作の新Router・GestureManager・ResultComposer実装と実機検証は未実施。
+- W01/W12の入力源分離、W06/W07のWin保持列、非アクティブcaptionとドラッグの競合、非同期workerの結果確定は、移行中に検証する。
+- 通信Evidenceの具体的な型と、未対応複合の採否は実装前に契約テストと共に確定する。
+
+**現在の本番仕様を説明する文書ではない。** 本番への切替は[移行計画](migration.md)に従い、段階ごとに行う。
