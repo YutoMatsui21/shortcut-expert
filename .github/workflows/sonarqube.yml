@@ -1,0 +1,50 @@
+name: SonarQube
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.1
+          cache: npm
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install dependencies
+        run: npm.cmd run dev:install
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner --version 12.0.0.12728
+
+      - name: Analyze
+        shell: pwsh
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          dotnet sonarscanner begin `
+            /k:"YutoMatsui21_shortcut-expert" `
+            /o:"yutomatsui21" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.projectBaseDir="."
+
+          dotnet build native-helper/WindowObserver.csproj --no-incremental --disable-build-servers
+
+          dotnet sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
