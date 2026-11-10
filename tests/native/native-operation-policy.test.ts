@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -40,6 +41,56 @@ test(
     assert.equal(result.status, 0, result.stderr + result.stdout);
     const report = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1)!);
     assert.equal(report.globalInputCollected, false);
+    // Fixed at main 8dbb7d6: production candidates, not the experiment's composer.
+    // Arrays preserve emission order; complete envelopes preserve route/evidence.
+    const baseline = JSON.parse(
+      readFileSync(
+        new URL("../fixtures/detection-baseline-v2.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    for (const key of Object.keys(baseline).filter(
+      (key) => key !== "independence",
+    ))
+      assert.deepEqual(
+        report[key],
+        baseline[key],
+        `current v2 baseline: ${key}`,
+      );
+    assert.deepEqual(
+      report.independence.rows.map(
+        (row: { name: string; expected: string[]; baseline: unknown }) => ({
+          name: row.name,
+          expected: row.expected,
+          baseline: row.baseline,
+        }),
+      ),
+      baseline.independence,
+      "49 named current-production fixture outcomes",
+    );
+    await t.test(
+      "target specification ONLY: confirmed W02 survives an invalid W03/W07 terminal",
+      () => {
+        // This checks the isolated design experiment, NOT a production partial-adoption path.
+        for (const name of ["invalid-max-release", "invalid-quarter-release"]) {
+          const row = report.independence.rows.find(
+            (row: { name: string }) => row.name === name,
+          );
+          assert.ok(row, name);
+          assert.equal(row.baseline, null, "current production emits nothing");
+          assert.deepEqual(
+            row.expected,
+            [],
+            "current expectation stays unchanged",
+          );
+          assert.deepEqual(
+            row.independent,
+            ["W02"],
+            "target independent evidence",
+          );
+        }
+      },
+    );
     assert.deepEqual(
       report.windowDiagnosticKeys,
       [...windowDiagnosticKeys],
