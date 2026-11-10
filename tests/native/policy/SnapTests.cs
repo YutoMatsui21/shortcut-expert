@@ -191,7 +191,7 @@ internal static class SnapTests
         );
         Check("max right edge is outside", !SnapGeometry.Contains(max, new() { X = 180, Y = 10 }));
         var samples = new List<object>();
-        var protocol = new CandidateProtocol(samples.Add);
+        var protocol = new CandidateSink(samples.Add);
         var tracker = new CandidateTracker();
         tracker.Reset(1);
         protocol.Start(1, 2);

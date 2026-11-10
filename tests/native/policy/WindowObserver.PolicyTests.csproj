@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../../native-helper/Core/CandidateSink.cs" Link="CandidateSink.cs" />
     <Compile
       Include="../../../validation/independence/IndependentDetection.cs"
       Link="IndependentDetection.cs"

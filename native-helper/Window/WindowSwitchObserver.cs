@@ -6,7 +6,7 @@ using Point = NativeMethods.Point;
 
 // Uses the existing message-thread hooks. No window identity or raw input crosses the protocol.
 internal sealed class WindowSwitchObserver(
-    CandidateProtocol protocol,
+    CandidateSink protocol,
     Func<int> transaction,
     Func<long> now,
     Action<WindowDiagnosticReason>? diagnostic = null

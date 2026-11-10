@@ -195,7 +195,7 @@ internal static class IndependentDetection
         if (ids.Length == 0 || admission && !Admit(g, ids))
             return null;
         var output = new List<object>();
-        var wire = new CandidateProtocol(output.Add);
+        var wire = new CandidateSink(output.Add);
         wire.Start(1, 2);
         string? direction =
             g.Before.Monitor == g.After.Monitor ? null
@@ -309,7 +309,7 @@ internal static class IndependentDetection
         object? result = tracker.FinishMove(11, g.After, 5000, g.Foreground, Date);
         Require(tracker.FinishMove(11, g.After, 5001, 11, Date) is null, "no second END");
         var output = new List<object>();
-        var wire = new CandidateProtocol(output.Add);
+        var wire = new CandidateSink(output.Add);
         wire.Start(1, 2);
         switch (result)
         {
@@ -384,7 +384,7 @@ internal static class IndependentDetection
         if (ids.Length == 0)
             return null;
         var output = new List<object>();
-        var wire = new CandidateProtocol(output.Add);
+        var wire = new CandidateSink(output.Add);
         wire.Start(1, 2);
         wire.CaptionClick(
             g.Id.Generation,
@@ -449,7 +449,7 @@ internal static class IndependentDetection
         if (result is null)
             return null;
         var output = new List<object>();
-        var wire = new CandidateProtocol(output.Add);
+        var wire = new CandidateSink(output.Add);
         wire.Start(1, 2);
         wire.CaptionClick(g.Id.Generation, result.Value.Transaction, Date, result.Value.Evidence);
         return output.Cast<CandidateEnvelope>().SingleOrDefault();
@@ -650,7 +650,7 @@ internal static class IndependentDetection
             "identity and dedup"
         );
         var emissions = new List<object>();
-        var sink = new CandidateProtocol(emissions.Add);
+        var sink = new CandidateSink(emissions.Add);
         sink.Start(1, 2);
         sink.Stop();
         sink.CaptionClick(1, 1, Date, new(null, true, true, true, 500, Start.Monitor));

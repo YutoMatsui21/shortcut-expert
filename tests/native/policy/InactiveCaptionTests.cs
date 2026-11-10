@@ -121,7 +121,7 @@ internal static class InactiveCaptionTests
                 );
                 if (mode == "normal")
                 {
-                    var wire = new CandidateProtocol(samples.Add);
+                    var wire = new CandidateSink(samples.Add);
                     wire.Start(1, 2);
                     wire.CaptionClick(1, completed.Transaction, "2026-11-04", completed.Evidence);
                     wire.Stop();
@@ -210,7 +210,7 @@ internal static class InactiveCaptionTests
                 Check("fallback switch " + mode, completed.Evidence.switched);
                 if (terminal is not null)
                 {
-                    var wire = new CandidateProtocol(samples.Add);
+                    var wire = new CandidateSink(samples.Add);
                     wire.Start(1, 2);
                     wire.CaptionClick(1, completed.Transaction, "2026-11-04", completed.Evidence);
                 }

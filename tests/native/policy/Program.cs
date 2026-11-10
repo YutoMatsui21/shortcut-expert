@@ -599,6 +599,52 @@ internal static partial class Program
             v2Samples.Add(CandidateProtocol.V2(legacy, legacy.sequence, legacy.sequence));
         }
         Check(
+            "shared sink preserves mixed evidence, order and stopped generations",
+            () =>
+            {
+                var delivered = new List<CandidateEnvelope>();
+                var sink = new CandidateSink(value => delivered.Add((CandidateEnvelope)value));
+                var evidence = new WindowCloseEvidence(true, true, 25, null);
+                var draft = new CandidateDraft(
+                    1,
+                    7,
+                    "2026-10-11",
+                    "key",
+                    "alt-f4",
+                    false,
+                    false,
+                    evidence
+                );
+                sink.Start(1, 2);
+                sink.Submit(draft with { Generation = 2 });
+                sink.Submit(draft);
+                sink.Switch(
+                    1,
+                    3,
+                    "2026-10-11",
+                    "mouse",
+                    new WindowSwitchEvidence(true, true, true, true, 20, 50, null)
+                );
+                sink.Close(1, 8, "2026-10-11", "key", evidence);
+                Equal(3, delivered.Count);
+                Equal(1, delivered[0].sequence);
+                Equal(7, delivered[0].transaction);
+                Equal<Evidence>(evidence, delivered[0].evidence);
+                Equal("direct-click", delivered[1].route);
+                Equal(2, delivered[1].sequence);
+                Equal(3, delivered[2].sequence);
+                sink.Stop();
+                sink.Submit(draft);
+                sink.Close(1, 9, "2026-10-11", "key", evidence);
+                sink.Start(2, 2);
+                sink.Submit(draft);
+                Equal(3, delivered.Count);
+                sink.Submit(draft with { Generation = 2 });
+                Equal(1, delivered[3].sequence);
+                Equal(2, delivered[3].generation);
+            }
+        );
+        Check(
             "final emission order is independent from input transaction order",
             () =>
             {
@@ -610,9 +656,7 @@ internal static partial class Program
                 var second = (WindowCandidate)
                     tracker.Complete(11, normal, maximized, 300, 11, "2026-10-11", null)!;
                 var delivered = new List<CandidateEnvelope>();
-                var emitter = new CandidateProtocol(value =>
-                    delivered.Add((CandidateEnvelope)value)
-                );
+                var emitter = new CandidateSink(value => delivered.Add((CandidateEnvelope)value));
                 emitter.Start(1, 2);
                 emitter.Complete(second);
                 emitter.Complete(first);

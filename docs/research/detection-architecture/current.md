@@ -10,7 +10,7 @@ flowchart TD
     OBS["Observer.cs<br/>Hook、ウィンドウ状態取得、処理の振分け"]
     TRACK["CandidateTracker<br/>最大化・配置・ドラッグなど"]
     OTHER["操作別Observer / Policy<br/>切替・閉じる・タスクバー等"]
-    PROTO["CandidateProtocol<br/>Evidence → CandidateEnvelope v2"]
+    PROTO["CandidateSink<br/>CandidateDraft → CandidateEnvelope v2"]
     HOST["ObserverHost<br/>JSON Lines / stdout"]
     MAIN["src/main/observer.ts<br/>JSON検証・Candidate受信"]
     COACH["DurableCoach<br/>世代・順序・重複の確認"]
@@ -77,3 +77,21 @@ C#側の`WindowCandidate`内部に古い`protocolVersion=1`表記があっても
 操作の具体的な成立条件は[操作別設計](../../operations/README.md)を正本とする。
 
 → **新しい構成は[目標アーキテクチャ](target.md)**。
+
+## Candidate Sink (Issue #173)
+
+All production candidates pass through `CandidateSink.Submit(CandidateDraft)`. The existing operation adapters construct drafts; only Submit assigns the wire sequence and invokes the output callback under the generation gate. ObserverHost retains its outputLock. Transaction IDs remain input IDs assigned by existing policies; cancellation and duplicate completion prevention remain in those policies, and delivery deduplication remains in DurableCoach.
+
+| Candidate source                                           | Sink adapter         |
+| ---------------------------------------------------------- | -------------------- |
+| Observer / CandidateTracker: window state and monitor move | Complete             |
+| Observer / CandidateTracker: placement and compound drag   | Placement / Compound |
+| Observer / InactiveCaptionPolicy                           | CaptionClick         |
+| WindowSwitchObserver                                       | Switch               |
+| WindowCloseObserver                                        | Close                |
+| TaskbarInputObserver                                       | Taskbar              |
+| SnapInvocationObserver: non-product validation route       | Invocation           |
+
+`CandidateProtocol.V2` is now a pure legacy evidence converter. WindowCandidate's internal sequence remains for legacy policy fixture compatibility and never controls wire numbering. The independence comparison fixtures also use CandidateSink; direct V2 conversion fixtures do not emit output. The pre-refactor component descriptions above refer to CandidateProtocol; their emission responsibility now belongs to CandidateSink.
+
+The fixture-only `ObserverHost.fixtureCandidate` command deliberately bypasses the sink to inject exact envelopes into TypeScript, preserving parser/replay tests. Control responses and bounded diagnostic aggregates are not candidates and still use Host output directly. No raw input or window identity is added to drafts or JSONL.
