@@ -43,7 +43,7 @@ jobs:
             /k:"YutoMatsui21_shortcut-expert" `
             /o:"yutomatsui21" `
             /d:sonar.token="$env:SONAR_TOKEN" `
-            /d:sonar.projectBaseDir="."
+            /d:sonar.projectBaseDir="$((Get-Location).Path)"
 
           dotnet build native-helper/WindowObserver.csproj --no-incremental --disable-build-servers
 
