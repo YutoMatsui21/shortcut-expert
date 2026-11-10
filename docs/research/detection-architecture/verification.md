@@ -45,3 +45,38 @@
 - **検証レベル**：C# Policy単体・TS単体・helper IPC・SQLite統合・Electron smoke・自然入力を区別する。**fixtureの成功は物理操作やOS Toast表示の証拠にはならない**。
 
 Windowsの実行コマンド・CIは[開発ガイド](../../development.md)と[テスト実装方針](../../../.agents/skills/test-shortcut-coach/SKILL.md)を参照。**本文書は試験計画であり、試験の実行結果ではない**。
+
+## Issue #172 の固定基準
+
+基準revisionは `8dbb7d6`。製品要件は変更しない。上記の回帰条件は、目標仕様への意図的な変更と区別する。
+
+`tests/fixtures/detection-baseline-v2.json` は本番C# policyの人工入力から得た10出力群と、PR #169の49列（ドラッグ18、caption31）の名前・現行期待値・本番Envelopeを固定する。`tests/native/native-operation-policy.test.ts` が再生成した出力と一致を確認する。kind/profile/route/origin/Evidence、候補数、配列内の発行順、sequence/generationを含む。各列は独立セッションであり、配列間の順序は実Observerの配送順を保証しない。transactionの絶対値も固定するが、採番移行で欠番が変わる場合は理由をレビューし、その項目だけ更新できる。
+
+既存経路が厳格parse→Core→隔離SQLite→通知要求を確認する。保存原子性・rollbackは `tests/operations/cross-monitor-compound-drag.test.ts` と `tests/operations/inactive-caption-click.test.ts` を再利用する。
+
+`target specification ONLY` サブテストは `invalid-max-release` / `invalid-quarter-release` の現行出力0件と、独立実験のW02のみ採用を並べて検証する。新Composerの製品実装を検証したものではない。実験の単独候補が旧v2を通ることも将来のEnvelope契約の決定を意味しない。`unsupported-cross-half` は現行0件のまま固定し、実験の部分採用をW02＋W06の製品採否へ流用しない。
+
+### 既存試験の再利用
+
+以下のC#試験は `tests/native/policy/`、TS操作試験は `tests/operations/` にある。
+
+| 検証項目                                           | 主な既存試験と確認内容                                                                                                                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PR #166/#167 W02/W06/W07、対象・物理性・取消・時刻 | `MouseRepositionTests.cs`、`CompoundDragTests.cs`、`MonitorMoveTests.cs`。release、process、foreground、layout、期限、取消後END                                                                                          |
+| 中間W04/W06、Win保持・Win+↓連続                    | `PlacementTests.cs`、`WindowStateTests.cs`、`window-snap-placement.test.ts`、`window-maximize-minimize.test.ts`                                                                                                          |
+| 世代、Stop/Reset、遅延結果                         | 独立実験のGestureLifetime、`tests/app/ipc/native-message-protocol.test.ts`、`tests/app/lifecycle/observer-process-lifecycle.test.ts`、`tests/native/helper-process-contract.test.ts`。実験gateを本番workerの証明にしない |
+| W11 DESTROY                                        | `WindowCloseTests.cs`、`window-close-detection.test.ts`。要求だけ、別対象、再利用、重複、期限                                                                                                                            |
+| W12 UIA・W01排他                                   | `TaskbarTests.cs`、`WindowSwitchTests.cs`。入力後照会、配置変更、期限、Stop、タスクバー入力からW01へfallbackしない境界                                                                                                   |
+| 正常8操作、キー同等性不明、学習状態と通知          | `tests/integration/candidate-to-page-model-data-flow.test.ts`。実SQLiteと通知adapter要求まで。実Toastや自然入力精度の証拠ではない                                                                                        |
+
+### #177（Protocol設計）で決めるゲート
+
+| 項目               | 現行と目標の差 / 決定すべき事項                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 不正複合の部分採用 | 現行は全棄却。目標は共通証拠が有効なら確証済みW02を残す。共通不正と操作別不成立の型、parserの棄却単位、旧variantとの共存を決める |
+| W02＋W06           | 現行製品要件では未採用。採否、必要な確証、記録数、案内と通知をユーザー判断込みで決める。無断で追加しない                         |
+| 同一gesture最大2件 | 現行は0〜2件・原子保存・単一通知。目標の任意結果リストは3件以上を承認しない。上限超過時の拒否／保留と重複IDの扱いを決める        |
+| 未確定結果         | 途中W04/W06抑制を維持。不成立と結果待ちを区別し、全購読者完了・操作別期限・取消の確定barrierを決める。空結果を完了と推測しない   |
+| W01/W12排他        | 現行要件を維持。sourceの表現、UIA失敗／遅延時の非fallback、同一入力IDの扱いを新契約でも保証する                                  |
+
+全出口の実Observer配信順・非同期OSイベントと自然入力の最終受入は未実施。Sink移行前には本番出口の試験、worker所有変更前には寿命試験を追加し、本基準だけで移行完了とはしない。
