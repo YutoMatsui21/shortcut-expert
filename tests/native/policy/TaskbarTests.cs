@@ -122,7 +122,7 @@ internal static class TaskbarTests
         confirmation.Add(Pending(10, 750));
         Check("inclusive age bounds", confirmation.Confirm(layout, 751, 3250).Length == 1);
         var emitted = new List<object>();
-        var protocol = new CandidateProtocol(emitted.Add);
+        var protocol = new CandidateSink(emitted.Add);
         protocol.Start(1, 2);
         protocol.Taskbar(
             1,

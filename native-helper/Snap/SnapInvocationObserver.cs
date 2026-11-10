@@ -6,7 +6,7 @@ using Point = NativeMethods.Point;
 
 // All mutable state lives on the helper's message thread. No raw input leaves this class.
 internal sealed class SnapInvocationObserver(
-    CandidateProtocol protocol,
+    CandidateSink protocol,
     Func<int> transaction,
     Func<long> now
 ) : IDisposable

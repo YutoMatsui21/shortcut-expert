@@ -47,7 +47,7 @@ internal static class WindowCloseTests
             );
             Check("duplicate destroy " + mouse, p.Destroy(11, 8, 201, false, 201) is null);
             var messages = new List<object>();
-            var protocol = new CandidateProtocol(messages.Add);
+            var protocol = new CandidateSink(messages.Add);
             protocol.Start(1, 2);
             protocol.Close(
                 1,

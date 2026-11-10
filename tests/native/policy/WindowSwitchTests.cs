@@ -477,7 +477,7 @@ internal static class WindowSwitchTests
         Foreground(taskbar, b);
         Check("Win digit never W01", taskbar.Poll(b, 340) is null);
         var emitted = new List<object>();
-        var protocol = new CandidateProtocol(emitted.Add);
+        var protocol = new CandidateSink(emitted.Add);
         protocol.Start(1, 2);
         foreach (var sample in new[] { result!, keyResult! })
             protocol.Switch(

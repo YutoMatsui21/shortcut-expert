@@ -4,7 +4,7 @@ using Point = NativeMethods.Point;
 
 // Reads only the target needed for a bounded close transaction. No app/title/path is emitted.
 internal sealed class WindowCloseObserver(
-    CandidateProtocol protocol,
+    CandidateSink protocol,
     Func<int> transaction,
     Func<long> now,
     Action<CloseReason>? diagnostic = null

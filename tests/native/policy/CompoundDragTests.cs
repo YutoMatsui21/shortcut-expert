@@ -62,7 +62,7 @@ internal static partial class Program
                     tracker.FinishMove(11, after, 500, 11, "2026-10-28") as CompoundMoveResult;
                 Equal(true, result is not null);
                 var emitted = new List<object>();
-                var protocol = new CandidateProtocol(emitted.Add);
+                var protocol = new CandidateSink(emitted.Add);
                 protocol.Start(1, 2);
                 protocol.Compound(1, "2026-10-28", result!);
                 Equal(
@@ -224,7 +224,7 @@ internal static partial class Program
                     Equal(proven, result!.TwoDisplayLayoutConfirmed);
                     Equal<string?>(null, result.MoveDirection);
                     var emitted = new List<object>();
-                    var protocol = new CandidateProtocol(emitted.Add);
+                    var protocol = new CandidateSink(emitted.Add);
                     protocol.Start(1, 2);
                     protocol.Compound(1, "2026-10-28", result);
                     Equal(
@@ -427,7 +427,7 @@ internal static partial class Program
                     if (result is CompoundMoveResult compound)
                     {
                         var emitted = new List<object>();
-                        var protocol = new CandidateProtocol(emitted.Add);
+                        var protocol = new CandidateSink(emitted.Add);
                         protocol.Start(1, 2);
                         protocol.Compound(1, "2026-10-28", compound);
                         Equal(1, emitted.Count);

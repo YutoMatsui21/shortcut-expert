@@ -7,7 +7,7 @@ using Point = NativeMethods.Point;
 internal sealed class Observer : IDisposable
 {
     private const uint HitTestTimeoutMs = 10;
-    private readonly CandidateProtocol protocol;
+    private readonly CandidateSink protocol;
     private readonly bool fixture;
     private readonly Action<WindowDiagnosticReason>? windowDiagnostic;
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -42,7 +42,7 @@ internal sealed class Observer : IDisposable
         Action<WindowDiagnosticReason>? windowDiagnostic = null
     )
     {
-        protocol = new CandidateProtocol(emit);
+        protocol = new CandidateSink(emit);
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;

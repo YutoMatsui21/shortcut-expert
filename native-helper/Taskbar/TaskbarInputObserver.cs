@@ -3,7 +3,7 @@ using Point = NativeMethods.Point;
 
 // Message-thread state only. Polling completions are consumed here, never on a hook callback.
 internal sealed class TaskbarInputObserver(
-    CandidateProtocol protocol,
+    CandidateSink protocol,
     Func<int> transaction,
     Func<long> now
 ) : IDisposable
