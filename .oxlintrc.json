@@ -18,7 +18,7 @@
     "typescript/no-misused-promises": "warn",
     "typescript/no-unsafe-assignment": "warn",
     "typescript/no-unsafe-type-assertion": "warn",
-    "import/no-cycle": "warn",
+    "import/no-cycle": "error",
     "typescript/unbound-method": "warn",
     "eslint/no-unused-expressions": [
       "error",
