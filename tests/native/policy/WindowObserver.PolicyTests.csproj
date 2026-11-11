@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../../native-helper/Core/GestureManager.cs" Link="GestureManager.cs" />
     <Compile Include="../../../native-helper/Core/DetectionSession.cs" Link="DetectionSession.cs" />
     <Compile Include="../../../native-helper/Core/CandidateSink.cs" Link="CandidateSink.cs" />
     <Compile
