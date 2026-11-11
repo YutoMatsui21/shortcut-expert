@@ -12,7 +12,8 @@ internal sealed class Observer : IDisposable
     private readonly Action<WindowDiagnosticReason>? windowDiagnostic;
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
-    private readonly CandidateTracker tracker = new();
+    private readonly DetectionSession session = new();
+    private readonly CandidateTracker tracker;
     private readonly InactiveCaptionPolicy captionClick = new();
     private string captionDate = "";
 
@@ -43,28 +44,26 @@ internal sealed class Observer : IDisposable
     )
     {
         protocol = new CandidateSink(emit);
+        tracker = new(session);
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
-        taskbar = new(protocol, tracker.NextTransaction, () => clock.ElapsedMilliseconds);
+        taskbar = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds);
         switching = new(
             protocol,
-            tracker.NextTransaction,
+            NextTransaction,
             () => clock.ElapsedMilliseconds,
             windowDiagnostic
         );
-        closing = new(
-            protocol,
-            tracker.NextTransaction,
-            () => clock.ElapsedMilliseconds,
-            closeDiagnostic
-        );
+        closing = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
         mouseCallback = OnMouse;
         keyCallback = OnKey;
         eventCallback = OnEvent;
         maximizeTimer.Tick += (_, _) => PollMaximize();
     }
+
+    private int NextTransaction() => session.Allocator(epoch)();
 
     internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
 
@@ -98,6 +97,7 @@ internal sealed class Observer : IDisposable
     internal void Start(int newGeneration, int protocolVersion = 2)
     {
         Stop();
+        session.Start(newGeneration);
         tracker.Reset(newGeneration);
         epoch = newGeneration;
         protocol.Start(newGeneration, protocolVersion);
@@ -148,6 +148,8 @@ internal sealed class Observer : IDisposable
     {
         captionClick.Cancel();
         maximizeTimer.Stop();
+        session.Stop();
+        epoch = 0;
         protocol.Stop();
         taskbar.Stop();
         switching.Stop();
@@ -540,7 +542,7 @@ internal sealed class Observer : IDisposable
                     mouse.Point,
                     clock.ElapsedMilliseconds,
                     mouse.Time,
-                    tracker.NextTransaction(),
+                    NextTransaction(),
                     InactiveCaptionPolicy.EligiblePress(
                         switching.CaptionPressReady,
                         WindowSwitchObserver.Read(pressForeground, requireCaption: false),

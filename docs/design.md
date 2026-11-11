@@ -25,6 +25,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
+- **採番**：Nativeの`DetectionSession`が観測世代内で共有transactionを発行する。ObserverのStartで開始し、Stopで失効する。検出器のResetや候補取消では共有カウンタを巻き戻さず、欠番を許容する。採番delegateは開始時の世代とライフサイクルを保持し、停止後は0（無効）を返す。W11の保留確認、W12のworker結果はメッセージスレッドで確定し、Stopで保留・worker参照を破棄する。Candidate Sinkは旧世代を棄却し、transactionとは独立に送信確定順のsequenceを発行する。通信型・Mainの再配送排除・保存・通知の契約は変更しない。
 
 操作ごとの成立条件は[operations/](operations/)、技術検証の原本は[research/](research/)を参照。**検出処理の現在の構成と、実装前のリファクタリング設計は[検出アーキテクチャ](research/detection-architecture/README.md)に分けて記載する。\*\*\*\*W02（画面移動）とW03（最大化）／W07（四隅配置）の同時成立**は、1ジェスチャから異なる操作IDをそれぞれ1件採用し、同じIDを重複させない設計とする。実装・最終受入が完了した意味ではない（[#113](https://github.com/YutoMatsui21/shortcut-expert/issues/113)）。1操作への複数代替キー案内は将来の[#96](https://github.com/YutoMatsui21/shortcut-expert/issues/96)で扱う。
 

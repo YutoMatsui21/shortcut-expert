@@ -137,8 +137,17 @@ internal sealed class CandidateTracker
     private long lastCaptionAt = NoCaptionClickAt;
     private Point lastCaptionPoint;
     private int generation,
-        sequence,
-        transaction;
+        sequence;
+    private readonly DetectionSession session;
+    private readonly bool ownsSession;
+    private Func<int> allocate = () => 0;
+
+    internal CandidateTracker(DetectionSession? session = null)
+    {
+        ownsSession = session is null;
+        this.session = session ?? new DetectionSession();
+    }
+
     internal PlacementPolicy Placement { get; } = new();
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal bool HasDrag => drags.Count == 1;
@@ -169,7 +178,7 @@ internal sealed class CandidateTracker
             CancelMouseState();
     }
 
-    internal int NextTransaction() => checked(++transaction);
+    internal int NextTransaction() => allocate();
 
     internal object? FinishKey(
         nint window,
@@ -241,7 +250,14 @@ internal sealed class CandidateTracker
     {
         generation = newGeneration;
         sequence = 0;
-        transaction = 0;
+        if (ownsSession)
+        {
+            if (newGeneration > 0)
+                session.Start(newGeneration);
+            else
+                session.Stop();
+        }
+        allocate = session.Allocator(newGeneration);
         moving.Clear();
         drags.Clear();
         input = null;
@@ -412,7 +428,7 @@ internal sealed class CandidateTracker
             (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
             modifiers,
             foreground,
-            checked(++transaction),
+            NextTransaction(),
             CaptionPress: route == "caption-press"
         );
         // Explicit resize borders and caption buttons remain outside window-move detection.
@@ -534,7 +550,7 @@ internal sealed class CandidateTracker
             (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
             conflict,
             true,
-            checked(++transaction)
+            NextTransaction()
         );
         moveKeyReleased = false;
     }
@@ -1027,7 +1043,7 @@ internal sealed class CandidateTracker
                 && TwoDisplayLayout(before, after, candidate?.Origin != "mouse")
         )
         {
-            Transaction = candidate?.Transaction ?? checked(++transaction),
+            Transaction = candidate?.Transaction ?? NextTransaction(),
         };
     }
 
