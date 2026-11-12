@@ -136,12 +136,15 @@ internal sealed class DetectionRouter
                     gesture.Source
                 );
 
+        private bool PendingValid() =>
+            router.Current(revision, observed.Generation) && valid!() && LiveGesture();
+
         internal bool Complete(CompletionIdentity identity, GestureManager.Gesture expected)
         {
             router.VerifyThread();
             if (Status != State.AwaitingResult)
                 return false;
-            if (!router.Current(revision, observed.Generation) || !valid!() || !LiveGesture())
+            if (!PendingValid())
             {
                 Cancel();
                 return false;
