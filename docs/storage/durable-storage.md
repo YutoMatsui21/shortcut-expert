@@ -1,5 +1,7 @@
 # SQLiteの永続保存・障害復旧
 
+**#177の確定設計との境界**：以下の2件・組合せ・全体棄却は現行の旧compound経路の説明。[独立結果Envelope契約](../research/detection-architecture/result-envelope.md)では成立した既存操作を全件採用し、W02＋W06・部分採用・3件以上を原子的に保存する。新経路への本番切替は未実施。
+
 **責務**：操作回数と観測範囲を失わず保存し、再送・故障・再起動で**二重加算や空データへの置換を起こさない**。[製品要件](../ui-requirements.md)、[移行](json-migration.md)、[履歴削除](history-deletion.md)を参照。
 
 ## 1. 保存先と責務

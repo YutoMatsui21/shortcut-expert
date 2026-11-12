@@ -40,6 +40,8 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - `coach-ipc.ts`が送信元frame・引数・削除確認tokenを検証する。Rendererは限定されたPreload APIだけを呼ぶ。`contextIsolation`と`sandbox`を維持する。
 - UIの状態・操作ルールは[一覧](features/learning-ui.md)、[記録](features/records-ui.md)、[設定](features/settings-panel.md)、[ウィンドウ](features/window-lifecycle.md)を参照する。
 
+独立結果の次期通信型・完了barrier・任意件数保存は[#177の確定契約](research/detection-architecture/result-envelope.md)。現行v2の追加variantとして #178/#179で導入し、本番Detectorは段階移行する。
+
 ## 4. 保存・通知
 
 ### 保存と移行
