@@ -95,3 +95,20 @@ All production candidates pass through `CandidateSink.Submit(CandidateDraft)`. T
 `CandidateProtocol.V2` is now a pure legacy evidence converter. WindowCandidate's internal sequence remains for legacy policy fixture compatibility and never controls wire numbering. The independence comparison fixtures also use CandidateSink; direct V2 conversion fixtures do not emit output. The pre-refactor component descriptions above refer to CandidateProtocol; their emission responsibility now belongs to CandidateSink.
 
 The fixture-only `ObserverHost.fixtureCandidate` command deliberately bypasses the sink to inject exact envelopes into TypeScript, preserving parser/replay tests. Control responses and bounded diagnostic aggregates are not candidates and still use Host output directly. No raw input or window identity is added to drafts or JSONL.
+
+## GestureManager（Issue #175）
+
+`Observer`は引き続きWin32の観測・WindowState取得・配送順序・pollを担当する。取得済みsnapshotと観測時刻をTracker経由で`GestureManager`へ渡す。hook内のOS照会は増やしていない。
+
+`GestureManager`は、Trackerの入力・物理press・移動中対象・drag・release・Win+Up候補の共通管理元になった。共通GestureはローカルID、generationとResetごとのrevision、入力源、対象、開始snapshot、物理性・修飾状態、最新foreground、解放時刻、終端snapshotを持つ。snapshotの時刻は同じ単調時計の観測時刻。IDはtransactionと別で、`DetectionSession`の採番やSinkのsequenceを変更しない。完了済み・取消済み・期限切れ・別Gesture・Reset前の参照への完了要求は拒否する。履歴を蓄積せず、現在のGestureと既存Policyが必要とする参照だけを保持し、外部送信・保存しない。
+
+物理pressからMOVESIZESTARTで作るdrag入力は同じGestureを参照し、従来のinputAgeMs用の時刻変換は互換入力にだけ適用する。Win保持中のPlacement系列も同じGestureと開始snapshotを参照し、途中のWin+Up候補を作っても共通IDを作り直さない。入力終了は`awaiting-result`、Policyの終端処理は`completed`または`cancelled`とし、期限の選択は既存Policy側に残す。
+
+### 今回残した責務
+
+- Trackerのroute分類、クリック距離・ダブルクリック・キーrepeat／注入キー、Win+Down継続判定、診断probe、操作固有の期限と成立条件は既存のまま。互換`Input`のroute・transaction・Conflicted等は既存判定のために残し、共通Gestureに操作の成否を格納しない。
+- PlacementPolicyの形状系列・heldキー・期限は残し、開始／解放／完了／取消のみ共通寿命へ接続した。
+- 背後captionは既存の並行追跡・foreground照合を維持する。W11のDESTROY待ち、W12の非同期UIA、W01/W12排他と各workerの寿命は専用Observer／Policyに残す。それらの入力を共通Gestureへ移す作業は後続のRouter／独立Detector移行で扱う。
+- GestureManagerの完了はCandidateの送信ではない。既存PolicyがCandidateを返し、CandidateSinkが世代・送信順を管理する。検出条件、途中計上の抑制、Protocol v2、TS分類、保存・通知は変更していない。
+
+人工入力の共通寿命と本番Trackerへの接続は`GestureTests.cs`、Native出力の互換性は#172の固定baselineと既存Policy試験で検証する。自然入力・実OSのイベント順序・通知表示の受入とは区別する。

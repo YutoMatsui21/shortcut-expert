@@ -49,6 +49,13 @@ test(
         "utf8",
       ),
     );
+    // Invocation is the sole legacy adapter using the wall-clock date. Compare
+    // its date separately so the fixed baseline does not expire at midnight.
+    const today = new Intl.DateTimeFormat("sv-SE").format(new Date());
+    for (const candidate of report.snapSamples) {
+      assert.equal(candidate.date, today);
+      candidate.date = baseline.snapSamples[0].date;
+    }
     for (const key of Object.keys(baseline).filter(
       (key) => key !== "independence",
     ))

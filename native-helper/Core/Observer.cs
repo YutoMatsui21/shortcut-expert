@@ -354,7 +354,8 @@ internal sealed class Observer : IDisposable
                         known ? Bounds(info.Work) : null,
                         taskbarMouse.Flags,
                         physicalBefore,
-                        physicalAfter
+                        physicalAfter,
+                        clock.ElapsedMilliseconds
                     );
                     if (tracker.MouseStateTarget is { } clicked && captionClick.Target != clicked)
                     {
@@ -618,7 +619,7 @@ internal sealed class Observer : IDisposable
             {
                 if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
                     tracker.ClearInput();
-                tracker.KeyReleased(key.Key);
+                tracker.KeyReleased(key.Key, clock.ElapsedMilliseconds);
                 if (key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT)
                 {
                     nint releasedTarget = GetForegroundWindow();

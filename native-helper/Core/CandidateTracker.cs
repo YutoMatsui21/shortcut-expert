@@ -37,17 +37,24 @@ internal sealed record CompoundMoveResult(
 // Windows reads, hooks and input payload lifetimes remain in Observer.
 internal sealed class CandidateTracker
 {
+    internal GestureManager Gestures => gestures;
+    private readonly GestureManager gestures = new();
+
     private const long InputMatchWindowMs = 1000;
     private const long MouseStateMatchWindowMs = 500;
     private const int ClickMovementPx = 4;
     private Point clickPoint;
     private bool clickReleased;
-    internal nint? MouseStateTarget => input is { Route: "unknown" } ? input.Window : null;
+    internal nint? MouseStateTarget =>
+        gestures.Pending is { Route: "unknown" } ? gestures.Pending.Window : null;
 
     internal void CancelMouseState()
     {
         if (MouseStateTarget is not null)
-            input = null;
+        {
+            gestures.Pending = null;
+            gestures.RetireUnreferenced();
+        }
     }
 
     internal void MouseMessage(nint message)
@@ -55,45 +62,36 @@ internal sealed class CandidateTracker
         if (message is not (0x200 or WM_LBUTTONDOWN or WM_LBUTTONUP))
         {
             CancelMouseState();
-            dragPress = null;
+            gestures.AbandonPress();
         }
     }
 
     private const int CaptionDoubleClickDistancePx = 4;
     private const long NoCaptionClickAt = -10000;
 
-    private sealed record Input(
-        nint Window,
-        WindowState Before,
-        string Origin,
-        string Route,
-        long At,
-        bool Injected,
-        bool Conflicted,
-        bool Matched,
-        int Transaction,
-        WindowDragReleaseProbe? Probe = null,
-        bool CaptionPress = false
-    );
-
-    private readonly HashSet<nint> moving = new();
-    private readonly Dictionary<nint, Input> drags = new();
-    private (MonitorBounds Monitor, MonitorBounds Work, Point Point)? release;
-    private Input? input;
-    private Input? dragPress;
-    private Input? winUp;
     private bool upHeld;
     private readonly HashSet<uint> injectedWin = new();
 
     internal nint? MaximizeTarget(long now)
     {
-        if (winUp is { } pending && now - pending.At is < 0 or > InputMatchWindowMs)
-            winUp = null;
-        return winUp?.Window;
+        if (gestures.Maximize is { } pending && now - pending.At is < 0 or > InputMatchWindowMs)
+        {
+            // The maximize adapter's one-second window is not the lifetime of a
+            // shared Win-held placement series (which owns its own deadline).
+            if (!Placement.Owns(pending.Window))
+            {
+                if (now < pending.At)
+                    gestures.Cancel(pending.Gesture);
+                else
+                    gestures.Expire(pending.Gesture, now, pending.At + InputMatchWindowMs);
+            }
+            gestures.Maximize = null;
+        }
+        return gestures.Maximize?.Window;
     }
 
     internal uint? MaximizeProcess(nint window, long now) =>
-        MaximizeTarget(now) == window ? winUp!.Before.Process : null;
+        MaximizeTarget(now) == window ? gestures.Maximize!.Before.Process : null;
 
     internal WindowCandidate? ConfirmMaximize(
         nint window,
@@ -105,16 +103,18 @@ internal sealed class CandidateTracker
     {
         if (MaximizeTarget(now) is not { } target || target != window)
             return null;
-        var pending = winUp!;
+        var pending = gestures.Maximize!;
         if (foreground != window || after is null || after.Process != pending.Before.Process)
         {
-            winUp = null;
+            gestures.Maximize = null;
+            gestures.RetireUnreferenced(Placement.Owns(window));
             return null;
         }
         if (after.Show != SW_SHOWMAXIMIZED)
             return null;
-        winUp = null;
-        input = null;
+        gestures.Complete(pending.Gesture, window, after, now);
+        gestures.Maximize = null;
+        gestures.Pending = null;
         Placement.Cancel();
         return (WindowCandidate)Build(
             "maximize",
@@ -130,7 +130,7 @@ internal sealed class CandidateTracker
     }
 
     private bool moveKeyReleased;
-    private Input? completedWinDown;
+    private GestureManager.Input? completedWinDown;
     private bool winDownHeld;
     private nint lastCaption;
     private uint lastCaptionProcess;
@@ -144,25 +144,26 @@ internal sealed class CandidateTracker
 
     internal CandidateTracker(DetectionSession? session = null)
     {
+        Placement = new(gestures);
         ownsSession = session is null;
         this.session = session ?? new DetectionSession();
     }
 
-    internal PlacementPolicy Placement { get; } = new();
+    internal PlacementPolicy Placement { get; }
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
-    internal bool HasDrag => drags.Count == 1;
+    internal bool HasDrag => gestures.Drags.Count == 1;
 
     internal void MouseMoved(Point point, uint flags)
     {
         if (
             (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0
-            && (dragPress is not null || HasDrag)
+            && (gestures.Press is not null || HasDrag)
         )
         {
             ClearInput();
             return;
         }
-        foreach (var drag in drags.Values)
+        foreach (var drag in gestures.Drags.Values)
             drag.Probe?.Sample(point, flags);
         if (
             MouseStateTarget is not null
@@ -189,12 +190,15 @@ internal sealed class CandidateTracker
     )
     {
         if (injected)
-            winUp = null;
+        {
+            gestures.Maximize = null;
+            gestures.RetireUnreferenced(Placement.Owns(window));
+        }
         var confirmed = ConfirmMaximize(window, after, now, window, date);
         if (confirmed is not null)
             return confirmed;
         if (
-            input is { Route: "win-shift-left" or "win-shift-right" } move
+            gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
             && move.Window == window
             && moveKeyReleased
         )
@@ -212,17 +216,19 @@ internal sealed class CandidateTracker
         return placed;
     }
 
-    internal void KeyReleased(uint key)
+    internal void KeyReleased(uint key, long? now = null)
     {
-        Placement.Released(key);
+        Placement.Released(key, now);
+        if (!Placement.WinHeld && gestures.Current?.Source == "key")
+            gestures.AwaitResult(gestures.Current, now);
         injectedWin.Remove(key);
         if (key == VK_UP)
             upHeld = false;
         if (key == VK_DOWN)
             winDownHeld = false;
         if (
-            input is { Route: "win-shift-left" } && key == VK_LEFT
-            || input is { Route: "win-shift-right" } && key == VK_RIGHT
+            gestures.Pending is { Route: "win-shift-left" } && key == VK_LEFT
+            || gestures.Pending is { Route: "win-shift-right" } && key == VK_RIGHT
         )
             moveKeyReleased = true;
     }
@@ -230,18 +236,9 @@ internal sealed class CandidateTracker
     internal void ForegroundChanged(nint window)
     {
         Placement.Foreground(window);
-        if (dragPress?.Window != window)
-            dragPress = null;
-        if (winUp?.Window != window)
-            winUp = null;
-        if (input is { Route: "win-shift-left" or "win-shift-right" } && input.Window != window)
-            input = null;
-        if (drags.Keys.Any(target => target != window))
-        {
+        if (gestures.Drags.Keys.Any(target => target != window))
             Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled);
-            drags.Clear();
-            release = null;
-        }
+        gestures.Foreground(window);
         if (completedWinDown is not null && completedWinDown.Window != window)
             completedWinDown = null;
     }
@@ -258,45 +255,30 @@ internal sealed class CandidateTracker
                 session.Stop();
         }
         allocate = session.Allocator(newGeneration);
-        moving.Clear();
-        drags.Clear();
-        input = null;
-        dragPress = null;
+        gestures.Reset(newGeneration);
         completedWinDown = null;
         winDownHeld = false;
-        release = null;
         lastCaption = 0;
         lastCaptionAt = NoCaptionClickAt;
         Placement.Reset();
-        winUp = null;
+        gestures.Maximize = null;
         upHeld = false;
         injectedWin.Clear();
     }
 
     internal void ClearInput()
     {
-        if (drags.Count > 0)
+        if (gestures.Drags.Count > 0)
             Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled);
         Placement.Cancel();
-        input = null;
-        dragPress = null;
-        winUp = null;
-        drags.Clear();
+        gestures.Clear();
         completedWinDown = null;
-        release = null;
     }
 
-    internal void Forget(nint window)
+    internal void Forget(nint window, bool preserveGesture = false)
     {
         Placement.Forget(window);
-        if (dragPress?.Window == window)
-            dragPress = null;
-        if (winUp?.Window == window)
-            winUp = null;
-        moving.Remove(window);
-        drags.Remove(window);
-        if (input?.Window == window)
-            input = null;
+        gestures.Forget(window, preserveGesture);
         if (completedWinDown?.Window == window)
             completedWinDown = null;
         if (lastCaption == window)
@@ -308,25 +290,7 @@ internal sealed class CandidateTracker
 
     internal void MoveStart(nint window, long now = 0)
     {
-        release = null;
-        moving.Add(window);
-        winUp = null;
-        // A live physical left press is independent of click movement/hit-test classification.
-        if (
-            dragPress is { } press
-            && press.Window == window
-            && now - press.At is >= 0 and <= InputMatchWindowMs
-        )
-            drags[window] = press with
-            {
-                Origin = "mouse",
-                Route = "caption-drag",
-                At = now - press.At,
-                Probe = Diagnostic is null ? null : new(),
-            };
-        dragPress = null;
-        if (input?.Window == window)
-            input = input with { Conflicted = true };
+        gestures.MoveStarted(window, now, Diagnostic is not null);
         lastCaption = 0;
         lastCaptionAt = NoCaptionClickAt;
     }
@@ -339,7 +303,8 @@ internal sealed class CandidateTracker
         MonitorBounds? work,
         uint flags,
         Point? physicalBefore = null,
-        Point? physicalAfter = null
+        Point? physicalAfter = null,
+        long? releasedAt = null
     )
     {
         if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0)
@@ -347,20 +312,22 @@ internal sealed class CandidateTracker
             ClearInput();
             return;
         }
-        dragPress = null;
+        gestures.Press = null;
         MouseMoved(point, flags);
         clickReleased = true;
+        if (gestures.Current?.Source == "caption")
+            gestures.AwaitResult(gestures.Current, releasedAt);
         if (
-            drags.Count == 1
+            gestures.Drags.Count == 1
             && monitor is not null
             && work is not null
             && Diagnostic is { } diagnostic
         )
-            drags
-                .Values.First()
+            gestures
+                .Drags.Values.First()
                 .Probe?.Record(point, monitor, work, physicalBefore, physicalAfter, diagnostic);
-        release =
-            drags.Count == 1 && monitor is not null && work is not null
+        gestures.Release =
+            gestures.Drags.Count == 1 && monitor is not null && work is not null
                 ? (monitor, work, point)
                 : null;
     }
@@ -392,9 +359,9 @@ internal sealed class CandidateTracker
     )
     {
         Placement.Cancel();
-        winUp = null;
-        drags.Clear();
-        release = null;
+        gestures.Maximize = null;
+        gestures.Drags.Clear();
+        gestures.Release = null;
         completedWinDown = null;
         clickPoint = point;
         clickReleased = false;
@@ -419,7 +386,7 @@ internal sealed class CandidateTracker
         lastCaptionProcess = before.Process;
         lastCaptionAt = now;
         lastCaptionPoint = point;
-        input = new Input(
+        gestures.Pending = gestures.Begin(
             window,
             before,
             route is "unknown" or "caption-press" ? "unknown" : "mouse",
@@ -432,8 +399,10 @@ internal sealed class CandidateTracker
             CaptionPress: route == "caption-press"
         );
         // Explicit resize borders and caption buttons remain outside window-move detection.
-        dragPress =
-            (route is "unknown" or "caption-press") && hit is not (>= 10 and <= 18) ? input : null;
+        gestures.Press =
+            (route is "unknown" or "caption-press") && hit is not (>= 10 and <= 18)
+                ? gestures.Pending
+                : null;
     }
 
     internal void Key(
@@ -448,16 +417,42 @@ internal sealed class CandidateTracker
         bool altDown = false
     )
     {
-        drags.Clear();
-        dragPress = null;
-        release = null;
+        try
+        {
+            KeyCore(window, before, key, winDown, modifiers, now, flags, shiftDown, altDown);
+        }
+        finally
+        {
+            gestures.RetireUnreferenced(
+                gestures.Current is { } current && Placement.Owns(current.Window)
+            );
+        }
+    }
+
+    private void KeyCore(
+        nint window,
+        WindowState? before,
+        uint key,
+        bool winDown,
+        bool modifiers,
+        long now,
+        uint flags,
+        bool shiftDown = false,
+        bool altDown = false
+    )
+    {
+        gestures.Drags.Clear();
+        gestures.Press = null;
+        gestures.Release = null;
         bool conflict =
-            input is not null && input.Origin == "mouse" && now - input.At <= InputMatchWindowMs;
+            gestures.Pending is not null
+            && gestures.Pending.Origin == "mouse"
+            && now - gestures.Pending.At <= InputMatchWindowMs;
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
         if (injected && key is VK_LWIN or VK_RWIN)
             injectedWin.Add(key);
         if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN))
-            winUp = null;
+            gestures.Maximize = null;
         if (IsModifier(key))
         {
             Placement.Key(window, before, key, winDown, modifiers, now, flags, NextTransaction);
@@ -466,8 +461,8 @@ internal sealed class CandidateTracker
                 || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0
             )
                 completedWinDown = null;
-            if (input is not null)
-                input = input with { Conflicted = true };
+            if (gestures.Pending is not null)
+                gestures.Pending = gestures.Pending with { Conflicted = true };
             return;
         }
         string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
@@ -480,15 +475,15 @@ internal sealed class CandidateTracker
                 return;
             }
             upHeld = true;
-            winUp =
+            gestures.Maximize =
                 route == "win-up"
                 && before is { Show: SW_SHOWNORMAL }
                 && !injected
                 && injectedWin.Count == 0
                 && !conflict
-                && !moving.Contains(window)
+                && !gestures.Moving.Contains(window)
                 && !Placement.Cancelled
-                    ? new Input(
+                    ? gestures.Begin(
                         window,
                         before,
                         "key",
@@ -497,13 +492,14 @@ internal sealed class CandidateTracker
                         false,
                         false,
                         true,
-                        NextTransaction()
+                        NextTransaction(),
+                        ContinueSeries: Placement.Owns(window)
                     )
                     : null;
         }
         if (
             route is "win-shift-left" or "win-shift-right"
-            && input?.Route == route
+            && gestures.Pending?.Route == route
             && !moveKeyReleased
         )
         {
@@ -524,7 +520,7 @@ internal sealed class CandidateTracker
             && Placement.Key(window, before, key, winDown, conflict, now, flags, NextTransaction)
         )
         {
-            input = null;
+            gestures.Pending = null;
             completedWinDown = null;
             return;
         }
@@ -538,10 +534,10 @@ internal sealed class CandidateTracker
         }
         if (route is null || route == "win-up" && !injected && !conflict || before is null)
         {
-            input = null;
+            gestures.Pending = null;
             return;
         }
-        input = new Input(
+        gestures.Pending = gestures.Begin(
             window,
             before,
             "key",
@@ -587,10 +583,27 @@ internal sealed class CandidateTracker
         string date
     )
     {
-        drags.TryGetValue(window, out Input? drag);
-        var released = release;
-        release = null;
-        Forget(window);
+        var gesture = gestures.Drags.GetValueOrDefault(window)?.Gesture;
+        var result = FinishMoveCore(window, after, now, foreground, date);
+        if (after is not null && result is not null)
+            gestures.Complete(gesture, window, after, now);
+        else
+            gestures.Cancel(gesture);
+        return result;
+    }
+
+    private object? FinishMoveCore(
+        nint window,
+        WindowState? after,
+        long now,
+        nint foreground,
+        string date
+    )
+    {
+        gestures.Drags.TryGetValue(window, out GestureManager.Input? drag);
+        var released = gestures.Release;
+        gestures.Release = null;
+        Forget(window, preserveGesture: true);
         if (drag is null)
         {
             Diagnostic?.Invoke(WindowDiagnosticReason.DragNoSource);
@@ -816,7 +829,11 @@ internal sealed class CandidateTracker
         );
     }
 
-    private static CompoundMoveResult Compound(Input drag, WindowState after, string terminal) =>
+    private static CompoundMoveResult Compound(
+        GestureManager.Input drag,
+        WindowState after,
+        string terminal
+    ) =>
         new(
             drag.Transaction,
             drag.Before.Monitor!,
@@ -841,7 +858,8 @@ internal sealed class CandidateTracker
 
     internal object? Close(nint window, WindowState? previous, long now, string date)
     {
-        Input? candidate = input?.Window == window ? input : null;
+        GestureManager.Input? candidate =
+            gestures.Pending?.Window == window ? gestures.Pending : null;
         Forget(window);
         if (
             previous is null
@@ -891,12 +909,12 @@ internal sealed class CandidateTracker
         if (Placement.Owns(window))
             return null;
         // A drag owns this transaction until its terminal result; derived transitions cannot consume it.
-        if (drags.ContainsKey(window))
+        if (gestures.Drags.ContainsKey(window))
             return null;
         // Re-read from the click start: a state event may have updated the cache before button-up.
-        bool fallback = input is { Route: "unknown" } mouse && mouse.Window == window;
+        bool fallback = gestures.Pending is { Route: "unknown" } mouse && mouse.Window == window;
         if (fallback && clickReleased)
-            previous = input!.Before;
+            previous = gestures.Pending!.Before;
         string? operation = (State(previous.Show), State(after.Show)) switch
         {
             ("normal", "maximized") => "maximize",
@@ -904,7 +922,8 @@ internal sealed class CandidateTracker
             ("maximized", "normal") => "restore",
             _ => null,
         };
-        Input? candidate = input?.Window == window ? input : null;
+        GestureManager.Input? candidate =
+            gestures.Pending?.Window == window ? gestures.Pending : null;
         if (candidate is not null && candidate.Before.Process != after.Process)
         {
             ClearInput();
@@ -944,13 +963,15 @@ internal sealed class CandidateTracker
             if (
                 age is >= 0 and <= MouseStateMatchWindowMs
                 && candidate is { Injected: false, Conflicted: false, Matched: true }
-                && !moving.Contains(window)
+                && !gestures.Moving.Contains(window)
                 && (operation == "minimize" || foreground == window)
             )
                 candidate = candidate with { Origin = "mouse", Route = "mouse-state-fallback" };
         }
         bool recent = age >= 0 && age <= InputMatchWindowMs;
         WindowState before = recent && candidate is not null ? candidate.Before : previous;
+        if (candidate is not null)
+            gestures.Complete(candidate.Gesture, window, after, now);
         object result = Build(
             operation,
             before,
@@ -958,12 +979,12 @@ internal sealed class CandidateTracker
             candidate,
             age,
             operation == "minimize" || foreground == window,
-            moving.Contains(window),
+            gestures.Moving.Contains(window),
             date,
             monitor
         );
-        if (input?.Window == window)
-            input = null;
+        if (gestures.Pending?.Window == window)
+            gestures.Pending = null;
         // The first confirmed reduction counts immediately. A second physical Win+Down
         // on the same window within one second is the continuation of that operation.
         if (
@@ -1005,7 +1026,7 @@ internal sealed class CandidateTracker
         string operation,
         WindowState before,
         WindowState after,
-        Input? candidate,
+        GestureManager.Input? candidate,
         long age,
         bool target,
         bool isMoving,

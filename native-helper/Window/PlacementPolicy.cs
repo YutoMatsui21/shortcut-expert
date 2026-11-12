@@ -184,8 +184,10 @@ internal static class PlacementGeometry
     }
 }
 
-internal sealed class PlacementPolicy
+internal sealed class PlacementPolicy(GestureManager? gestures = null)
 {
+    private GestureManager.Gesture? gesture;
+
     private sealed record Series(
         nint Window,
         WindowState Before,
@@ -207,6 +209,7 @@ internal sealed class PlacementPolicy
 
     internal void Cancel()
     {
+        gestures?.Cancel(gesture);
         if (series is not null)
             cancelled = true;
         series = null;
@@ -214,6 +217,8 @@ internal sealed class PlacementPolicy
 
     internal void Reset()
     {
+        gestures?.Cancel(gesture);
+        gesture = null;
         series = null;
         cancelled = false;
         held.Clear();
@@ -231,7 +236,12 @@ internal sealed class PlacementPolicy
             Cancel();
     }
 
-    internal void Released(uint key) => held.Remove(key);
+    internal void Released(uint key, long? now = null)
+    {
+        held.Remove(key);
+        if (!WinHeld)
+            gestures?.AwaitResult(gesture, now);
+    }
 
     internal bool Key(
         nint window,
@@ -304,6 +314,7 @@ internal sealed class PlacementPolicy
                 cancelled = true;
                 return true;
             }
+            gesture = gestures?.StartKeySeries(window, before, now);
             series = new(
                 window,
                 before,
@@ -348,7 +359,14 @@ internal sealed class PlacementPolicy
         series = null;
         cancelled = false;
         if (pending is null || !Valid(pending, window, after, now, injected))
+        {
+            if (pending is not null && now - pending.Started > 15000)
+                gestures?.Expire(gesture, now, pending.Started + 15000);
+            else
+                gestures?.Cancel(gesture);
             return null;
+        }
+        gestures?.Complete(gesture, window, after!, now);
         string? shape = PlacementGeometry.Shape(after!);
         string? initial = PlacementGeometry.Shape(pending.Before);
         if (
