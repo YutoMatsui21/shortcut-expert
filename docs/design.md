@@ -25,6 +25,8 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
+- **イベント配送**：`Observer`が既存の観測点で作成した`ObservedEvent`を`DetectionRouter`へ渡し、購読登録した互換アダプターがTracker／専用Observerへ同期配送する。Routerは登録・配送・完了通知だけを担当し、成立条件・排他・操作固有workerは既存処理に残す。非同期完了はmessage-loopスレッドで対象・世代・有効Gestureを照合する。移行範囲は[現行構成](research/detection-architecture/current.md#detectionrouterissue-176)を参照。
+
 - **入力系列**：`GestureManager`がTrackerの共通入力参照と開始・解放・終端snapshot、取消・期限切れ・Resetの寿命を管理する。操作固有の成立条件・キー系列の形状・W11のDESTROY待ち・W12のUIA待ちは既存Tracker／Policyに残す。共通GestureのIDはtransactionとは独立し、共通寿命からCandidateを送信しない。移行済み範囲と残る責務は[現行構成](research/detection-architecture/current.md)を参照。
 
 - **採番**：Nativeの`DetectionSession`が観測世代内で共有transactionを発行する。ObserverのStartで開始し、Stopで失効する。検出器のResetや候補取消では共有カウンタを巻き戻さず、欠番を許容する。採番delegateは開始時の世代とライフサイクルを保持し、停止後は0（無効）を返す。W11の保留確認、W12のworker結果はメッセージスレッドで確定し、Stopで保留・worker参照を破棄する。Candidate Sinkは旧世代を棄却し、transactionとは独立に送信確定順のsequenceを発行する。通信型・Mainの再配送排除・保存・通知の契約は変更しない。

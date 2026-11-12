@@ -455,7 +455,7 @@ internal static class IndependentDetection
         return output.Cast<CandidateEnvelope>().SingleOrDefault();
     }
 
-    internal static object Run()
+    internal static object Run(Action<string, Drag, CandidateEnvelope?>? validateDrag = null)
     {
         var rows = new List<object>();
         int mismatches = 0;
@@ -518,6 +518,7 @@ internal static class IndependentDetection
             var naive = Compose(g, parts, false);
             var composed = Compose(g, parts, true);
             var baseline = Baseline(g);
+            validateDrag?.Invoke(name, g, baseline);
             // Compare complete protocol envelopes, not just the final operation names.
             Require(
                 Equals(baseline, composed),
