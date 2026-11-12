@@ -14,6 +14,7 @@ internal sealed class Observer : IDisposable
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly DetectionSession session = new();
     private readonly CandidateTracker tracker;
+    private readonly DetectionRouter router = new();
     private readonly InactiveCaptionPolicy captionClick = new();
     private string captionDate = "";
 
@@ -45,6 +46,11 @@ internal sealed class Observer : IDisposable
     {
         protocol = new CandidateSink(emit);
         tracker = new(session);
+        new TrackerEventAdapter(
+            tracker,
+            protocol,
+            (target, value) => states[target] = value
+        ).Register(router);
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
@@ -57,6 +63,7 @@ internal sealed class Observer : IDisposable
             windowDiagnostic
         );
         closing = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
+        new DedicatedInputAdapter(taskbar, switching, closing).Register(router);
         mouseCallback = OnMouse;
         keyCallback = OnKey;
         eventCallback = OnEvent;
@@ -100,6 +107,7 @@ internal sealed class Observer : IDisposable
         session.Start(newGeneration);
         tracker.Reset(newGeneration);
         epoch = newGeneration;
+        router.Reset(newGeneration);
         protocol.Start(newGeneration, protocolVersion);
         if (!fixture && GetSystemMetrics(SM_REMOTESESSION) != 0)
             throw new InvalidOperationException("remote-session-unsupported");
@@ -146,6 +154,7 @@ internal sealed class Observer : IDisposable
 
     internal void Stop()
     {
+        router.Stop();
         captionClick.Cancel();
         maximizeTimer.Stop();
         session.Stop();
@@ -324,16 +333,30 @@ internal sealed class Observer : IDisposable
                         return CallNextHookEx(0, code, message, data);
                 }
             }
-            tracker.MouseMessage(message);
+            router.Dispatch(new MouseMessageEvent(epoch, clock.ElapsedMilliseconds, message));
             bool probeRelease =
                 windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
             Point? physicalBefore =
                 probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
-            taskbar.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags);
-            switching.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
-            closing.Mouse(message, taskbarMouse.Point, taskbarMouse.Flags, taskbarMouse.Time);
+            router.Dispatch(
+                new RawMouseEvent(
+                    epoch,
+                    clock.ElapsedMilliseconds,
+                    message,
+                    taskbarMouse.Point,
+                    taskbarMouse.Flags,
+                    taskbarMouse.Time
+                )
+            );
             if (message == 0x200)
-                tracker.MouseMoved(taskbarMouse.Point, taskbarMouse.Flags);
+                router.Dispatch(
+                    new MouseMoveEvent(
+                        epoch,
+                        clock.ElapsedMilliseconds,
+                        taskbarMouse.Point,
+                        taskbarMouse.Flags
+                    )
+                );
             if (message != WM_LBUTTONDOWN)
             {
                 if (message == WM_LBUTTONUP)
@@ -348,14 +371,17 @@ internal sealed class Observer : IDisposable
                         new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
                     Point? physicalAfter =
                         probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
-                    tracker.MouseReleased(
-                        taskbarMouse.Point,
-                        known ? Bounds(info.Monitor) : null,
-                        known ? Bounds(info.Work) : null,
-                        taskbarMouse.Flags,
-                        physicalBefore,
-                        physicalAfter,
-                        clock.ElapsedMilliseconds
+                    router.Dispatch(
+                        new MouseReleaseEvent(
+                            epoch,
+                            clock.ElapsedMilliseconds,
+                            taskbarMouse.Point,
+                            known ? Bounds(info.Monitor) : null,
+                            known ? Bounds(info.Work) : null,
+                            taskbarMouse.Flags,
+                            physicalBefore,
+                            physicalAfter
+                        )
                     );
                     if (tracker.MouseStateTarget is { } clicked && captionClick.Target != clicked)
                     {
@@ -366,19 +392,18 @@ internal sealed class Observer : IDisposable
                         else
                         {
                             states[clicked] = after;
-                            if (
-                                tracker.Complete(
+                            router.Dispatch(
+                                new StateObservedEvent(
+                                    epoch,
                                     clicked,
+                                    clock.ElapsedMilliseconds,
                                     previous,
                                     after,
-                                    clock.ElapsedMilliseconds,
                                     GetForegroundWindow(),
                                     DateTime.Now.ToString("yyyy-MM-dd"),
                                     after.Monitor
                                 )
-                                is WindowCandidate evidence
-                            )
-                                protocol.Complete(evidence);
+                            );
                         }
                     }
                 }
@@ -567,20 +592,23 @@ internal sealed class Observer : IDisposable
                 if (!captionClick.Fallback)
                     return CallNextHookEx(0, code, message, data);
             }
-            tracker.Mouse(
-                target,
-                before,
-                hit,
-                mouse.Point,
-                clock.ElapsedMilliseconds,
-                GetDoubleClickTime(),
-                mouse.Flags,
-                GetAsyncKeyState(VK_SHIFT) < 0
-                    || GetAsyncKeyState(VK_CONTROL) < 0
-                    || GetAsyncKeyState(VK_MENU) < 0
-                    || GetAsyncKeyState(VK_LWIN) < 0
-                    || GetAsyncKeyState(VK_RWIN) < 0,
-                GetForegroundWindow() == target
+            router.Dispatch(
+                new MousePressEvent(
+                    epoch,
+                    target,
+                    clock.ElapsedMilliseconds,
+                    before,
+                    hit,
+                    mouse.Point,
+                    GetDoubleClickTime(),
+                    mouse.Flags,
+                    GetAsyncKeyState(VK_SHIFT) < 0
+                        || GetAsyncKeyState(VK_CONTROL) < 0
+                        || GetAsyncKeyState(VK_MENU) < 0
+                        || GetAsyncKeyState(VK_LWIN) < 0
+                        || GetAsyncKeyState(VK_RWIN) < 0,
+                    GetForegroundWindow() == target
+                )
             );
         }
         catch
@@ -603,9 +631,16 @@ internal sealed class Observer : IDisposable
             captionClick.Cancel();
             tracker.CancelMouseState();
             bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            taskbar.Key(key.Key, down, key.Flags);
-            switching.Key(key.Key, down, key.Flags, key.Time);
-            closing.Key(key.Key, down, key.Flags, key.Time);
+            router.Dispatch(
+                new RawKeyEvent(
+                    epoch,
+                    clock.ElapsedMilliseconds,
+                    key.Key,
+                    down,
+                    key.Flags,
+                    key.Time
+                )
+            );
             // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
             if (
                 key.Key is >= 0x30 and <= 0x39
@@ -619,36 +654,39 @@ internal sealed class Observer : IDisposable
             {
                 if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
                     tracker.ClearInput();
-                tracker.KeyReleased(key.Key, clock.ElapsedMilliseconds);
+                router.Dispatch(new KeyReleaseEvent(epoch, clock.ElapsedMilliseconds, key.Key));
                 if (key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT)
                 {
                     nint releasedTarget = GetForegroundWindow();
                     states.TryGetValue(releasedTarget, out WindowState? releasedCached);
-                    var result = tracker.FinishKey(
-                        releasedTarget,
-                        ReadStateChange(releasedTarget, releasedCached),
-                        clock.ElapsedMilliseconds,
-                        (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
-                        DateTime.Now.ToString("yyyy-MM-dd")
+                    var releasedAfter = ReadStateChange(releasedTarget, releasedCached);
+                    router.Dispatch(
+                        new KeyResultEvent(
+                            epoch,
+                            releasedTarget,
+                            clock.ElapsedMilliseconds,
+                            releasedAfter,
+                            (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
+                            DateTime.Now.ToString("yyyy-MM-dd")
+                        )
                     );
-                    if (result is PlacementResult placed)
-                        protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placed);
-                    if (result is WindowCandidate maximized)
-                        protocol.Complete(maximized);
                 }
                 return CallNextHookEx(0, code, message, data);
             }
             nint target = GetForegroundWindow();
             if (CandidateTracker.IsModifier(key.Key))
             {
-                tracker.Key(
-                    target,
-                    null,
-                    key.Key,
-                    false,
-                    false,
-                    clock.ElapsedMilliseconds,
-                    key.Flags
+                router.Dispatch(
+                    new KeyPressEvent(
+                        epoch,
+                        target,
+                        clock.ElapsedMilliseconds,
+                        null,
+                        key.Key,
+                        false,
+                        false,
+                        key.Flags
+                    )
                 );
                 return CallNextHookEx(0, code, message, data);
             }
@@ -669,16 +707,19 @@ internal sealed class Observer : IDisposable
                 if (before is not null)
                     states[target] = before;
             }
-            tracker.Key(
-                target,
-                before,
-                key.Key,
-                win,
-                modifiers,
-                clock.ElapsedMilliseconds,
-                key.Flags,
-                shift,
-                alt
+            router.Dispatch(
+                new KeyPressEvent(
+                    epoch,
+                    target,
+                    clock.ElapsedMilliseconds,
+                    before,
+                    key.Key,
+                    win,
+                    modifiers,
+                    key.Flags,
+                    shift,
+                    alt
+                )
             );
         }
         catch
@@ -736,17 +777,16 @@ internal sealed class Observer : IDisposable
             )
             {
                 WindowState? after = ReadStateChange(target);
-                var result = tracker.ConfirmMaximize(
-                    target,
-                    after,
-                    clock.ElapsedMilliseconds,
-                    GetForegroundWindow(),
-                    DateTime.Now.ToString("yyyy-MM-dd")
+                router.Dispatch(
+                    new TickEvent(
+                        epoch,
+                        target,
+                        clock.ElapsedMilliseconds,
+                        after,
+                        GetForegroundWindow(),
+                        DateTime.Now.ToString("yyyy-MM-dd")
+                    )
                 );
-                if (after is not null)
-                    states[target] = after;
-                if (result is not null)
-                    protocol.Complete(result);
             }
         }
         catch
@@ -799,12 +839,26 @@ internal sealed class Observer : IDisposable
             closing.Event(kind, window, obj, child, thread, time);
             if (kind == EVENT_SYSTEM_FOREGROUND)
             {
-                tracker.ForegroundChanged(window);
+                router.Dispatch(
+                    new ObservedEvent(
+                        ObservedKind.Foreground,
+                        epoch,
+                        window,
+                        clock.ElapsedMilliseconds
+                    )
+                );
                 switching.Foreground(window, time);
             }
             if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
             {
-                tracker.Forget(window);
+                router.Dispatch(
+                    new ObservedEvent(
+                        ObservedKind.Destroy,
+                        epoch,
+                        window,
+                        clock.ElapsedMilliseconds
+                    )
+                );
                 states.Remove(window);
                 return;
             }
@@ -812,7 +866,14 @@ internal sealed class Observer : IDisposable
             {
                 windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveStart);
                 switching.Cancel();
-                tracker.MoveStart(window, clock.ElapsedMilliseconds);
+                router.Dispatch(
+                    new ObservedEvent(
+                        ObservedKind.MoveStart,
+                        epoch,
+                        window,
+                        clock.ElapsedMilliseconds
+                    )
+                );
                 return;
             }
             if (kind == EVENT_SYSTEM_MOVESIZEEND)
@@ -820,21 +881,16 @@ internal sealed class Observer : IDisposable
                 windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveEnd);
                 states.TryGetValue(window, out WindowState? cached);
                 WindowState? end = Read(window, cached);
-                object? result = tracker.FinishMove(
-                    window,
-                    end,
-                    clock.ElapsedMilliseconds,
-                    GetForegroundWindow(),
-                    DateTime.Now.ToString("yyyy-MM-dd")
+                router.Dispatch(
+                    new MoveEndEvent(
+                        epoch,
+                        window,
+                        clock.ElapsedMilliseconds,
+                        end,
+                        GetForegroundWindow(),
+                        DateTime.Now.ToString("yyyy-MM-dd")
+                    )
                 );
-                if (end is not null)
-                    states[window] = end;
-                if (result is WindowCandidate evidence)
-                    protocol.Complete(evidence);
-                if (result is PlacementResult placement)
-                    protocol.Placement(epoch, DateTime.Now.ToString("yyyy-MM-dd"), placement);
-                if (result is CompoundMoveResult compound)
-                    protocol.Compound(epoch, DateTime.Now.ToString("yyyy-MM-dd"), compound);
                 return;
             }
             if (
@@ -857,17 +913,18 @@ internal sealed class Observer : IDisposable
             states[window] = after;
             if (captionClick.Target == window)
                 return;
-            object? candidate = tracker.Complete(
-                window,
-                previous,
-                after,
-                clock.ElapsedMilliseconds,
-                GetForegroundWindow(),
-                DateTime.Now.ToString("yyyy-MM-dd"),
-                DisplayContext.Bounds(window)
+            router.Dispatch(
+                new StateObservedEvent(
+                    epoch,
+                    window,
+                    clock.ElapsedMilliseconds,
+                    previous,
+                    after,
+                    GetForegroundWindow(),
+                    DateTime.Now.ToString("yyyy-MM-dd"),
+                    DisplayContext.Bounds(window)
+                )
             );
-            if (candidate is WindowCandidate evidenceResult)
-                protocol.Complete(evidenceResult);
         }
         catch
         {

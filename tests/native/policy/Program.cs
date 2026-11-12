@@ -499,7 +499,7 @@ internal static partial class Program
             CheckMouseShadow();
             CheckClickComparison();
             CheckProtocol();
-            GestureTests();
+            InputInfrastructureTests();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);
@@ -521,7 +521,7 @@ internal static partial class Program
                         monitorMoveSamples,
                         compoundSamples,
                         closeSamples,
-                        independence = IndependentDetection.Run(),
+                        independence = IndependentDetection.Run(VerifyRouterDrag),
                         windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
                         globalInputCollected = false,
                     }

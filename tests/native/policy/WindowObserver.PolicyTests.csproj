@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
+    <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
+    <Compile
+      Include="../../../native-helper/Core/TrackerEventAdapter.cs"
+      Link="TrackerEventAdapter.cs"
+    />
     <Compile Include="../../../native-helper/Core/GestureManager.cs" Link="GestureManager.cs" />
     <Compile Include="../../../native-helper/Core/DetectionSession.cs" Link="DetectionSession.cs" />
     <Compile Include="../../../native-helper/Core/CandidateSink.cs" Link="CandidateSink.cs" />

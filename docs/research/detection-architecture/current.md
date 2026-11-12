@@ -1,6 +1,6 @@
 # 現在の検出アーキテクチャ
 
-**これは現行実装の説明**。リファクタリング後の設計ではない。構造は2026-11-06の[コード](https://github.com/YutoMatsui21/shortcut-expert/tree/c1203ec79cf0976a2dad1e65b8c2451fcbe14ef7)で確認した。変更後の実態はコードで再確認する。
+**これは現行実装の説明**。リファクタリング後の設計ではない。構造は2026-11-06の[コード](https://github.com/YutoMatsui21/shortcut-expert/tree/c1203ec79cf0976a2dad1e65b8c2451fcbe14ef7)で確認した。以下の基礎図表はその時点の構成。CandidateSink・GestureManager・DetectionRouter導入後の本番経路と残存責務は末尾の各節を参照する。
 
 ## 処理の全体像
 
@@ -112,3 +112,47 @@ The fixture-only `ObserverHost.fixtureCandidate` command deliberately bypasses t
 - GestureManagerの完了はCandidateの送信ではない。既存PolicyがCandidateを返し、CandidateSinkが世代・送信順を管理する。検出条件、途中計上の抑制、Protocol v2、TS分類、保存・通知は変更していない。
 
 人工入力の共通寿命と本番Trackerへの接続は`GestureTests.cs`、Native出力の互換性は#172の固定baselineと既存Policy試験で検証する。自然入力・実OSのイベント順序・通知表示の受入とは区別する。
+
+## DetectionRouter（Issue #176）
+
+本番では、Observerが取得した共通イベントを`DetectionRouter.Dispatch`へ渡し、登録された互換アダプターが既存処理へ変換する。Routerは購読種別と登録順に同期配送するだけで、成立判定・優先順位・相互取消・Candidateの合成は行わない。
+
+```text
+Windows hook / WinEvent / 50ms poll
+  → Observer（既存位置でWin32観測、WindowState取得、排他・取消）
+  → ObservedEvent → DetectionRouter
+      → DedicatedInputAdapter → TaskbarInputObserver → WindowSwitchObserver → WindowCloseObserver
+      → TrackerEventAdapter → CandidateTracker / PlacementPolicy / GestureManager
+                            → CandidateSink → ObserverHost
+```
+
+上の専用Observer間の矢印は従来の呼出し順を表す。独立Detectorへ変換した意味ではない。各専用Observerは従来どおりCandidateSinkへ出力する。
+
+### 移行した配送と観測順
+
+| 入口                            | Routerに配送する内容                                                                           | 保持した観測・処理順                                                                                                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| mouse hook                      | `MouseMessageEvent`、`RawMouseEvent`、`MouseMoveEvent`、`MouseReleaseEvent`、`MousePressEvent` | caption継続処理 → Trackerのmessage処理 → release probeの開始観測 → W12/W01/W11入力 → 移動／解放 → 押下対象・hit test取得 → caption admission → Tracker押下。各段階は別イベントで、同じ処理を二重配送しない |
+| key hook                        | `RawKeyEvent`、`KeyReleaseEvent`、`KeyResultEvent`、`KeyPressEvent`                            | caption／mouse-state取消 → W12/W01/W11入力 → Win+数字除外 → 解放 → 必要な終端snapshot取得／FinishKey、または開始snapshot取得／Key                                                                          |
+| foreground                      | `ObservedKind.Foreground`、必要なら後続の`StateObservedEvent`                                  | caption照合 → closing.Event → Tracker.ForegroundChanged → switching.Foreground → 状態取得・確定                                                                                                            |
+| MOVESIZESTART                   | `ObservedKind.MoveStart`                                                                       | caption取消 → closing.Event → switching.Cancel → Tracker.MoveStart                                                                                                                                         |
+| MOVESIZEEND                     | `MoveEndEvent`                                                                                 | 既存位置で終端snapshot取得 → FinishMove → 状態cache更新 → 既存の結果種別に応じSink送信                                                                                                                     |
+| DESTROY                         | `ObservedKind.Destroy`                                                                         | caption処理 → closing.Event（W11確証）→ 対象とOBJID_WINDOW/CHILDID_SELF確認 → Tracker.Forget → cache削除                                                                                                   |
+| 状態変化／mouse解放後のfallback | `StateObservedEvent`                                                                           | 既存位置で前後snapshot取得・cache更新 → caption対象除外 → Tracker.Complete → Sink                                                                                                                          |
+| 50ms poll                       | `TickEvent`                                                                                    | caption poll → Trackerの対象・process確認 → 終端snapshot取得 → ConfirmMaximize → cache更新 → Sink                                                                                                          |
+
+イベントの`At`は既存の単調時計、`InputTime`は既存のOS時刻で、用途を混ぜない。WindowStateは取得済みsnapshotで、Routerに新しいOS照会を追加していない。生入力・対象・snapshotを保存や通信へ追加しない。
+
+### 配送と非同期完了の境界
+
+`Subscribe`にイベント種別とハンドラーを登録すれば、Observerへ操作専用分岐を増やさず受信できる。同期処理は`Processed`となる。ハンドラーが`Delivery.Await`を使った場合は`AwaitingResult`となり、購読先が保持する有効性述語とGesture、generation、対象HWND、process、入力源を照合して、`Complete`が完了通知を一度だけ呼ぶ。`Cancel`、Stop、同じgenerationへのResetも旧完了を無効にする。購読登録はStop/Resetで保持する。Routerは処理中の参照だけを保持し、完了・取消時にはpending集合から削除する。
+
+全APIは作成元のmessage-loopスレッドに限定する。workerは元スレッドへpostしてから完了を通知する契約で、別スレッドからの完了要求は拒否する。この完了APIは将来のDetector向け境界で、現行W11/W12の非同期処理を置き換えていない。既存アダプターの`Processed`は配送済みを意味し、操作成立やGesture終了を意味しない。
+
+### 意図的に残した経路
+
+- ObserverのOS取得、対象cache、captionの並行追跡と排他、`ClearInput`／`CancelMouseState`／不正状態時の`Forget`、`MaximizeTarget`／`MaximizeProcess`等の照会、timer有効化は残す。取得と取消が交互に行われる既存順序を保ち、成立条件は変えない。
+- `closing.Event`、`switching.Foreground`と各専用ObserverのStart/Stop、timer、W11のDESTROY待ち、W12のUIA worker・完了post・対象／generation照合は既存のまま。これらをRouterのpending状態へ統合しない。W01/W12排他も各既存処理に残す。
+- captionのStart/Mouse/State/Foreground/Poll、専用Observer内のWin32/UIA取得とSink出力、検証専用Snap経路は未移行。今回の対象は配送の分離であり、8操作の独立Detector化やResultComposer、Protocol変更は行わない。
+
+`RouterTests.cs`で購読・順序・処理状態・対象／process／入力源／Gesture不一致、取消・Stop/Reset・別スレッドの完了、TrackerとGestureManagerの共存、キー／poll／破棄の互換性を検証する。#172の既存baselineは変更せず、既存ドラッグfixtureも本番Router／アダプターで再生し、Candidateの件数・順序とEnvelope全体を直呼び出しと比較する。W11/W12等の未移行状態機械は既存Policy・helper結合試験で保護する。これらは隔離fixtureの証拠で、自然入力や実OSの順序・通知表示の受入ではない。
