@@ -499,8 +499,7 @@ internal static partial class Program
             CheckMouseShadow();
             CheckClickComparison();
             CheckProtocol();
-            GestureTests();
-            RouterTests();
+            InputInfrastructureTests();
             var snapSamples = SnapTests.Run(passed);
             var taskbarSamples = TaskbarTests.Run(passed);
             var switchSamples = WindowSwitchTests.Run(passed);

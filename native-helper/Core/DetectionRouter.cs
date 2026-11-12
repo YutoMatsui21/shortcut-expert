@@ -11,6 +11,16 @@ internal sealed class DetectionRouter
         Cancelled,
     }
 
+    internal sealed record CompletionIdentity(
+        int Generation,
+        nint Target,
+        uint Process,
+        string Source
+    );
+
+    private bool Current(long expectedRevision, int expectedGeneration) =>
+        revision == expectedRevision && generation > 0 && generation == expectedGeneration;
+
     private sealed record Subscription(
         HashSet<ObservedKind> Kinds,
         Action<ObservedEvent, Delivery> Handle
@@ -93,15 +103,7 @@ internal sealed class DetectionRouter
         internal void Await(GestureManager.Gesture expected, Func<bool> isValid, Action onCompleted)
         {
             router.VerifyThread();
-            if (
-                Status != State.Processing
-                || router.revision != revision
-                || router.generation <= 0
-                || router.generation != observed.Generation
-                || expected.Generation != observed.Generation
-                || expected.Window != observed.Target
-                || !isValid()
-            )
+            if (!CanAwait(expected) || !isValid())
                 throw new InvalidOperationException("Invalid pending delivery");
             gesture = expected;
             valid = isValid;
@@ -110,35 +112,41 @@ internal sealed class DetectionRouter
             router.pending.Add(this);
         }
 
-        internal bool Complete(
-            int generation,
-            nint target,
-            uint process,
-            string source,
+        private bool CanAwait(GestureManager.Gesture expected) =>
+            Status == State.Processing
+            && router.Current(revision, observed.Generation)
+            && MatchesObservation(expected);
+
+        private bool MatchesObservation(GestureManager.Gesture expected) =>
+            expected.Generation == observed.Generation && expected.Window == observed.Target;
+
+        private bool LiveGesture() =>
+            gesture!.State is GestureManager.Phase.Observing or GestureManager.Phase.AwaitingResult;
+
+        private bool MatchesCompletion(
+            CompletionIdentity identity,
             GestureManager.Gesture expected
-        )
+        ) =>
+            ReferenceEquals(gesture, expected)
+            && identity
+                == new CompletionIdentity(
+                    observed.Generation,
+                    observed.Target,
+                    gesture!.Start.State.Process,
+                    gesture.Source
+                );
+
+        internal bool Complete(CompletionIdentity identity, GestureManager.Gesture expected)
         {
             router.VerifyThread();
             if (Status != State.AwaitingResult)
                 return false;
-            if (
-                router.revision != revision
-                || router.generation != observed.Generation
-                || valid!() != true
-                || gesture!.State
-                    is not (GestureManager.Phase.Observing or GestureManager.Phase.AwaitingResult)
-            )
+            if (!router.Current(revision, observed.Generation) || !valid!() || !LiveGesture())
             {
                 Cancel();
                 return false;
             }
-            if (
-                generation != observed.Generation
-                || target != observed.Target
-                || process != gesture!.Start.State.Process
-                || !ReferenceEquals(gesture, expected)
-                || source != gesture.Source
-            )
+            if (!MatchesCompletion(identity, expected))
                 return false;
             var callback = completed!;
             Status = State.Completed;
