@@ -158,18 +158,25 @@ export class DurableCoach {
   idle(): Promise<void> {
     return this.queue.run(async () => {});
   }
+  private canWriteDate(
+    today: string,
+    counts: NonNullable<RecordMutation["counts"]>,
+    reset = false,
+  ): boolean {
+    if (!validDate(today)) return false;
+    if (reset) return true;
+    return (
+      this.data.highWater <= today &&
+      !Object.keys(this.data.counts).some((day) => day > today) &&
+      !counts.some((count) => count.day > today)
+    );
+  }
   private prepare(
     counts: NonNullable<RecordMutation["counts"]> = [],
     reset?: boolean,
   ): RecordMutation | null {
     const today = this.deps.date();
-    if (
-      !validDate(today) ||
-      (!reset &&
-        (this.data.highWater > today ||
-          Object.keys(this.data.counts).some((day) => day > today) ||
-          counts.some((count) => count.day > today)))
-    ) {
+    if (!this.canWriteDate(today, counts, reset)) {
       this.fail(
         "端末の日付が記録より前です。日付を確認してください。",
         "clock",

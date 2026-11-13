@@ -14,17 +14,8 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
   if (
     value.protocolVersion === 2 &&
     value.evidence.kind === "independent-results"
-  ) {
-    const candidate = independentCandidate(value);
-    if (!candidate || candidate.evidence.kind !== "independent-results")
-      return [];
-    return candidate.evidence.results.map((proof) => ({
-      id: `${candidate.generation}:t${candidate.transaction}`,
-      origin: candidate.origin,
-      date: candidate.date,
-      ...classifyProof(proof, candidate.origin),
-    }));
-  }
+  )
+    return classifyIndependent(value);
   if (value.protocolVersion === 2 && value.evidence.kind === "caption-click") {
     const e = value.evidence;
     if (
@@ -125,6 +116,18 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
           : `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`,
     },
   ];
+}
+
+function classifyIndependent(value: ObserverCandidate): Observation[] {
+  const candidate = independentCandidate(value);
+  if (!candidate || candidate.evidence.kind !== "independent-results")
+    return [];
+  return candidate.evidence.results.map((proof) => ({
+    id: `${candidate.generation}:t${candidate.transaction}`,
+    origin: candidate.origin,
+    date: candidate.date,
+    ...classifyProof(proof, candidate.origin),
+  }));
 }
 
 function classifyProof(

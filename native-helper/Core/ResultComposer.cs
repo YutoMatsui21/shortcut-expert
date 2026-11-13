@@ -108,33 +108,39 @@ internal sealed class ResultComposer(
             composer.VerifyThread();
             if (closed)
                 return false;
-            var g = input.Gesture;
-            if (
-                !leaseValid()
-                || !composer.manager.IsCurrent(g)
-                || !targetValid()
-                || composer.now() > deadline
-                || input.Transaction <= 0
-                || input.Origin is not ("mouse" or "key")
-                || (input.Origin == "key") != (g.Source == "key")
-                || input.Injected
-                || input.Conflicted
-                || !input.Matched
-                || g.Injected
-                || g.Modified
-                || !g.Matched
-                || g.Start.State.Process != input.Before.Process
-                || g.State is GestureManager.Phase.Cancelled or GestureManager.Phase.Expired
-                || (
-                    g.End is { } end
-                    && (end.State.Process != input.Before.Process || end.At < g.Start.At)
-                )
-            )
+            if (!CurrentLease() || !PhysicalInput() || !TargetIdentity() || !TerminalValid())
             {
                 Cancel();
                 return false;
             }
             return true;
+        }
+
+        private bool CurrentLease() =>
+            leaseValid() && composer.manager.IsCurrent(input.Gesture) && composer.now() <= deadline;
+
+        private bool PhysicalInput() =>
+            input.Transaction > 0
+            && input.Origin is "mouse" or "key"
+            && (input.Origin == "key") == (input.Gesture.Source == "key")
+            && !input.Injected
+            && !input.Conflicted
+            && input.Matched;
+
+        private bool TargetIdentity() =>
+            targetValid()
+            && input.Gesture.Start.State.Process == input.Before.Process
+            && input.Gesture.Matched
+            && !input.Gesture.Injected
+            && !input.Gesture.Modified;
+
+        private bool TerminalValid()
+        {
+            var g = input.Gesture;
+            if (g.State is GestureManager.Phase.Cancelled or GestureManager.Phase.Expired)
+                return false;
+            return g.End is not { } end
+                || (end.State.Process == input.Before.Process && end.At >= g.Start.At);
         }
 
         internal bool Confirm(

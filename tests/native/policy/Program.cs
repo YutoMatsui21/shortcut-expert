@@ -74,49 +74,52 @@ internal static partial class Program
             foreground
         );
 
+    private static void CheckSessionAllocator()
+    {
+        Check(
+            "session allocator is shared, survives cancellation and rejects stale leases",
+            () =>
+            {
+                var session = new DetectionSession();
+                session.Start(1);
+                var allocate = session.Allocator(1);
+                Equal(1, allocate());
+                var tracker = new CandidateTracker(session);
+                tracker.Reset(1);
+                Mouse(tracker);
+                tracker.ClearInput();
+                Equal(3, allocate());
+                tracker.Reset(1); // clearing detector state must not rewind shared IDs
+                Equal(4, allocate());
+                session.Stop();
+                Equal(0, allocate());
+                session.Start(2);
+                Equal(0, allocate());
+                Equal(1, session.Allocator(2)());
+                var secondLease = session.Allocator(2);
+                var ids = new System.Collections.Concurrent.ConcurrentBag<int>();
+                Parallel.For(0, 100, _ => ids.Add(secondLease()));
+                Equal(100, ids.Distinct().Count());
+                Equal(2, ids.Min());
+                Equal(101, ids.Max());
+                session.Start(2);
+                Equal(0, secondLease());
+                Equal(1, session.Allocator(2)());
+                var sink = new CandidateSink(_ => throw new Exception("stale completion emitted"));
+                sink.Start(2, 2);
+                sink.Close(1, 1, "2026-11-10", "key", new(true, true, 25, null));
+                sink.Taskbar(1, 2, "2026-11-10", "key", new(1, true, 0, 25, null));
+                sink.Stop();
+                sink.Close(2, 1, "2026-11-10", "key", new(true, true, 25, null));
+            }
+        );
+    }
+
     private static int Main()
     {
         try
         {
-            Check(
-                "session allocator is shared, survives cancellation and rejects stale leases",
-                () =>
-                {
-                    var session = new DetectionSession();
-                    session.Start(1);
-                    var allocate = session.Allocator(1);
-                    Equal(1, allocate());
-                    var tracker = new CandidateTracker(session);
-                    tracker.Reset(1);
-                    Mouse(tracker);
-                    tracker.ClearInput();
-                    Equal(3, allocate());
-                    tracker.Reset(1); // clearing detector state must not rewind shared IDs
-                    Equal(4, allocate());
-                    session.Stop();
-                    Equal(0, allocate());
-                    session.Start(2);
-                    Equal(0, allocate());
-                    Equal(1, session.Allocator(2)());
-                    var secondLease = session.Allocator(2);
-                    var ids = new System.Collections.Concurrent.ConcurrentBag<int>();
-                    Parallel.For(0, 100, _ => ids.Add(secondLease()));
-                    Equal(100, ids.Distinct().Count());
-                    Equal(2, ids.Min());
-                    Equal(101, ids.Max());
-                    session.Start(2);
-                    Equal(0, secondLease());
-                    Equal(1, session.Allocator(2)());
-                    var sink = new CandidateSink(_ =>
-                        throw new Exception("stale completion emitted")
-                    );
-                    sink.Start(2, 2);
-                    sink.Close(1, 1, "2026-11-10", "key", new(true, true, 25, null));
-                    sink.Taskbar(1, 2, "2026-11-10", "key", new(1, true, 0, 25, null));
-                    sink.Stop();
-                    sink.Close(2, 1, "2026-11-10", "key", new(true, true, 25, null));
-                }
-            );
+            CheckSessionAllocator();
             Check(
                 "max button + same target + result",
                 () =>
