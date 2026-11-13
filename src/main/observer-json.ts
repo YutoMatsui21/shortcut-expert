@@ -6,20 +6,25 @@ type Scope = {
 };
 type StringToken = { content: string; next: number };
 
+function decodeStringToken(
+  line: string,
+  start: number,
+  next: number,
+): StringToken {
+  const content: unknown = JSON.parse(line.slice(start, next));
+  if (typeof content !== "string") throw new Error("json-string");
+  return { content, next };
+}
+
 function readStringToken(line: string, start: number): StringToken {
   let position = start + 1;
   while (position < line.length) {
     const char = line[position++];
     if (char === "\\") position++;
-    else if (char === '"') {
-      const content: unknown = JSON.parse(line.slice(start, position));
-      if (typeof content !== "string") throw new Error("json-string");
-      return { content, next: position };
-    }
+    else if (char === '"') return decodeStringToken(line, start, position);
   }
   throw new Error("json-string");
 }
-
 function valuePath(scope: Scope | undefined): string[] {
   if (!scope) return [];
   // Only root/evidence discriminators matter. Deeper paths remain distinguishable
