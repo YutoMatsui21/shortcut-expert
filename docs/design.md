@@ -21,7 +21,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 
 `Windows API → Native候補 → Mainの型・世代検証 → Coreの採用判定 → 保存 → 必要なら通知`
 
-- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateProtocol`で送信順を確定する。最大化したままの画面移動は単独W02、既知配置からの再配置は`PlacementGeometry`で配置差を確認する。既存のTracker・Policy・複合契約を使用し、独立検出器やAggregatorは追加しない。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
+- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateSink`で送信順を確定する。最大化したままの画面移動は単独W02、既知配置からの再配置は`PlacementGeometry`で配置差を確認する。本番Detectorは既存のTracker・Policy・複合契約を使用する。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
 - **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
@@ -40,7 +40,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - `coach-ipc.ts`が送信元frame・引数・削除確認tokenを検証する。Rendererは限定されたPreload APIだけを呼ぶ。`contextIsolation`と`sandbox`を維持する。
 - UIの状態・操作ルールは[一覧](features/learning-ui.md)、[記録](features/records-ui.md)、[設定](features/settings-panel.md)、[ウィンドウ](features/window-lifecycle.md)を参照する。
 
-独立結果の次期通信型・完了barrier・任意件数保存は[#177の確定契約](research/detection-architecture/result-envelope.md)。現行v2の追加variantとして #178/#179で導入し、本番Detectorは段階移行する。
+独立結果の通信型・完了barrier・任意件数保存は[#177の確定契約](research/detection-architecture/result-envelope.md)。`ResultComposer.Begin`でGestureの購読集合・個別期限・共通期限・対象identityの照合関数を固定し、Routerからの各完了を`Confirm`/`Reject`で受ける。共通入力の解放・終端後に`Seal`し、`Tick`で個別期限を処理する。全購読者の確定後、成立Proofだけを正規順で1Envelopeにする。取消・旧lease・対象不一致は全件破棄する。MainとCoreは純粋な`core/independent-results.ts`の検証を共用し、Coreが既存8操作へ分類する。共通処理はfixtureで接続済みだが、本番Detectorは #180〜#184で旧出口から排他的に移行する。
 
 ## 4. 保存・通知
 

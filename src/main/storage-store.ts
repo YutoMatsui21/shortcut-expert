@@ -23,7 +23,7 @@ import type {
   RecordRange,
   StorageState,
 } from "../shared/storage.ts";
-import { daysBefore } from "../shared/storage.ts";
+import { daysBefore, recordOperations } from "../shared/storage.ts";
 import { isNormalBounds } from "../shared/window.ts";
 import { fileExists } from "./storage-files.ts";
 import type { LegacyImport } from "./storage-migration.ts";
@@ -455,7 +455,8 @@ export class StorageStore {
       "INVALID_WRITE",
     );
     check(
-      Array.isArray(value.coverage) && value.coverage.length <= 14,
+      Array.isArray(value.coverage) &&
+        value.coverage.length <= 2 * recordOperations.length,
       "INVALID_COVERAGE",
     );
     for (const row of value.coverage) {
@@ -477,14 +478,15 @@ export class StorageStore {
     check(
       value.counts === undefined ||
         (Array.isArray(value.counts) &&
-          value.counts.length === 2 &&
-          !value.count &&
-          value.counts[0].day === value.counts[1].day &&
-          value.counts.every((c) => c.origin === "mouse") &&
-          ((value.counts[0].operation === "W02" &&
-            ["W03", "W07"].includes(value.counts[1].operation)) ||
-            (value.counts[0].operation === "W01" &&
-              ["W03", "W04"].includes(value.counts[1].operation)))),
+          value.count === undefined &&
+          new Set(value.counts.map((c) => c.operation)).size ===
+            value.counts.length &&
+          value.counts.every(
+            (c) =>
+              recordOperations.includes(c.operation) &&
+              c.day === value.counts![0].day &&
+              c.origin === value.counts![0].origin,
+          )),
       "INVALID_COUNTS",
     );
     const counts = value.counts ?? (value.count ? [value.count] : []);

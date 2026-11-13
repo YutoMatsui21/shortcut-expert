@@ -14,6 +14,7 @@
     />
     <Compile Include="../../../native-helper/Core/GestureManager.cs" Link="GestureManager.cs" />
     <Compile Include="../../../native-helper/Core/DetectionSession.cs" Link="DetectionSession.cs" />
+    <Compile Include="../../../native-helper/Core/ResultComposer.cs" Link="ResultComposer.cs" />
     <Compile Include="../../../native-helper/Core/CandidateSink.cs" Link="CandidateSink.cs" />
     <Compile
       Include="../../../validation/independence/IndependentDetection.cs"

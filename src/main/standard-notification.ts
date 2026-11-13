@@ -48,7 +48,14 @@ export class StandardNotifications {
         body:
           items.length === 1
             ? items[0].label
-            : items.map((item) => `${item.label}: ${item.shortcut}`).join("\n"),
+            : [
+                ...items
+                  .slice(0, 2)
+                  .map((item) => `${item.label}: ${item.shortcut}`),
+                ...(items.length > 2
+                  ? [`ほか${items.length - 2}件のショートカット`]
+                  : []),
+              ].join("\n"),
         silent: true,
         timeoutType: "default",
       });

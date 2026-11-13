@@ -284,13 +284,16 @@ for (const operation of ["W04", "W06", "W07", "W02", "W11"] as const)
         entered = deferred<void>(),
         released = deferred<void>();
       repository.commit = async (mutation) => {
-        if (mutation.count) {
+        if (mutation.count || mutation.counts?.length) {
           entered.resolve();
           await released.promise;
           if (boundary === "failure") throw new Error("fixture disk failure");
         }
         await commit(mutation);
-        if (mutation.count && boundary === "ack-loss")
+        if (
+          (mutation.count || mutation.counts?.length) &&
+          boundary === "ack-loss"
+        )
           throw new Error("fixture lost ACK");
       };
       const input = candidateV2(

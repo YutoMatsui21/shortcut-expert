@@ -88,16 +88,22 @@ function envelope(results = proofs, origin = "mouse") {
 function accepts(proof: Record<string, unknown>, origin = "mouse") {
   return candidateV2(envelope([proof], origin));
 }
-test("independent results accept 1/2/3+ proofs without enabling classification", () => {
-  for (const results of [
-    [proofs[0]],
-    [proofs[1], proofs[3]],
-    proofs.slice(0, 3),
-    proofs,
-  ]) {
-    const parsed = candidateV2(envelope(results));
+test("independent results classify 1/2/3+ proofs in canonical operation order", () => {
+  for (const [results, operations] of [
+    [[proofs[0]], ["W01"]],
+    [
+      [proofs[1], proofs[3]],
+      ["W02", "W06"],
+    ],
+    [proofs.slice(0, 3), ["W01", "W02", "W03"]],
+    [proofs, ["W01", "W02", "W03", "W06", "W11", "W12"]],
+  ] as const) {
+    const parsed = candidateV2(envelope([...results]));
     assert.ok(parsed);
-    assert.deepEqual(classifyGesture(parsed), []);
+    assert.deepEqual(
+      classifyGesture(parsed).map((o) => o.operation),
+      operations,
+    );
   }
 });
 test("strict keys are required at envelope/evidence/proof/Bounds levels", () => {
@@ -243,10 +249,45 @@ test("all legal routes preserve origin and state transition requirements", () =>
   ];
   for (const [index, route, origin, patch] of cases) {
     const proof = { ...proofs[index], route, ...patch };
-    assert.ok(accepts(proof, origin), JSON.stringify(proof));
+    const candidate = accepts(proof, origin);
+    assert.ok(candidate, JSON.stringify(proof));
+    const observations = classifyGesture(candidate);
+    assert.equal(observations.length, 1);
+    assert.equal(observations[0].origin, origin);
+    assert.equal(
+      observations[0].operation,
+      index === 2 && patch.action
+        ? "W04"
+        : ["W01", "W02", "W03", "W06", "W11", "W12"][index],
+    );
     assert.equal(accepts(proof, origin === "mouse" ? "key" : "mouse"), null);
   }
   for (const proof of proofs) assert.ok(accepts(proof));
+});
+
+test("Core rejects invalid common input and conflicting proofs even without Main parsing", () => {
+  const candidate = candidateV2(envelope());
+  assert.ok(candidate);
+  for (const patch of [
+    { released: false },
+    { final: false },
+    { targetMatched: false },
+    { results: [] },
+    { results: [proofs[1], { ...proofs[1], moveDirection: "left" }] },
+  ]) {
+    const invalid: import("../../../src/shared/coach.ts").CandidateV2 =
+      structuredClone(candidate);
+    Object.assign(invalid.evidence, patch);
+    assert.deepEqual(classifyGesture(invalid), []);
+  }
+  const duplicate = candidateV2(
+    envelope([proofs[1], proofs[1], proofs[3]].reverse()),
+  );
+  assert.ok(duplicate);
+  assert.deepEqual(
+    classifyGesture(duplicate).map((o) => o.operation),
+    ["W02", "W06"],
+  );
 });
 test("integer age, slot and geometry boundaries are enforced", () => {
   for (const [index, origin, route, max, min] of [

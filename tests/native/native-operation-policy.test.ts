@@ -9,6 +9,7 @@ import { dotnet, dotnetEnvironment } from "../../scripts/dev/dotnet.mjs";
 import { classify, classifyGesture } from "../../src/core/detector.ts";
 import { DurableCoach } from "../../src/core/durable-coach.ts";
 import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
+import type { ShortcutNotice } from "../../src/shared/coach.ts";
 import { windowDiagnosticKeys } from "../../src/shared/window-diagnostics.ts";
 import { v2Fixture, type Candidate } from "../support/fixtures.ts";
 
@@ -133,6 +134,76 @@ test(
       if (evidence.kind === "independent-results")
         assert.equal(evidence.results.length, count);
     }
+    await t.test(
+      "production Composer → Sink → strict parser → Core → SQLite → one notification",
+      async (t) => {
+        assert.equal(report.composerSamples.length, 3);
+        const root = await mkdtemp(join(tmpdir(), "coach-composer-"));
+        const repository = new SqliteRepository(
+          root,
+          resolve("src/main/storage-worker.ts"),
+        );
+        t.after(async () => {
+          await repository.close();
+          await rm(root, { recursive: true, force: true });
+        });
+        const notices: ShortcutNotice[] = [];
+        const coach = new DurableCoach({
+          repository,
+          session: repository.session,
+          date: () => "2026-11-13",
+          now: () => 0,
+          capabilities: () => [],
+          changed: () => {},
+          notify: async (notice) => {
+            notices.push(notice);
+            return true;
+          },
+        });
+        await coach.initialize();
+        for (const [index, expected] of [
+          ["W02"],
+          ["W02", "W06"],
+          ["W02", "W03", "W06"],
+        ].entries()) {
+          coach.begin(1); // Every C# fixture starts its own session.
+          const candidate = candidateV2(
+            parseObserverMessage(report.composerSamples[index]),
+          );
+          assert.ok(candidate);
+          assert.deepEqual(
+            classifyGesture(candidate).map((o) => o.operation),
+            expected,
+          );
+          await coach.accept(candidate);
+          await coach.accept({
+            ...candidate,
+            sequence: candidate.sequence + 1,
+          });
+          assert.equal(notices.length, index + 1);
+          const notice = notices[index];
+          assert.deepEqual(
+            (notice.items ?? [notice]).map((item) => item.operation),
+            expected,
+          );
+          const saved = await repository.load("2026-11-13");
+          for (const operation of expected)
+            assert.ok(
+              saved.counts["2026-11-13"][operation as "W02" | "W03" | "W06"]
+                ?.mouse,
+            );
+          assert.deepEqual(coach.snapshot().counts, saved.counts);
+        }
+        assert.deepEqual(
+          (await repository.load("2026-11-13")).counts["2026-11-13"],
+          {
+            W02: { mouse: 3, key: 0 },
+            W03: { mouse: 1, key: 0 },
+            W06: { mouse: 2, key: 0 },
+          },
+        );
+      },
+    );
     const observations = report.samples.map((sample: Candidate) => {
       const parsed = candidateV2(v2Fixture(sample));
       assert.ok(parsed, "internal C# sample must satisfy TS v2 protocol");

@@ -4,11 +4,27 @@ import type {
   ObserverCandidate,
   Observation,
   OperationId,
+  IndependentProof,
 } from "../shared/coach.ts";
 import { validDate } from "./dates.ts";
+import { independentCandidate } from "./independent-results.ts";
 
 // One envelope is one gesture. Never expose one half of an invalid compound result.
 export function classifyGesture(value: ObserverCandidate): Observation[] {
+  if (
+    value.protocolVersion === 2 &&
+    value.evidence.kind === "independent-results"
+  ) {
+    const candidate = independentCandidate(value);
+    if (!candidate || candidate.evidence.kind !== "independent-results")
+      return [];
+    return candidate.evidence.results.map((proof) => ({
+      id: `${candidate.generation}:t${candidate.transaction}`,
+      origin: candidate.origin,
+      date: candidate.date,
+      ...classifyProof(proof, candidate.origin),
+    }));
+  }
   if (value.protocolVersion === 2 && value.evidence.kind === "caption-click") {
     const e = value.evidence;
     if (
@@ -109,6 +125,72 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
           : `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`,
     },
   ];
+}
+
+function classifyProof(
+  proof: IndependentProof,
+  origin: "mouse" | "key",
+): Pick<Observation, "operation" | "shortcut" | "monitor"> {
+  switch (proof.kind) {
+    case "switch":
+      return {
+        operation: "W01",
+        shortcut: "Alt + Tab",
+        monitor: proof.monitor,
+      };
+    case "monitor-move": {
+      const from = proof.fromMonitor,
+        to = proof.toMonitor,
+        direction = proof.moveDirection;
+      const equivalent =
+        direction &&
+        from.y === to.y &&
+        (direction === "left"
+          ? to.x + to.width <= from.x
+          : from.x + from.width <= to.x) &&
+        (origin !== "key" || proof.route === `win-shift-${direction}`);
+      return {
+        operation: "W02",
+        monitor: to,
+        shortcut: equivalent
+          ? `Win + Shift + ${direction === "left" ? "←" : "→"}`
+          : proof.twoDisplayLayoutConfirmed && separateMonitors(from, to)
+            ? `Win + Shift + ${origin === "key" && proof.route === "win-shift-right" ? "→" : "←"}`
+            : null,
+      };
+    }
+    case "state":
+      return {
+        operation: proof.action === "maximize" ? "W03" : "W04",
+        shortcut:
+          proof.action === "maximize"
+            ? "Win + ↑"
+            : proof.action === "restore" || proof.beforeArranged === false
+              ? "Win + ↓"
+              : null,
+        monitor: proof.monitor,
+      };
+    case "placement": {
+      const [side, vertical] = proof.shape.split("-");
+      const horizontal = side === "left" ? "←" : "→";
+      return {
+        operation: vertical === "half" ? "W06" : "W07",
+        monitor: proof.monitor,
+        shortcut:
+          vertical === "half"
+            ? `Win + ${horizontal}`
+            : `Winを押したまま ${horizontal}、続けて ${vertical === "top" ? "↑" : "↓"}`,
+      };
+    }
+    case "close":
+      return { operation: "W11", shortcut: "Alt + F4", monitor: proof.monitor };
+    case "taskbar":
+      return {
+        operation: "W12",
+        shortcut: `Win + ${proof.slot === 10 ? 0 : proof.slot}`,
+        monitor: proof.monitor,
+      };
+  }
 }
 
 export function classify(value: ObserverCandidate): Observation | null {

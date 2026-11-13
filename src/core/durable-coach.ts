@@ -159,9 +159,8 @@ export class DurableCoach {
     return this.queue.run(async () => {});
   }
   private prepare(
-    count?: RecordMutation["count"],
+    counts: NonNullable<RecordMutation["counts"]> = [],
     reset?: boolean,
-    additional?: RecordMutation["count"],
   ): RecordMutation | null {
     const today = this.deps.date();
     if (
@@ -169,7 +168,7 @@ export class DurableCoach {
       (!reset &&
         (this.data.highWater > today ||
           Object.keys(this.data.counts).some((day) => day > today) ||
-          (count && count.day > today)))
+          counts.some((count) => count.day > today)))
     ) {
       this.fail(
         "端末の日付が記録より前です。日付を確認してください。",
@@ -219,8 +218,8 @@ export class DurableCoach {
               },
             };
           });
-    for (const entry of [count, additional])
-      if (entry && entry.day !== today)
+    for (const entry of counts)
+      if (entry.day !== today)
         coverage.push({
           day: entry.day,
           operation: entry.operation,
@@ -249,14 +248,19 @@ export class DurableCoach {
         (row.value.knowledge === "observed" && prior.knowledge !== "observed")
       );
     });
-    if (!count && !reset && today === this.data.highWater && !coverageChanged)
+    if (
+      !counts.length &&
+      !reset &&
+      today === this.data.highWater &&
+      !coverageChanged
+    )
       return null;
     return {
       epoch: this.data.epoch,
       writeSession: this.session,
       sequence: ++this.writeSequence,
       today,
-      ...(count && additional ? { counts: [count, additional] } : { count }),
+      ...(counts.length ? { counts } : {}),
       coverage,
       reset,
     };
@@ -496,7 +500,7 @@ export class DurableCoach {
         operation: o.operation,
         origin: o.origin,
       }));
-      const value = this.prepare(counts[0], undefined, counts[1]);
+      const value = this.prepare(counts);
       if (!value) return;
       await this.persist(value);
       if (

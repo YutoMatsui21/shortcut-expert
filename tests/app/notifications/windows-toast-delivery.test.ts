@@ -25,6 +25,34 @@ const value = {
   label: "ウィンドウを最大化する",
 };
 
+test("three or more eligible items retain their list and display two lines plus remainder", async (t) => {
+  FakeNotification.all = [];
+  const adapter = new StandardNotifications(
+    () => {},
+    () => {},
+  );
+  t.after(() => adapter.dispose());
+  for (const length of [1, 2, 3, 8]) {
+    const items = Array.from({ length }, (_, i) => ({
+      ...value,
+      label: `操作${i}`,
+    }));
+    const notice = { ...items[0], items };
+    await adapter.show(notice);
+    const expected =
+      length === 1
+        ? items[0].label
+        : [
+            ...items
+              .slice(0, 2)
+              .map((item) => `${item.label}: ${item.shortcut}`),
+            ...(length > 2 ? [`ほか${length - 2}件のショートカット`] : []),
+          ].join("\n");
+    assert.equal(FakeNotification.all.at(-1)!.options.body, expected);
+    assert.equal(notice.items.length, length);
+  }
+});
+
 test("N requests use separate silent instances and UUIDs; OS events are distinct from API return", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   FakeNotification.all = [];
