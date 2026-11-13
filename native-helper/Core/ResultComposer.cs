@@ -253,16 +253,19 @@ internal sealed class ResultComposer(
             {
                 IndependentSwitchProof => 0,
                 IndependentMonitorMoveProof => 1,
-                IndependentStateProof { action: IndependentStateAction.Maximize } => 2,
-                IndependentStateProof => 3,
-                IndependentPlacementProof
-                {
-                    shape: IndependentPlacementShape.LeftHalf or IndependentPlacementShape.RightHalf
-                } => 4,
-                IndependentPlacementProof => 5,
+                IndependentStateProof state => StateCategory(state),
+                IndependentPlacementProof placement => PlacementCategory(placement),
                 IndependentCloseProof => 6,
                 IndependentTaskbarProof => 7,
                 _ => throw new ArgumentException("Unsupported proof", nameof(proof)),
             };
+
+        private static int StateCategory(IndependentStateProof proof) =>
+            proof.action == IndependentStateAction.Maximize ? 2 : 3;
+
+        private static int PlacementCategory(IndependentPlacementProof proof) =>
+            proof.shape is IndependentPlacementShape.LeftHalf or IndependentPlacementShape.RightHalf
+                ? 4
+                : 5;
     }
 }

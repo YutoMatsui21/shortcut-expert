@@ -284,7 +284,7 @@ for (const operation of ["W04", "W06", "W07", "W02", "W11"] as const)
         entered = deferred<void>(),
         released = deferred<void>();
       repository.commit = async (mutation) => {
-        const hasCount = !!mutation.count || !!mutation.counts?.length;
+        const hasCount = !!mutation.counts?.length;
         if (hasCount) {
           entered.resolve();
           await released.promise;

@@ -16,6 +16,10 @@ export function classifyGesture(value: ObserverCandidate): Observation[] {
     value.evidence.kind === "independent-results"
   )
     return classifyIndependent(value);
+  return classifyLegacyGesture(value);
+}
+
+function classifyLegacyGesture(value: ObserverCandidate): Observation[] {
   if (value.protocolVersion === 2 && value.evidence.kind === "caption-click") {
     const e = value.evidence;
     if (

@@ -171,6 +171,46 @@ export class DurableCoach {
       !counts.some((count) => count.day > today)
     );
   }
+  private observedCoverage(
+    today: string,
+    time: number,
+    current: Capability[],
+  ): RecordMutation["coverage"] {
+    const prior = this.baseline;
+    const elapsed = prior ? Math.floor(time - prior.time) : 0;
+    const continuous =
+      !!prior &&
+      prior.day === today &&
+      prior.observing &&
+      this.observing &&
+      elapsed > 0 &&
+      elapsed <= 2500;
+    return recordOperations.map((operation) => {
+      const capability = current.find((c) => c.operation === operation);
+      const sameCapability =
+        capability &&
+        prior?.capabilities.some(
+          (c) =>
+            c.operation === operation && c.revision === capability.revision,
+        );
+      const activeMs = continuous && sameCapability ? elapsed : 0;
+      return {
+        day: today,
+        operation,
+        value: {
+          knowledge:
+            activeMs > 0 ? ("observed" as const) : ("not-observed" as const),
+          activeMs,
+          gap:
+            !activeMs ||
+            !prior ||
+            prior.day !== today ||
+            !this.data.coverage[today]?.[operation],
+          capabilityRevision: capability?.revision ?? "unverified",
+        },
+      };
+    });
+  }
   private prepare(
     counts: NonNullable<RecordMutation["counts"]> = [],
     reset?: boolean,
@@ -183,48 +223,12 @@ export class DurableCoach {
       );
       return null;
     }
-    const time = this.deps.now(),
-      prior = this.baseline;
+    const time = this.deps.now();
     const current = this.deps.capabilities();
-    const elapsed = prior ? Math.floor(time - prior.time) : 0;
-    const continuous =
-      !!prior &&
-      prior.day === today &&
-      prior.observing &&
-      this.observing &&
-      elapsed > 0 &&
-      elapsed <= 2500;
     const coverage =
       reset || !this.observing
         ? []
-        : recordOperations.map((operation) => {
-            const capability = current.find((c) => c.operation === operation);
-            const sameCapability =
-              capability &&
-              prior?.capabilities.some(
-                (c) =>
-                  c.operation === operation &&
-                  c.revision === capability.revision,
-              );
-            const activeMs = continuous && sameCapability ? elapsed : 0;
-            return {
-              day: today,
-              operation,
-              value: {
-                knowledge:
-                  activeMs > 0
-                    ? ("observed" as const)
-                    : ("not-observed" as const),
-                activeMs,
-                gap:
-                  !activeMs ||
-                  !prior ||
-                  prior.day !== today ||
-                  !this.data.coverage[today]?.[operation],
-                capabilityRevision: capability?.revision ?? "unverified",
-              },
-            };
-          });
+        : this.observedCoverage(today, time, current);
     for (const entry of counts)
       if (entry.day !== today)
         coverage.push({
