@@ -38,11 +38,8 @@ internal static partial class Program
 
         internal ResultComposer.Pending Begin(params string[] subscribers) =>
             Composer.Begin(
-                Input,
-                "2026-11-13",
-                subscribers.Select(name => new ResultComposer.Subscription(name, 900)),
-                1000,
-                () => TargetValid
+                new(Input, "2026-11-13", 1000, () => TargetValid),
+                subscribers.Select(name => new ResultComposer.Subscription(name, 900))
             );
 
         internal void Terminal()
@@ -86,9 +83,87 @@ internal static partial class Program
         composerMonitor
     );
 
+    private sealed record UnknownComposerProof : IndependentProof;
+
+    private static void ComposerProofCategoryTests()
+    {
+        var ordered = new IndependentProof[]
+        {
+            new IndependentSwitchProof(
+                IndependentSwitchRoute.DirectClick,
+                true,
+                true,
+                true,
+                200,
+                100,
+                null
+            ),
+            composerMove,
+            composerMaximize,
+            new IndependentStateProof(
+                IndependentStateRoute.MinButton,
+                IndependentStateAction.Minimize,
+                IndependentBeforeState.Normal,
+                IndependentAfterState.Minimized,
+                false,
+                null,
+                200,
+                null
+            ),
+            composerHalf,
+            composerHalf with
+            {
+                shape = IndependentPlacementShape.LeftTop,
+            },
+            new IndependentCloseProof(IndependentCloseRoute.CloseButton, true, 200, null),
+            new IndependentTaskbarProof(
+                IndependentTaskbarRoute.TaskbarClick,
+                1,
+                true,
+                200,
+                200,
+                null
+            ),
+        };
+        var f = new ComposerFixture();
+        var pending = f.Begin(
+            Enumerable.Range(0, ordered.Length).Select(i => i.ToString()).ToArray()
+        );
+        for (int i = ordered.Length - 1; i >= 0; i--)
+            pending.Confirm(i.ToString(), f.Identity, f.Input.Gesture, ordered[i]);
+        f.Terminal();
+        pending.Seal();
+        Equal(true, ordered.SequenceEqual(f.Results));
+
+        var unknown = new ComposerFixture();
+        var unsupported = unknown.Begin("unknown");
+        unsupported.Confirm(
+            "unknown",
+            unknown.Identity,
+            unknown.Input.Gesture,
+            new UnknownComposerProof()
+        );
+        unknown.Terminal();
+        bool rejected = false;
+        try
+        {
+            unsupported.Seal();
+        }
+        catch (ArgumentException)
+        {
+            rejected = true;
+        }
+        Equal(true, rejected);
+        Equal(0, unknown.Output.Count);
+    }
+
     private static List<string> ResultComposerTests()
     {
         var wire = new List<string>();
+        Check(
+            "composer preserves every semantic category and rejects unsupported proof kinds",
+            ComposerProofCategoryTests
+        );
         Check(
             "composer waits for pending subscribers and common terminal before partial adoption",
             () =>
@@ -303,11 +378,8 @@ internal static partial class Program
                     (observed, delivery) =>
                     {
                         pending = f.Composer.Begin(
-                            f.Input,
-                            "2026-11-13",
-                            subscribers,
-                            1000,
-                            () => f.TargetValid
+                            new(f.Input, "2026-11-13", 1000, () => f.TargetValid),
+                            subscribers
                         );
                         waiting = delivery;
                         delivery.Await(

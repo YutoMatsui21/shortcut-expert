@@ -1,6 +1,5 @@
-// Like DetectionRouter, this component is owned by the message-loop thread. Workers
-// post detector completions back to the router; neither hook nor worker waits here.
-// Existing detectors retain their legacy outlets until their individual migration.
+// Owned by the router's message-loop thread. Workers post completions back to
+// that thread; hooks and workers never wait for the completion barrier.
 internal sealed class ResultComposer(
     DetectionSession session,
     GestureManager gestures,
@@ -10,10 +9,16 @@ internal sealed class ResultComposer(
 {
     internal sealed record Subscription(string Detector, long Deadline);
 
-    private readonly GestureManager manager = gestures;
+    // Shared input facts and lifetime, distinct from individual detector deadlines.
+    internal sealed record GestureContext(
+        GestureManager.Input Input,
+        string Date,
+        long Deadline,
+        Func<bool> TargetValid
+    );
+
     private readonly CandidateSink output = sink;
     private readonly Func<long> now = clock;
-
     private readonly int owner = Environment.CurrentManagedThreadId;
 
     private void VerifyThread()
@@ -22,85 +27,34 @@ internal sealed class ResultComposer(
             throw new InvalidOperationException("ResultComposer requires its message-loop thread");
     }
 
-    // The caller fixes subscriptions when routing the input and supplies a live target
-    // identity/reuse check. All deadlines use the same monotonic clock as the router.
-    internal Pending Begin(
-        GestureManager.Input input,
-        string date,
-        IEnumerable<Subscription> subscriptions,
-        long deadline,
-        Func<bool> targetValid
-    )
+    // Fix subscriptions at input routing time. Existing detectors retain their
+    // legacy outlets until their individual migration to this entry point.
+    internal Pending Begin(GestureContext context, IEnumerable<Subscription> subscriptions)
     {
         VerifyThread();
-        var subscribers = subscriptions.ToArray();
-        if (
-            subscribers.Any(s => string.IsNullOrWhiteSpace(s.Detector))
-            || subscribers.Select(s => s.Detector).Distinct().Count() != subscribers.Length
-        )
-            throw new ArgumentException(
-                "Detector subscriptions must be unique",
-                nameof(subscriptions)
-            );
-        bool claimed = input.Gesture.ResultsClaimed;
-        input.Gesture.ResultsClaimed = true;
-        return new(
-            this,
-            input,
-            date,
-            subscribers,
-            deadline,
-            targetValid,
-            session.Lease(input.Gesture.Generation),
-            claimed
+        var results = new DetectorResults(subscriptions);
+        var gesture = new ComposerGesture(
+            context,
+            gestures,
+            session.Lease(context.Input.Gesture.Generation)
         );
+        return new(this, gesture, results);
     }
 
     internal sealed class Pending
     {
-        private sealed class Result(long deadline)
-        {
-            internal long Deadline { get; } = deadline;
-            internal bool Finished;
-            internal IndependentProof? Proof;
-        }
-
         private readonly ResultComposer composer;
-        private readonly GestureManager.Input input;
-        private readonly string date;
-        private readonly long deadline;
-        private readonly Func<bool> targetValid,
-            leaseValid;
-        private readonly Dictionary<string, Result> results;
-        private readonly DetectionRouter.CompletionIdentity identity;
+        private readonly ComposerGesture gesture;
+        private readonly DetectorResults results;
         private bool closed,
             sealedInput;
 
-        internal Pending(
-            ResultComposer composer,
-            GestureManager.Input input,
-            string date,
-            Subscription[] subscriptions,
-            long deadline,
-            Func<bool> targetValid,
-            Func<bool> leaseValid,
-            bool closed
-        )
+        internal Pending(ResultComposer composer, ComposerGesture gesture, DetectorResults results)
         {
             this.composer = composer;
-            this.input = input;
-            this.date = date;
-            this.deadline = deadline;
-            this.targetValid = targetValid;
-            this.leaseValid = leaseValid;
-            this.closed = closed;
-            results = subscriptions.ToDictionary(s => s.Detector, s => new Result(s.Deadline));
-            identity = new(
-                input.Gesture.Generation,
-                input.Window,
-                input.Before.Process,
-                input.Gesture.Source
-            );
+            this.gesture = gesture;
+            this.results = results;
+            closed = gesture.AlreadyClaimed;
         }
 
         private bool Valid()
@@ -108,104 +62,55 @@ internal sealed class ResultComposer(
             composer.VerifyThread();
             if (closed)
                 return false;
-            if (!CurrentLease() || !PhysicalInput() || !TargetIdentity() || !TerminalValid())
-            {
-                Cancel();
-                return false;
-            }
-            return true;
-        }
-
-        private bool CurrentLease() =>
-            leaseValid() && composer.manager.IsCurrent(input.Gesture) && composer.now() <= deadline;
-
-        private bool PhysicalInput() =>
-            input.Transaction > 0
-            && input.Origin is "mouse" or "key"
-            && (input.Origin == "key") == (input.Gesture.Source == "key")
-            && !input.Injected
-            && !input.Conflicted
-            && input.Matched;
-
-        private bool TargetIdentity() =>
-            targetValid()
-            && input.Gesture.Start.State.Process == input.Before.Process
-            && input.Gesture.Matched
-            && !input.Gesture.Injected
-            && !input.Gesture.Modified;
-
-        private bool TerminalValid()
-        {
-            var g = input.Gesture;
-            if (g.State is GestureManager.Phase.Cancelled or GestureManager.Phase.Expired)
-                return false;
-            return g.End is not { } end
-                || (end.State.Process == input.Before.Process && end.At >= g.Start.At);
+            if (gesture.IsValid(composer.now()))
+                return true;
+            Cancel();
+            return false;
         }
 
         internal bool Confirm(
             string detector,
             DetectionRouter.CompletionIdentity completed,
-            GestureManager.Gesture gesture,
+            GestureManager.Gesture expected,
             IndependentProof proof
-        ) => Finish(detector, completed, gesture, proof);
+        ) => Finish(detector, completed, expected, proof);
 
         internal bool Reject(
             string detector,
             DetectionRouter.CompletionIdentity completed,
-            GestureManager.Gesture gesture
-        ) => Finish(detector, completed, gesture, null);
+            GestureManager.Gesture expected
+        ) => Finish(detector, completed, expected, null);
 
         private bool Finish(
             string detector,
             DetectionRouter.CompletionIdentity completed,
-            GestureManager.Gesture gesture,
+            GestureManager.Gesture expected,
             IndependentProof? proof
         )
         {
-            if (
-                !Valid()
-                || completed != identity
-                || !ReferenceEquals(input.Gesture, gesture)
-                || !results.TryGetValue(detector, out var result)
-            )
+            if (!Valid() || !gesture.Matches(completed, expected))
                 return false;
-            if (result.Finished)
+            if (!results.Finish(detector, proof, composer.now()))
                 return false;
-            result.Finished = true;
-            result.Proof = composer.now() <= result.Deadline ? proof : null;
             Publish();
             return true;
         }
 
-        // The shared input lifecycle must already contain release and terminal facts.
-        // Calling early is harmless and cannot turn intermediate window state into proof.
+        // Only release plus a shared terminal snapshot may seal the input.
+        // Early calls cannot promote intermediate window state into proof.
         internal void Seal()
         {
-            if (!Valid())
-                return;
-            var g = input.Gesture;
-            if (
-                g.State != GestureManager.Phase.Completed
-                || g.End is null
-                || g.ReleasedAt is not { } released
-                || released < g.Start.At
-                || released > g.End.At
-            )
+            if (!Valid() || !gesture.HasTerminalRelease())
                 return;
             sealedInput = true;
             Publish();
         }
 
-        // Each detector has its own deadline; expiry rejects only that detector.
-        // A shared deadline expiry is handled by Valid and discards the whole input.
         internal void Tick()
         {
             if (!Valid())
                 return;
-            foreach (var result in results.Values)
-                if (!result.Finished && composer.now() > result.Deadline)
-                    result.Finished = true;
+            results.Expire(composer.now());
             Publish();
         }
 
@@ -213,59 +118,18 @@ internal sealed class ResultComposer(
         {
             composer.VerifyThread();
             closed = true;
-            results.Clear();
+            results.Discard();
         }
 
         private void Publish()
         {
-            if (!Valid() || !sealedInput || results.Values.Any(r => !r.Finished))
+            if (!Valid() || !sealedInput || !results.AllFinished)
                 return;
-            var accepted = results
-                .Values.Where(r => r.Proof is not null)
-                .Select(r => r.Proof!)
-                .GroupBy(Category)
-                .OrderBy(g => g.Key)
-                .Select(g => g.Distinct().ToArray())
-                .Where(g => g.Length == 1)
-                .Select(g => g[0])
-                .ToArray();
-            // Close before crossing the sink boundary, including the empty-result case.
+            var accepted = IndependentProofSet.Select(results.Confirmed);
+            // Close before crossing the sink boundary, even for an empty result.
             Cancel();
-            if (accepted.Length == 0)
-                return;
-            composer.output.Submit(
-                new(
-                    input.Gesture.Generation,
-                    input.Transaction,
-                    date,
-                    input.Origin,
-                    "independent-results",
-                    false,
-                    false,
-                    new IndependentResultsEvidence(true, true, true, accepted)
-                )
-            );
+            if (accepted.Length > 0)
+                composer.output.Submit(gesture.Draft(accepted));
         }
-
-        // Semantic categories, not product operation IDs or a combination allowlist.
-        private static int Category(IndependentProof proof) =>
-            proof switch
-            {
-                IndependentSwitchProof => 0,
-                IndependentMonitorMoveProof => 1,
-                IndependentStateProof state => StateCategory(state),
-                IndependentPlacementProof placement => PlacementCategory(placement),
-                IndependentCloseProof => 6,
-                IndependentTaskbarProof => 7,
-                _ => throw new ArgumentException("Unsupported proof", nameof(proof)),
-            };
-
-        private static int StateCategory(IndependentStateProof proof) =>
-            proof.action == IndependentStateAction.Maximize ? 2 : 3;
-
-        private static int PlacementCategory(IndependentPlacementProof proof) =>
-            proof.shape is IndependentPlacementShape.LeftHalf or IndependentPlacementShape.RightHalf
-                ? 4
-                : 5;
     }
 }

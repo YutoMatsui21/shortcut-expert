@@ -18,14 +18,18 @@ import type {
   RecordMutation,
   StorageState,
 } from "../shared/storage.ts";
-import { daysBefore, recordOperations } from "../shared/storage.ts";
+import { daysBefore } from "../shared/storage.ts";
 import { validDate } from "./dates.ts";
 import { classifyGesture } from "./detector.ts";
 import { learningReadModel } from "./learning.ts";
+import {
+  prepareRecordChange,
+  type Capability,
+  type RecordingBaseline,
+} from "./record-preparation.ts";
 import { recordRanges, recordsReadModel } from "./records.ts";
 import { SerialQueue } from "./serial-queue.ts";
-
-export type Capability = { operation: OperationId; revision: string };
+export type { Capability } from "./record-preparation.ts";
 type Dependencies = {
   repository: DurableRepository;
   session: string;
@@ -65,12 +69,7 @@ export class DurableCoach {
   private deleting = false;
   private pendingSettings: Settings | null = null;
   private queue = new SerialQueue();
-  private baseline: {
-    day: string;
-    time: number;
-    observing: boolean;
-    capabilities: Capability[];
-  } | null = null;
+  private baseline: RecordingBaseline | null = null;
   private deps: Dependencies;
   constructor(deps: Dependencies) {
     this.deps = deps;
@@ -171,46 +170,6 @@ export class DurableCoach {
       !counts.some((count) => count.day > today)
     );
   }
-  private observedCoverage(
-    today: string,
-    time: number,
-    current: Capability[],
-  ): RecordMutation["coverage"] {
-    const prior = this.baseline;
-    const elapsed = prior ? Math.floor(time - prior.time) : 0;
-    const continuous =
-      !!prior &&
-      prior.day === today &&
-      prior.observing &&
-      this.observing &&
-      elapsed > 0 &&
-      elapsed <= 2500;
-    return recordOperations.map((operation) => {
-      const capability = current.find((c) => c.operation === operation);
-      const sameCapability =
-        capability &&
-        prior?.capabilities.some(
-          (c) =>
-            c.operation === operation && c.revision === capability.revision,
-        );
-      const activeMs = continuous && sameCapability ? elapsed : 0;
-      return {
-        day: today,
-        operation,
-        value: {
-          knowledge:
-            activeMs > 0 ? ("observed" as const) : ("not-observed" as const),
-          activeMs,
-          gap:
-            !activeMs ||
-            !prior ||
-            prior.day !== today ||
-            !this.data.coverage[today]?.[operation],
-          capabilityRevision: capability?.revision ?? "unverified",
-        },
-      };
-    });
-  }
   private prepare(
     counts: NonNullable<RecordMutation["counts"]> = [],
     reset?: boolean,
@@ -223,57 +182,24 @@ export class DurableCoach {
       );
       return null;
     }
-    const time = this.deps.now();
-    const current = this.deps.capabilities();
-    const coverage =
-      reset || !this.observing
-        ? []
-        : this.observedCoverage(today, time, current);
-    for (const entry of counts)
-      if (entry.day !== today)
-        coverage.push({
-          day: entry.day,
-          operation: entry.operation,
-          value: {
-            knowledge: "not-observed",
-            activeMs: 0,
-            gap: true,
-            capabilityRevision:
-              current.find((c) => c.operation === entry.operation)?.revision ??
-              "unverified",
-          },
-        });
-    this.baseline = {
+    const current: RecordingBaseline = {
       day: today,
-      time,
+      time: this.deps.now(),
       observing: this.observing,
-      capabilities: current,
+      capabilities: this.deps.capabilities(),
     };
-    const coverageChanged = coverage.some((row) => {
-      const prior = this.data.coverage[row.day]?.[row.operation];
-      return (
-        !prior ||
-        row.value.activeMs > 0 ||
-        (row.value.gap && !prior.gap) ||
-        row.value.capabilityRevision !== prior.capabilityRevision ||
-        (row.value.knowledge === "observed" && prior.knowledge !== "observed")
-      );
-    });
-    if (
-      !counts.length &&
-      !reset &&
-      today === this.data.highWater &&
-      !coverageChanged
-    )
-      return null;
+    const draft = prepareRecordChange(
+      this.data,
+      { previous: this.baseline, current },
+      { counts, reset },
+    );
+    this.baseline = current;
+    if (!draft) return null;
     return {
       epoch: this.data.epoch,
       writeSession: this.session,
       sequence: ++this.writeSequence,
-      today,
-      ...(counts.length ? { counts } : {}),
-      coverage,
-      reset,
+      ...draft,
     };
   }
   private async persist(value: RecordMutation): Promise<void> {
