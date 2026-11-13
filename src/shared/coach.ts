@@ -41,7 +41,87 @@ export type WindowEvidenceResult = {
   moveConfirmed?: boolean;
   twoDisplayLayoutConfirmed?: boolean;
 };
+export type IndependentProof =
+  | {
+      kind: "switch";
+      route: "direct-click" | "alt-tab";
+      windowsDifferent: true;
+      eligible: true;
+      foregroundMatched: true;
+      inputAgeMs: number;
+      settleMs: number;
+      monitor: Bounds | null;
+    }
+  | {
+      kind: "monitor-move";
+      route: "caption-drag" | "win-shift-left" | "win-shift-right";
+      moveConfirmed: true;
+      layoutStable: true;
+      inputAgeMs: number;
+      fromMonitor: Bounds;
+      toMonitor: Bounds;
+      moveDirection: "left" | "right" | null;
+      twoDisplayLayoutConfirmed: boolean;
+    }
+  | {
+      kind: "state";
+      route:
+        | "max-button"
+        | "min-button"
+        | "caption-double-click"
+        | "caption-top-drag"
+        | "mouse-state-fallback"
+        | "win-up"
+        | "win-down";
+      action: "maximize" | "restore" | "minimize";
+      before: "normal" | "maximized";
+      after: "normal" | "maximized" | "minimized";
+      beforeArranged: boolean | null;
+      afterArranged: boolean | null;
+      inputAgeMs: number;
+      monitor: Bounds | null;
+    }
+  | {
+      kind: "placement";
+      route: "caption-edge-drag" | "win-held-arrows";
+      shape:
+        | "left-half"
+        | "right-half"
+        | "left-top"
+        | "right-top"
+        | "left-bottom"
+        | "right-bottom";
+      placementConfirmed: true;
+      layoutStable: true;
+      inputAgeMs: number;
+      monitor: Bounds;
+    }
+  | {
+      kind: "close";
+      route: "close-button" | "alt-f4";
+      destroyed: true;
+      inputAgeMs: number;
+      monitor: Bounds | null;
+    }
+  | {
+      kind: "taskbar";
+      route: "taskbar-click" | "win-digit";
+      slot: number;
+      mappingConfirmed: true;
+      snapshotAgeMs: number;
+      confirmationAgeMs: number;
+      monitor: Bounds | null;
+    };
+export type IndependentResultsEvidence = {
+  kind: "independent-results";
+  profile: "independent-results-v1";
+  targetMatched: true;
+  released: true;
+  final: true;
+  results: IndependentProof[];
+};
 export type Evidence =
+  | IndependentResultsEvidence
   | {
       kind: "caption-click";
       profile: "caption-click-v1";

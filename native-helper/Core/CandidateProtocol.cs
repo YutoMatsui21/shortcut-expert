@@ -12,7 +12,227 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(WindowCloseEvidence), "window-close")]
 [JsonDerivedType(typeof(CompoundDragEvidence), "compound-drag")]
 [JsonDerivedType(typeof(CaptionClickEvidence), "caption-click")]
+[JsonDerivedType(typeof(IndependentResultsEvidence), "independent-results")]
 internal abstract record Evidence(string profile);
+
+internal sealed record IndependentResultsEvidence(
+    bool targetMatched,
+    bool released,
+    bool final,
+    IReadOnlyList<IndependentProof> results
+) : Evidence("independent-results-v1");
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(IndependentSwitchProof), "switch")]
+[JsonDerivedType(typeof(IndependentMonitorMoveProof), "monitor-move")]
+[JsonDerivedType(typeof(IndependentStateProof), "state")]
+[JsonDerivedType(typeof(IndependentPlacementProof), "placement")]
+[JsonDerivedType(typeof(IndependentCloseProof), "close")]
+[JsonDerivedType(typeof(IndependentTaskbarProof), "taskbar")]
+internal abstract record IndependentProof;
+
+internal sealed record IndependentSwitchProof(
+    IndependentSwitchRoute route,
+    bool windowsDifferent,
+    bool eligible,
+    bool foregroundMatched,
+    long inputAgeMs,
+    long settleMs,
+    MonitorBounds? monitor
+) : IndependentProof;
+
+internal sealed record IndependentMonitorMoveProof(
+    IndependentMonitorMoveRoute route,
+    bool moveConfirmed,
+    bool layoutStable,
+    long inputAgeMs,
+    MonitorBounds fromMonitor,
+    MonitorBounds toMonitor,
+    IndependentMoveDirection? moveDirection,
+    bool twoDisplayLayoutConfirmed
+) : IndependentProof;
+
+internal sealed record IndependentStateProof(
+    IndependentStateRoute route,
+    IndependentStateAction action,
+    IndependentBeforeState before,
+    IndependentAfterState after,
+    bool? beforeArranged,
+    bool? afterArranged,
+    long inputAgeMs,
+    MonitorBounds? monitor
+) : IndependentProof;
+
+internal sealed record IndependentPlacementProof(
+    IndependentPlacementRoute route,
+    IndependentPlacementShape shape,
+    bool placementConfirmed,
+    bool layoutStable,
+    long inputAgeMs,
+    MonitorBounds monitor
+) : IndependentProof;
+
+internal sealed record IndependentCloseProof(
+    IndependentCloseRoute route,
+    bool destroyed,
+    long inputAgeMs,
+    MonitorBounds? monitor
+) : IndependentProof;
+
+internal sealed record IndependentTaskbarProof(
+    IndependentTaskbarRoute route,
+    int slot,
+    bool mappingConfirmed,
+    long snapshotAgeMs,
+    long confirmationAgeMs,
+    MonitorBounds? monitor
+) : IndependentProof;
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentSwitchRoute>))]
+internal enum IndependentSwitchRoute
+{
+    [JsonStringEnumMemberName("direct-click")]
+    DirectClick,
+
+    [JsonStringEnumMemberName("alt-tab")]
+    AltTab,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentMonitorMoveRoute>))]
+internal enum IndependentMonitorMoveRoute
+{
+    [JsonStringEnumMemberName("caption-drag")]
+    CaptionDrag,
+
+    [JsonStringEnumMemberName("win-shift-left")]
+    WinShiftLeft,
+
+    [JsonStringEnumMemberName("win-shift-right")]
+    WinShiftRight,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentMoveDirection>))]
+internal enum IndependentMoveDirection
+{
+    [JsonStringEnumMemberName("left")]
+    Left,
+
+    [JsonStringEnumMemberName("right")]
+    Right,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentStateRoute>))]
+internal enum IndependentStateRoute
+{
+    [JsonStringEnumMemberName("max-button")]
+    MaxButton,
+
+    [JsonStringEnumMemberName("min-button")]
+    MinButton,
+
+    [JsonStringEnumMemberName("caption-double-click")]
+    CaptionDoubleClick,
+
+    [JsonStringEnumMemberName("caption-top-drag")]
+    CaptionTopDrag,
+
+    [JsonStringEnumMemberName("mouse-state-fallback")]
+    MouseStateFallback,
+
+    [JsonStringEnumMemberName("win-up")]
+    WinUp,
+
+    [JsonStringEnumMemberName("win-down")]
+    WinDown,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentStateAction>))]
+internal enum IndependentStateAction
+{
+    [JsonStringEnumMemberName("maximize")]
+    Maximize,
+
+    [JsonStringEnumMemberName("restore")]
+    Restore,
+
+    [JsonStringEnumMemberName("minimize")]
+    Minimize,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentBeforeState>))]
+internal enum IndependentBeforeState
+{
+    [JsonStringEnumMemberName("normal")]
+    Normal,
+
+    [JsonStringEnumMemberName("maximized")]
+    Maximized,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentAfterState>))]
+internal enum IndependentAfterState
+{
+    [JsonStringEnumMemberName("normal")]
+    Normal,
+
+    [JsonStringEnumMemberName("maximized")]
+    Maximized,
+
+    [JsonStringEnumMemberName("minimized")]
+    Minimized,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentPlacementRoute>))]
+internal enum IndependentPlacementRoute
+{
+    [JsonStringEnumMemberName("caption-edge-drag")]
+    CaptionEdgeDrag,
+
+    [JsonStringEnumMemberName("win-held-arrows")]
+    WinHeldArrows,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentPlacementShape>))]
+internal enum IndependentPlacementShape
+{
+    [JsonStringEnumMemberName("left-half")]
+    LeftHalf,
+
+    [JsonStringEnumMemberName("right-half")]
+    RightHalf,
+
+    [JsonStringEnumMemberName("left-top")]
+    LeftTop,
+
+    [JsonStringEnumMemberName("right-top")]
+    RightTop,
+
+    [JsonStringEnumMemberName("left-bottom")]
+    LeftBottom,
+
+    [JsonStringEnumMemberName("right-bottom")]
+    RightBottom,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentCloseRoute>))]
+internal enum IndependentCloseRoute
+{
+    [JsonStringEnumMemberName("close-button")]
+    CloseButton,
+
+    [JsonStringEnumMemberName("alt-f4")]
+    AltF4,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<IndependentTaskbarRoute>))]
+internal enum IndependentTaskbarRoute
+{
+    [JsonStringEnumMemberName("taskbar-click")]
+    TaskbarClick,
+
+    [JsonStringEnumMemberName("win-digit")]
+    WinDigit,
+}
 
 internal sealed record CaptionClickEvidence(
     string? terminal,

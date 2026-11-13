@@ -505,6 +505,7 @@ internal static partial class Program
             var switchSamples = WindowSwitchTests.Run(passed);
             var captionSamples = InactiveCaptionTests.Run(passed);
             var closeSamples = WindowCloseTests.Run(passed);
+            var independentResultSamples = IndependentResultsTests.Run(passed);
             Console.WriteLine(
                 JsonSerializer.Serialize(
                     new
@@ -521,6 +522,7 @@ internal static partial class Program
                         monitorMoveSamples,
                         compoundSamples,
                         closeSamples,
+                        independentResultSamples,
                         independence = IndependentDetection.Run(VerifyRouterDrag),
                         windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
                         globalInputCollected = false,
