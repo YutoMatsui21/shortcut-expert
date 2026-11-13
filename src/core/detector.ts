@@ -1,14 +1,24 @@
 import type {
-  Bounds,
   WindowEvidenceResult,
   ObserverCandidate,
   Observation,
   OperationId,
 } from "../shared/coach.ts";
 import { validDate } from "./dates.ts";
+import { classifyIndependent } from "./independent-detector.ts";
+import { sameMonitor, separateMonitors } from "./monitor-geometry.ts";
 
 // One envelope is one gesture. Never expose one half of an invalid compound result.
 export function classifyGesture(value: ObserverCandidate): Observation[] {
+  if (
+    value.protocolVersion === 2 &&
+    value.evidence.kind === "independent-results"
+  )
+    return classifyIndependent(value);
+  return classifyLegacyGesture(value);
+}
+
+function classifyLegacyGesture(value: ObserverCandidate): Observation[] {
   if (value.protocolVersion === 2 && value.evidence.kind === "caption-click") {
     const e = value.evidence;
     if (
@@ -428,26 +438,4 @@ function classifyWindow(
     shortcut,
     monitor: candidate.monitor,
   };
-}
-
-function sameMonitor(a: Bounds, b: Bounds): boolean {
-  return (
-    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
-  );
-}
-
-// Two endpoint bounds alone do not prove a complete two-display layout.
-function separateMonitors(a: Bounds, b: Bounds): boolean {
-  return (
-    [a, b].every(
-      (r) =>
-        [r.x, r.y, r.width, r.height].every(Number.isFinite) &&
-        r.width > 0 &&
-        r.height > 0,
-    ) &&
-    (a.x + a.width <= b.x ||
-      b.x + b.width <= a.x ||
-      a.y + a.height <= b.y ||
-      b.y + b.height <= a.y)
-  );
 }

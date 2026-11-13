@@ -28,6 +28,19 @@ internal sealed class DetectionSession
     }
 
     // Capture a lifecycle lease: even reusing a generation cannot revive an old worker.
+    internal Func<bool> Lease(int epoch)
+    {
+        lock (gate)
+        {
+            long lease = revision;
+            return () =>
+            {
+                lock (gate)
+                    return generation > 0 && generation == epoch && revision == lease;
+            };
+        }
+    }
+
     // Zero means inactive; it is never a valid protocol transaction.
     internal Func<int> Allocator(int epoch)
     {
