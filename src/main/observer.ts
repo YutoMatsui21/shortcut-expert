@@ -1,7 +1,10 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import { independentCandidate } from "./independent-results.ts";
+import {
+  independentCandidate,
+  usesIndependentResults,
+} from "./independent-results.ts";
 import { parseObserverMessage } from "./observer-json.ts";
 export { parseObserverMessage } from "./observer-json.ts";
 import type {
@@ -114,13 +117,7 @@ function nullableBoolean(value: unknown): value is boolean | null {
   return value === null || typeof value === "boolean";
 }
 export function candidateV2(value: unknown): CandidateV2 | null {
-  if (
-    record(value) &&
-    (value.route === "independent-results" ||
-      (record(value.evidence) &&
-        (value.evidence.kind === "independent-results" ||
-          value.evidence.profile === "independent-results-v1")))
-  )
+  if (record(value) && usesIndependentResults(value))
     return independentCandidate(value);
   if (
     !record(value) ||
