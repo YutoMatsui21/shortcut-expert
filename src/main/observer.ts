@@ -1,6 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { app } from "electron";
+import {
+  independentCandidate,
+  usesIndependentResults,
+} from "./independent-results.ts";
+import { parseObserverMessage } from "./observer-json.ts";
+export { parseObserverMessage } from "./observer-json.ts";
 import type {
   Bounds,
   CandidateV2,
@@ -111,6 +117,8 @@ function nullableBoolean(value: unknown): value is boolean | null {
   return value === null || typeof value === "boolean";
 }
 export function candidateV2(value: unknown): CandidateV2 | null {
+  if (record(value) && usesIndependentResults(value))
+    return independentCandidate(value);
   if (
     !record(value) ||
     value.type !== "candidate" ||
@@ -654,8 +662,7 @@ export class ObserverClient {
   }
   private receive(line: string): void {
     try {
-      if (line.length > 16384) throw new Error("oversize");
-      const message: unknown = JSON.parse(line);
+      const message: unknown = parseObserverMessage(line);
       if (!record(message)) throw new Error("protocol");
       if (message.type === "ready") {
         if (message.protocolVersion !== 2) throw new Error("helper-protocol");

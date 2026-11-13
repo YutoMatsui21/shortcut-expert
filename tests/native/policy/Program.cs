@@ -505,27 +505,27 @@ internal static partial class Program
             var switchSamples = WindowSwitchTests.Run(passed);
             var captionSamples = InactiveCaptionTests.Run(passed);
             var closeSamples = WindowCloseTests.Run(passed);
-            Console.WriteLine(
-                JsonSerializer.Serialize(
-                    new
-                    {
-                        passed,
-                        samples,
-                        v2Samples,
-                        snapSamples,
-                        taskbarSamples,
-                        switchSamples,
-                        captionSamples,
-                        windowStateSamples,
-                        placementSamples,
-                        monitorMoveSamples,
-                        compoundSamples,
-                        closeSamples,
-                        independence = IndependentDetection.Run(VerifyRouterDrag),
-                        windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
-                        globalInputCollected = false,
-                    }
-                )
+            var independentResultSamples = IndependentResultsTests.Run(passed);
+            WriteReport(
+                new
+                {
+                    passed,
+                    samples,
+                    v2Samples,
+                    snapSamples,
+                    taskbarSamples,
+                    switchSamples,
+                    captionSamples,
+                    windowStateSamples,
+                    placementSamples,
+                    monitorMoveSamples,
+                    compoundSamples,
+                    closeSamples,
+                    independentResultSamples,
+                    independence = IndependentDetection.Run(VerifyRouterDrag),
+                    windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
+                    globalInputCollected = false,
+                }
             );
             return 0;
         }
@@ -537,6 +537,9 @@ internal static partial class Program
             return 1;
         }
     }
+
+    private static void WriteReport(object report) =>
+        Console.WriteLine(JsonSerializer.Serialize(report));
 
     private static void CheckWinDownGrouping()
     {

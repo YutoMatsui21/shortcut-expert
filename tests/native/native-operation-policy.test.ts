@@ -13,7 +13,8 @@ import { windowDiagnosticKeys } from "../../src/shared/window-diagnostics.ts";
 import { v2Fixture, type Candidate } from "../support/fixtures.ts";
 
 mock.module("electron", { namedExports: { app: {} } });
-const { candidateV2 } = await import("../../src/main/observer.ts");
+const { candidateV2, parseObserverMessage } =
+  await import("../../src/main/observer.ts");
 
 test(
   "本番のC#候補生成と全画面分類を人工イベント列で検証する",
@@ -108,6 +109,30 @@ test(
       "Native policy suite must not silently discover zero tests",
     );
     t.diagnostic(`C# production policy assertions: ${report.passed.length}`);
+    // These lines are produced by the production C# Evidence serializer. Check
+    // the wire before parsing as well as the normalized TS result.
+    assert.ok(report.independentResultSamples.length >= 3);
+    const independent = report.independentResultSamples.map((line: string) => {
+      const raw: unknown = parseObserverMessage(line);
+      const parsed = candidateV2(raw);
+      assert.ok(parsed, "C# independent-results JSON must satisfy TS contract");
+      assert.equal(parsed.evidence.kind, "independent-results");
+      const forbidden =
+        /"(?:operation|shortcut|hwnd|pid|title|url|path|clipboard|keys|inputTimes|generationId|targetIdentity)"\s*:/i;
+      assert.equal(
+        forbidden.test(line),
+        false,
+        "raw C# JSONL has no forbidden fields",
+      );
+      assert.equal(forbidden.test(JSON.stringify(parsed)), false);
+      return parsed;
+    });
+    for (const [index, count] of [1, 2, 3].entries()) {
+      const evidence = independent[index].evidence;
+      assert.equal(evidence.kind, "independent-results");
+      if (evidence.kind === "independent-results")
+        assert.equal(evidence.results.length, count);
+    }
     const observations = report.samples.map((sample: Candidate) => {
       const parsed = candidateV2(v2Fixture(sample));
       assert.ok(parsed, "internal C# sample must satisfy TS v2 protocol");

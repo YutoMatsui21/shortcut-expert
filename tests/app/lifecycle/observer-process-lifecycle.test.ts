@@ -452,3 +452,51 @@ test("fixture focusの不正結果を正常なtokenへ変換しない", async (t
       .send({ type: "focus", requestId: request.requestId, result: null });
   await assert.rejects(h.client.focusToken(), /invalid-focus-token/);
 });
+
+test("independent results retain generation/stop filtering and oversize transport failure", async (t) => {
+  const h = harness(t);
+  await h.client.start();
+  const candidate = {
+    type: "candidate",
+    protocolVersion: 2,
+    generation: 1,
+    sequence: 1,
+    transaction: 1,
+    date: "2026-11-13",
+    origin: "mouse",
+    route: "independent-results",
+    injected: false,
+    conflicted: false,
+    evidence: {
+      kind: "independent-results",
+      profile: "independent-results-v1",
+      targetMatched: true,
+      released: true,
+      final: true,
+      results: [
+        {
+          kind: "close",
+          route: "close-button",
+          destroyed: true,
+          inputAgeMs: 0,
+          monitor: null,
+        },
+      ],
+    },
+  };
+  h.child().send({ ...candidate, generation: 2 });
+  assert.equal(h.accepted.length, 0);
+  h.child().send(candidate);
+  assert.equal(h.accepted.length, 1);
+  await h.client.stop();
+  h.child().send({ ...candidate, sequence: 2 });
+  assert.equal(h.accepted.length, 1);
+  await h.client.start();
+  h.child().send({ ...candidate, generation: 2, sequence: 2 });
+  assert.equal(h.accepted.length, 2);
+  h.child().stdout.write(
+    JSON.stringify({ ...candidate, generation: 2 }).padEnd(16385, " ") + "\n",
+  );
+  assert.equal(h.faults(), 1);
+  assert.equal(h.accepted.length, 2);
+});

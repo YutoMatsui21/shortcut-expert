@@ -13,6 +13,7 @@ const { candidateV2 } = await import("../../src/main/observer.ts");
 test("W08 strict schema, meaning, unknowns and negative evidence", () => {
   for (const origin of ["mouse", "key"] as const) {
     const fixture = snapFixture(origin);
+    if (fixture.evidence.kind !== "snap-invocation") throw new Error("fixture");
     assert.deepEqual(candidateV2(fixture), fixture);
     assert.equal(classify(fixture), null);
     for (const extra of [
