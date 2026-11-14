@@ -4,7 +4,7 @@ import { app } from "electron";
 import {
   independentCandidate,
   usesIndependentResults,
-} from "./independent-results.ts";
+} from "../core/independent-results.ts";
 import { parseObserverMessage } from "./observer-json.ts";
 export { parseObserverMessage } from "./observer-json.ts";
 import type {

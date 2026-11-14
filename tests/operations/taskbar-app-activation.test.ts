@@ -138,7 +138,8 @@ test("W12 real SQLite: both origins, three states, save-before-notify, replay, p
   const commit = repository.commit.bind(repository);
   let fail = true;
   repository.commit = async (value) => {
-    if (fail && value.count) throw new Error("fixture-write-failure");
+    if (fail && (value.count || value.counts?.length))
+      throw new Error("fixture-write-failure");
     return commit(value);
   };
   await coach.accept({ ...taskbarFixture("mouse", 1), generation: 2 });

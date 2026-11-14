@@ -116,7 +116,8 @@ test("W01 SQLite: replay, pause/stop, generation, save failure and retry do not 
   const commit = repository.commit.bind(repository);
   let fail = true;
   repository.commit = async (value) => {
-    if (fail && value.count) throw new Error("fixture-write-failure");
+    if (fail && (value.count || value.counts?.length))
+      throw new Error("fixture-write-failure");
     return commit(value);
   };
   await coach.accept({ ...switchFixture("mouse", 1), generation: 2 });

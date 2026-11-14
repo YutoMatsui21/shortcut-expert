@@ -362,7 +362,7 @@ test("delete drains an in-flight durable write, discards queued old candidates a
     entered = resolve;
   });
   h.repository.commit = async (value) => {
-    if (value.count) {
+    if (value.count || value.counts?.length) {
       entered();
       await held;
     }

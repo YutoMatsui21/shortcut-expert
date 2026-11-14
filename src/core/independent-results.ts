@@ -1,10 +1,10 @@
-import { validDate } from "../core/dates.ts";
 import type {
   Bounds,
   CandidateV2,
   IndependentProof,
   IndependentResultsEvidence,
 } from "../shared/coach.ts";
+import { validDate } from "./dates.ts";
 
 type ObjectValue = Record<string, unknown>;
 type Origin = "mouse" | "key";
@@ -338,7 +338,9 @@ function completedEvidence(value: unknown): value is Omit<
     value.results.length > 0
   );
 }
-export function independentCandidate(value: ObjectValue): CandidateV2 | null {
+export function independentCandidate(
+  value: ObjectValue,
+): (CandidateV2 & { origin: Origin }) | null {
   if (!candidateHeader(value) || !completedEvidence(value.evidence))
     return null;
   const results = normalizeProofs(value.evidence.results, value.origin);

@@ -21,7 +21,7 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 
 `Windows API → Native候補 → Mainの型・世代検証 → Coreの採用判定 → 保存 → 必要なら通知`
 
-- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateProtocol`で送信順を確定する。最大化したままの画面移動は単独W02、既知配置からの再配置は`PlacementGeometry`で配置差を確認する。既存のTracker・Policy・複合契約を使用し、独立検出器やAggregatorは追加しない。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
+- **Native**：`Observer`で入力・状態を取り込み、`CandidateTracker`や操作別`Policy`で証拠を組み立てる。`CandidateSink`で送信順を確定する。最大化したままの画面移動は単独W02、既知配置からの再配置は`PlacementGeometry`で配置差を確認する。本番Detectorは既存のTracker・Policy・複合契約を使用する。UIAなどの遅い照会を入力hookの中で無制限に実行しない。
 - **Main**：`observer.ts`で通信形式・必須項目・世代・protocol v2を検証し、認めた項目だけCoreへ渡す。未知の能力は`unknown`のまま扱う。
 - **Core**：`detector.ts`などが入力由来・対象・結果・同等キーを照合する。確証のないイベントを推測で採用しない。**操作の記録可否とキー案内の可否は別判定**にする。
 - **境界**：protocol v2だけを受理し、イベント識別子・入力transaction・送信sequenceによって旧世代や再配送を拒否する。入力した文字・生キー列・ウィンドウタイトル等は保存・外部送信しない。
@@ -40,13 +40,13 @@ Shortcut Expertを**どの責務に分け、なぜそう接続するか**を記�
 - `coach-ipc.ts`が送信元frame・引数・削除確認tokenを検証する。Rendererは限定されたPreload APIだけを呼ぶ。`contextIsolation`と`sandbox`を維持する。
 - UIの状態・操作ルールは[一覧](features/learning-ui.md)、[記録](features/records-ui.md)、[設定](features/settings-panel.md)、[ウィンドウ](features/window-lifecycle.md)を参照する。
 
-独立結果の次期通信型・完了barrier・任意件数保存は[#177の確定契約](research/detection-architecture/result-envelope.md)。現行v2の追加variantとして #178/#179で導入し、本番Detectorは段階移行する。
+独立結果の通信型・完了barrier・任意件数保存は[#177の確定契約](research/detection-architecture/result-envelope.md)。`ResultComposer.Begin`で共通Gestureのcontextと購読集合を受け取り、`ComposerGesture`が共通入力・対象identity・lease・終端、`DetectorResults`が固定購読と個別期限、`IndependentProofSet`が区分別重複・矛盾除外と正規順を管理する。Routerからの各完了を`Confirm`/`Reject`で受ける。共通入力の解放・終端後に`Seal`し、`Tick`で個別期限を処理する。全購読者の確定後、成立Proofだけを正規順で1Envelopeにする。取消・旧lease・対象不一致は全件破棄する。MainとCoreは純粋な`core/independent-results.ts`の検証を共用し、`core/independent-detector.ts`が独立Proofを既存8操作へ分類する。旧Evidenceの分類は`detector.ts`に維持する。共通処理はfixtureで接続済みだが、本番Detectorは #180〜#184で旧出口から排他的に移行する。
 
 ## 4. 保存・通知
 
 ### 保存と移行
 
-- 通常起動は`DurableCoach`と`SqliteRepository`を使う。`sqlite-repository.ts`が単一writer／`storage-worker.ts`を管理し、`storage-store.ts`だけがSQLiteへアクセスする。
+- 通常起動は`DurableCoach`と`SqliteRepository`を使う。`record-preparation.ts`が直前と現在の観測区間からcoverage・操作全件のmutation内容を純粋に組み立て、`DurableCoach`が時計確認・baseline更新・採番・保存・保存後通知を管理する。`sqlite-repository.ts`が単一writer／`storage-worker.ts`を管理し、`storage-store.ts`だけがSQLiteへアクセスする。
 - 件数・観測範囲・checkpoint等の一貫性を維持し、ACK喪失時の再送でも二重計上しない。複合操作の複数カウントは原子的に保存する設計とする。
 - 記録は無期限に保持し、UI/IPCの取得は最大60日へ制限。旧JSONの厳格検証・staging移行・再照合は`storage-migration.ts`が担当する。失敗を空記録への初期化で隠さない。
 - 通常起動・隔離smokeともに同じSQLite／標準通知経路を使う。旧JSON writer・30日prune・独自通知ウィンドウは設けない。旧JSONの読み取り検証だけを`legacy-documents.ts`に保持する。

@@ -39,6 +39,10 @@ internal sealed class GestureManager
         internal bool Modified { get; } = modified;
         internal bool Matched { get; } = matched;
         internal Phase State { get; set; } = Phase.Observing;
+
+        // The independent route owns this physical input once subscribed. Kept on the
+        // gesture so reopening a completed composer cannot emit the input twice.
+        internal bool ResultsClaimed { get; set; }
     }
 
     // Compatibility input: route, age convention, transaction and drag evidence still belong
@@ -150,13 +154,15 @@ internal sealed class GestureManager
             CaptionPress: CaptionPress
         );
 
-    private bool Live(Gesture? value) =>
+    internal bool IsCurrent(Gesture? value) =>
         value is not null
         && ReferenceEquals(value, Current)
         && value.Revision == revision
         && value.Generation == generation
-        && generation > 0
-        && value.State is Phase.Observing or Phase.AwaitingResult;
+        && generation > 0;
+
+    private bool Live(Gesture? value) =>
+        IsCurrent(value) && value!.State is Phase.Observing or Phase.AwaitingResult;
 
     internal bool AwaitResult(Gesture? value, long? releasedAt = null)
     {
