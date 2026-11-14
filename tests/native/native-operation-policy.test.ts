@@ -20,10 +20,9 @@ const { candidateV2, parseObserverMessage } =
 async function verifyIndependentDragSample(
   coach: DurableCoach,
   notices: ShortcutNotice[],
-  line: string,
-  index: number,
-  expected: string[],
+  fixture: { line: string; index: number; expected: string[] },
 ) {
+  const { line, index, expected } = fixture;
   coach.begin(1);
   assert.equal(
     /"(?:hwnd|pid|title|url|path|clipboard|keys|inputTimes|ReleasePoint)"\s*:/i.test(
@@ -275,13 +274,11 @@ test(
           expectedResults.length,
         );
         for (const [index, expected] of expectedResults.entries()) {
-          await verifyIndependentDragSample(
-            coach,
-            notices,
-            report.independentDragSamples[index],
+          await verifyIndependentDragSample(coach, notices, {
+            line: report.independentDragSamples[index],
             index,
             expected,
-          );
+          });
         }
         assert.deepEqual(
           (await repository.load("2026-11-15")).counts["2026-11-15"],
