@@ -3,7 +3,8 @@
 internal sealed class TrackerEventAdapter(
     CandidateTracker tracker,
     CandidateSink sink,
-    Action<nint, WindowState>? remember = null
+    Action<nint, WindowState>? remember = null,
+    IndependentDragAdapter? independentDrag = null
 )
 {
     internal void Register(DetectionRouter router)
@@ -135,6 +136,12 @@ internal sealed class TrackerEventAdapter(
                     sink.Complete(candidate);
                 break;
             case MoveEndEvent e:
+                if (independentDrag?.Finish(e) == true)
+                {
+                    tracker.MoveEnd(e.Target);
+                    Remember(e.Target, e.After);
+                    break;
+                }
                 var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
                 Remember(e.Target, e.After);
                 Emit(move, e.Generation, e.Date);

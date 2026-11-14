@@ -204,6 +204,83 @@ test(
         );
       },
     );
+    await t.test(
+      "opt-in drag Router → Composer → SQLite preserves partial adoption",
+      async (t) => {
+        const root = await mkdtemp(join(tmpdir(), "coach-independent-drag-"));
+        const repository = new SqliteRepository(
+          root,
+          resolve("src/main/storage-worker.ts"),
+        );
+        t.after(async () => {
+          await repository.close();
+          await rm(root, { recursive: true, force: true });
+        });
+        const notices: ShortcutNotice[] = [];
+        const coach = new DurableCoach({
+          repository,
+          session: repository.session,
+          date: () => "2026-11-15",
+          now: () => 0,
+          capabilities: () => [],
+          changed: () => {},
+          notify: async (notice) => {
+            notices.push(notice);
+            return true;
+          },
+        });
+        await coach.initialize();
+        const expectedResults = [
+          ["W02", "W03"],
+          ["W02", "W07"],
+          ["W02"],
+          ["W02"],
+          ["W02"],
+          ["W02"],
+        ];
+        assert.equal(
+          report.independentDragSamples.length,
+          expectedResults.length,
+        );
+        for (const [index, expected] of expectedResults.entries()) {
+          coach.begin(1);
+          const line: string = report.independentDragSamples[index];
+          assert.equal(
+            /"(?:hwnd|pid|title|url|path|clipboard|keys|inputTimes|ReleasePoint)"\s*:/i.test(
+              line,
+            ),
+            false,
+          );
+          const candidate = candidateV2(parseObserverMessage(line));
+          assert.ok(candidate);
+          assert.deepEqual(
+            classifyGesture(candidate).map((o) => o.operation),
+            expected,
+          );
+          await coach.accept(candidate);
+          await coach.accept({
+            ...candidate,
+            sequence: candidate.sequence + 1,
+          });
+          assert.equal(notices.length, index + 1);
+          assert.deepEqual(
+            (notices[index].items ?? [notices[index]]).map(
+              (item) => item.operation,
+            ),
+            expected,
+          );
+        }
+        assert.deepEqual(
+          (await repository.load("2026-11-15")).counts["2026-11-15"],
+          {
+            W02: { mouse: 6, key: 0 },
+            W03: { mouse: 1, key: 0 },
+            W07: { mouse: 1, key: 0 },
+          },
+        );
+      },
+    );
+
     const observations = report.samples.map((sample: Candidate) => {
       const parsed = candidateV2(v2Fixture(sample));
       assert.ok(parsed, "internal C# sample must satisfy TS v2 protocol");

@@ -509,6 +509,8 @@ internal static partial class Program
             var captionSamples = InactiveCaptionTests.Run(passed);
             var closeSamples = WindowCloseTests.Run(passed);
             var independentResultSamples = IndependentResultsTests.Run(passed);
+            CheckIndependentDragDetectors();
+            var independentDragSamples = IndependentDragRouterTests();
             var composerSamples = ResultComposerTests();
             WriteReport(
                 new
@@ -527,6 +529,7 @@ internal static partial class Program
                     closeSamples,
                     independentResultSamples,
                     composerSamples,
+                    independentDragSamples,
                     independence = IndependentDetection.Run(VerifyRouterDrag),
                     windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
                     globalInputCollected = false,

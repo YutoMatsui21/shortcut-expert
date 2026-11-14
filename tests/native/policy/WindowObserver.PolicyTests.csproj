@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../../native-helper/Core/IndependentDragAdapter.cs" Link="IndependentDragAdapter.cs" />
+    <Compile Include="../../../native-helper/Detectors/DragDetectors.cs" Link="DragDetectors.cs" />
     <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
     <Compile
