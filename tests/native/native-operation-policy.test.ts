@@ -17,6 +17,38 @@ mock.module("electron", { namedExports: { app: {} } });
 const { candidateV2, parseObserverMessage } =
   await import("../../src/main/observer.ts");
 
+async function verifyIndependentDragSample(
+  coach: DurableCoach,
+  notices: ShortcutNotice[],
+  line: string,
+  index: number,
+  expected: string[],
+) {
+  coach.begin(1);
+  assert.equal(
+    /"(?:hwnd|pid|title|url|path|clipboard|keys|inputTimes|ReleasePoint)"\s*:/i.test(
+      line,
+    ),
+    false,
+  );
+  const candidate = candidateV2(parseObserverMessage(line));
+  assert.ok(candidate);
+  assert.deepEqual(
+    classifyGesture(candidate).map((o) => o.operation),
+    expected,
+  );
+  await coach.accept(candidate);
+  await coach.accept({
+    ...candidate,
+    sequence: candidate.sequence + 1,
+  });
+  assert.equal(notices.length, index + 1);
+  assert.deepEqual(
+    (notices[index].items ?? [notices[index]]).map((item) => item.operation),
+    expected,
+  );
+}
+
 test(
   "本番のC#候補生成と全画面分類を人工イベント列で検証する",
   { timeout: 60_000 },
@@ -243,30 +275,11 @@ test(
           expectedResults.length,
         );
         for (const [index, expected] of expectedResults.entries()) {
-          coach.begin(1);
-          const line: string = report.independentDragSamples[index];
-          assert.equal(
-            /"(?:hwnd|pid|title|url|path|clipboard|keys|inputTimes|ReleasePoint)"\s*:/i.test(
-              line,
-            ),
-            false,
-          );
-          const candidate = candidateV2(parseObserverMessage(line));
-          assert.ok(candidate);
-          assert.deepEqual(
-            classifyGesture(candidate).map((o) => o.operation),
-            expected,
-          );
-          await coach.accept(candidate);
-          await coach.accept({
-            ...candidate,
-            sequence: candidate.sequence + 1,
-          });
-          assert.equal(notices.length, index + 1);
-          assert.deepEqual(
-            (notices[index].items ?? [notices[index]]).map(
-              (item) => item.operation,
-            ),
+          await verifyIndependentDragSample(
+            coach,
+            notices,
+            report.independentDragSamples[index],
+            index,
             expected,
           );
         }

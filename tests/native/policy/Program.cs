@@ -494,47 +494,7 @@ internal static partial class Program
             );
             CheckAdditionalOperations();
             CheckWinDownGrouping();
-            var windowStateSamples = CheckWindowStates();
-            var placementSamples = CheckPlacement();
-            CheckMonitorMoves();
-            CheckCompoundDrags();
-            CheckMouseReposition(placementSamples);
-            CheckMouseShadow();
-            CheckClickComparison();
-            CheckProtocol();
-            InputInfrastructureTests();
-            var snapSamples = SnapTests.Run(passed);
-            var taskbarSamples = TaskbarTests.Run(passed);
-            var switchSamples = WindowSwitchTests.Run(passed);
-            var captionSamples = InactiveCaptionTests.Run(passed);
-            var closeSamples = WindowCloseTests.Run(passed);
-            var independentResultSamples = IndependentResultsTests.Run(passed);
-            CheckIndependentDragDetectors();
-            var independentDragSamples = IndependentDragRouterTests();
-            var composerSamples = ResultComposerTests();
-            WriteReport(
-                new
-                {
-                    passed,
-                    samples,
-                    v2Samples,
-                    snapSamples,
-                    taskbarSamples,
-                    switchSamples,
-                    captionSamples,
-                    windowStateSamples,
-                    placementSamples,
-                    monitorMoveSamples,
-                    compoundSamples,
-                    closeSamples,
-                    independentResultSamples,
-                    composerSamples,
-                    independentDragSamples,
-                    independence = IndependentDetection.Run(VerifyRouterDrag),
-                    windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
-                    globalInputCollected = false,
-                }
-            );
+            RunAdditionalPolicyTests();
             return 0;
         }
         catch (Exception error)
@@ -544,6 +504,51 @@ internal static partial class Program
             );
             return 1;
         }
+    }
+
+    private static void RunAdditionalPolicyTests()
+    {
+        var windowStateSamples = CheckWindowStates();
+        var placementSamples = CheckPlacement();
+        CheckMonitorMoves();
+        CheckCompoundDrags();
+        CheckMouseReposition(placementSamples);
+        CheckMouseShadow();
+        CheckClickComparison();
+        CheckProtocol();
+        InputInfrastructureTests();
+        var snapSamples = SnapTests.Run(passed);
+        var taskbarSamples = TaskbarTests.Run(passed);
+        var switchSamples = WindowSwitchTests.Run(passed);
+        var captionSamples = InactiveCaptionTests.Run(passed);
+        var closeSamples = WindowCloseTests.Run(passed);
+        var independentResultSamples = IndependentResultsTests.Run(passed);
+        CheckIndependentDragDetectors();
+        var independentDragSamples = IndependentDragRouterTests();
+        var composerSamples = ResultComposerTests();
+        WriteReport(
+            new
+            {
+                passed,
+                samples,
+                v2Samples,
+                snapSamples,
+                taskbarSamples,
+                switchSamples,
+                captionSamples,
+                windowStateSamples,
+                placementSamples,
+                monitorMoveSamples,
+                compoundSamples,
+                closeSamples,
+                independentResultSamples,
+                composerSamples,
+                independentDragSamples,
+                independence = IndependentDetection.Run(VerifyRouterDrag),
+                windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
+                globalInputCollected = false,
+            }
+        );
     }
 
     private static void WriteReport(object report) =>
