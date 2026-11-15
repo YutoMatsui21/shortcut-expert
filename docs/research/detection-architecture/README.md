@@ -5,8 +5,8 @@
 | 知りたいこと               | 読む文書                             | 状態                         |
 | -------------------------- | ------------------------------------ | ---------------------------- |
 | **今どう動いているか**     | [現在の構成](current.md)             | 現行コードの説明             |
-| **どの構造を目指すか**     | [目標アーキテクチャ](target.md)      | 採用する設計（未実装）       |
-| **どう変更するか**         | [リファクタリング計画](migration.md) | 実装順序・完了条件（未着手） |
+| **どの構造を目指すか**     | [目標アーキテクチャ](target.md)      | 採用する設計（段階導入中）   |
+| **どう変更するか**         | [リファクタリング計画](migration.md) | 実装順序・完了条件（移行中） |
 | **何を壊してはいけないか** | [回帰条件とテスト](verification.md)  | 既存動作を守るための検証仕様 |
 
 ## 設計を見直すための調査
@@ -18,8 +18,8 @@
 ## 最初に押さえること
 
 - **現在**：C#の`Observer`がイベント取得だけでなく、`CandidateTracker`や専用Observerの呼出し・競合・取消も担う。
-- **目標**：ObserverはOS観測に集中し、`DetectionRouter`と`ArbitrationPolicy`が配信・競合を制御。各HandlerがOS証拠を生成し、TypeScriptが操作IDと案内キーを判定する。
-- **移行中も変えない**：Candidate JSONL protocol v2、初回対象8操作、入力の確証条件、複合操作、SQLite記録、通知の振る舞い。
+- **目標**：ObserverはOS観測に集中し、`GestureManager`が入力寿命、`DetectionRouter`が配送、`ResultComposer`が確定結果の統合を担当。各HandlerがOS証拠を生成し、TypeScriptが操作IDと案内キーを判定する。
+- **移行中も変えない**：Candidate JSONL protocol v2、初回対象8操作、入力の確証条件、SQLiteの原子保存、通知の適格性。独立Detectorへ移行したW02/W03/W07は、共通入力が有効な結果だけを部分採用する。
 
 **Codexの参照順**：`current.md` → `target.md` → `migration.md` → `verification.md`。変更対象が明確な場合は該当文書だけでよい。
 

@@ -156,3 +156,17 @@ Windows hook / WinEvent / 50ms poll
 - captionのStart/Mouse/State/Foreground/Poll、専用Observer内のWin32/UIA取得とSink出力、検証専用Snap経路は未移行。今回の対象は配送の分離であり、8操作の独立Detector化やResultComposer、Protocol変更は行わない。
 
 `RouterTests.cs`で購読・順序・処理状態・対象／process／入力源／Gesture不一致、取消・Stop/Reset・別スレッドの完了、TrackerとGestureManagerの共存、キー／poll／破棄の互換性を検証する。#172の既存baselineは変更せず、既存ドラッグfixtureも本番Router／アダプターで再生し、Candidateの件数・順序とEnvelope全体を直呼び出しと比較する。W11/W12等の未移行状態機械は既存Policy・helper結合試験で保護する。これらは隔離fixtureの証拠で、自然入力や実OSの順序・通知表示の受入ではない。
+
+<a id="independent-detectors-180"></a>
+
+## W02・W03・W07の独立判定（Issue #180）
+
+通常起動では `IndependentOperationAdapter` をRouterの互換配送に接続する。物理入力の開始時に `OperationResultSession` が3つの購読を固定し、`MonitorMoveDetector`・`MaximizeDetector`・`QuarterPlacementDetector` が共通の入力・終端snapshotだけを評価する。他Detectorの結果は参照しない。`KeyGestureSeries` は旧PlacementPolicyから取り出したWin保持列の中立factsを持ち、未移行のW06も同じfactsを使う。
+
+ドラッグはMOVESIZEEND、Win保持配置列は両Win解放後、Shift付きmonitor移動は方向キー解放後の結果で確定する。W03のキーとクリックも未解放では発行しない。W03の通常キーは入力から1秒、配置列は全体15秒・最後の方向入力から1秒、fallbackクリックは500ms、ドラッグ開始は押下から1秒という期限を維持する。W03キーの開始arranged不明・captionなし結果は従来どおり扱う。クリック状態が解放前に届いても、解放後の再読取・50ms timerで確認する。Win解放直後が最後の方向入力前のsnapshotや途中の通常形状なら、確定配置・最大化の変化を期限内で再照会し、中間quarterを確定しない。W04の最小化は前面離脱を許す既存経路に残す。
+
+新経路は共通Gestureを完了し、Composerで成立Proofだけを1つの `independent-results` Envelopeへ送る。W03/W07の個別不成立だけではW02を捨てない。releaseのmonitor/work不一致、物理入力不正、対象/process・世代不一致、取消、構成やdocking設定の変更は共通不正として採用しない。cross-monitor halfではW02だけを採用し、W06の移行や自動対応は行わない。同一monitorのhalfは従来のW06出口を保ち、移行済み操作の旧出力は互換アダプターで抑止する。
+
+非アクティブcaptionは `CaptionPressEvent` / `CaptionResultEvent` をRouterへ渡し、`CaptionClickResultAdapter` が別の共通GestureとComposerで統合する。W03は `MaximizeDetector.InactiveClick` が入力・activation観測・終端を独立評価する。未移行W01/W04の判定と原子保存を保つため、外部には引き続き1つの `caption-click` Envelopeを送る。これは開始arranged不明を従来どおり扱う互換出口でもあり、不明値を推測で補完しない。W01/W04自体の独立Detector移行は後続Issue。
+
+切戻しはhelper起動前の環境変数 `COACH_DETECTION_MODE=legacy`。未指定・空・`independent` は新経路、不明値は起動エラーとする。アプリを完全終了して再起動することで経路を選び、測定中の動的切替はしない。旧基準fixtureは旧経路の回帰として維持し、新経路の部分採用・未解放抑止は別試験で確認する。自然入力・実OS通知の最終受入は #186 に残す。

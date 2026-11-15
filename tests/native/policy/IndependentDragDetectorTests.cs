@@ -90,6 +90,10 @@ internal static partial class Program
                             {
                                 After = end with { Monitor = null },
                             },
+                            facts with
+                            {
+                                After = end with { MouseDockThresholdPx = 32 },
+                            },
                         }
                     )
                     {

@@ -1,14 +1,15 @@
-// Compatibility translation only. Admission, cancellation, deadlines and operation results
-// stay in CandidateTracker / PlacementPolicy / GestureManager; emission stays in CandidateSink.
+// Shared input collection stays in CandidateTracker / KeyGestureSeries / GestureManager.
+// Migrated verdicts go through independent predicates and Composer; retained operations use the legacy outlet.
 internal sealed class TrackerEventAdapter(
     CandidateTracker tracker,
     CandidateSink sink,
     Action<nint, WindowState>? remember = null,
-    IndependentDragAdapter? independentDrag = null
+    IndependentOperationAdapter? independent = null
 )
 {
     internal void Register(DetectionRouter router)
     {
+        tracker.IndependentResults = independent is not null;
         router.Subscribe(
             new[]
             {
@@ -17,7 +18,11 @@ internal sealed class TrackerEventAdapter(
                 ObservedKind.MouseRelease,
                 ObservedKind.MousePress,
             },
-            (e, _) => Mouse(e)
+            (e, _) =>
+            {
+                Mouse(e);
+                independent?.Observe(e);
+            }
         );
         router.Subscribe(
             new[] { ObservedKind.KeyPress, ObservedKind.KeyRelease, ObservedKind.KeyResult },
@@ -25,7 +30,11 @@ internal sealed class TrackerEventAdapter(
         );
         router.Subscribe(
             new[] { ObservedKind.Foreground, ObservedKind.MoveStart, ObservedKind.Destroy },
-            (e, _) => Lifecycle(e)
+            (e, _) =>
+            {
+                Lifecycle(e);
+                independent?.Observe(e);
+            }
         );
         router.Subscribe(
             new[] { ObservedKind.State, ObservedKind.MoveEnd, ObservedKind.Tick },
@@ -86,11 +95,14 @@ internal sealed class TrackerEventAdapter(
                     e.Shift,
                     e.Alt
                 );
+                independent?.Observe(e);
                 break;
             case KeyReleaseEvent e:
                 tracker.KeyReleased(e.Key, e.At);
                 break;
             case KeyResultEvent e:
+                if (independent?.State(e.Target, e.After, e.At, e.Target, e.Injected) == true)
+                    break;
                 Emit(
                     tracker.FinishKey(e.Target, e.After, e.At, e.Injected, e.Date),
                     e.Generation,
@@ -121,6 +133,7 @@ internal sealed class TrackerEventAdapter(
         switch (observed)
         {
             case StateObservedEvent e:
+                independent?.State(e.Target, e.After, e.At, e.Foreground);
                 if (
                     tracker.Complete(
                         e.Target,
@@ -133,10 +146,10 @@ internal sealed class TrackerEventAdapter(
                     )
                     is WindowCandidate candidate
                 )
-                    sink.Complete(candidate);
+                    Emit(candidate, e.Generation, e.Date);
                 break;
             case MoveEndEvent e:
-                if (independentDrag?.Finish(e) == true)
+                if (independent?.Finish(e) == true)
                 {
                     tracker.MoveEnd(e.Target);
                     Remember(e.Target, e.After);
@@ -147,6 +160,7 @@ internal sealed class TrackerEventAdapter(
                 Emit(move, e.Generation, e.Date);
                 break;
             case TickEvent e:
+                independent?.State(e.Target, e.After, e.At, e.Foreground);
                 var maximized = tracker.ConfirmMaximize(
                     e.Target,
                     e.After,
@@ -169,6 +183,15 @@ internal sealed class TrackerEventAdapter(
 
     private void Emit(object? result, int generation, string date)
     {
+        if (
+            independent is not null
+            && (
+                result is WindowCandidate { operation: "maximize" or "monitor-move" }
+                || result is PlacementResult p && !p.Evidence.shape.EndsWith("-half")
+                || result is CompoundMoveResult
+            )
+        )
+            return;
         switch (result)
         {
             case WindowCandidate candidate:

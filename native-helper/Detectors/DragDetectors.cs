@@ -21,13 +21,14 @@ internal sealed record DragDetectionFacts(
         && Before.Process == After.Process
         && Before.DisplayLayout is not null
         && Before.DisplayLayout == After.DisplayLayout
+        && Before.MouseDockThresholdPx == After.MouseDockThresholdPx
         && Before.Monitor is not null
         && After.Monitor is not null
         && After.Monitor == ReleaseMonitor
         && After.Work == ReleaseWork;
 }
 
-internal static class MonitorMoveDetector
+internal static partial class MonitorMoveDetector
 {
     internal static IndependentMonitorMoveProof? Drag(DragDetectionFacts f)
     {
@@ -65,7 +66,7 @@ internal static class MonitorMoveDetector
     }
 }
 
-internal static class MaximizeDetector
+internal static partial class MaximizeDetector
 {
     internal static IndependentStateProof? Drag(DragDetectionFacts f)
     {
@@ -100,7 +101,7 @@ internal static class MaximizeDetector
     }
 }
 
-internal static class QuarterPlacementDetector
+internal static partial class QuarterPlacementDetector
 {
     internal static IndependentPlacementProof? Drag(DragDetectionFacts f)
     {

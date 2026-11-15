@@ -14,7 +14,8 @@ internal sealed class ResultComposer(
         GestureManager.Input Input,
         string Date,
         long Deadline,
-        Func<bool> TargetValid
+        Func<bool> TargetValid,
+        Func<string>? CompletionDate = null
     );
 
     private readonly CandidateSink output = sink;

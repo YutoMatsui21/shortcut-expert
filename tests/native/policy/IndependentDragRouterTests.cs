@@ -5,6 +5,7 @@ internal static partial class Program
 {
     private static List<string> IndependentDragRouterTests()
     {
+        IndependentInputTests();
         var lines = new List<string>();
         var before = normal with
         {
@@ -56,7 +57,7 @@ internal static partial class Program
                     new TrackerEventAdapter(
                         tracker,
                         sink,
-                        independentDrag: new(tracker.Gestures, session, sink)
+                        independent: new(tracker, session, sink, () => "2026-11-15")
                     ).Register(router);
                     var start =
                         mode == "max-max" ? before with { Show = SW_SHOWMAXIMIZED } : before;

@@ -544,6 +544,9 @@ internal static partial class Program
                 independentResultSamples,
                 composerSamples,
                 independentDragSamples,
+                independentInputSamples = IndependentSequenceTests()
+                    .Concat(independentMouseSamples)
+                    .ToArray(),
                 independence = IndependentDetection.Run(VerifyRouterDrag),
                 windowDiagnosticKeys = Enum.GetNames<WindowDiagnosticReason>(),
                 globalInputCollected = false,

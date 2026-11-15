@@ -7,9 +7,30 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile
-      Include="../../../native-helper/Core/IndependentDragAdapter.cs"
-      Link="IndependentDragAdapter.cs"
+      Include="../../../native-helper/Detectors/CaptionClickFacts.cs"
+      Link="CaptionClickFacts.cs"
     />
+    <Compile
+      Include="../../../native-helper/Core/CaptionClickResultAdapter.cs"
+      Link="CaptionClickResultAdapter.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Core/DetectionMigration.cs"
+      Link="DetectionMigration.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Detectors/InputDetectors.cs"
+      Link="InputDetectors.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Core/IndependentOperationAdapter.cs"
+      Link="IndependentOperationAdapter.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Core/OperationResultSession.cs"
+      Link="OperationResultSession.cs"
+    />
+
     <Compile Include="../../../native-helper/Detectors/DragDetectors.cs" Link="DragDetectors.cs" />
     <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />

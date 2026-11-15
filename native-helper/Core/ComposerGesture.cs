@@ -70,7 +70,7 @@ internal sealed class ComposerGesture
         new(
             Gesture.Generation,
             Input.Transaction,
-            context.Date,
+            context.CompletionDate?.Invoke() ?? context.Date,
             Input.Origin,
             "independent-results",
             false,

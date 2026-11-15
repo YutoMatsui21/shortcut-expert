@@ -184,7 +184,7 @@ internal static class PlacementGeometry
     }
 }
 
-internal sealed class PlacementPolicy(GestureManager? gestures = null)
+internal sealed class KeyGestureSeries(GestureManager? gestures = null)
 {
     private GestureManager.Gesture? gesture;
 
@@ -198,6 +198,61 @@ internal sealed class PlacementPolicy(GestureManager? gestures = null)
         string? Vertical,
         WindowState LastBefore
     );
+
+    // Neutral input/geometry facts, shared with W03/W07 and the retained W06 policy.
+    internal sealed record TerminalFacts(
+        WindowState Before,
+        WindowState After,
+        string? Horizontal,
+        string? Vertical,
+        long Age
+    );
+
+    internal GestureManager.Input? Input =>
+        series is { } s && gesture is { } g
+            ? new(
+                g,
+                s.Before,
+                "key",
+                "win-held-arrows",
+                s.Started,
+                false,
+                false,
+                true,
+                s.Transaction
+            )
+            : null;
+
+    internal TerminalFacts? Terminal(nint window, WindowState? after, long now, bool injected) =>
+        !WinHeld && series is { } s && Valid(s, window, after, now, injected)
+            ? new(s.Before, after!, s.Horizontal, s.Vertical, now - s.Started)
+            : null;
+
+    // A read immediately after release can still be the pre-input snapshot.
+    // Wait for a terminal state/placement change, never infer it from a key alone.
+    internal bool ResultObserved(WindowState after) =>
+        series is { } s
+        && (
+            after.Show != s.LastBefore.Show
+            || after.Arranged != s.LastBefore.Arranged
+            || after.Frame != s.LastBefore.Frame
+        )
+        && (
+            after.Show is SW_SHOWMAXIMIZED or SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE
+            || PlacementGeometry.Shape(after) is not null
+        );
+
+    internal nint? PendingResultTarget(long now)
+    {
+        if (WinHeld || series is not { } s)
+            return null;
+        if (now - s.Started is < 0 or > 15000 || now - s.Last is < 0 or > 1000)
+        {
+            Cancel();
+            return null;
+        }
+        return s.Window;
+    }
 
     private Series? series;
     private bool cancelled;

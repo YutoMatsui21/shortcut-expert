@@ -90,6 +90,36 @@ internal sealed class CandidateTracker
         return gestures.Maximize?.Window;
     }
 
+    internal nint? ClickResultTarget =>
+        IndependentResults
+        && gestures.Pending
+            is { Before.Show: SW_SHOWNORMAL, Route: "max-button" or "caption-double-click" } click
+            ? click.Window
+            : null;
+
+    internal nint? ResultTarget(long now, nint excluded = 0)
+    {
+        if (MaximizeTarget(now) is { } key)
+            return key != excluded ? key : null;
+        if (IndependentResults && Placement.PendingResultTarget(now) is { } series)
+            return series != excluded ? series : null;
+        if (
+            !IndependentResults
+            || gestures.Drags.Count != 0
+            || gestures.Pending is not { } click
+            || click.Origin == "key"
+            || click.Before.Show != SW_SHOWNORMAL
+            || click.Route is not ("max-button" or "caption-double-click" or "unknown")
+        )
+            return null;
+        if (now - click.At is < 0 or > 1000)
+        {
+            ClearInput();
+            return null;
+        }
+        return click.Window != excluded ? click.Window : null;
+    }
+
     internal uint? MaximizeProcess(nint window, long now) =>
         MaximizeTarget(now) == window ? gestures.Maximize!.Before.Process : null;
 
@@ -101,6 +131,8 @@ internal sealed class CandidateTracker
         string date
     )
     {
+        if (IndependentResults)
+            return null;
         if (MaximizeTarget(now) is not { } target || target != window)
             return null;
         var pending = gestures.Maximize!;
@@ -149,7 +181,10 @@ internal sealed class CandidateTracker
         this.session = session ?? new DetectionSession();
     }
 
-    internal PlacementPolicy Placement { get; }
+    internal KeyGestureSeries Placement { get; }
+    internal bool IndependentResults { get; set; }
+    internal bool MoveKeyReleased => moveKeyReleased;
+    internal bool ClickReleased => clickReleased;
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal bool HasDrag => gestures.Drags.Count == 1;
 
@@ -231,6 +266,12 @@ internal sealed class CandidateTracker
             || gestures.Pending is { Route: "win-shift-right" } && key == VK_RIGHT
         )
             moveKeyReleased = true;
+        if (
+            IndependentResults
+            && moveKeyReleased
+            && gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
+        )
+            gestures.AwaitResult(move.Gesture, now);
     }
 
     internal void ForegroundChanged(nint window)
@@ -952,7 +993,7 @@ internal sealed class CandidateTracker
             && operation != "monitor-move"
         )
             return null;
-        if (operation is null)
+        if (operation is null || IndependentResults && operation is "maximize" or "monitor-move")
             return null;
         long age = candidate is null ? -1 : now - candidate.At;
         if (fallback)

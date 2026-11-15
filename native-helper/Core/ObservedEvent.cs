@@ -17,6 +17,8 @@ internal enum ObservedKind
     Destroy,
     Tick,
     State,
+    CaptionPress,
+    CaptionResult,
 }
 
 // Local snapshots at the original observation point; never serialized or retained as history.
@@ -123,3 +125,9 @@ internal sealed record RawKeyEvent(
     uint Flags,
     uint InputTime
 ) : ObservedEvent(ObservedKind.RawKey, Generation, 0, At);
+
+internal sealed record CaptionPressEvent(int Generation, CaptionPressFacts Facts, string Date)
+    : ObservedEvent(ObservedKind.CaptionPress, Generation, Facts.Target, Facts.At);
+
+internal sealed record CaptionResultEvent(int Generation, CaptionCompletionFacts Facts)
+    : ObservedEvent(ObservedKind.CaptionResult, Generation, Facts.Press.Target, Facts.At);
