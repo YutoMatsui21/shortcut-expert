@@ -73,6 +73,7 @@ internal static partial class Program
     private static List<object> IndependentSequenceTests()
     {
         RetainedWindowOperationTests();
+        IndependentAsyncLifetimeTests();
         var samples = new List<object>();
         foreach (
             string mode in new[]
@@ -251,13 +252,7 @@ internal static partial class Program
             f.Press(after, VK_RIGHT, 30, true);
         if (mode != "unreleased")
             f.Release(VK_RIGHT, 40);
-        after = mode switch
-        {
-            "return" => before,
-            "unknown" => after with { Monitor = null },
-            "captionless" => after with { HasCaption = false },
-            _ => MutateSeriesResult(after, mode),
-        };
+        after = MutateMonitorResult(before, after, mode);
         long at = mode == "expired" ? 1011 : 50;
         f.Result(after, at);
         f.Result(after, at + 1);
@@ -267,6 +262,19 @@ internal static partial class Program
         else
             Equal(0, f.Output.Count);
     }
+
+    private static WindowState MutateMonitorResult(
+        WindowState before,
+        WindowState after,
+        string mode
+    ) =>
+        mode switch
+        {
+            "return" => before,
+            "unknown" => after with { Monitor = null },
+            "captionless" => after with { HasCaption = false },
+            _ => MutateSeriesResult(after, mode),
+        };
 
     private sealed record SeriesSnapshots(
         WindowState Before,

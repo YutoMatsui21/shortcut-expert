@@ -114,15 +114,18 @@ internal static partial class MaximizeDetector
             || !KnownMouseTransition(input.Before, after)
         )
             return null;
-        IndependentStateRoute? route = input.Route switch
+        var route = ClickRoute(input.Route);
+        return route is { } known ? Proof(input, after, known, at - input.At) : null;
+    }
+
+    private static IndependentStateRoute? ClickRoute(string route) =>
+        route switch
         {
             "max-button" => IndependentStateRoute.MaxButton,
             "caption-double-click" => IndependentStateRoute.CaptionDoubleClick,
             "unknown" => IndependentStateRoute.MouseStateFallback,
             _ => null,
         };
-        return route is { } known ? Proof(input, after, known, at - input.At) : null;
-    }
 
     private static bool MaximizeTransition(WindowState before, WindowState after) =>
         before.Show == SW_SHOWNORMAL && after.Show == SW_SHOWMAXIMIZED;

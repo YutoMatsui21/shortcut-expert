@@ -101,7 +101,7 @@ internal sealed class TrackerEventAdapter(
                 tracker.KeyReleased(e.Key, e.At);
                 break;
             case KeyResultEvent e:
-                if (independent?.State(new(e.Target, e.After, e.At, e.Target, e.Injected)) == true)
+                if (HandledResult(new(e.Target, e.After, e.At, e.Target, e.Injected)))
                     break;
                 Emit(
                     tracker.FinishKey(e.Target, e.After, e.At, e.Injected, e.Date),
@@ -128,51 +128,60 @@ internal sealed class TrackerEventAdapter(
         }
     }
 
+    private bool HandledResult(OperationObservation observed) =>
+        independent?.State(observed) is OperationDispatch.Pending or OperationDispatch.Consumed;
+
     private void Result(ObservedEvent observed)
     {
         switch (observed)
         {
             case StateObservedEvent e:
-                independent?.State(new(e.Target, e.After, e.At, e.Foreground));
-                if (
-                    tracker.Complete(
-                        e.Target,
-                        e.Before,
-                        e.After,
-                        e.At,
-                        e.Foreground,
-                        e.Date,
-                        e.Monitor
-                    )
-                    is WindowCandidate candidate
-                )
-                    Emit(candidate, e.Generation, e.Date);
+                StateResult(e);
                 break;
             case MoveEndEvent e:
-                if (independent?.Finish(e) == true)
-                {
-                    tracker.MoveEnd(e.Target);
-                    Remember(e.Target, e.After);
-                    break;
-                }
-                var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
-                Remember(e.Target, e.After);
-                Emit(move, e.Generation, e.Date);
+                MoveResult(e);
                 break;
             case TickEvent e:
-                independent?.State(new(e.Target, e.After, e.At, e.Foreground));
-                var maximized = tracker.ConfirmMaximize(
-                    e.Target,
-                    e.After,
-                    e.At,
-                    e.Foreground,
-                    e.Date
-                );
-                Remember(e.Target, e.After);
-                if (maximized is not null)
-                    sink.Complete(maximized);
+                TickResult(e);
                 break;
         }
+    }
+
+    private void StateResult(StateObservedEvent e)
+    {
+        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
+            return;
+        if (
+            tracker.Complete(e.Target, e.Before, e.After, e.At, e.Foreground, e.Date, e.Monitor)
+            is WindowCandidate candidate
+        )
+            Emit(candidate, e.Generation, e.Date);
+    }
+
+    private void MoveResult(MoveEndEvent e)
+    {
+        if (independent?.Finish(e) == true)
+        {
+            tracker.MoveEnd(e.Target);
+            Remember(e.Target, e.After);
+            return;
+        }
+        var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
+        Remember(e.Target, e.After);
+        Emit(move, e.Generation, e.Date);
+    }
+
+    private void TickResult(TickEvent e)
+    {
+        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
+        {
+            Remember(e.Target, e.After);
+            return;
+        }
+        var maximized = tracker.ConfirmMaximize(e.Target, e.After, e.At, e.Foreground, e.Date);
+        Remember(e.Target, e.After);
+        if (maximized is not null)
+            sink.Complete(maximized);
     }
 
     private void Remember(nint target, WindowState? after)
