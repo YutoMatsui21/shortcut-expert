@@ -7,18 +7,23 @@ internal sealed partial class CandidateTracker
     {
         if (gestures.Maximize is { } pending && now - pending.At is < 0 or > InputMatchWindowMs)
         {
-            // The maximize adapter's one-second window is not the lifetime of a
-            // shared Win-held placement series (which owns its own deadline).
-            if (!Placement.Owns(pending.Window))
-            {
-                if (now < pending.At)
-                    gestures.Cancel(pending.Gesture);
-                else
-                    gestures.Expire(pending.Gesture, now, pending.At + InputMatchWindowMs);
-            }
+            // The one-second maximize window does not expire a retained key series.
+            ExpireMaximizeGesture(pending, now);
             gestures.Maximize = null;
         }
         return gestures.Maximize?.Window;
+    }
+
+    private void ExpireMaximizeGesture(GestureManager.Input pending, long now)
+    {
+        if (Placement.Owns(pending.Window))
+            return;
+        if (now < pending.At)
+        {
+            gestures.Cancel(pending.Gesture);
+            return;
+        }
+        gestures.Expire(pending.Gesture, now, pending.At + InputMatchWindowMs);
     }
 
     internal nint? ClickResultTarget =>
