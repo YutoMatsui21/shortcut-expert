@@ -27,15 +27,15 @@ internal sealed class OperationResultSession(
         );
     }
 
-    internal void Finish(WindowState after, long at, params IndependentProof?[] proofs)
+    internal bool Finish(WindowState after, long at, params IndependentProof?[] proofs)
     {
         if (pending is null || input is null)
-            return;
+            return false;
         now = at;
         if (!gestures.Complete(input.Gesture, input.Window, after, at))
         {
             pending.Cancel();
-            return;
+            return false;
         }
         var identity = new DetectionRouter.CompletionIdentity(
             input.Gesture.Generation,
@@ -50,6 +50,6 @@ internal sealed class OperationResultSession(
             else
                 pending.Reject(subscribers[i], identity, input.Gesture);
         }
-        pending.Seal();
+        return pending.Seal();
     }
 }

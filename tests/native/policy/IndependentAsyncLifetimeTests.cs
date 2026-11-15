@@ -4,6 +4,22 @@ internal static partial class Program
 {
     private static void IndependentAsyncLifetimeTests()
     {
+        RejectedCommonHalfTests();
+        Check(
+            "placement waits for observed release without an observed Win press",
+            () =>
+            {
+                var f = new IndependentRouterFixture();
+                var before = IndependentNormal();
+                var half = before with { Arranged = true, Frame = new(0, 0, 960, 1040) };
+                f.Press(before, VK_LEFT, 10);
+                f.State(half, 20);
+                Equal(0, f.Output.Count);
+                f.Release(VK_LEFT, 30);
+                f.Result(half, 40);
+                Equal(1, f.Output.Count);
+            }
+        );
         foreach (string terminal in new[] { "quarter", "max", "half" })
         foreach (bool tick in new[] { false, true })
             Check(
@@ -45,6 +61,32 @@ internal static partial class Program
                     var first = (CandidateEnvelope)f.Output[0];
                     var second = (CandidateEnvelope)f.Output[1];
                     Equal(true, first.transaction != second.transaction);
+                }
+            );
+    }
+
+    private static void RejectedCommonHalfTests()
+    {
+        foreach (string mode in new[] { "cancel", "stop", "restart" })
+            Check(
+                "retained half obeys common rejection " + mode,
+                () =>
+                {
+                    var f = new IndependentRouterFixture();
+                    var before = IndependentNormal();
+                    var half = before with { Arranged = true, Frame = new(0, 0, 960, 1040) };
+                    f.Press(null, VK_LWIN, 0);
+                    f.Press(before, VK_LEFT, 10);
+                    f.Release(VK_LEFT, 20);
+                    f.Release(VK_LWIN, 30);
+                    if (mode == "cancel")
+                        f.Tracker.Gestures.Cancel(f.Tracker.Gestures.Current);
+                    else if (mode == "stop")
+                        f.Session.Stop();
+                    else
+                        f.Session.Start(1);
+                    f.State(half, 40);
+                    Equal(0, f.Output.Count);
                 }
             );
     }

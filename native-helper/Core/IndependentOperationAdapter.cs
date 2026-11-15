@@ -132,7 +132,7 @@ internal sealed class IndependentOperationAdapter
 
     private bool InputStillOpen(nint target)
     {
-        if (gestures.Drags.ContainsKey(target))
+        if (gestures.Drags.ContainsKey(target) || gestures.Current?.ReleasedAt is null)
             return true;
         bool monitorChord = gestures.Pending is { Route: "win-shift-left" or "win-shift-right" };
         return tracker.Placement.WinHeld && !monitorChord;
@@ -145,7 +145,7 @@ internal sealed class IndependentOperationAdapter
         if (!tracker.Placement.ResultObserved(o.After!))
             return OperationDispatch.Pending;
         var facts = tracker.Placement.Terminal(o.Target, o.After, o.At, o.Injected);
-        results.Finish(
+        bool accepted = results.Finish(
             o.After!,
             o.At,
             null,
@@ -153,15 +153,15 @@ internal sealed class IndependentOperationAdapter
             facts is null ? null : QuarterPlacementDetector.Key(facts)
         );
         gestures.Maximize = null;
-        RetireSeries(o);
+        RetireSeries(o, accepted);
         return OperationDispatch.Consumed;
     }
 
-    private void RetireSeries(OperationObservation o)
+    private void RetireSeries(OperationObservation o, bool accepted)
     {
         int generation = tracker.Placement.Input!.Gesture.Generation;
         var retained = tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
-        if (retained is not null && retained.Evidence.shape.EndsWith("-half"))
+        if (accepted && retained is not null && retained.Evidence.shape.EndsWith("-half"))
             sink.Placement(generation, date(), retained);
     }
 

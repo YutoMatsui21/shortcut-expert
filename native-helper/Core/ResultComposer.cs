@@ -99,12 +99,13 @@ internal sealed class ResultComposer(
 
         // Only release plus a shared terminal snapshot may seal the input.
         // Early calls cannot promote intermediate window state into proof.
-        internal void Seal()
+        internal bool Seal()
         {
             if (!Valid() || !gesture.HasTerminalRelease())
-                return;
+                return false;
             sealedInput = true;
             Publish();
+            return true;
         }
 
         internal void Tick()
