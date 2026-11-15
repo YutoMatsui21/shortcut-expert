@@ -2,6 +2,8 @@
 
 **責務**：同一ウィンドウの入力前後の状態を確証し、最大化（W03）と最大化解除・最小化（W04）を分類する。ドラッグ中の派生復元や連続キーによる二重計上を防ぐ。[製品要件](../ui-requirements.md)、[技術調査](../research/compound-drag-validation.md)。
 
+W03は通常起動で独立Detectorを使用し、W04は既存判定を維持する。W03のキー・ボタンクリックは、既存期限内の物理解放と確定結果が揃うまで発行しない。Win保持中の配置列は両Win解放後の最終結果だけを使う。以下の入力適格性・結果読取の条件は共通で、解放前即時確定・配置列の消費という旧W03の振る舞いは切戻し経路だけに残す。詳細は[現行構成](../research/detection-architecture/current.md#independent-detectors-180)。
+
 ## 1. 共有する判定
 
 `CandidateTracker`で入力対象・process・入力由来・結果・期限・競合・dragの始終を照合。標準captionのボタン矩形は`WindowCaption`を共用し、有効な`TITLEBARINFOEX`を優先する。全ボタン矩形が空なら既存hit testへ戻す。独自captionの矩形が不整合でも、root自身が明示的に返したHTCAPTION／HTMINBUTTON／HTMAXBUTTON／HTCLOSEは維持する。不整合な矩形から位置を推測しない。有効な矩形の優先・無効状態の棄却と、取得失敗時の扱いは維持する。

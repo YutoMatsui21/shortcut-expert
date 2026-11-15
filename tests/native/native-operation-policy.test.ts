@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { test, mock } from "node:test";
+import { test, mock, type TestContext } from "node:test";
 import { dotnet, dotnetEnvironment } from "../../scripts/dev/dotnet.mjs";
 import { classify, classifyGesture } from "../../src/core/detector.ts";
 import { DurableCoach } from "../../src/core/durable-coach.ts";
@@ -16,6 +16,104 @@ import { v2Fixture, type Candidate } from "../support/fixtures.ts";
 mock.module("electron", { namedExports: { app: {} } });
 const { candidateV2, parseObserverMessage } =
   await import("../../src/main/observer.ts");
+
+async function verifyIndependentDragSample(
+  coach: DurableCoach,
+  notices: ShortcutNotice[],
+  fixture: { line: string; index: number; expected: string[] },
+) {
+  const { line, index, expected } = fixture;
+  coach.begin(1);
+  assert.equal(
+    /"(?:hwnd|pid|title|url|path|clipboard|keys|inputTimes|ReleasePoint)"\s*:/i.test(
+      line,
+    ),
+    false,
+  );
+  const candidate = candidateV2(parseObserverMessage(line));
+  assert.ok(candidate);
+  assert.deepEqual(
+    classifyGesture(candidate).map((o) => o.operation),
+    expected,
+  );
+  await coach.accept(candidate);
+  await coach.accept({
+    ...candidate,
+    sequence: candidate.sequence + 1,
+  });
+  assert.equal(notices.length, index + 1);
+  assert.deepEqual(
+    (notices[index].items ?? [notices[index]]).map((item) => item.operation),
+    expected,
+  );
+}
+
+type NativeOperationSample = {
+  line: string;
+  expected: string[];
+  origin: "mouse" | "key";
+};
+
+async function acceptIndependentInputSample(
+  context: { coach: DurableCoach; notices: ShortcutNotice[] },
+  sample: NativeOperationSample,
+) {
+  const { coach, notices } = context;
+  coach.begin(1);
+  const candidate = candidateV2(parseObserverMessage(sample.line));
+  assert.ok(candidate);
+  assert.equal(candidate.origin, sample.origin);
+  assert.deepEqual(
+    classifyGesture(candidate).map((o) => o.operation),
+    sample.expected,
+  );
+  const before = notices.length;
+  await coach.accept(candidate);
+  await coach.accept({ ...candidate, sequence: candidate.sequence + 1 });
+  assert.equal(notices.length - before, sample.origin === "mouse" ? 1 : 0);
+}
+
+async function verifyIndependentInputPersistence(
+  t: TestContext,
+  samples: NativeOperationSample[],
+) {
+  assert.ok(samples.length >= 15);
+  const root = await mkdtemp(join(tmpdir(), "coach-independent-inputs-"));
+  const repository = new SqliteRepository(
+    root,
+    resolve("src/main/storage-worker.ts"),
+  );
+  t.after(async () => {
+    await repository.close();
+    await rm(root, { recursive: true, force: true });
+  });
+  const notices: ShortcutNotice[] = [];
+  const coach = new DurableCoach({
+    repository,
+    session: repository.session,
+    date: () => "2026-11-15",
+    now: () => 0,
+    capabilities: () => [],
+    changed: () => {},
+    notify: async (notice) => {
+      notices.push(notice);
+      return true;
+    },
+  });
+  await coach.initialize();
+  const expected: Record<string, { mouse: number; key: number }> = {};
+  for (const sample of samples) {
+    await acceptIndependentInputSample({ coach, notices }, sample);
+    for (const operation of sample.expected) {
+      const count = (expected[operation] ??= { mouse: 0, key: 0 });
+      count[sample.origin]++;
+    }
+  }
+  assert.deepEqual(
+    (await repository.load("2026-11-15")).counts["2026-11-15"],
+    expected,
+  );
+}
 
 test(
   "本番のC#候補生成と全画面分類を人工イベント列で検証する",
@@ -37,10 +135,16 @@ test(
         encoding: "utf8",
         windowsHide: true,
         timeout: 55_000,
-        maxBuffer: 262_144,
+        // Includes bounded legacy and migrated wire fixtures.
+        maxBuffer: 524_288,
       },
     );
-    assert.equal(result.status, 0, result.stderr + result.stdout);
+    assert.ifError(result.error);
+    assert.equal(
+      result.status,
+      0,
+      (result.stderr + result.stdout).slice(-8000),
+    );
     const report = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1)!);
     assert.equal(report.globalInputCollected, false);
     // Fixed at main 8dbb7d6: production candidates, not the experiment's composer.
@@ -201,6 +305,71 @@ test(
             W03: { mouse: 1, key: 0 },
             W06: { mouse: 2, key: 0 },
           },
+        );
+      },
+    );
+    await t.test(
+      "opt-in drag Router → Composer → SQLite preserves partial adoption",
+      async (t) => {
+        const root = await mkdtemp(join(tmpdir(), "coach-independent-drag-"));
+        const repository = new SqliteRepository(
+          root,
+          resolve("src/main/storage-worker.ts"),
+        );
+        t.after(async () => {
+          await repository.close();
+          await rm(root, { recursive: true, force: true });
+        });
+        const notices: ShortcutNotice[] = [];
+        const coach = new DurableCoach({
+          repository,
+          session: repository.session,
+          date: () => "2026-11-15",
+          now: () => 0,
+          capabilities: () => [],
+          changed: () => {},
+          notify: async (notice) => {
+            notices.push(notice);
+            return true;
+          },
+        });
+        await coach.initialize();
+        const expectedResults = [
+          ["W02", "W03"],
+          ["W02", "W07"],
+          ["W02"],
+          ["W02"],
+          ["W02"],
+          ["W02"],
+        ];
+        assert.equal(
+          report.independentDragSamples.length,
+          expectedResults.length,
+        );
+        for (const [index, expected] of expectedResults.entries()) {
+          await verifyIndependentDragSample(coach, notices, {
+            line: report.independentDragSamples[index],
+            index,
+            expected,
+          });
+        }
+        assert.deepEqual(
+          (await repository.load("2026-11-15")).counts["2026-11-15"],
+          {
+            W02: { mouse: 6, key: 0 },
+            W03: { mouse: 1, key: 0 },
+            W07: { mouse: 1, key: 0 },
+          },
+        );
+      },
+    );
+
+    await t.test(
+      "migrated key/click Native → TS → SQLite and notification origin",
+      async (t) => {
+        await verifyIndependentInputPersistence(
+          t,
+          report.independentInputSamples,
         );
       },
     );

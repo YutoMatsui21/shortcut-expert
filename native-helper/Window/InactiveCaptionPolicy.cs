@@ -29,6 +29,7 @@ internal sealed class InactiveCaptionPolicy
     private uint tick;
     private int hit,
         transaction;
+    private long releasedAt;
     private bool released,
         switched;
     private string? terminal;
@@ -115,7 +116,10 @@ internal sealed class InactiveCaptionPolicy
                 Cancel();
             }
             else
+            {
                 released = true;
+                releasedAt = at;
+            }
         }
     }
 
@@ -150,7 +154,19 @@ internal sealed class InactiveCaptionPolicy
             Cancel();
     }
 
+    internal CaptionPressFacts? PressFacts =>
+        Pending && before is not null ? new(Target, before, started, transaction) : null;
+
     internal (int Transaction, CaptionClickEvidence Evidence)? Poll(WindowState? after, long at)
+    {
+        var facts = PollFacts(after, at);
+        if (facts is null)
+            return null;
+        var evidence = facts.LegacyEvidence();
+        return evidence is null ? null : (facts.Press.Transaction, evidence);
+    }
+
+    internal CaptionCompletionFacts? PollFacts(WindowState? after, long at)
     {
         if (!Pending)
             return null;
@@ -166,24 +182,21 @@ internal sealed class InactiveCaptionPolicy
             State(after, at);
             return null;
         }
-        bool matched = after is not null && after.Process == Process;
-        string? result =
-            matched
-            && (
-                terminal == "minimized" && after!.Show == SW_SHOWMINIMIZED
-                || terminal == "maximized" && after!.Show == SW_SHOWMAXIMIZED
-            )
-            && (!Fallback || switched)
-                ? terminal
+        var facts =
+            after is not null && after.Process == Process && released
+                ? new CaptionCompletionFacts(
+                    PressFacts!,
+                    after,
+                    hit,
+                    switched,
+                    terminal,
+                    releasedAt,
+                    at
+                )
                 : null;
-        var evidence =
-            matched && released && (switched || result is not null)
-                ? new CaptionClickEvidence(result, switched, true, true, 500, before!.Monitor)
-                : null;
-        int id = transaction;
-        if (evidence is null)
+        if (facts?.LegacyEvidence() is null)
             Diagnostic?.Invoke(WindowDiagnosticReason.CaptionNoResult);
         Cancel();
-        return evidence is null ? null : (id, evidence);
+        return facts;
     }
 }

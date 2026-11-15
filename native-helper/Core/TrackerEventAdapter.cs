@@ -1,13 +1,15 @@
-// Compatibility translation only. Admission, cancellation, deadlines and operation results
-// stay in CandidateTracker / PlacementPolicy / GestureManager; emission stays in CandidateSink.
+// Shared input collection stays in CandidateTracker / KeyGestureSeries / GestureManager.
+// Migrated verdicts go through independent predicates and Composer; retained operations use the legacy outlet.
 internal sealed class TrackerEventAdapter(
     CandidateTracker tracker,
     CandidateSink sink,
-    Action<nint, WindowState>? remember = null
+    Action<nint, WindowState>? remember = null,
+    IndependentOperationAdapter? independent = null
 )
 {
     internal void Register(DetectionRouter router)
     {
+        tracker.IndependentResults = independent is not null;
         router.Subscribe(
             new[]
             {
@@ -16,7 +18,11 @@ internal sealed class TrackerEventAdapter(
                 ObservedKind.MouseRelease,
                 ObservedKind.MousePress,
             },
-            (e, _) => Mouse(e)
+            (e, _) =>
+            {
+                Mouse(e);
+                independent?.Observe(e);
+            }
         );
         router.Subscribe(
             new[] { ObservedKind.KeyPress, ObservedKind.KeyRelease, ObservedKind.KeyResult },
@@ -24,7 +30,11 @@ internal sealed class TrackerEventAdapter(
         );
         router.Subscribe(
             new[] { ObservedKind.Foreground, ObservedKind.MoveStart, ObservedKind.Destroy },
-            (e, _) => Lifecycle(e)
+            (e, _) =>
+            {
+                Lifecycle(e);
+                independent?.Observe(e);
+            }
         );
         router.Subscribe(
             new[] { ObservedKind.State, ObservedKind.MoveEnd, ObservedKind.Tick },
@@ -85,11 +95,14 @@ internal sealed class TrackerEventAdapter(
                     e.Shift,
                     e.Alt
                 );
+                independent?.Observe(e);
                 break;
             case KeyReleaseEvent e:
                 tracker.KeyReleased(e.Key, e.At);
                 break;
             case KeyResultEvent e:
+                if (HandledResult(new(e.Target, e.After, e.At, e.Target, e.Injected)))
+                    break;
                 Emit(
                     tracker.FinishKey(e.Target, e.After, e.At, e.Injected, e.Date),
                     e.Generation,
@@ -115,43 +128,60 @@ internal sealed class TrackerEventAdapter(
         }
     }
 
+    private bool HandledResult(OperationObservation observed) =>
+        independent?.State(observed) is OperationDispatch.Pending or OperationDispatch.Consumed;
+
     private void Result(ObservedEvent observed)
     {
         switch (observed)
         {
             case StateObservedEvent e:
-                if (
-                    tracker.Complete(
-                        e.Target,
-                        e.Before,
-                        e.After,
-                        e.At,
-                        e.Foreground,
-                        e.Date,
-                        e.Monitor
-                    )
-                    is WindowCandidate candidate
-                )
-                    sink.Complete(candidate);
+                StateResult(e);
                 break;
             case MoveEndEvent e:
-                var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
-                Remember(e.Target, e.After);
-                Emit(move, e.Generation, e.Date);
+                MoveResult(e);
                 break;
             case TickEvent e:
-                var maximized = tracker.ConfirmMaximize(
-                    e.Target,
-                    e.After,
-                    e.At,
-                    e.Foreground,
-                    e.Date
-                );
-                Remember(e.Target, e.After);
-                if (maximized is not null)
-                    sink.Complete(maximized);
+                TickResult(e);
                 break;
         }
+    }
+
+    private void StateResult(StateObservedEvent e)
+    {
+        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
+            return;
+        if (
+            tracker.Complete(e.Target, e.Before, e.After, e.At, e.Foreground, e.Date, e.Monitor)
+            is WindowCandidate candidate
+        )
+            Emit(candidate, e.Generation, e.Date);
+    }
+
+    private void MoveResult(MoveEndEvent e)
+    {
+        if (independent?.Finish(e) == true)
+        {
+            tracker.MoveEnd(e.Target);
+            Remember(e.Target, e.After);
+            return;
+        }
+        var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
+        Remember(e.Target, e.After);
+        Emit(move, e.Generation, e.Date);
+    }
+
+    private void TickResult(TickEvent e)
+    {
+        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
+        {
+            Remember(e.Target, e.After);
+            return;
+        }
+        var maximized = tracker.ConfirmMaximize(e.Target, e.After, e.At, e.Foreground, e.Date);
+        Remember(e.Target, e.After);
+        if (maximized is not null)
+            sink.Complete(maximized);
     }
 
     private void Remember(nint target, WindowState? after)
@@ -162,6 +192,15 @@ internal sealed class TrackerEventAdapter(
 
     private void Emit(object? result, int generation, string date)
     {
+        if (
+            independent is not null
+            && (
+                result is WindowCandidate { operation: "maximize" or "monitor-move" }
+                || result is PlacementResult p && !p.Evidence.shape.EndsWith("-half")
+                || result is CompoundMoveResult
+            )
+        )
+            return;
         switch (result)
         {
             case WindowCandidate candidate:

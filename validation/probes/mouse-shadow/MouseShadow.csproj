@@ -7,6 +7,14 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile
+      Include="../../../native-helper/Core/CandidateTracker.InputFacts.cs"
+      Link="CandidateTracker.InputFacts.cs"
+    />
+    <Compile
+      Include="../../../native-helper/Detectors/CaptionClickFacts.cs"
+      Link="CaptionClickFacts.cs"
+    />
     <Compile Include="../../../native-helper/Core/GestureManager.cs" Link="GestureManager.cs" />
     <Compile Include="../../../native-helper/Core/DetectionSession.cs" Link="DetectionSession.cs" />
     <Compile

@@ -18,6 +18,10 @@ npm.cmd run dev
 - `build`はC# helperのpublish、型検査、Electron bundleを作成する。SDKは`.tools/dotnet`へ導入し、通常はシステムPATHを変更しない。
 - 画面の×はウィンドウを隠し、トレイでの動作を継続する。**完全終了**はトレイの「終了」を使用する。未インストール時と配布版で保存先が異なるので、テストには隔離データを使う。
 
+### 検出経路の切戻し
+
+W02/W03/W07は既定で独立Detectorを使用する。比較・切戻しでは、アプリをトレイから完全終了し、helperを起動する親プロセスの環境変数 `COACH_DETECTION_MODE` を `legacy` に設定して再起動する。未指定・空・`independent` は新経路、不明値は起動エラー。測定中の動的な経路変更はしない。切戻しでDB形式や既存記録は変更しない。[移行範囲](research/detection-architecture/current.md#independent-detectors-180)も参照。
+
 <a id="development-workflow"></a>
 
 ## 2. 普段の開発フロー

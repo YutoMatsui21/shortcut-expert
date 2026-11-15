@@ -35,7 +35,7 @@ internal sealed record CompoundMoveResult(
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
-internal sealed class CandidateTracker
+internal sealed partial class CandidateTracker
 {
     internal GestureManager Gestures => gestures;
     private readonly GestureManager gestures = new();
@@ -72,27 +72,6 @@ internal sealed class CandidateTracker
     private bool upHeld;
     private readonly HashSet<uint> injectedWin = new();
 
-    internal nint? MaximizeTarget(long now)
-    {
-        if (gestures.Maximize is { } pending && now - pending.At is < 0 or > InputMatchWindowMs)
-        {
-            // The maximize adapter's one-second window is not the lifetime of a
-            // shared Win-held placement series (which owns its own deadline).
-            if (!Placement.Owns(pending.Window))
-            {
-                if (now < pending.At)
-                    gestures.Cancel(pending.Gesture);
-                else
-                    gestures.Expire(pending.Gesture, now, pending.At + InputMatchWindowMs);
-            }
-            gestures.Maximize = null;
-        }
-        return gestures.Maximize?.Window;
-    }
-
-    internal uint? MaximizeProcess(nint window, long now) =>
-        MaximizeTarget(now) == window ? gestures.Maximize!.Before.Process : null;
-
     internal WindowCandidate? ConfirmMaximize(
         nint window,
         WindowState? after,
@@ -101,6 +80,8 @@ internal sealed class CandidateTracker
         string date
     )
     {
+        if (IndependentResults)
+            return null;
         if (MaximizeTarget(now) is not { } target || target != window)
             return null;
         var pending = gestures.Maximize!;
@@ -149,7 +130,10 @@ internal sealed class CandidateTracker
         this.session = session ?? new DetectionSession();
     }
 
-    internal PlacementPolicy Placement { get; }
+    internal KeyGestureSeries Placement { get; }
+    internal bool IndependentResults { get; set; }
+    internal bool MoveKeyReleased => moveKeyReleased;
+    internal bool ClickReleased => clickReleased;
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
     internal bool HasDrag => gestures.Drags.Count == 1;
 
@@ -226,11 +210,7 @@ internal sealed class CandidateTracker
             upHeld = false;
         if (key == VK_DOWN)
             winDownHeld = false;
-        if (
-            gestures.Pending is { Route: "win-shift-left" } && key == VK_LEFT
-            || gestures.Pending is { Route: "win-shift-right" } && key == VK_RIGHT
-        )
-            moveKeyReleased = true;
+        ReleaseMonitorKey(key, now);
     }
 
     internal void ForegroundChanged(nint window)
@@ -952,7 +932,7 @@ internal sealed class CandidateTracker
             && operation != "monitor-move"
         )
             return null;
-        if (operation is null)
+        if (!RetainsOperation(operation))
             return null;
         long age = candidate is null ? -1 : now - candidate.At;
         if (fallback)

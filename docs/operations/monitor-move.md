@@ -25,7 +25,7 @@
 
 最大化A→最大化BはW02のみ。同一ドラッグで別モニターへ移動し、非最大化→最大化W03／四隅配置W07も成立したら[複合契約](compound-drag.md)で各1件を原子保存し、適格な通知を1つにまとめる。
 
-- `FinishMove`が同一入力transaction・開始／終了monitorと対象情報を照合し、`CompoundMoveResult`を`compound-drag-v1`へ送る。単独W02として部分送信しない。
+- 通常起動は独立Detectorで同一入力・開始／終了monitor・対象を照合し、ComposerがW02と同時成立したW03/W07を1つのEnvelopeにまとめる。共通入力が有効ならW02だけの部分採用も行う。旧`FinishMove`・`CompoundMoveResult`による全体棄却は切戻し経路に残す。
 - W02＋W06（別画面へのhalf配置）は未検証で、自動的に対応対象へ含めない。
 
 ## 4. 検証と限界

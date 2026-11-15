@@ -10,6 +10,8 @@
 - `caption-click-v1`は`switched`と`terminal`（最大化／最小化／なし）を単一envelopeで渡す。片方だけの確証も1操作として扱う。復元は追加しない。
 - Coreは1gestureをW01＋W03／W04に展開する。SQLiteは既存のW02＋W03／W07に加え、この2組のみを2件の原子mutationとして許可する。保存成功後に学習中の行だけを1つのWindows通知へ渡す。停止・通知一時停止・保存失敗・ACK喪失・再送の契約は共通経路で維持する。
 
+W03は独立Detectorで観測factsを評価し、Router経由の共通GestureとComposerで完了を統合する。W01/W04は判定を移行せず、外部の `caption-click-v1` 形式と開始arranged不明の扱いを維持する。詳細は[独立移行の現行構成](../research/detection-architecture/current.md#independent-detectors-180)。
+
 ## 検証の境界
 
 `InactiveCaptionTests.cs`でNativeのイベント列・取消・停止、`native-operation-policy.test.ts`でC#→TS契約、`inactive-caption-click.test.ts`で厳格parse→Core→SQLite→通知adapterを検証する。人工fixtureは実入力の検出精度やWindows通知の表示成功を証明しない。
