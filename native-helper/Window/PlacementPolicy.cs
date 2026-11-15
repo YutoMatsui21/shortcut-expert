@@ -196,7 +196,9 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
         long Last,
         string? Horizontal,
         string? Vertical,
-        WindowState LastBefore
+        WindowState LastBefore,
+        uint? LastKey = null,
+        bool UnobservedRepeat = false
     );
 
     // Neutral input/geometry facts, shared with W03/W07 and the retained W06 policy.
@@ -230,17 +232,31 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
 
     // A read immediately after release can still be the pre-input snapshot.
     // Wait for a terminal state/placement change, never infer it from a key alone.
-    internal bool ResultObserved(WindowState after) =>
-        series is { } s
-        && (
-            after.Show != s.LastBefore.Show
-            || after.Arranged != s.LastBefore.Arranged
-            || after.Frame != s.LastBefore.Frame
-        )
-        && (
-            after.Show is SW_SHOWMAXIMIZED or SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE
-            || PlacementGeometry.Shape(after) is not null
-        );
+    internal bool ResultObserved(WindowState after)
+    {
+        if (series is not { } s || SameResultSnapshot(s.LastBefore, after))
+            return false;
+        if (after.Show == SW_SHOWMAXIMIZED)
+            return s.LastKey == VK_UP;
+        if (after.Show is SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE)
+            return s.LastKey == VK_DOWN;
+        return DirectionalResultObserved(s, PlacementGeometry.Shape(after));
+    }
+
+    private static bool SameResultSnapshot(WindowState a, WindowState b) =>
+        a.Show == b.Show
+        && a.Arranged == b.Arranged
+        && a.Frame == b.Frame
+        && a.Monitor == b.Monitor;
+
+    private static bool DirectionalResultObserved(Series s, string? shape)
+    {
+        if (shape is null || s.Horizontal is null || !shape.StartsWith(s.Horizontal + "-"))
+            return false;
+        if (shape.EndsWith("-half"))
+            return s.Vertical is null; // retained W06 behavior
+        return !s.UnobservedRepeat && s.Vertical is not null && shape.EndsWith("-" + s.Vertical);
+    }
 
     internal nint? PendingResultTarget(long now)
     {
@@ -384,6 +400,10 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
         series = series with
         {
             Last = now,
+            UnobservedRepeat =
+                (series.UnobservedRepeat || series.LastKey == key)
+                && SameResultSnapshot(series.LastBefore, before),
+            LastKey = key,
             LastBefore = before,
             Horizontal =
                 key == VK_LEFT ? "left"

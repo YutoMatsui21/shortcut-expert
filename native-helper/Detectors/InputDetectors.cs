@@ -3,19 +3,23 @@ using static NativeMethods;
 internal static class InputDetectionFacts
 {
     internal static bool MoveContext(WindowState before, WindowState after) =>
-        before.HasCaption
-        && after.HasCaption
-        && before.Process == after.Process
-        && before.DisplayLayout is not null
-        && before.DisplayLayout == after.DisplayLayout
-        && before.Monitor is not null
-        && after.Monitor is not null
-        && before.Work is not null
-        && after.Work is not null
-        && before.Dpi > 0
-        && after.Dpi > 0
-        && before.Show is SW_SHOWNORMAL or SW_SHOWMAXIMIZED
-        && after.Show is SW_SHOWNORMAL or SW_SHOWMAXIMIZED;
+        before.Process == after.Process
+        && SameDisplayLayout(before, after)
+        && KnownMoveGeometry(before)
+        && KnownMoveGeometry(after);
+
+    private static bool SameDisplayLayout(WindowState a, WindowState b) =>
+        a.DisplayLayout is not null && a.DisplayLayout == b.DisplayLayout;
+
+    private static bool KnownMoveGeometry(WindowState state) =>
+        state
+            is {
+                HasCaption: true,
+                Monitor: not null,
+                Work: not null,
+                Dpi: > 0,
+                Show: SW_SHOWNORMAL or SW_SHOWMAXIMIZED,
+            };
 
     internal static bool Valid(
         GestureManager.Input input,
@@ -23,12 +27,12 @@ internal static class InputDetectionFacts
         long at,
         long limit = 1000
     ) =>
-        !input.Injected
-        && !input.Conflicted
-        && input.Matched
+        input is { Injected: false, Conflicted: false, Matched: true }
         && input.Before.Process == after.Process
-        && at - input.At is >= 0
-        && at - input.At <= limit;
+        && Recent(input, at, limit);
+
+    private static bool Recent(GestureManager.Input input, long at, long limit) =>
+        at - input.At >= 0 && at - input.At <= limit;
 }
 
 internal static partial class MonitorMoveDetector
@@ -47,12 +51,7 @@ internal static partial class MonitorMoveDetector
             || input.Route is not ("win-shift-left" or "win-shift-right")
         )
             return null;
-        IndependentMoveDirection? direction =
-            before.HorizontalPair && after.HorizontalPair && before.Monitor!.y == after.Monitor!.y
-                ? after.Monitor!.x < before.Monitor!.x
-                    ? IndependentMoveDirection.Left
-                    : IndependentMoveDirection.Right
-                : null;
+        var direction = HorizontalDirection(before, after);
         return new(
             input.Route == "win-shift-left"
                 ? IndependentMonitorMoveRoute.WinShiftLeft
@@ -63,11 +62,30 @@ internal static partial class MonitorMoveDetector
             before.Monitor!,
             after.Monitor!,
             direction,
-            before.TwoDisplayPair
-                && after.TwoDisplayPair
-                && MonitorMovePolicy.Separate(before.Monitor!, after.Monitor!)
+            TwoDisplayLayout(before, after)
         );
     }
+
+    private static IndependentMoveDirection? HorizontalDirection(
+        WindowState before,
+        WindowState after
+    )
+    {
+        if (
+            !before.HorizontalPair
+            || !after.HorizontalPair
+            || before.Monitor!.y != after.Monitor!.y
+        )
+            return null;
+        return after.Monitor!.x < before.Monitor!.x
+            ? IndependentMoveDirection.Left
+            : IndependentMoveDirection.Right;
+    }
+
+    private static bool TwoDisplayLayout(WindowState before, WindowState after) =>
+        before.TwoDisplayPair
+        && after.TwoDisplayPair
+        && MonitorMovePolicy.Separate(before.Monitor!, after.Monitor!);
 }
 
 internal static partial class MaximizeDetector
@@ -79,8 +97,7 @@ internal static partial class MaximizeDetector
     ) =>
         input is { Route: "win-up" }
         && InputDetectionFacts.Valid(input, after, at)
-        && input.Before.Show == SW_SHOWNORMAL
-        && after.Show == SW_SHOWMAXIMIZED
+        && MaximizeTransition(input.Before, after)
             ? Proof(input, after, IndependentStateRoute.WinUp, at - input.At)
             : null;
 
@@ -94,9 +111,7 @@ internal static partial class MaximizeDetector
         if (
             !stationary
             || !InputDetectionFacts.Valid(input, after, at, input.Route == "unknown" ? 500 : 1000)
-            || input.Before.Show != SW_SHOWNORMAL
-            || input.Before.Arranged is null
-            || after.Show != SW_SHOWMAXIMIZED
+            || !KnownMouseTransition(input.Before, after)
         )
             return null;
         IndependentStateRoute? route = input.Route switch
@@ -108,6 +123,12 @@ internal static partial class MaximizeDetector
         };
         return route is { } known ? Proof(input, after, known, at - input.At) : null;
     }
+
+    private static bool MaximizeTransition(WindowState before, WindowState after) =>
+        before.Show == SW_SHOWNORMAL && after.Show == SW_SHOWMAXIMIZED;
+
+    private static bool KnownMouseTransition(WindowState before, WindowState after) =>
+        before.Arranged is not null && MaximizeTransition(before, after);
 
     private static IndependentStateProof Proof(
         GestureManager.Input input,
@@ -135,10 +156,7 @@ internal static partial class QuarterPlacementDetector
         if (
             shape is null
             || shape == PlacementGeometry.Shape(f.Before)
-            || f.Horizontal is null
-            || !shape.StartsWith(f.Horizontal + "-")
-            || f.Vertical is null
-            || !shape.EndsWith("-" + f.Vertical)
+            || !MatchesDirections(f, shape)
         )
             return null;
         IndependentPlacementShape? quarter = shape switch
@@ -160,4 +178,13 @@ internal static partial class QuarterPlacementDetector
             )
             : null;
     }
+
+    private static bool MatchesDirections(KeyGestureSeries.TerminalFacts f, string shape) =>
+        HorizontalMatches(f, shape) && VerticalMatches(f, shape);
+
+    private static bool HorizontalMatches(KeyGestureSeries.TerminalFacts f, string shape) =>
+        f.Horizontal is not null && shape.StartsWith(f.Horizontal + "-");
+
+    private static bool VerticalMatches(KeyGestureSeries.TerminalFacts f, string shape) =>
+        f.Vertical is not null && shape.EndsWith("-" + f.Vertical);
 }

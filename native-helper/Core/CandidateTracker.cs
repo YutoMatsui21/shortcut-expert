@@ -35,7 +35,7 @@ internal sealed record CompoundMoveResult(
 
 // Same candidate construction for live callbacks and isolated event-sequence tests.
 // Windows reads, hooks and input payload lifetimes remain in Observer.
-internal sealed class CandidateTracker
+internal sealed partial class CandidateTracker
 {
     internal GestureManager Gestures => gestures;
     private readonly GestureManager gestures = new();
@@ -71,57 +71,6 @@ internal sealed class CandidateTracker
 
     private bool upHeld;
     private readonly HashSet<uint> injectedWin = new();
-
-    internal nint? MaximizeTarget(long now)
-    {
-        if (gestures.Maximize is { } pending && now - pending.At is < 0 or > InputMatchWindowMs)
-        {
-            // The maximize adapter's one-second window is not the lifetime of a
-            // shared Win-held placement series (which owns its own deadline).
-            if (!Placement.Owns(pending.Window))
-            {
-                if (now < pending.At)
-                    gestures.Cancel(pending.Gesture);
-                else
-                    gestures.Expire(pending.Gesture, now, pending.At + InputMatchWindowMs);
-            }
-            gestures.Maximize = null;
-        }
-        return gestures.Maximize?.Window;
-    }
-
-    internal nint? ClickResultTarget =>
-        IndependentResults
-        && gestures.Pending
-            is { Before.Show: SW_SHOWNORMAL, Route: "max-button" or "caption-double-click" } click
-            ? click.Window
-            : null;
-
-    internal nint? ResultTarget(long now, nint excluded = 0)
-    {
-        if (MaximizeTarget(now) is { } key)
-            return key != excluded ? key : null;
-        if (IndependentResults && Placement.PendingResultTarget(now) is { } series)
-            return series != excluded ? series : null;
-        if (
-            !IndependentResults
-            || gestures.Drags.Count != 0
-            || gestures.Pending is not { } click
-            || click.Origin == "key"
-            || click.Before.Show != SW_SHOWNORMAL
-            || click.Route is not ("max-button" or "caption-double-click" or "unknown")
-        )
-            return null;
-        if (now - click.At is < 0 or > 1000)
-        {
-            ClearInput();
-            return null;
-        }
-        return click.Window != excluded ? click.Window : null;
-    }
-
-    internal uint? MaximizeProcess(nint window, long now) =>
-        MaximizeTarget(now) == window ? gestures.Maximize!.Before.Process : null;
 
     internal WindowCandidate? ConfirmMaximize(
         nint window,
@@ -261,17 +210,7 @@ internal sealed class CandidateTracker
             upHeld = false;
         if (key == VK_DOWN)
             winDownHeld = false;
-        if (
-            gestures.Pending is { Route: "win-shift-left" } && key == VK_LEFT
-            || gestures.Pending is { Route: "win-shift-right" } && key == VK_RIGHT
-        )
-            moveKeyReleased = true;
-        if (
-            IndependentResults
-            && moveKeyReleased
-            && gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
-        )
-            gestures.AwaitResult(move.Gesture, now);
+        ReleaseMonitorKey(key, now);
     }
 
     internal void ForegroundChanged(nint window)
@@ -993,7 +932,7 @@ internal sealed class CandidateTracker
             && operation != "monitor-move"
         )
             return null;
-        if (operation is null || IndependentResults && operation is "maximize" or "monitor-move")
+        if (!RetainsOperation(operation))
             return null;
         long age = candidate is null ? -1 : now - candidate.At;
         if (fallback)

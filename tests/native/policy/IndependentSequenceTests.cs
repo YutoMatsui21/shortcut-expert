@@ -119,6 +119,9 @@ internal static partial class Program
                 "quarter",
                 "max",
                 "delayed-max",
+                "delayed-max-stale-press",
+                "delayed-bottom",
+                "delayed-placement-after-max",
                 "delayed-quarter",
                 "transient-max",
                 "dual-win",
@@ -159,11 +162,7 @@ internal static partial class Program
     private static void CheckIndependentMax(string mode, List<object> samples)
     {
         var f = new IndependentRouterFixture();
-        var before = IndependentNormal();
-        if (mode == "unknown-arranged")
-            before = before with { Arranged = null };
-        if (mode == "captionless-start")
-            before = before with { HasCaption = false };
+        var before = MaxInputSnapshot(mode);
         var after = before with
         {
             Show = SW_SHOWMAXIMIZED,
@@ -173,28 +172,9 @@ internal static partial class Program
         f.Press(before, VK_UP, 10, flags: mode == "injected" ? LLKHF_INJECTED : 0);
         f.State(after, 20);
         Equal(0, f.Output.Count);
-        if (mode == "cancel")
-            f.Tracker.ClearInput();
-        if (mode == "reset")
-        {
-            f.Tracker.Reset(1);
-            f.Router.Reset(1);
-        }
-        if (mode == "stop")
-        {
-            f.Session.Stop();
-            f.Router.Stop();
-        }
-        if (mode == "foreign")
-            f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 12, 25));
-        if (mode != "unreleased")
-            f.Release(VK_UP, 30);
-        if (mode != "win-held" && mode != "unreleased")
-            f.Release(VK_LWIN, 40);
-        if (mode == "process")
-            after = after with { Process = 8 };
-        if (mode == "layout")
-            after = after with { DisplayLayout = "changed" };
+        CancelIndependentMax(f, mode);
+        ReleaseIndependentMax(f, mode);
+        after = MutateSeriesResult(after, mode);
         long at =
             mode == "expired" ? 1011
             : mode == "boundary" ? 1010
@@ -215,6 +195,44 @@ internal static partial class Program
             Equal(0, f.Output.Count);
     }
 
+    private static WindowState MaxInputSnapshot(string mode) =>
+        mode switch
+        {
+            "unknown-arranged" => IndependentNormal() with { Arranged = null },
+            "captionless-start" => IndependentNormal() with { HasCaption = false },
+            _ => IndependentNormal(),
+        };
+
+    private static void CancelIndependentMax(IndependentRouterFixture f, string mode)
+    {
+        switch (mode)
+        {
+            case "cancel":
+                f.Tracker.ClearInput();
+                break;
+            case "reset":
+                f.Tracker.Reset(1);
+                f.Router.Reset(1);
+                break;
+            case "stop":
+                f.Session.Stop();
+                f.Router.Stop();
+                break;
+            case "foreign":
+                f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 12, 25));
+                break;
+        }
+    }
+
+    private static void ReleaseIndependentMax(IndependentRouterFixture f, string mode)
+    {
+        if (mode == "unreleased")
+            return;
+        f.Release(VK_UP, 30);
+        if (mode != "win-held")
+            f.Release(VK_LWIN, 40);
+    }
+
     private static void CheckIndependentMove(string mode, List<object> samples)
     {
         var f = new IndependentRouterFixture();
@@ -232,16 +250,13 @@ internal static partial class Program
             f.Press(after, VK_RIGHT, 30, true);
         if (mode != "unreleased")
             f.Release(VK_RIGHT, 40);
-        if (mode == "return")
-            after = before;
-        if (mode == "unknown")
-            after = after with { Monitor = null };
-        if (mode == "layout")
-            after = after with { DisplayLayout = "changed" };
-        if (mode == "process")
-            after = after with { Process = 8 };
-        if (mode == "captionless")
-            after = after with { HasCaption = false };
+        after = mode switch
+        {
+            "return" => before,
+            "unknown" => after with { Monitor = null },
+            "captionless" => after with { HasCaption = false },
+            _ => MutateSeriesResult(after, mode),
+        };
         long at = mode == "expired" ? 1011 : 50;
         f.Result(after, at);
         f.Result(after, at + 1);
@@ -252,9 +267,43 @@ internal static partial class Program
             Equal(0, f.Output.Count);
     }
 
+    private sealed record SeriesSnapshots(
+        WindowState Before,
+        WindowState Half,
+        WindowState Quarter
+    );
+
     private static void CheckIndependentSeries(string mode, List<object> samples)
     {
         var f = new IndependentRouterFixture();
+        var states = BeginIndependentSeries(f, mode);
+        var after = ApplyFinalSeriesInput(f, states, mode);
+        if (mode == "cancel")
+            f.Tracker.ClearInput();
+        after = MutateSeriesResult(after, mode);
+        ReleaseIndependentSeries(f, after, mode);
+        long at =
+            mode == "expired" ? 15011
+            : mode == "last-expired" ? 1031
+            : 90;
+        if (EarlySeriesSnapshot(states, mode) is { } early)
+        {
+            f.Result(early, at);
+            Equal(0, f.Output.Count);
+            f.State(after, at + 20);
+        }
+        else
+            f.Result(after, at);
+        f.Result(after, at + 21);
+        string? expected = ExpectedSeriesOperation(mode);
+        if (expected is null)
+            Equal(0, f.Output.Count);
+        else
+            AddIndependentSample(samples, f, expected);
+    }
+
+    private static SeriesSnapshots BeginIndependentSeries(IndependentRouterFixture f, string mode)
+    {
         var before = IndependentNormal();
         var half = before with { Arranged = true, Frame = new(0, 0, 960, 1040) };
         var quarter = half with { Frame = new(0, 0, 960, 520) };
@@ -267,67 +316,87 @@ internal static partial class Program
         Equal(0, f.Output.Count);
         f.Press(half, VK_UP, 30, flags: mode == "injected" ? LLKHF_INJECTED : 0);
         f.Release(VK_UP, 40);
-        f.State(quarter, 45);
+        f.State(mode == "delayed-max-stale-press" ? half : quarter, 45);
         Equal(0, f.Output.Count);
-        var after = quarter;
-        if (mode is "max" or "delayed-max" or "transient-max")
+        return new(before, half, quarter);
+    }
+
+    private static bool IsSeriesMax(string mode) =>
+        mode is "max" or "delayed-max" or "transient-max" or "delayed-max-stale-press";
+
+    private static WindowState ApplyFinalSeriesInput(
+        IndependentRouterFixture f,
+        SeriesSnapshots states,
+        string mode
+    )
+    {
+        if (IsSeriesMax(mode))
         {
-            f.Press(quarter, VK_UP, 50);
+            f.Press(mode == "delayed-max-stale-press" ? states.Half : states.Quarter, VK_UP, 50);
             f.Release(VK_UP, 60);
-            after = before with { Show = SW_SHOWMAXIMIZED };
+            return states.Before with { Show = SW_SHOWMAXIMIZED };
         }
-        if (mode == "cancel")
-            f.Tracker.ClearInput();
-        if (mode == "process")
-            after = after with { Process = 8 };
-        if (mode == "layout")
-            after = after with { DisplayLayout = "changed" };
-        if (mode == "work")
-            after = after with { Work = new(0, 0, 1920, 1000) };
-        if (mode == "dpi")
-            after = after with { Dpi = 144 };
+        if (mode == "delayed-bottom")
+        {
+            f.Press(states.Half, VK_DOWN, 50);
+            f.Release(VK_DOWN, 60);
+            return states.Quarter with { Frame = new(0, 520, 960, 520) };
+        }
+        if (mode == "delayed-placement-after-max")
+        {
+            f.Press(states.Quarter, VK_RIGHT, 50);
+            f.Release(VK_RIGHT, 60);
+            return states.Quarter with { Frame = new(960, 0, 960, 520) };
+        }
+        return states.Quarter;
+    }
+
+    private static WindowState MutateSeriesResult(WindowState after, string mode) =>
+        mode switch
+        {
+            "process" => after with { Process = 8 },
+            "layout" => after with { DisplayLayout = "changed" },
+            "work" => after with { Work = new(0, 0, 1920, 1000) },
+            "dpi" => after with { Dpi = 144 },
+            _ => after,
+        };
+
+    private static void ReleaseIndependentSeries(
+        IndependentRouterFixture f,
+        WindowState after,
+        string mode
+    )
+    {
         if (mode != "unreleased")
             f.Release(VK_LWIN, 70);
-        if (mode == "dual-win")
-        {
-            f.Result(after, 75);
-            Equal(0, f.Output.Count);
-            f.Release(VK_RWIN, 80);
-        }
-        long at =
-            mode == "expired" ? 15011
-            : mode == "last-expired" ? 1031
-            : 90;
-        if (mode is "delayed-max" or "delayed-quarter" or "transient-max")
-        {
-            f.Result(
-                mode == "delayed-quarter" ? half
-                    : mode == "transient-max" ? before
-                    : quarter,
-                at
-            );
-            Equal(0, f.Output.Count);
-            f.State(after, at + 20);
-        }
-        else
-            f.Result(after, at);
-        f.Result(after, at + 21);
-        bool valid =
-            mode
-            is "delayed-max"
-                or "delayed-quarter"
-                or "transient-max"
-                or "quarter"
-                or "max"
-                or "dual-win"
-                or "duplicate";
-        if (valid)
-            AddIndependentSample(
-                samples,
-                f,
-                mode is "max" or "delayed-max" or "transient-max" ? "W03" : "W07"
-            );
-        else
-            Equal(0, f.Output.Count);
+        if (mode != "dual-win")
+            return;
+        f.Result(after, 75);
+        Equal(0, f.Output.Count);
+        f.Release(VK_RWIN, 80);
     }
+
+    private static WindowState? EarlySeriesSnapshot(SeriesSnapshots states, string mode) =>
+        mode switch
+        {
+            "delayed-quarter" => states.Half,
+            "transient-max" => states.Before,
+            "delayed-max" or "delayed-max-stale-press" or "delayed-bottom" => states.Quarter,
+            "delayed-placement-after-max" => states.Before with { Show = SW_SHOWMAXIMIZED },
+            _ => null,
+        };
+
+    private static string? ExpectedSeriesOperation(string mode) =>
+        IsSeriesMax(mode)
+            ? "W03"
+            : mode switch
+            {
+                "quarter"
+                or "delayed-quarter"
+                or "delayed-bottom"
+                or "delayed-placement-after-max"
+                or "dual-win"
+                or "duplicate" => "W07",
+                _ => null,
+            };
 }

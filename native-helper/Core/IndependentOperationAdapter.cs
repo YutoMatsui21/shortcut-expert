@@ -80,111 +80,144 @@ internal sealed class IndependentOperationAdapter
         gestures.Drags.ContainsKey(target)
         || tracker.Placement.Owns(target)
         || gestures.Maximize?.Window == target
-        || gestures.Pending is { } input
-            && input.Window == target
-            && (
-                input.Route is "win-shift-left" or "win-shift-right"
-                || input.Before.Show == SW_SHOWNORMAL
-                    && input.Route is "max-button" or "caption-double-click" or "unknown"
-            );
+        || MigratedPendingInput(target);
 
-    internal bool State(
-        nint target,
-        WindowState? after,
-        long at,
-        nint foreground,
-        bool injected = false
-    )
+    private bool MigratedPendingInput(nint target)
     {
-        if (gestures.Current is not { } current || current.Window != target)
-            return false;
-        // Retained W04 minimization may legitimately leave the foreground. Do not
-        // apply migrated W03 checks to a legacy-only input or reduction result.
-        if (
-            !MigratedInput(target)
-            || after?.Show is SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE
-        )
-            return false;
-        if (
-            after is null
-            || foreground != target
-            || injected
-            || after.Process != current.Start.State.Process
-        )
-        {
-            tracker.ClearInput();
-            return false;
-        }
-        if (
-            current.Start.State.DisplayLayout is { } layout
-            && after.DisplayLayout is { } finalLayout
-            && layout != finalLayout
-        )
-        {
-            tracker.ClearInput();
-            return false;
-        }
-        bool monitorChord = gestures.Pending is { Route: "win-shift-left" or "win-shift-right" };
-        if (gestures.Drags.ContainsKey(target) || tracker.Placement.WinHeld && !monitorChord)
-            return false;
-        if (tracker.Placement.Input is { } series && series.Window == target)
-        {
-            if (tracker.Placement.PendingResultTarget(at) is null)
-                return false;
-            if (!tracker.Placement.ResultObserved(after))
-                return true;
-            var f = tracker.Placement.Terminal(target, after, at, injected);
-            // A series can end in maximize without being a valid placement geometry.
-            var max = MaximizeDetector.Key(gestures.Maximize, after, at);
-            results.Finish(
-                after,
-                at,
-                null,
-                max,
-                f is null ? null : QuarterPlacementDetector.Key(f)
-            );
-            gestures.Maximize = null;
-            return false;
-        }
-        if (gestures.Maximize is { } up && up.Window == target && up.Gesture.ReleasedAt is not null)
-        {
-            var proof = MaximizeDetector.Key(up, after, at);
-            if (proof is not null)
-            {
-                results.Finish(after, at, null, proof, null);
-                gestures.Maximize = null;
-            }
-            return false;
-        }
         if (gestures.Pending is not { } input || input.Window != target)
             return false;
-        if (input.Route is "win-shift-left" or "win-shift-right")
+        return input.Route switch
         {
-            if (tracker.MoveKeyReleased)
-            {
-                if (!InputDetectionFacts.MoveContext(input.Before, after))
-                {
-                    tracker.ClearInput();
-                    return false;
-                }
-                var proof = MonitorMoveDetector.Key(input, after, at);
-                if (proof is not null)
-                {
-                    results.Finish(after, at, proof, null, null);
-                    gestures.Pending = null;
-                }
-            }
+            "win-shift-left" or "win-shift-right" => true,
+            "max-button" or "caption-double-click" or "unknown" => input.Before.Show
+                == SW_SHOWNORMAL,
+            _ => false,
+        };
+    }
+
+    internal bool State(OperationObservation observed)
+    {
+        if (!OwnsObservation(observed))
+            return false;
+        if (!ValidObservedWindow(observed))
+        {
+            tracker.ClearInput();
             return false;
         }
-        if (tracker.ClickReleased)
-        {
-            var proof = MaximizeDetector.Click(input, after, at, !gestures.Moving.Contains(target));
-            if (proof is not null)
-            {
-                results.Finish(after, at, null, proof, null);
-                gestures.Pending = null;
-            }
-        }
+        if (InputStillOpen(observed.Target))
+            return false;
+        if (tracker.Placement.Owns(observed.Target))
+            return FinishSeries(observed);
+        FinishStandalone(observed);
         return false;
     }
+
+    private bool OwnsObservation(OperationObservation observed) =>
+        gestures.Current?.Window == observed.Target
+        && MigratedInput(observed.Target)
+        && observed.After?.Show is not (SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE);
+
+    private bool ValidObservedWindow(OperationObservation o)
+    {
+        if (o.After is not { } after || o.Foreground != o.Target || o.Injected)
+            return false;
+        if (after.Process != gestures.Current!.Start.State.Process)
+            return false;
+        var layout = gestures.Current.Start.State.DisplayLayout;
+        return layout is null || after.DisplayLayout is null || layout == after.DisplayLayout;
+    }
+
+    private bool InputStillOpen(nint target)
+    {
+        if (gestures.Drags.ContainsKey(target))
+            return true;
+        bool monitorChord = gestures.Pending is { Route: "win-shift-left" or "win-shift-right" };
+        return tracker.Placement.WinHeld && !monitorChord;
+    }
+
+    private bool FinishSeries(OperationObservation o)
+    {
+        if (tracker.Placement.PendingResultTarget(o.At) is null)
+            return false;
+        if (!tracker.Placement.ResultObserved(o.After!))
+            return true;
+        var facts = tracker.Placement.Terminal(o.Target, o.After, o.At, o.Injected);
+        results.Finish(
+            o.After!,
+            o.At,
+            null,
+            MaximizeDetector.Key(gestures.Maximize, o.After!, o.At),
+            facts is null ? null : QuarterPlacementDetector.Key(facts)
+        );
+        gestures.Maximize = null;
+        return false;
+    }
+
+    private void FinishStandalone(OperationObservation o)
+    {
+        if (
+            gestures.Maximize is { } up
+            && up.Window == o.Target
+            && up.Gesture.ReleasedAt is not null
+        )
+        {
+            FinishMaximize(up, o);
+            return;
+        }
+        if (gestures.Pending is not { } input || input.Window != o.Target)
+            return;
+        if (input.Route is "win-shift-left" or "win-shift-right")
+            FinishMonitorChord(input, o);
+        else
+            FinishClick(input, o);
+    }
+
+    private void FinishMaximize(GestureManager.Input input, OperationObservation o)
+    {
+        var proof = MaximizeDetector.Key(input, o.After!, o.At);
+        if (proof is null)
+            return;
+        results.Finish(o.After!, o.At, null, proof, null);
+        gestures.Maximize = null;
+    }
+
+    private void FinishMonitorChord(GestureManager.Input input, OperationObservation o)
+    {
+        if (!tracker.MoveKeyReleased)
+            return;
+        if (!InputDetectionFacts.MoveContext(input.Before, o.After!))
+        {
+            tracker.ClearInput();
+            return;
+        }
+        var proof = MonitorMoveDetector.Key(input, o.After!, o.At);
+        if (proof is null)
+            return;
+        results.Finish(o.After!, o.At, proof, null, null);
+        gestures.Pending = null;
+    }
+
+    private void FinishClick(GestureManager.Input input, OperationObservation o)
+    {
+        if (!tracker.ClickReleased)
+            return;
+        var proof = MaximizeDetector.Click(
+            input,
+            o.After!,
+            o.At,
+            !gestures.Moving.Contains(o.Target)
+        );
+        if (proof is null)
+            return;
+        results.Finish(o.After!, o.At, null, proof, null);
+        gestures.Pending = null;
+    }
 }
+
+internal sealed record OperationObservation(
+    nint Target,
+    WindowState? After,
+    long At,
+    nint Foreground,
+    bool Injected = false
+);

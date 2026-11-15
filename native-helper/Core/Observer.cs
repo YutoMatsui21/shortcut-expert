@@ -321,6 +321,71 @@ internal sealed class Observer : IDisposable
             states[window] = state;
     }
 
+    private void ObserveMouseRelease(MouseData mouse, bool probeRelease, Point? physicalBefore)
+    {
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseUp);
+        var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
+        bool known = GetMonitorInfoW(
+            MonitorFromPoint(mouse.Point, MONITOR_DEFAULTTONULL),
+            ref info
+        );
+        static MonitorBounds Bounds(Rect r) =>
+            new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
+        Point? physicalAfter =
+            probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
+        router.Dispatch(
+            new MouseReleaseEvent(
+                epoch,
+                clock.ElapsedMilliseconds,
+                mouse.Point,
+                known ? Bounds(info.Monitor) : null,
+                known ? Bounds(info.Work) : null,
+                mouse.Flags,
+                physicalBefore,
+                physicalAfter
+            )
+        );
+        RefreshClickResult();
+    }
+
+    private void RefreshClickResult()
+    {
+        var clicked = tracker.MouseStateTarget ?? tracker.ClickResultTarget;
+        if (clicked is not { } target || captionClick.Target == target)
+            return;
+        states.TryGetValue(target, out WindowState? previous);
+        var after = ReadStateChange(target, previous);
+        if (after is null)
+        {
+            tracker.Forget(target);
+            return;
+        }
+        states[target] = after;
+        router.Dispatch(
+            new StateObservedEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                previous,
+                after,
+                GetForegroundWindow(),
+                DateTime.Now.ToString("yyyy-MM-dd"),
+                after.Monitor
+            )
+        );
+    }
+
+    private void BeginCaptionResults()
+    {
+        captionDate = DateTime.Now.ToString("yyyy-MM-dd");
+        if (independentDetection && captionClick.PressFacts is { } pressFacts)
+            router.Dispatch(new CaptionPressEvent(epoch, pressFacts, captionDate));
+    }
+
+    private bool ReadsKeyResult(uint key) =>
+        key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT
+        || independentDetection && key is VK_UP or VK_DOWN;
+
     private nint OnMouse(int code, nint message, nint data)
     {
         try
@@ -381,58 +446,7 @@ internal sealed class Observer : IDisposable
             {
                 if (message == WM_LBUTTONUP)
                 {
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseUp);
-                    var info = new MonitorInfo { Size = (uint)Marshal.SizeOf<MonitorInfo>() };
-                    bool known = GetMonitorInfoW(
-                        MonitorFromPoint(taskbarMouse.Point, MONITOR_DEFAULTTONULL),
-                        ref info
-                    );
-                    static MonitorBounds Bounds(Rect r) =>
-                        new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
-                    Point? physicalAfter =
-                        probeRelease && GetPhysicalCursorPos(out Point current) ? current : null;
-                    router.Dispatch(
-                        new MouseReleaseEvent(
-                            epoch,
-                            clock.ElapsedMilliseconds,
-                            taskbarMouse.Point,
-                            known ? Bounds(info.Monitor) : null,
-                            known ? Bounds(info.Work) : null,
-                            taskbarMouse.Flags,
-                            physicalBefore,
-                            physicalAfter
-                        )
-                    );
-                    if (
-                        (
-                            tracker.MouseStateTarget
-                            ?? (independentDetection ? tracker.ClickResultTarget : null)
-                        )
-                            is { } clicked
-                        && captionClick.Target != clicked
-                    )
-                    {
-                        states.TryGetValue(clicked, out WindowState? previous);
-                        var after = ReadStateChange(clicked, previous);
-                        if (after is null)
-                            tracker.Forget(clicked);
-                        else
-                        {
-                            states[clicked] = after;
-                            router.Dispatch(
-                                new StateObservedEvent(
-                                    epoch,
-                                    clicked,
-                                    clock.ElapsedMilliseconds,
-                                    previous,
-                                    after,
-                                    GetForegroundWindow(),
-                                    DateTime.Now.ToString("yyyy-MM-dd"),
-                                    after.Monitor
-                                )
-                            );
-                        }
-                    }
+                    ObserveMouseRelease(taskbarMouse, probeRelease, physicalBefore);
                 }
                 if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL)
                     tracker.ClearInput();
@@ -607,9 +621,7 @@ internal sealed class Observer : IDisposable
                 )
             )
             {
-                captionDate = DateTime.Now.ToString("yyyy-MM-dd");
-                if (independentDetection && captionClick.PressFacts is { } pressFacts)
-                    router.Dispatch(new CaptionPressEvent(epoch, pressFacts, captionDate));
+                BeginCaptionResults();
                 windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStartAccepted);
                 // Preserve the existing drag press for unidentified client/caption surfaces.
                 // MOVESIZESTART cancels this click policy and leaves drag ownership unchanged.
@@ -684,10 +696,7 @@ internal sealed class Observer : IDisposable
                 if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
                     tracker.ClearInput();
                 router.Dispatch(new KeyReleaseEvent(epoch, clock.ElapsedMilliseconds, key.Key));
-                if (
-                    key.Key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT
-                    || independentDetection && key.Key is VK_UP or VK_DOWN
-                )
+                if (ReadsKeyResult(key.Key))
                 {
                     nint releasedTarget = GetForegroundWindow();
                     states.TryGetValue(releasedTarget, out WindowState? releasedCached);

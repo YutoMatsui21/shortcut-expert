@@ -30,9 +30,23 @@ internal static partial class Program
             );
     }
 
+    private sealed record WindowTransition(WindowState Before, WindowState After);
+
     private static CandidateEnvelope[] RetainedWindowCase(string mode, bool independent)
     {
         var f = new IndependentRouterFixture(independent);
+        var transition = RetainedTransition(mode);
+        if (mode == "half")
+            ReplayRetainedHalf(f, transition.Before);
+        else if (mode.StartsWith("key-"))
+            ReplayRetainedKey(f, transition, mode);
+        else
+            ReplayRetainedMouse(f, transition, mode);
+        return f.Output.Cast<CandidateEnvelope>().ToArray();
+    }
+
+    private static WindowTransition RetainedTransition(string mode)
+    {
         var before = IndependentNormal();
         if (
             mode.StartsWith("restore")
@@ -46,48 +60,57 @@ internal static partial class Program
                     ? SW_SHOWNORMAL
                     : SW_SHOWMINIMIZED,
         };
-        if (mode == "half")
+        return new(before, after);
+    }
+
+    private static void ReplayRetainedHalf(IndependentRouterFixture f, WindowState before)
+    {
+        f.Press(null, VK_LWIN, 0);
+        f.Press(before, VK_LEFT, 10);
+        f.Release(VK_LEFT, 20);
+        f.Release(VK_LWIN, 30);
+        f.Result(before with { Arranged = true, Frame = new(0, 0, 960, 1040) }, 40);
+    }
+
+    private static void ReplayRetainedKey(
+        IndependentRouterFixture f,
+        WindowTransition t,
+        string mode
+    )
+    {
+        f.Press(t.Before, VK_DOWN, 10);
+        f.State(t.After, 20, foreground: t.After.Show == SW_SHOWMINIMIZED ? 12 : 11);
+        f.Release(VK_DOWN, 30);
+        if (mode != "key-grouped-down")
+            return;
+        f.Press(t.After, VK_DOWN, 40);
+        f.State(t.After with { Show = SW_SHOWMINIMIZED }, 50, foreground: 12);
+        f.Release(VK_DOWN, 60);
+    }
+
+    private static void ReplayRetainedMouse(
+        IndependentRouterFixture f,
+        WindowTransition t,
+        string mode
+    )
+    {
+        int hit = mode switch
         {
-            f.Press(null, VK_LWIN, 0);
-            f.Press(before, VK_LEFT, 10);
-            f.Release(VK_LEFT, 20);
-            f.Release(VK_LWIN, 30);
-            after = before with { Arranged = true, Frame = new(0, 0, 960, 1040) };
-            f.Result(after, 40);
-        }
-        else if (mode.StartsWith("key-"))
-        {
-            f.Press(before, VK_DOWN, 10);
-            f.State(after, 20, foreground: after.Show == SW_SHOWMINIMIZED ? 12 : 11);
-            f.Release(VK_DOWN, 30);
-            if (mode == "key-grouped-down")
-            {
-                f.Press(after, VK_DOWN, 40);
-                f.State(after with { Show = SW_SHOWMINIMIZED }, 50, foreground: 12);
-                f.Release(VK_DOWN, 60);
-            }
-        }
-        else
-        {
-            int hit = mode.StartsWith("restore")
-                ? mode.EndsWith("double-click")
-                    ? HTCAPTION
-                    : HTMAXBUTTON
-                : mode == "fallback-min"
-                    ? 1
-                    : HTMINBUTTON;
-            if (mode.EndsWith("double-click"))
-                f.Router.Dispatch(
-                    new MousePressEvent(1, 11, 0, before, hit, default, 500, 0, false, true)
-                );
+            "restore-button" => HTMAXBUTTON,
+            "restore-double-click" => HTCAPTION,
+            "fallback-min" => 1,
+            _ => HTMINBUTTON,
+        };
+        if (mode.EndsWith("double-click"))
             f.Router.Dispatch(
-                new MousePressEvent(1, 11, 10, before, hit, default, 500, 0, false, true)
+                new MousePressEvent(1, 11, 0, t.Before, hit, default, 500, 0, false, true)
             );
-            f.Router.Dispatch(
-                new MouseReleaseEvent(1, 30, default, before.Monitor, before.Work, 0, null, null)
-            );
-            f.State(after, 40, foreground: after.Show == SW_SHOWMINIMIZED ? 12 : 11);
-        }
-        return f.Output.Cast<CandidateEnvelope>().ToArray();
+        f.Router.Dispatch(
+            new MousePressEvent(1, 11, 10, t.Before, hit, default, 500, 0, false, true)
+        );
+        f.Router.Dispatch(
+            new MouseReleaseEvent(1, 30, default, t.Before.Monitor, t.Before.Work, 0, null, null)
+        );
+        f.State(t.After, 40, foreground: t.After.Show == SW_SHOWMINIMIZED ? 12 : 11);
     }
 }

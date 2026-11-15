@@ -101,7 +101,7 @@ internal sealed class TrackerEventAdapter(
                 tracker.KeyReleased(e.Key, e.At);
                 break;
             case KeyResultEvent e:
-                if (independent?.State(e.Target, e.After, e.At, e.Target, e.Injected) == true)
+                if (independent?.State(new(e.Target, e.After, e.At, e.Target, e.Injected)) == true)
                     break;
                 Emit(
                     tracker.FinishKey(e.Target, e.After, e.At, e.Injected, e.Date),
@@ -133,7 +133,7 @@ internal sealed class TrackerEventAdapter(
         switch (observed)
         {
             case StateObservedEvent e:
-                independent?.State(e.Target, e.After, e.At, e.Foreground);
+                independent?.State(new(e.Target, e.After, e.At, e.Foreground));
                 if (
                     tracker.Complete(
                         e.Target,
@@ -160,7 +160,7 @@ internal sealed class TrackerEventAdapter(
                 Emit(move, e.Generation, e.Date);
                 break;
             case TickEvent e:
-                independent?.State(e.Target, e.After, e.At, e.Foreground);
+                independent?.State(new(e.Target, e.After, e.At, e.Foreground));
                 var maximized = tracker.ConfirmMaximize(
                     e.Target,
                     e.After,
