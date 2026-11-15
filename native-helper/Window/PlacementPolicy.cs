@@ -198,7 +198,8 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
         string? Vertical,
         WindowState LastBefore,
         uint? LastKey = null,
-        bool UnobservedRepeat = false
+        uint UnobservedDirections = 0,
+        uint RepeatedDirections = 0
     );
 
     // Neutral input/geometry facts, shared with W03/W07 and the retained W06 policy.
@@ -246,8 +247,44 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
     private static bool SameResultSnapshot(WindowState a, WindowState b) =>
         a.Show == b.Show
         && a.Arranged == b.Arranged
-        && a.Frame == b.Frame
-        && a.Monitor == b.Monitor;
+        && a.Monitor == b.Monitor
+        && SameResultShape(a, b);
+
+    private static bool SameResultShape(WindowState a, WindowState b)
+    {
+        var first = PlacementGeometry.Shape(a);
+        var second = PlacementGeometry.Shape(b);
+        return first is not null && second is not null ? first == second : a.Frame == b.Frame;
+    }
+
+    // Bounded direction categories, not an input sequence. Repeated physical
+    // directions without an observed state advance cannot claim an old quarter.
+    private static uint DirectionBit(uint key) =>
+        key switch
+        {
+            VK_LEFT => 1,
+            VK_RIGHT => 2,
+            VK_UP => 4,
+            VK_DOWN => 8,
+            _ => 0,
+        };
+
+    private static Series TrackResultCorrelation(Series previous, uint key, WindowState before)
+    {
+        bool unchanged = SameResultSnapshot(previous.LastBefore, before);
+        uint seen = unchanged ? previous.UnobservedDirections : 0;
+        uint repeated = unchanged ? previous.RepeatedDirections : 0;
+        uint bit = DirectionBit(key);
+        return previous with
+        {
+            LastKey = key,
+            UnobservedDirections = seen | bit,
+            RepeatedDirections = repeated | (seen & bit),
+        };
+    }
+
+    private static bool LastDirectionRepeated(Series s) =>
+        s.LastKey is { } key && (s.RepeatedDirections & DirectionBit(key)) != 0;
 
     private static bool DirectionalResultObserved(Series s, string? shape)
     {
@@ -255,7 +292,9 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
             return false;
         if (shape.EndsWith("-half"))
             return s.Vertical is null; // retained W06 behavior
-        return !s.UnobservedRepeat && s.Vertical is not null && shape.EndsWith("-" + s.Vertical);
+        return !LastDirectionRepeated(s)
+            && s.Vertical is not null
+            && shape.EndsWith("-" + s.Vertical);
     }
 
     internal nint? PendingResultTarget(long now)
@@ -397,13 +436,10 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
                 before
             );
         }
+        series = TrackResultCorrelation(series, key, before);
         series = series with
         {
             Last = now,
-            UnobservedRepeat =
-                (series.UnobservedRepeat || series.LastKey == key)
-                && SameResultSnapshot(series.LastBefore, before),
-            LastKey = key,
             LastBefore = before,
             Horizontal =
                 key == VK_LEFT ? "left"

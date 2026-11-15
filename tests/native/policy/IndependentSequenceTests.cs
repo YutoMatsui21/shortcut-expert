@@ -120,6 +120,7 @@ internal static partial class Program
                 "max",
                 "delayed-max",
                 "delayed-max-stale-press",
+                "delayed-max-reordered",
                 "delayed-bottom",
                 "delayed-placement-after-max",
                 "delayed-quarter",
@@ -316,13 +317,18 @@ internal static partial class Program
         Equal(0, f.Output.Count);
         f.Press(half, VK_UP, 30, flags: mode == "injected" ? LLKHF_INJECTED : 0);
         f.Release(VK_UP, 40);
-        f.State(mode == "delayed-max-stale-press" ? half : quarter, 45);
+        f.State(mode is "delayed-max-stale-press" or "delayed-max-reordered" ? half : quarter, 45);
         Equal(0, f.Output.Count);
         return new(before, half, quarter);
     }
 
     private static bool IsSeriesMax(string mode) =>
-        mode is "max" or "delayed-max" or "transient-max" or "delayed-max-stale-press";
+        mode
+            is "max"
+                or "delayed-max"
+                or "transient-max"
+                or "delayed-max-stale-press"
+                or "delayed-max-reordered";
 
     private static WindowState ApplyFinalSeriesInput(
         IndependentRouterFixture f,
@@ -332,7 +338,18 @@ internal static partial class Program
     {
         if (IsSeriesMax(mode))
         {
-            f.Press(mode == "delayed-max-stale-press" ? states.Half : states.Quarter, VK_UP, 50);
+            if (mode == "delayed-max-reordered")
+            {
+                f.Press(states.Half, VK_LEFT, 46);
+                f.Release(VK_LEFT, 47);
+            }
+            f.Press(
+                mode is "delayed-max-stale-press" or "delayed-max-reordered"
+                    ? states.Half
+                    : states.Quarter,
+                VK_UP,
+                50
+            );
             f.Release(VK_UP, 60);
             return states.Before with { Show = SW_SHOWMAXIMIZED };
         }
@@ -381,7 +398,10 @@ internal static partial class Program
         {
             "delayed-quarter" => states.Half,
             "transient-max" => states.Before,
-            "delayed-max" or "delayed-max-stale-press" or "delayed-bottom" => states.Quarter,
+            "delayed-max"
+            or "delayed-max-stale-press"
+            or "delayed-max-reordered"
+            or "delayed-bottom" => states.Quarter,
             "delayed-placement-after-max" => states.Before with { Show = SW_SHOWMAXIMIZED },
             _ => null,
         };
