@@ -160,9 +160,12 @@ internal sealed class IndependentOperationAdapter
             facts is null ? null : HalfPlacementDetector.Key(facts)
         );
         gestures.Maximize = null;
-        tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
+        RetireSeries(o);
         return OperationDispatch.Consumed;
     }
+
+    private void RetireSeries(OperationObservation o) =>
+        tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
 
     private OperationDispatch FinishStandalone(OperationObservation o)
     {

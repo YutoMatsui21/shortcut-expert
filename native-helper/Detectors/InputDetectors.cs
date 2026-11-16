@@ -197,13 +197,11 @@ internal static partial class HalfPlacementDetector
     internal static IndependentPlacementProof? Key(KeyGestureSeries.TerminalFacts f)
     {
         string? shape = PlacementGeometry.Shape(f.After);
-        if (
-            shape == PlacementGeometry.Shape(f.Before)
-            || f.Horizontal is null
-            || f.Vertical is not null
-            || shape != f.Horizontal + "-half"
-        )
+        if (shape == PlacementGeometry.Shape(f.Before) || !MatchesHalfDirections(f, shape))
             return null;
         return Proof(shape, IndependentPlacementRoute.WinHeldArrows, f.Age, f.After.Monitor);
     }
+
+    private static bool MatchesHalfDirections(KeyGestureSeries.TerminalFacts f, string? shape) =>
+        f.Horizontal is not null && f.Vertical is null && shape == f.Horizontal + "-half";
 }

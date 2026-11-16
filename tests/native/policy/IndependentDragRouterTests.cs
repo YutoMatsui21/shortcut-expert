@@ -153,11 +153,7 @@ internal static partial class Program
                     var envelope = (CandidateEnvelope)output.Single();
                     if (mode == "same-half")
                     {
-                        Equal(
-                            true,
-                            ((IndependentResultsEvidence)envelope.evidence).results.Single()
-                                is IndependentPlacementProof
-                        );
+                        AssertIndependentHalfEnvelope(envelope);
                         return;
                     }
                     var proofs = ((IndependentResultsEvidence)envelope.evidence).results;
@@ -168,4 +164,11 @@ internal static partial class Program
             );
         return lines;
     }
+
+    private static void AssertIndependentHalfEnvelope(CandidateEnvelope envelope) =>
+        Equal(
+            true,
+            ((IndependentResultsEvidence)envelope.evidence).results.Single()
+                is IndependentPlacementProof
+        );
 }
