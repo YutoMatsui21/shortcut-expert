@@ -9,7 +9,7 @@
 | マウス | 前面の同一ウィンドウで左押下と解放を確認し、双方で有効な`TITLEBARINFOEX`閉じる矩形と一致、または矩形が使えない独自captionで同一root／process／threadを再確認した明示的`HTCLOSE` |
 | キー   | 中立状態からの`Alt+F4`。追加修飾・注入・repeat・競合を除外                                                                                                                      |
 
-- `WindowCloseObserver`が既存hookとWinEventを受け、`WindowClosePolicy`が同一対象を一時照合。desktop／Shell、owned／tool／child、最小化・非表示・cloaked、自己process・昇格／不明なウィンドウは除外する。アプリ名のallowlistへ依存しない。
+- `WindowCloseObserver`が既存hookとWinEventから対象・矩形・process/thread・消滅の事実を取得し、独立した`WindowCloseDetector`が`WindowClosePolicy`で同一対象を一時照合。DetectorはSwitch/Tracker/Taskbarの内部状態を参照しない。desktop／Shell、owned／tool／child、最小化・非表示・cloaked、自己process・昇格／不明なウィンドウは除外する。アプリ名のallowlistへ依存しない。
 - タブの×やclient／resize／不明判定、独自UIの位置だけから閉鎖を推測しない。矩形が空／不整合の場合のroot照会はWM_NCHITTEST・10ms上限とし、照会後にも同じroot・process・threadを確認する。有効な矩形がある場合は状態と位置の照合を優先し、この代替経路で無効状態や範囲外を迂回しない。**入力だけ・ウィンドウの消滅だけではW11を確定しない**。
 
 ## 2. 破棄確認と誤計上防止
@@ -21,10 +21,11 @@
 
 ## 3. 通信と記録
 
-専用v2の`window-close/window-close-v1`に同一対象照合・`destroyed`・有界な`inputAgeMs`・入力前monitorを渡す。HWND／PID／thread／tick、生入力・ウィンドウ名は渡さず、既存の日別集計を使う。Mainの厳格parse→Core採用→SQLite保存後通知と3学習状態を共用する。旧window型の読み取り互換は残すが、新helperの閉鎖経路はv2専用。
+共通`GestureManager`に入力由来・解放／Alt+F4成立時刻・世代内の寿命を保持し、`ResultComposer`からv2の`independent-results`内の`close` Proofを一度だけ送る。同一対象照合・`destroyed`・有界な`inputAgeMs`・入力前monitorを渡す。閉鎖に伴うforegroundは共通Gestureの入力由来で識別し、W01へ流用しない。旧`window-close/window-close-v1`の読み取り・fixture互換は維持する。HWND／PID／thread／tick、生入力・ウィンドウ名は渡さず、既存の日別集計を使う。Mainの厳格parse→Core採用→SQLite保存後通知と3学習状態を共用する。旧window型の読み取り互換は残すが、新helperの閉鎖経路はv2専用。
 
 ## 4. テスト・実測の限界
 
+- `tests/native/policy/IndependentCloseTests.cs`：独立Detector・共通Gesture・Composerからの単一候補、Stop/Reset・同一世代の旧lease・遅延確定、Native→TS→SQLite・通知の契約をfixtureで確認。
 - `tests/native/policy/WindowCloseTests.cs`：入力・破棄・取消・hide・別対象・遅延／HWND再利用・repeat・世代停止。`tests/operations/window-close-detection.test.ts`／`tests/native/native-operation-policy.test.ts`でv2検証・Core／SQLiteへ接続。
 - `tests/integration/candidate-to-page-model-data-flow.test.ts`と隔離smoke：3学習状態、ページモデル、通知adapter、停止・保存失敗／ACK喪失の非重複と復旧。
 - **実機検証入口**：本人の明示同意後、`validation/window-close/`の手動パネルでARMからFINISHまで（自動キー送出なし）。8ケースの結果・途中の見逃し原因・同じbuildかどうかの区別は[検証記録](https://github.com/YutoMatsui21/shortcut-expert/issues/39)に保存。

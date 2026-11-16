@@ -49,6 +49,7 @@ internal sealed class GestureManager
         // The independent route owns this physical input once subscribed. Kept on the
         // gesture so reopening a completed composer cannot emit the input twice.
         internal bool ResultsClaimed { get; set; }
+        internal string? Route { get; set; }
     }
 
     // Compatibility input: route, age convention, transaction and drag evidence still belong
@@ -133,8 +134,9 @@ internal sealed class GestureManager
         int transaction,
         bool CaptionPress = false,
         bool ContinueSeries = false
-    ) =>
-        new(
+    )
+    {
+        var result = new Input(
             ContinueSeries
             && Live(Current)
             && Current!.Window == window
@@ -159,6 +161,15 @@ internal sealed class GestureManager
             transaction,
             CaptionPress: CaptionPress
         );
+        result.Gesture.Route = route;
+        return result;
+    }
+
+    internal bool IsCloseInput(long at) =>
+        Current is { Route: "close-button" or "alt-f4" } current
+        && IsCurrent(current)
+        && current.State is Phase.Observing or Phase.AwaitingResult or Phase.Completed
+        && at - current.Start.At is >= 0 and <= 1000;
 
     internal bool IsCurrent(Gesture? value) =>
         value is not null

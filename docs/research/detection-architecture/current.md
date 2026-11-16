@@ -182,3 +182,9 @@ W04はRestoreMinimizeDetectorが共通入力と結果を照合する。物理解
 背後窓captionはInactiveCaptionPolicyがクリック・前景・状態変化の事実を収集し、CaptionSwitchDetector、MaximizeDetector、RestoreMinimizeDetectorが各自評価する。他Detectorの採否を参照せず、確証された結果だけをComposerの1Envelopeにまとめる。一時前面化後の最小化でもW01の確証を保持し、MOVESIZESTARTではクリックを取り消してdrag追跡へ渡す。開始arranged不明も既存どおり扱うため、state proofにinactive-max-button/inactive-min-button/inactive-state-fallbackを使用する。
 
 通常起動では移行済みW01/W03/W04を旧window-switch/caption-click/window候補から二重配送しない。旧形式は切戻し・fixture互換用に残す。C# policyとNative→厳格parse→Core→SQLite・単一通知のfixture試験を使用し、自然入力・実OS通知・配布物の受入は#186に残す。
+
+## W11の独立判定（Issue #183）
+
+WindowCloseObserverはOS観測と50ms timerを担当する。Raw入力は専用のRouter購読から受け、WindowCloseDetectorが既存WindowClosePolicyの入力・対象identity・native tick・DESTROY・有界消滅確認を管理する。Switch/Tracker/Taskbarの内部状態には依存しない。HIDEやforeground変更のみでは成立せず、既存の確認ダイアログ取消・HWND再利用・1000ms期限を維持する。
+
+共通Gestureに入力由来と解放／Alt+F4成立時刻を保持し、session leaseとComposerにより単一のclose Proofを送る。Stop/Reset・同一世代の再開始・取消で保留を失効させる。W01は共通Gestureの閉鎖由来を参照して閉鎖後の前面変更を流用せず、次の別入力では由来を退役する。旧window-closeはfixture／読み取り互換として残す。実入力と実OS通知の受入は#186に残す。

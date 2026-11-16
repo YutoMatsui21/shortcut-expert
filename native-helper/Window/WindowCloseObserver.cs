@@ -4,26 +4,37 @@ using Point = NativeMethods.Point;
 
 // Reads only the target needed for a bounded close transaction. No app/title/path is emitted.
 internal sealed class WindowCloseObserver(
-    CandidateSink protocol,
-    Func<int> transaction,
+    WindowCloseDetector detector,
     Func<long> now,
     Action<CloseReason>? diagnostic = null
 ) : IDisposable
 {
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 50 };
-    private WindowClosePolicy policy = new();
-    private int generation,
-        pendingTransaction;
+    private WindowCloseDetector policy => detector;
+    private int generation;
     private static readonly int[] neutralKeys = Enum.GetValues<System.Windows.Forms.Keys>()
         .Select(k => (int)k)
         .Where(k => k is >= 1 and <= 254)
         .Distinct()
         .ToArray();
 
+    internal void Register(DetectionRouter router) =>
+        router.Subscribe(
+            new[] { ObservedKind.RawMouse, ObservedKind.RawKey },
+            (observed, _) =>
+            {
+                if (observed is RawMouseEvent mouse)
+                    Mouse(mouse.Message, mouse.Point, mouse.Flags, mouse.InputTime);
+                if (observed is RawKeyEvent key)
+                    Key(key.Key, key.Down, key.Flags, key.InputTime);
+            }
+        );
+
     internal void Start(int epoch)
     {
         Stop();
         generation = epoch;
+        policy.Start(epoch);
         Neutral();
         timer.Tick += Tick;
         timer.Start();
@@ -34,7 +45,7 @@ internal sealed class WindowCloseObserver(
         timer.Stop();
         timer.Tick -= Tick;
         generation = 0;
-        policy = new();
+        policy.Stop();
     }
 
     internal void Cancel() => policy.Cancel();
@@ -139,12 +150,6 @@ internal sealed class WindowCloseObserver(
         return WindowCaption.CloseButton(title, rect, point, diagnostic, rootCloseConfirmed);
     }
 
-    private void Capture(CloseWindow? previous)
-    {
-        if (previous is null && policy.Target is not null)
-            pendingTransaction = transaction();
-    }
-
     internal void Mouse(nint message, Point point, uint flags, uint tick)
     {
         if (generation == 0)
@@ -176,7 +181,6 @@ internal sealed class WindowCloseObserver(
             tick,
             now()
         );
-        Capture(previous);
         if (previous is null && policy.Target is not null)
             diagnostic?.Invoke(CloseReason.PendingMouse);
         if (message == WM_LBUTTONUP && policy.Target is not null)
@@ -200,7 +204,6 @@ internal sealed class WindowCloseObserver(
             tick,
             now()
         );
-        Capture(previous);
         if (previous is null && policy.Target is not null)
             diagnostic?.Invoke(CloseReason.PendingKey);
     }
@@ -243,23 +246,7 @@ internal sealed class WindowCloseObserver(
         }
         if (kind != EVENT_OBJECT_DESTROY || obj != OBJID_WINDOW || child != CHILDID_SELF)
             return;
-        var completed = policy.Destroy(window, thread, tick, IsWindow(window), now(), diagnostic);
-        Complete(completed);
-    }
-
-    private void Complete(CloseCompletion? completed)
-    {
-        if (completed is not null)
-        {
-            diagnostic?.Invoke(CloseReason.Completed);
-            protocol.Close(
-                generation,
-                pendingTransaction,
-                DateTime.Now.ToString("yyyy-MM-dd"),
-                completed.Origin,
-                new(true, true, completed.Age, completed.Monitor)
-            );
-        }
+        policy.Destroy(window, thread, tick, IsWindow(window), now(), diagnostic);
     }
 
     private void Tick(object? sender, EventArgs args)
@@ -267,25 +254,13 @@ internal sealed class WindowCloseObserver(
         try
         {
             var previous = policy.Target;
-            CloseCompletion? completed = null;
             if (previous is { } target)
             {
                 bool exists = IsWindow(target.Handle);
                 uint pid = 0,
                     thread = exists ? GetWindowThreadProcessId(target.Handle, out pid) : 0;
-                bool same = pid == target.Process && thread == target.Thread;
-                if (policy.DestroyPending)
-                {
-                    completed = policy.ConfirmGone(exists, same, now());
-                    Complete(completed);
-                }
-                // Normal closure can hide/activate B before DESTROY. Only identity or
-                // lifetime is checked here; disappearance without DESTROY cannot complete.
-                else
-                    policy.Poll(!exists || same, now());
+                policy.Poll(exists, pid == target.Process && thread == target.Thread, now());
             }
-            if (previous is not null && policy.Target is null && completed is null)
-                diagnostic?.Invoke(CloseReason.PollCancel);
             Neutral();
         }
         catch

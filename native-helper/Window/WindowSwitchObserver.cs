@@ -8,7 +8,8 @@ using Point = NativeMethods.Point;
 internal sealed class WindowSwitchObserver(
     WindowSwitchDetector detector,
     Func<long> now,
-    Action<WindowDiagnosticReason>? diagnostic = null
+    Action<WindowDiagnosticReason>? diagnostic = null,
+    Func<bool>? closeInput = null
 ) : IDisposable
 {
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 50 };
@@ -213,6 +214,11 @@ internal sealed class WindowSwitchObserver(
 
     internal void Foreground(nint window, uint eventTime)
     {
+        if (closeInput?.Invoke() == true)
+        {
+            Cancel();
+            return;
+        }
         if (generation == 0 || !policy.Pending)
             return;
 

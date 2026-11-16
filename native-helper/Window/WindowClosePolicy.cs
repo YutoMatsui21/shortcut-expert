@@ -57,6 +57,7 @@ internal sealed class WindowClosePolicy
     internal CloseWindow? Target => target;
     internal bool Ready => ready;
     internal bool DestroyPending => destroying;
+    internal long? ReleasedAt { get; private set; }
 
     internal void Neutral(bool neutral)
     {
@@ -72,6 +73,7 @@ internal sealed class WindowClosePolicy
         target = null;
         ready = false;
         released = destroying = false;
+        ReleasedAt = null;
     }
 
     private void Begin(CloseWindow window, bool isMouse, uint tick, long at)
@@ -79,6 +81,7 @@ internal sealed class WindowClosePolicy
         target = window;
         mouse = isMouse;
         released = !isMouse;
+        ReleasedAt = isMouse ? null : at;
         inputTick = tick;
         started = at;
     }
@@ -164,6 +167,7 @@ internal sealed class WindowClosePolicy
         )
         {
             released = true;
+            ReleasedAt = at;
             return;
         }
         Cancel();
