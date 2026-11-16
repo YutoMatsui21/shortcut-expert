@@ -95,6 +95,15 @@ internal static partial class Program
             half = half with { Dpi = 144 };
         }
         ReplayIndependentHalf(f, before, half, mode);
+        AssertIndependentHalfCase(f, half, mode);
+    }
+
+    private static void AssertIndependentHalfCase(
+        IndependentRouterFixture f,
+        WindowState half,
+        string mode
+    )
+    {
         bool rejected = mode is "same" or "unknown" or "cancel";
         Equal(rejected ? 0 : 1, f.Output.Count);
         if (rejected)
