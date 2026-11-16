@@ -91,18 +91,9 @@ internal sealed partial class CandidateTracker
         )
             gestures.AwaitResult(move.Gesture, now);
     }
-
-    private bool MouseInputConflict(long now) =>
-        gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
-
-    private void ReleaseReductionKey(uint key, long? now)
-    {
-        if (!IndependentResults || key != VK_DOWN)
-            return;
-        if (gestures.Pending is { Route: "win-down" } down)
-            gestures.AwaitResult(down.Gesture, now);
-    }
 }
 
 // Normalized physical key facts used by shared sequence lifetime tracking.
 internal readonly record struct KeySequenceInput(uint Key, bool Injected, string? Route);
+
+internal readonly record struct KeySequenceRelease(uint Key, long? At);

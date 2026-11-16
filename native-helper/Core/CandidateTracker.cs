@@ -203,7 +203,7 @@ internal sealed partial class CandidateTracker
 
     internal void KeyReleased(uint key, long? now = null)
     {
-        ReleaseReductionKey(key, now);
+        ReleaseReductionKey(new(key, now));
         Placement.Released(key, now);
         if (!Placement.WinHeld && gestures.Current?.Source == "key")
             gestures.AwaitResult(gestures.Current, now);
@@ -416,6 +416,17 @@ internal sealed partial class CandidateTracker
                 gestures.Current is { } current && Placement.Owns(current.Window)
             );
         }
+    }
+
+    private bool MouseInputConflict(long now) =>
+        gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
+
+    private void ReleaseReductionKey(KeySequenceRelease release)
+    {
+        if (!IndependentResults || release.Key != VK_DOWN)
+            return;
+        if (gestures.Pending is { Route: "win-down" } down)
+            gestures.AwaitResult(down.Gesture, release.At);
     }
 
     private void ObserveKeyEpoch(KeySequenceInput input)
