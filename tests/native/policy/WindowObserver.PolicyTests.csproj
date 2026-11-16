@@ -44,7 +44,10 @@
       Link="OperationResultSession.cs"
     />
 
-    <Compile Include="../../../native-helper/Detectors/HalfPlacementDetector.cs" Link="HalfPlacementDetector.cs" />
+    <Compile
+      Include="../../../native-helper/Detectors/HalfPlacementDetector.cs"
+      Link="HalfPlacementDetector.cs"
+    />
     <Compile Include="../../../native-helper/Detectors/DragDetectors.cs" Link="DragDetectors.cs" />
     <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
