@@ -9,14 +9,23 @@ internal sealed class WindowSwitchObserver(
     CandidateSink protocol,
     Func<int> transaction,
     Func<long> now,
+    DetectionSession session,
+    DetectionRouter router,
+    bool independent = true,
     Action<WindowDiagnosticReason>? diagnostic = null
 ) : IDisposable
 {
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 50 };
-    private WindowSwitchPolicy policy = new();
-    private int generation,
-        pendingTransaction;
-    private string date = "";
+    private readonly WindowSwitchDetector detector = new(
+        session,
+        protocol,
+        router,
+        transaction,
+        independent,
+        diagnostic
+    );
+    private WindowSwitchPolicy policy => detector.Policy;
+    private int generation;
     private uint inputTick;
     private uint shellProcess;
     private Point? mouseDown;
@@ -34,6 +43,7 @@ internal sealed class WindowSwitchObserver(
     {
         Stop();
         generation = epoch;
+        detector.Start(epoch);
         Neutral();
         timer.Tick += Tick;
         timer.Start();
@@ -44,21 +54,26 @@ internal sealed class WindowSwitchObserver(
         timer.Stop();
         timer.Tick -= Tick;
         generation = 0;
-        pendingTransaction = 0;
         shellProcess = 0;
-        policy = new() { Diagnostic = diagnostic };
+        detector.Stop();
         mouseDown = null;
         CaptionPressReady = false;
     }
 
     internal void Cancel()
     {
-        policy.Cancel();
+        detector.Cancel();
         mouseDown = null;
     }
 
     private void Neutral() =>
-        policy.Neutral(WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0));
+        detector.Dispatch(
+            new SwitchNeutralEvent(
+                generation,
+                now(),
+                WindowSwitchPolicy.KeysReleased(neutralKeys, k => GetAsyncKeyState(k) >= 0)
+            )
+        );
 
     internal static SwitchWindow? Read(
         nint window,
@@ -143,10 +158,8 @@ internal sealed class WindowSwitchObserver(
     {
         if (!wasPending && policy.Pending)
         {
-            pendingTransaction = transaction();
             inputTick = tick;
             GetWindowThreadProcessId(GetShellWindow(), out shellProcess);
-            date = DateTime.Now.ToString("yyyy-MM-dd");
         }
     }
 
@@ -155,12 +168,15 @@ internal sealed class WindowSwitchObserver(
         if (generation == 0)
             return;
         bool pending = policy.Pending;
-        policy.Key(
-            key,
-            down,
-            (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
-            key is 0x12 or 0xa4 or 0xa5 ? Read(GetForegroundWindow(), diagnostic) : null,
-            now()
+        detector.Dispatch(
+            new SwitchKeyEvent(
+                generation,
+                now(),
+                key,
+                down,
+                (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
+                key is 0x12 or 0xa4 or 0xa5 ? Read(GetForegroundWindow(), diagnostic) : null
+            )
         );
         Capture(pending, tick);
     }
@@ -185,17 +201,20 @@ internal sealed class WindowSwitchObserver(
             return;
         }
         bool pending = policy.Pending;
-        policy.Mouse(
-            message,
-            message is 0x201 or 0x202
-                ? Read(GetAncestor(WindowFromPhysicalPoint(point), GA_ROOT), diagnostic)
-                : null,
-            message == 0x201 ? Read(GetForegroundWindow(), diagnostic) : null,
-            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
-            new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k =>
-                GetAsyncKeyState(k) < 0
-            ),
-            now()
+        detector.Dispatch(
+            new SwitchMouseEvent(
+                generation,
+                now(),
+                message,
+                message is 0x201 or 0x202
+                    ? Read(GetAncestor(WindowFromPhysicalPoint(point), GA_ROOT), diagnostic)
+                    : null,
+                message == 0x201 ? Read(GetForegroundWindow(), diagnostic) : null,
+                (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
+                new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k =>
+                    GetAsyncKeyState(k) < 0
+                )
+            )
         );
         Capture(pending, tick);
         if (message == 0x201)
@@ -211,15 +230,18 @@ internal sealed class WindowSwitchObserver(
 
         nint current = GetForegroundWindow();
         long at = now();
-        policy.NativeForeground(
-            window,
-            current,
-            window == current ? Read(current, diagnostic) : null,
-            inputTick,
-            eventTime,
-            at,
-            window == current && KnownSwitcher(current),
-            window == current && KnownSwitcher(current, staging: true)
+        detector.Dispatch(
+            new SwitchForegroundEvent(
+                generation,
+                at,
+                window,
+                current,
+                window == current ? Read(current, diagnostic) : null,
+                inputTick,
+                eventTime,
+                window == current && KnownSwitcher(current),
+                window == current && KnownSwitcher(current, staging: true)
+            )
         );
     }
 
@@ -263,29 +285,24 @@ internal sealed class WindowSwitchObserver(
         try
         {
             Neutral();
-            var completed = policy.Poll(policy.Pending ? Read(GetForegroundWindow()) : null, now());
-            if (completed is not null && Read(GetForegroundWindow()) == completed.Target)
+            var current = policy.Pending ? Read(GetForegroundWindow()) : null;
+            if (current is not null && Read(GetForegroundWindow()) != current)
             {
-                protocol.Switch(
-                    generation,
-                    pendingTransaction,
-                    date,
-                    completed.Origin,
-                    new(
-                        true,
-                        true,
-                        true,
-                        true,
-                        completed.InputAgeMs,
-                        completed.SettleMs,
-                        DisplayContext.Monitor(completed.Target.Handle)
-                    )
-                );
+                detector.Cancel();
+                return;
             }
+            detector.Dispatch(
+                new SwitchPollEvent(
+                    generation,
+                    now(),
+                    current,
+                    current is null ? null : DisplayContext.Monitor(current.Handle)
+                )
+            );
         }
         catch
         {
-            policy.Cancel();
+            detector.Cancel();
         }
     }
 

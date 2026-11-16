@@ -156,7 +156,10 @@ internal static class IndependentResultsTests
             {
                 bool key = route is IndependentStateRoute.WinUp or IndependentStateRoute.WinDown;
                 bool minimize =
-                    route is IndependentStateRoute.MinButton or IndependentStateRoute.WinDown;
+                    route
+                    is IndependentStateRoute.MinButton
+                        or IndependentStateRoute.InactiveMinButton
+                        or IndependentStateRoute.WinDown;
                 Add(
                     key ? "key" : "mouse",
                     new IndependentStateProof(
@@ -170,7 +173,13 @@ internal static class IndependentResultsTests
                             : IndependentAfterState.Maximized,
                         false,
                         null,
-                        route == IndependentStateRoute.MouseStateFallback ? 500 : 1000,
+                        route
+                            is IndependentStateRoute.MouseStateFallback
+                                or IndependentStateRoute.InactiveMaxButton
+                                or IndependentStateRoute.InactiveMinButton
+                                or IndependentStateRoute.InactiveStateFallback
+                            ? 500
+                            : 1000,
                         null
                     )
                 );

@@ -66,6 +66,9 @@ export type IndependentProof =
   | {
       kind: "state";
       route:
+        | "inactive-max-button"
+        | "inactive-min-button"
+        | "inactive-state-fallback"
         | "max-button"
         | "min-button"
         | "caption-double-click"

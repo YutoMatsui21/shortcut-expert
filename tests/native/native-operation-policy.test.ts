@@ -70,7 +70,11 @@ async function acceptIndependentInputSample(
   const before = notices.length;
   await coach.accept(candidate);
   await coach.accept({ ...candidate, sequence: candidate.sequence + 1 });
-  assert.equal(notices.length - before, sample.origin === "mouse" ? 1 : 0);
+  assert.equal(
+    notices.length - before,
+    sample.origin === "mouse" ? 1 : 0,
+    `notification for ${sample.line}`,
+  );
 }
 
 async function verifyIndependentInputPersistence(

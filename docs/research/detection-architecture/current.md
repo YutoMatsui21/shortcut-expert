@@ -170,3 +170,15 @@ Windows hook / WinEvent / 50ms poll
 非アクティブcaptionは `CaptionPressEvent` / `CaptionResultEvent` をRouterへ渡し、`CaptionClickResultAdapter` が別の共通GestureとComposerで統合する。W03は `MaximizeDetector.InactiveClick` が入力・activation観測・終端を独立評価する。未移行W01/W04の判定と原子保存を保つため、外部には引き続き1つの `caption-click` Envelopeを送る。これは開始arranged不明を従来どおり扱う互換出口でもあり、不明値を推測で補完しない。W01/W04自体の独立Detector移行は後続Issue。
 
 切戻しはhelper起動前の環境変数 `COACH_DETECTION_MODE=legacy`。未指定・空・`independent` は新経路、不明値は起動エラーとする。アプリを完全終了して再起動することで経路を選び、測定中の動的切替はしない。旧基準fixtureは旧経路の回帰として維持し、新経路の部分採用・未解放抑止は別試験で確認する。自然入力・実OS通知の最終受入は #186 に残す。
+
+<a id="independent-detectors-181"></a>
+
+## W01・W04と背後窓captionの独立判定（Issue #181）
+
+通常起動ではW01・W04も独立結果を出力する。W01はWindowSwitchObserverが取得した中立・物理入力・foreground・最終照会の事実をRouter経由でWindowSwitchDetectorへ渡す。既存WindowSwitchPolicyの入力適格性、時刻比較、Shell中間窓、Alt保持・取消・期限を維持し、GestureManagerが入力のIDと開始snapshotを保持したまま観測済み切替先を関連付ける。タスクバー・閉じる由来のforegroundからW01を開始しない。入力源はdirect-click/alt-tabで区別する。
+
+W04はRestoreMinimizeDetectorが共通入力と結果を照合する。物理解放前・drag中・取消後は確定せず、Win+↓の1000ms以内の物理的な復元→最小化は従来どおり1操作。他入力・対象変更・前景離脱・reset/stopで連続関係を切る。ボタン/captionの1000ms、独自caption fallbackの500ms・4pxの条件を維持する。
+
+背後窓captionはInactiveCaptionPolicyがクリック・前景・状態変化の事実を収集し、CaptionSwitchDetector、MaximizeDetector、RestoreMinimizeDetectorが各自評価する。他Detectorの採否を参照せず、確証された結果だけをComposerの1Envelopeにまとめる。一時前面化後の最小化でもW01の確証を保持し、MOVESIZESTARTではクリックを取り消してdrag追跡へ渡す。開始arranged不明も既存どおり扱うため、state proofにinactive-max-button/inactive-min-button/inactive-state-fallbackを使用する。
+
+通常起動では移行済みW01/W03/W04を旧window-switch/caption-click/window候補から二重配送しない。旧形式は切戻し・fixture互換用に残す。C# policyとNative→厳格parse→Core→SQLite・単一通知のfixture試験を使用し、自然入力・実OS通知・配布物の受入は#186に残す。

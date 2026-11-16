@@ -407,3 +407,41 @@ test("proof order and exact duplicates normalize; conflicting categories reject 
     assert.equal(candidateV2(envelope([proof, { ...proof, ...patch }])), null);
   }
 });
+
+test("inactive caption routes preserve unknown arrangement and reject unrelated input/actions", () => {
+  for (const route of [
+    "inactive-max-button",
+    "inactive-min-button",
+    "inactive-state-fallback",
+  ]) {
+    const maximize = route === "inactive-max-button";
+    const proof = {
+      ...proofs[2],
+      route,
+      action: maximize ? "maximize" : "minimize",
+      after: maximize ? "maximized" : "minimized",
+      beforeArranged: null,
+      inputAgeMs: 500,
+    };
+    const candidate = accepts(proof);
+    assert.ok(candidate);
+    assert.equal(
+      classifyGesture(candidate)[0].shortcut,
+      maximize ? "Win + ↑" : "Win + ↓",
+    );
+    assert.equal(accepts(proof, "key"), null);
+    assert.equal(accepts({ ...proof, inputAgeMs: 501 }), null);
+    assert.equal(
+      accepts({
+        ...proof,
+        action: "restore",
+        before: "maximized",
+        after: "normal",
+        afterArranged: false,
+      }),
+      null,
+    );
+  }
+  assert.equal(accepts({ ...proofs[2], beforeArranged: null }), null);
+  assert.equal(accepts({ ...proofs[2], route: "inactive-min-button" }), null);
+});

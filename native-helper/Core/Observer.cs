@@ -79,6 +79,9 @@ internal sealed class Observer : IDisposable
             protocol,
             NextTransaction,
             () => clock.ElapsedMilliseconds,
+            session,
+            router,
+            this.independentDetection,
             windowDiagnostic
         );
         closing = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);

@@ -5,7 +5,13 @@ internal sealed class OperationResultSession(
     Func<string> date
 )
 {
-    private static readonly string[] subscribers = ["monitor-move", "maximize", "quarter"];
+    private static readonly string[] subscribers =
+    [
+        "monitor-move",
+        "maximize",
+        "quarter",
+        "reduction",
+    ];
     private ResultComposer.Pending? pending;
     private GestureManager.Input? input;
     private long now;
@@ -45,7 +51,7 @@ internal sealed class OperationResultSession(
         );
         for (int i = 0; i < subscribers.Length; i++)
         {
-            if (proofs[i] is { } proof)
+            if (i < proofs.Length && proofs[i] is { } proof)
                 pending.Confirm(subscribers[i], identity, input.Gesture, proof);
             else
                 pending.Reject(subscribers[i], identity, input.Gesture);

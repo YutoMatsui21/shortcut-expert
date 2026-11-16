@@ -195,7 +195,11 @@ internal sealed class TrackerEventAdapter(
         if (
             independent is not null
             && (
-                result is WindowCandidate { operation: "maximize" or "monitor-move" }
+                result
+                    is WindowCandidate
+                    {
+                        operation: "maximize" or "monitor-move" or "restore" or "minimize"
+                    }
                 || result is PlacementResult p && !p.Evidence.shape.EndsWith("-half")
                 || result is CompoundMoveResult
             )

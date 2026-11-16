@@ -24,6 +24,10 @@ internal sealed class WindowSwitchPolicy
     private readonly HashSet<nint> switcherWindows = new();
     internal bool Pending => before is not null;
     internal bool CanStartMouse => ready && !Pending && held.Count == 0;
+    internal SwitchWindow? InputWindow => key ? before : target;
+    internal bool KeyboardInput => key;
+    internal long StartedAt => started;
+    internal long? ReleasedAt => released ? releasedAt : null;
 
     internal static bool AllowsStyle(
         long? style,

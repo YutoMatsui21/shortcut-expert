@@ -29,7 +29,7 @@ internal sealed partial class CandidateTracker
     internal nint? ClickResultTarget =>
         IndependentResults
         && gestures.Pending
-            is { Before.Show: SW_SHOWNORMAL, Route: "max-button" or "caption-double-click" } click
+            is { Route: "max-button" or "min-button" or "caption-double-click" } click
             ? click.Window
             : null;
 
@@ -43,9 +43,14 @@ internal sealed partial class CandidateTracker
             !IndependentResults
             || gestures.Drags.Count != 0
             || gestures.Pending is not { } click
-            || click.Origin == "key"
-            || click.Before.Show != SW_SHOWNORMAL
-            || click.Route is not ("max-button" or "caption-double-click" or "unknown")
+            || click.Route
+                is not (
+                    "max-button"
+                    or "min-button"
+                    or "caption-double-click"
+                    or "unknown"
+                    or "win-down"
+                )
         )
             return null;
         if (now - click.At is < 0 or > 1000)
@@ -63,7 +68,10 @@ internal sealed partial class CandidateTracker
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? operation
     ) =>
         operation is not null
-        && (!IndependentResults || operation is not ("maximize" or "monitor-move"));
+        && (
+            !IndependentResults
+            || operation is not ("maximize" or "monitor-move" or "restore" or "minimize")
+        );
 
     private bool ReleasedMonitorKey(uint key) =>
         (gestures.Pending?.Route, key)

@@ -91,7 +91,12 @@ function representativeMonitorShortcut(
 
 function stateShortcut(proof: StateProof): string | null {
   if (proof.action === "maximize") return "Win + ↑";
-  if (proof.action === "restore" || proof.beforeArranged === false)
+  if (
+    proof.action === "restore" ||
+    proof.beforeArranged === false ||
+    proof.route === "inactive-min-button" ||
+    proof.route === "inactive-state-fallback"
+  )
     return "Win + ↓";
   return null;
 }

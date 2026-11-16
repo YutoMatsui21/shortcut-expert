@@ -1,6 +1,6 @@
 # 独立結果Envelope契約（Issue #177）
 
-**状態：#178で受信形式をExpandし、#179で共通Composerから分類・保存・通知までをfixtureで接続。** 下表の旧制約の調査基準は `feba87e`。W02/W03/W07は #180で本番切替、他Detectorは後続Issue、旧経路撤去・実機受入は #186。非アクティブcaptionはW01/W04との互換Envelopeを維持する。fixtureの成功を自然入力の検出精度やWindows通知の最終表示の証拠にはしない。
+**状態：#178で受信形式をExpandし、#179で共通Composerから分類・保存・通知までをfixtureで接続。** 下表の旧制約の調査基準は `feba87e`。W02/W03/W07は #180で本番切替、他Detectorは後続Issue、旧経路撤去・実機受入は #186。W01/W04と背後窓captionは #181で本番切替。背後窓captionも独立結果の単一Envelopeを使用する。fixtureの成功を自然入力の検出精度やWindows通知の最終表示の証拠にはしない。
 
 ## 1. 決定事項と調査結果
 
@@ -84,6 +84,9 @@ type Proof =
   | {
       kind: "state";
       route:
+        | "inactive-max-button"
+        | "inactive-min-button"
+        | "inactive-state-fallback"
         | "max-button"
         | "min-button"
         | "caption-double-click"
@@ -138,7 +141,7 @@ C#型案は `IndependentResultsEvidence(bool targetMatched, bool released, bool 
 
 構造・次の意味制約に1つでも違反したwireは**Envelope全体を拒否**。不正な1要素を黙って読み飛ばさない。Detectorがrejectedの結果を送らないことと、壊れたwireから部分救済することを混同しない。parserは型/範囲/route対応、Coreも採用条件を防御的に検証する。
 
-ageは整数ms、下限0（生の入力時刻・時刻列ではない）。inputAgeMs上限はmonitor-move/state/closeが由来にかかわらず1000、stateのmouse-state-fallbackは500。switchはmouse 1500/key 15000、placementはmouse 1000/key 15000。switchのsettleMsは0以上inputAgeMs以下、mouseは1500以下、keyは250〜2000。taskbarはslotが整数1〜10、snapshotAgeMsは0〜750、confirmationAgeMsは0〜2500。期限は操作固有であり、このwire上限のためにNative期限を延長しない。
+ageは整数ms、下限0（生の入力時刻・時刻列ではない）。inputAgeMs上限はmonitor-move/state/closeが由来にかかわらず1000、stateのmouse-state-fallbackおよびinactive-*は500。switchはmouse 1500/key 15000、placementはmouse 1000/key 15000。switchのsettleMsは0以上inputAgeMs以下、mouseは1500以下、keyは250〜2000。taskbarはslotが整数1〜10、snapshotAgeMsは0〜750、confirmationAgeMsは0〜2500。期限は操作固有であり、このwire上限のためにNative期限を延長しない。
 
 | proof / TS分類                       | 必須の因果・終端・キー規則                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -281,3 +284,7 @@ v2の既存variantとEnvelopeの意味を維持するためv3は不要。ただ�
 通信は上記の固定カテゴリ、経過msの単一値、日付、限定monitor幾何、証明フラグのみ。生キー/文字・入力時刻列・活動履歴・HWND/PID・タイトル・URL・パス・clipboard・画面画像・カーソル軌跡・任意文字列の診断情報は禁止。内部identityはwireへ出さず、wire/経過値/幾何をDBや診断ログへ保存しない。DBへは既存の日付・操作ID・由来の集計と必要なcoverage/checkpointだけ。Nativeの**生JSONL**とparser後の両方で禁止fieldを検査する。
 
 [固定回帰](verification.md)の現行期待値は旧経路のまま残す。意図差分はinvalid-max-release/invalid-quarter-release等のW02部分採用、unsupported-cross-halfのW02＋W06採用、3件以上。共通入力不正・途中half/W04・Win保持・取消・別対象・旧世代・キー不明の記録のみ等は維持。fixtureは型/保存/要求の証拠であり、自然入力精度・実OS通知表示・配布受入は未検証。
+
+### #181の背後窓caption用state route
+
+inactive-max-buttonはmouseのnormal→maximizedのみ、inactive-min-buttonはmouseのnormal/maximized→minimizedのみを許可する。inactive-state-fallbackはその2終端だけに使い、復元やkey由来へ流用しない。いずれも既存の背後窓captionの500ms以内の状態確認を表し、beforeArrangedはnullを許容する。fallbackは前面化確認も必須。Nativeの共通入力・解放・対象照合は通常どおり必要で、wireのnull許容から通常クリックの条件を緩めない。背後窓最小化の案内は配置状態によらずWin + ↓、最大化はWin + ↑。switch proofの有無をstate proofの採否・案内条件にしない。

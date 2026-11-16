@@ -41,7 +41,7 @@ internal sealed class ComposerGesture
 
     private bool TargetIdentity() =>
         context.TargetValid()
-        && Gesture.Start.State.Process == Input.Before.Process
+        && Gesture.ResultIdentity.Process == Input.Before.Process
         && Gesture.Matched
         && !Gesture.Injected
         && !Gesture.Modified;

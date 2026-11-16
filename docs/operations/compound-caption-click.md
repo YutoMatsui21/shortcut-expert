@@ -7,10 +7,10 @@
 - 押下時の状態を保持し、同一対象・processの通常→最大化、通常／最大化→最小化を独立に確認する。結果のcaption消失は開始時のprocessと通常対象の再検証で扱う。読取不能・process変更は採用しない。
 - W01は同じクリック以後の対象へのforegroundイベントを、コールバック時点の前面一致で確認する。最小化結果の確認後は別ウィンドウへの前面遷移を許す。前面化が観測できない場合、状態変更だけを採用し、W01を推測しない。
 - 物理解放・同一対象・4px以内の移動を必要とする。注入・追加キー・他ボタン・ドラッグ・別対象・停止・世代変更は取消。状態確認は既存クリック経路と同じ500ms以内とし、イベント順序を待って500msの期限で1回だけ確定する。タイマー遅延が750msを超えた結果は採用しない。この期限は保守的な実装境界で、実測精度の保証ではない。
-- `caption-click-v1`は`switched`と`terminal`（最大化／最小化／なし）を単一envelopeで渡す。片方だけの確証も1操作として扱う。復元は追加しない。
-- Coreは1gestureをW01＋W03／W04に展開する。SQLiteは既存のW02＋W03／W07に加え、この2組のみを2件の原子mutationとして許可する。保存成功後に学習中の行だけを1つのWindows通知へ渡す。停止・通知一時停止・保存失敗・ACK喪失・再送の契約は共通経路で維持する。
+- 通常起動は各Detectorのswitch/state proofを`independent-results`の単一Envelopeで渡す。片方だけの確証も1操作として扱う。復元は追加しない。`caption-click-v1`は切戻し・fixture互換に残す。
+- Coreは1gestureをW01＋W03／W04に展開する。SQLiteは同一gestureの確定操作を原子的に保存する。保存成功後に学習中の行だけを1つのWindows通知へ渡す。停止・通知一時停止・保存失敗・ACK喪失・再送の契約は共通経路で維持する。
 
-W03は独立Detectorで観測factsを評価し、Router経由の共通GestureとComposerで完了を統合する。W01/W04は判定を移行せず、外部の `caption-click-v1` 形式と開始arranged不明の扱いを維持する。詳細は[独立移行の現行構成](../research/detection-architecture/current.md#independent-detectors-180)。
+W01/W03/W04は共通の観測factsを独立Detectorで評価し、Router経由のGestureとComposerで完了を統合する。開始arranged不明の扱いも維持する。詳細は[独立移行の現行構成](../research/detection-architecture/current.md#independent-detectors-181)。
 
 ## 検証の境界
 

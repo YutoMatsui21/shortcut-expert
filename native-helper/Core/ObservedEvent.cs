@@ -19,6 +19,7 @@ internal enum ObservedKind
     State,
     CaptionPress,
     CaptionResult,
+    SwitchFacts,
 }
 
 // Local snapshots at the original observation point; never serialized or retained as history.
