@@ -95,15 +95,6 @@ internal sealed partial class CandidateTracker
     private bool MouseInputConflict(long now) =>
         gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
 
-    private void ObserveKeyEpoch(KeySequenceInput input)
-    {
-        if (!KeepsReductionSeries(input))
-            InputEpoch++;
-    }
-
-    private static bool KeepsReductionSeries(KeySequenceInput input) =>
-        !input.Injected && (input.Key is VK_LWIN or VK_RWIN || input.Route == "win-down");
-
     private void ReleaseReductionKey(uint key, long? now)
     {
         if (!IndependentResults || key != VK_DOWN)

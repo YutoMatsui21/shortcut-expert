@@ -418,6 +418,15 @@ internal sealed partial class CandidateTracker
         }
     }
 
+    private void ObserveKeyEpoch(KeySequenceInput input)
+    {
+        if (!KeepsReductionSeries(input))
+            InputEpoch++;
+    }
+
+    private static bool KeepsReductionSeries(KeySequenceInput input) =>
+        !input.Injected && (input.Key is VK_LWIN or VK_RWIN || input.Route == "win-down");
+
     private void KeyCore(
         nint window,
         WindowState? before,
