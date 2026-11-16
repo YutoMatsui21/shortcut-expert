@@ -83,17 +83,25 @@ internal sealed class WindowCloseDetector(
     {
         if (policy.Target is not { } target)
         {
-            if (input is not null)
-                Cancel();
+            RetireCancelledInput();
             return;
         }
+        if (input is null)
+            Begin(target, origin, at);
+        else
+            ObserveRelease();
+    }
+
+    private void RetireCancelledInput()
+    {
         if (input is not null)
-        {
-            if (policy.ReleasedAt is { } released)
-                gestures.AwaitResult(input.Gesture, released);
-            return;
-        }
-        Begin(target, origin, at);
+            Cancel();
+    }
+
+    private void ObserveRelease()
+    {
+        if (input is { } current && policy.ReleasedAt is { } released)
+            gestures.AwaitResult(current.Gesture, released);
     }
 
     private void Begin(CloseWindow target, string origin, long at)

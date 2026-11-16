@@ -6,7 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../../native-helper/Detectors/WindowCloseDetector.cs" Link="WindowCloseDetector.cs" />
+    <Compile
+      Include="../../../native-helper/Detectors/WindowCloseDetector.cs"
+      Link="WindowCloseDetector.cs"
+    />
     <Compile
       Include="../../../native-helper/Detectors/WindowSwitchDetector.cs"
       Link="WindowSwitchDetector.cs"
