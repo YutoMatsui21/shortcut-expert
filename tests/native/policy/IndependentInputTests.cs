@@ -6,6 +6,7 @@ internal static partial class Program
 
     private static void IndependentInputTests()
     {
+        IndependentHalfTests();
         IndependentCaptionTests();
         IndependentSwitchTests();
         IndependentReductionTests();
@@ -132,15 +133,11 @@ internal static partial class Program
         if (!valid)
             return;
         var envelope = (CandidateEnvelope)f.Output.Single();
-        if (mode == "key-half")
-        {
-            Equal(true, envelope.evidence is PlacementEvidence);
-            return;
-        }
         string operation = mode switch
         {
             "key-move" => "W02",
             "key-quarter" => "W07",
+            "key-half" => "W06",
             _ => "W03",
         };
         independentMouseSamples.Add(
@@ -160,7 +157,7 @@ internal static partial class Program
         operation switch
         {
             "W02" => proof is IndependentMonitorMoveProof,
-            "W07" => proof is IndependentPlacementProof,
+            "W06" or "W07" => proof is IndependentPlacementProof,
             _ => proof is IndependentStateProof,
         };
 }

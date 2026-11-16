@@ -11,6 +11,7 @@ internal sealed class OperationResultSession(
         "maximize",
         "quarter",
         "reduction",
+        "half",
     ];
     private ResultComposer.Pending? pending;
     private GestureManager.Input? input;

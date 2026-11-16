@@ -343,7 +343,7 @@ test(
           ["W02", "W07"],
           ["W02"],
           ["W02"],
-          ["W02"],
+          ["W02", "W06"],
           ["W02"],
         ];
         assert.equal(
@@ -362,6 +362,7 @@ test(
           {
             W02: { mouse: 6, key: 0 },
             W03: { mouse: 1, key: 0 },
+            W06: { mouse: 1, key: 0 },
             W07: { mouse: 1, key: 0 },
           },
         );
