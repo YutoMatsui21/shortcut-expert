@@ -33,6 +33,7 @@ internal sealed class Observer : IDisposable
     private readonly TaskbarInputObserver taskbar;
     private readonly WindowSwitchObserver switching;
     private readonly WindowCloseObserver closing;
+    private readonly GestureManager closeGestures = new();
 
     // Native側がcallbackを呼ぶ間、解除までdelegateをGCから保護する。
     private readonly InputHook mouseCallback,
@@ -84,10 +85,22 @@ internal sealed class Observer : IDisposable
                 new(this.independentDetection, windowDiagnostic)
             ),
             () => clock.ElapsedMilliseconds,
-            windowDiagnostic
+            windowDiagnostic,
+            () => closeGestures.IsCloseInput(clock.ElapsedMilliseconds)
         );
-        closing = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds, closeDiagnostic);
-        new DedicatedInputAdapter(taskbar, switching, closing).Register(router);
+        closing = new(
+            new WindowCloseDetector(
+                session,
+                closeGestures,
+                protocol,
+                () => clock.ElapsedMilliseconds,
+                diagnostic: closeDiagnostic
+            ),
+            () => clock.ElapsedMilliseconds,
+            closeDiagnostic
+        );
+        new DedicatedInputAdapter(taskbar, switching).Register(router);
+        closing.Register(router);
         mouseCallback = OnMouse;
         keyCallback = OnKey;
         eventCallback = OnEvent;

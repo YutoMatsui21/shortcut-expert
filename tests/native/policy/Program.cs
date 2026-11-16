@@ -521,6 +521,7 @@ internal static partial class Program
         var taskbarSamples = TaskbarTests.Run(passed);
         var switchSamples = WindowSwitchTests.Run(passed);
         var captionSamples = InactiveCaptionTests.Run(passed);
+        IndependentCloseTests();
         var closeSamples = WindowCloseTests.Run(passed);
         var independentResultSamples = IndependentResultsTests.Run(passed);
         CheckIndependentDragDetectors();
