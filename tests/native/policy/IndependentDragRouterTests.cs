@@ -153,11 +153,15 @@ internal static partial class Program
                     var envelope = (CandidateEnvelope)output.Single();
                     if (mode == "same-half")
                     {
-                        Equal(true, envelope.evidence is PlacementEvidence);
+                        Equal(
+                            true,
+                            ((IndependentResultsEvidence)envelope.evidence).results.Single()
+                                is IndependentPlacementProof
+                        );
                         return;
                     }
                     var proofs = ((IndependentResultsEvidence)envelope.evidence).results;
-                    Equal(mode is "max" or "quarter" ? 2 : 1, proofs.Count);
+                    Equal(mode is "max" or "quarter" or "cross-half" ? 2 : 1, proofs.Count);
                     Equal(true, proofs[0] is IndependentMonitorMoveProof);
                     lines.Add(JsonSerializer.Serialize(envelope));
                 }

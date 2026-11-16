@@ -136,3 +136,45 @@ internal static partial class QuarterPlacementDetector
             : null;
     }
 }
+
+internal static partial class HalfPlacementDetector
+{
+    internal static IndependentPlacementProof? Drag(DragDetectionFacts f)
+    {
+        if (!f.Valid || !f.CaptionPress)
+            return null;
+        var evidence = PlacementGeometry.Drag(
+            f.Before,
+            f.After,
+            f.ReleasePoint,
+            f.ReleaseMonitor,
+            f.ReleaseWork,
+            f.StartAge,
+            true
+        );
+        return Proof(
+            evidence?.shape,
+            IndependentPlacementRoute.CaptionEdgeDrag,
+            f.StartAge,
+            f.After.Monitor
+        );
+    }
+
+    private static IndependentPlacementProof? Proof(
+        string? shape,
+        IndependentPlacementRoute route,
+        long age,
+        MonitorBounds? monitor
+    )
+    {
+        IndependentPlacementShape? half = shape switch
+        {
+            "left-half" => IndependentPlacementShape.LeftHalf,
+            "right-half" => IndependentPlacementShape.RightHalf,
+            _ => null,
+        };
+        return half is { } confirmed && monitor is not null
+            ? new(route, confirmed, true, true, age, monitor)
+            : null;
+    }
+}

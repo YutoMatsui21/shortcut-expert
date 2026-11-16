@@ -191,3 +191,19 @@ internal static partial class QuarterPlacementDetector
     private static bool VerticalMatches(KeyGestureSeries.TerminalFacts f, string shape) =>
         f.Vertical is not null && shape.EndsWith("-" + f.Vertical);
 }
+
+internal static partial class HalfPlacementDetector
+{
+    internal static IndependentPlacementProof? Key(KeyGestureSeries.TerminalFacts f)
+    {
+        string? shape = PlacementGeometry.Shape(f.After);
+        if (
+            shape == PlacementGeometry.Shape(f.Before)
+            || f.Horizontal is null
+            || f.Vertical is not null
+            || shape != f.Horizontal + "-half"
+        )
+            return null;
+        return Proof(shape, IndependentPlacementRoute.WinHeldArrows, f.Age, f.After.Monitor);
+    }
+}

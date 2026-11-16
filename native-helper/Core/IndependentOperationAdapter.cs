@@ -5,8 +5,6 @@ internal sealed class IndependentOperationAdapter
     private readonly CandidateTracker tracker;
     private readonly GestureManager gestures;
     private readonly OperationResultSession results;
-    private readonly CandidateSink sink;
-    private readonly Func<string> date;
     private readonly RestoreMinimizeDetector reduction = new();
 
     internal IndependentOperationAdapter(
@@ -18,9 +16,8 @@ internal sealed class IndependentOperationAdapter
     {
         this.tracker = tracker;
         gestures = tracker.Gestures;
-        this.sink = sink;
-        this.date = date ?? (() => DateTime.Now.ToString("yyyy-MM-dd"));
-        results = new(gestures, session, sink, this.date);
+        var currentDate = date ?? (() => DateTime.Now.ToString("yyyy-MM-dd"));
+        results = new(gestures, session, sink, currentDate);
     }
 
     internal void Observe(ObservedEvent e)
@@ -73,13 +70,11 @@ internal sealed class IndependentOperationAdapter
             e.At,
             MonitorMoveDetector.Drag(f),
             MaximizeDetector.Drag(f),
-            QuarterPlacementDetector.Drag(f)
+            QuarterPlacementDetector.Drag(f),
+            null,
+            HalfPlacementDetector.Drag(f)
         );
-        // Only same-monitor W06 can use its retained outlet.
-        return !(
-            input.Before.Monitor == after.Monitor
-            && PlacementGeometry.Shape(after)?.EndsWith("-half") == true
-        );
+        return true;
     }
 
     private bool MigratedInput(nint target) =>
@@ -155,24 +150,18 @@ internal sealed class IndependentOperationAdapter
         if (!tracker.Placement.ResultObserved(o.After!))
             return OperationDispatch.Pending;
         var facts = tracker.Placement.Terminal(o.Target, o.After, o.At, o.Injected);
-        bool accepted = results.Finish(
+        results.Finish(
             o.After!,
             o.At,
             null,
             MaximizeDetector.Key(gestures.Maximize, o.After!, o.At),
-            facts is null ? null : QuarterPlacementDetector.Key(facts)
+            facts is null ? null : QuarterPlacementDetector.Key(facts),
+            null,
+            facts is null ? null : HalfPlacementDetector.Key(facts)
         );
         gestures.Maximize = null;
-        RetireSeries(o, accepted);
+        tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
         return OperationDispatch.Consumed;
-    }
-
-    private void RetireSeries(OperationObservation o, bool accepted)
-    {
-        int generation = tracker.Placement.Input!.Gesture.Generation;
-        var retained = tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
-        if (accepted && retained is not null && retained.Evidence.shape.EndsWith("-half"))
-            sink.Placement(generation, date(), retained);
     }
 
     private OperationDispatch FinishStandalone(OperationObservation o)

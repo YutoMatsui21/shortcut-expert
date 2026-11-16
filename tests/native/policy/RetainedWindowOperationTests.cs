@@ -27,7 +27,14 @@ internal static partial class Program
                     Equal(1, legacy.Length);
                     Equal(1, migrated.Length);
                     if (mode == "half")
-                        Equal(true, legacy.SequenceEqual(migrated));
+                        Equal(
+                            true,
+                            ((IndependentResultsEvidence)migrated[0].evidence).results.Single()
+                                is IndependentPlacementProof
+                                {
+                                    shape: IndependentPlacementShape.LeftHalf
+                                }
+                        );
                     else
                     {
                         var proofs = (IndependentResultsEvidence)migrated[0].evidence;
