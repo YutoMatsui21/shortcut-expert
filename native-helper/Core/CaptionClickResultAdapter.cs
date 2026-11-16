@@ -1,7 +1,4 @@
-// Compatibility output for W01/W04 until their own migration. W03 is judged
-// independently; the shared Composer still owns one completion and one sink call.
-// Retaining caption-click also preserves unknown-arranged inactive clicks, which
-// the independent-results wire contract intentionally cannot represent for mouse.
+// Independent caption subscriptions share physical click facts and one completion barrier.
 internal sealed class CaptionClickResultAdapter
 {
     private readonly GestureManager gestures = new();
@@ -57,42 +54,15 @@ internal sealed class CaptionClickResultAdapter
             true,
             facts.Transaction
         );
-        var bridge = new CandidateSink(value =>
-        {
-            var envelope = (CandidateEnvelope)value;
-            var proofs = ((IndependentResultsEvidence)envelope.evidence).results;
-            string? terminal = proofs
-                .OfType<IndependentStateProof>()
-                .FirstOrDefault()
-                ?.action switch
-            {
-                IndependentStateAction.Maximize => "maximized",
-                IndependentStateAction.Minimize => "minimized",
-                _ => null,
-            };
-            sink.CaptionClick(
-                envelope.generation,
-                envelope.transaction,
-                envelope.date,
-                new(
-                    terminal,
-                    proofs.OfType<IndependentSwitchProof>().Any(),
-                    true,
-                    true,
-                    500,
-                    facts.Before.Monitor
-                )
-            );
-        });
-        bridge.Start(generation, 2);
-        var composer = new ResultComposer(session, gestures, bridge, () => now);
+        var composer = new ResultComposer(session, gestures, sink, () => now);
         long deadline = facts.At + 750;
         now = facts.At;
         pending = composer.Begin(
             new(input, date, deadline, () => true),
-            new[] { "maximize", "retained-switch", "retained-minimize" }.Select(
-                s => new ResultComposer.Subscription(s, deadline)
-            )
+            new[] { "maximize", "switch", "reduction" }.Select(s => new ResultComposer.Subscription(
+                s,
+                deadline
+            ))
         );
     }
 
@@ -120,37 +90,8 @@ internal sealed class CaptionClickResultAdapter
             "caption"
         );
         Finish("maximize", MaximizeDetector.InactiveClick(facts));
-        Finish(
-            "retained-switch",
-            facts.Activated
-                ? new IndependentSwitchProof(
-                    IndependentSwitchRoute.DirectClick,
-                    true,
-                    true,
-                    true,
-                    500,
-                    500,
-                    input.Before.Monitor
-                )
-                : null
-        );
-        Finish(
-            "retained-minimize",
-            facts.MatchedTerminal == "minimized"
-                ? new IndependentStateProof(
-                    IndependentStateRoute.MinButton,
-                    IndependentStateAction.Minimize,
-                    input.Before.Show == NativeMethods.SW_SHOWNORMAL
-                        ? IndependentBeforeState.Normal
-                        : IndependentBeforeState.Maximized,
-                    IndependentAfterState.Minimized,
-                    input.Before.Arranged,
-                    facts.After.Arranged,
-                    500,
-                    input.Before.Monitor
-                )
-                : null
-        );
+        Finish("switch", CaptionSwitchDetector.Detect(facts));
+        Finish("reduction", RestoreMinimizeDetector.InactiveClick(facts));
         pending.Seal();
         void Finish(string name, IndependentProof? proof)
         {

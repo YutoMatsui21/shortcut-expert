@@ -7,6 +7,9 @@ internal static partial class Program
     private static void IndependentInputTests()
     {
         IndependentCaptionTests();
+        IndependentSwitchTests();
+        IndependentReductionTests();
+        IndependentReductionSeriesTests();
         Equal(true, DetectionMigration.Enabled(null));
         Equal(true, DetectionMigration.Enabled("independent"));
         Equal(false, DetectionMigration.Enabled("legacy"));

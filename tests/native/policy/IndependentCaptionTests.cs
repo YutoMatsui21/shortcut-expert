@@ -23,20 +23,41 @@ internal static partial class Program
         )
             Check(
                 $"independent caption compatibility {hit}/{unknownArranged}/{mode}",
-                () =>
+                () => CheckCaptionCompatibility(hit, unknownArranged, mode)
+            );
+    }
+
+    private static void CheckCaptionCompatibility(int hit, bool unknownArranged, string mode)
+    {
+        var legacy = ReplayCaption(hit, unknownArranged, mode, false);
+        var migrated = ReplayCaption(hit, unknownArranged, mode, true);
+        Equal(legacy is null, migrated is null);
+        if (
+            legacy?.evidence is CaptionClickEvidence prior
+            && migrated?.evidence is IndependentResultsEvidence current
+        )
+        {
+            Equal(prior.switched, current.results.OfType<IndependentSwitchProof>().Any());
+            Equal(
+                prior.terminal == "maximized",
+                current
+                    .results.OfType<IndependentStateProof>()
+                    .Any(p => p.action == IndependentStateAction.Maximize)
+            );
+            Equal(
+                prior.terminal == "minimized",
+                current
+                    .results.OfType<IndependentStateProof>()
+                    .Any(p => p.action == IndependentStateAction.Minimize)
+            );
+        }
+        if (mode == "valid" && migrated is not null)
+            independentMouseSamples.Add(
+                new
                 {
-                    var legacy = ReplayCaption(hit, unknownArranged, mode, false);
-                    var migrated = ReplayCaption(hit, unknownArranged, mode, true);
-                    Equal(legacy, migrated);
-                    if (hit == HTMAXBUTTON && mode == "valid" && migrated is not null)
-                        independentMouseSamples.Add(
-                            new
-                            {
-                                line = System.Text.Json.JsonSerializer.Serialize(migrated),
-                                expected = new[] { "W01", "W03" },
-                                origin = "mouse",
-                            }
-                        );
+                    line = System.Text.Json.JsonSerializer.Serialize(migrated),
+                    expected = new[] { "W01", hit == HTMINBUTTON ? "W04" : "W03" },
+                    origin = "mouse",
                 }
             );
     }

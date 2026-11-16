@@ -19,13 +19,29 @@ internal static partial class Program
             }
         )
             Check(
-                "retained window parity " + mode,
+                "migrated window behavior " + mode,
                 () =>
                 {
                     var legacy = RetainedWindowCase(mode, false);
                     var migrated = RetainedWindowCase(mode, true);
                     Equal(1, legacy.Length);
-                    Equal(true, legacy.SequenceEqual(migrated));
+                    Equal(1, migrated.Length);
+                    if (mode == "half")
+                        Equal(true, legacy.SequenceEqual(migrated));
+                    else
+                    {
+                        var proofs = (IndependentResultsEvidence)migrated[0].evidence;
+                        Equal(1, proofs.results.Count);
+                        Equal(
+                            true,
+                            proofs.results[0]
+                                is IndependentStateProof
+                                {
+                                    action: IndependentStateAction.Restore
+                                        or IndependentStateAction.Minimize
+                                }
+                        );
+                    }
                 }
             );
     }
@@ -81,11 +97,15 @@ internal static partial class Program
         f.Press(t.Before, VK_DOWN, 10);
         f.State(t.After, 20, foreground: t.After.Show == SW_SHOWMINIMIZED ? 12 : 11);
         f.Release(VK_DOWN, 30);
+        if (f.Tracker.IndependentResults)
+            f.State(t.After, 31, foreground: t.After.Show == SW_SHOWMINIMIZED ? 12 : 11);
         if (mode != "key-grouped-down")
             return;
         f.Press(t.After, VK_DOWN, 40);
         f.State(t.After with { Show = SW_SHOWMINIMIZED }, 50, foreground: 12);
         f.Release(VK_DOWN, 60);
+        if (f.Tracker.IndependentResults)
+            f.State(t.After with { Show = SW_SHOWMINIMIZED }, 61, foreground: 12);
     }
 
     private static void ReplayRetainedMouse(

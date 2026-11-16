@@ -7,6 +7,7 @@ internal sealed class IndependentOperationAdapter
     private readonly OperationResultSession results;
     private readonly CandidateSink sink;
     private readonly Func<string> date;
+    private readonly RestoreMinimizeDetector reduction = new();
 
     internal IndependentOperationAdapter(
         CandidateTracker tracker,
@@ -35,7 +36,8 @@ internal sealed class IndependentOperationAdapter
                     tracker.Placement.Input
                     ?? gestures.Maximize
                     ?? (
-                        gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
+                        gestures.Pending
+                            is { Route: "win-shift-left" or "win-shift-right" or "win-down" } move
                             ? move
                             : null
                     );
@@ -92,9 +94,9 @@ internal sealed class IndependentOperationAdapter
             return false;
         return input.Route switch
         {
-            "win-shift-left" or "win-shift-right" => true,
-            "max-button" or "caption-double-click" or "unknown" => input.Before.Show
-                == SW_SHOWNORMAL,
+            "win-shift-left" or "win-shift-right" or "win-down" => true,
+            "min-button" => true,
+            "max-button" or "caption-double-click" or "unknown" => true,
             _ => false,
         };
     }
@@ -116,13 +118,11 @@ internal sealed class IndependentOperationAdapter
     }
 
     private bool OwnsObservation(OperationObservation observed) =>
-        gestures.Current?.Window == observed.Target
-        && MigratedInput(observed.Target)
-        && observed.After?.Show is not (SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE);
+        gestures.Current?.Window == observed.Target && MigratedInput(observed.Target);
 
     private bool ValidObservedWindow(OperationObservation o)
     {
-        if (o.After is not { } after || o.Foreground != o.Target || o.Injected)
+        if (o.After is not { } after || !HasForegroundResult(o))
             return false;
         if (after.Process != gestures.Current!.Start.State.Process)
             return false;
@@ -130,12 +130,22 @@ internal sealed class IndependentOperationAdapter
         return layout is null || after.DisplayLayout is null || layout == after.DisplayLayout;
     }
 
+    private static bool HasForegroundResult(OperationObservation observed) =>
+        !observed.Injected
+        && (
+            observed.Foreground == observed.Target
+            || CandidateTracker.State(observed.After!.Show) == "minimized"
+        );
+
+    private bool ReleasedStandaloneKey(bool monitorChord) =>
+        monitorChord || gestures.Pending?.Route == "win-down";
+
     private bool InputStillOpen(nint target)
     {
         if (gestures.Drags.ContainsKey(target) || gestures.Current?.ReleasedAt is null)
             return true;
         bool monitorChord = gestures.Pending is { Route: "win-shift-left" or "win-shift-right" };
-        return tracker.Placement.WinHeld && !monitorChord;
+        return tracker.Placement.WinHeld && !ReleasedStandaloneKey(monitorChord);
     }
 
     private OperationDispatch FinishSeries(OperationObservation o)
@@ -207,17 +217,22 @@ internal sealed class IndependentOperationAdapter
 
     private OperationDispatch FinishClick(GestureManager.Input input, OperationObservation o)
     {
-        if (!tracker.ClickReleased)
+        if (input.Origin != "key" && !tracker.ClickReleased)
             return OperationDispatch.Pending;
-        var proof = MaximizeDetector.Click(
+        var maximize = MaximizeDetector.Click(
             input,
             o.After!,
             o.At,
             !gestures.Moving.Contains(o.Target)
         );
-        if (proof is null)
+        bool moving = gestures.Moving.Contains(o.Target);
+        var facts = new ReductionFacts(input, o.After!, o.At, o.Foreground == o.Target, moving);
+        var reductionFacts = RestoreMinimizeDetector.Detect(facts);
+        if (maximize is null && reductionFacts is null)
             return OperationDispatch.Pending;
-        results.Finish(o.After!, o.At, null, proof, null);
+        var reduced = reduction.Select(input, reductionFacts, tracker.InputEpoch);
+        bool accepted = results.Finish(o.After!, o.At, null, maximize, null, reduced);
+        reduction.Completed(facts, reductionFacts, tracker.InputEpoch, accepted);
         gestures.Pending = null;
         return OperationDispatch.Consumed;
     }

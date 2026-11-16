@@ -132,6 +132,7 @@ internal sealed partial class CandidateTracker
 
     internal KeyGestureSeries Placement { get; }
     internal bool IndependentResults { get; set; }
+    internal long InputEpoch { get; private set; }
     internal bool MoveKeyReleased => moveKeyReleased;
     internal bool ClickReleased => clickReleased;
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
@@ -202,6 +203,7 @@ internal sealed partial class CandidateTracker
 
     internal void KeyReleased(uint key, long? now = null)
     {
+        ReleaseReductionKey(new(key, now));
         Placement.Released(key, now);
         if (!Placement.WinHeld && gestures.Current?.Source == "key")
             gestures.AwaitResult(gestures.Current, now);
@@ -215,6 +217,8 @@ internal sealed partial class CandidateTracker
 
     internal void ForegroundChanged(nint window)
     {
+        if (gestures.Current?.Window != window)
+            InputEpoch++;
         Placement.Foreground(window);
         if (gestures.Drags.Keys.Any(target => target != window))
             Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled);
@@ -225,6 +229,7 @@ internal sealed partial class CandidateTracker
 
     internal void Reset(int newGeneration)
     {
+        InputEpoch++;
         generation = newGeneration;
         sequence = 0;
         if (ownsSession)
@@ -248,6 +253,7 @@ internal sealed partial class CandidateTracker
 
     internal void ClearInput()
     {
+        InputEpoch++;
         if (gestures.Drags.Count > 0)
             Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled);
         Placement.Cancel();
@@ -257,6 +263,8 @@ internal sealed partial class CandidateTracker
 
     internal void Forget(nint window, bool preserveGesture = false)
     {
+        if (gestures.Current?.Window == window)
+            InputEpoch++;
         Placement.Forget(window);
         gestures.Forget(window, preserveGesture);
         if (completedWinDown?.Window == window)
@@ -338,6 +346,7 @@ internal sealed partial class CandidateTracker
         bool foreground
     )
     {
+        InputEpoch++;
         Placement.Cancel();
         gestures.Maximize = null;
         gestures.Drags.Clear();
@@ -409,6 +418,26 @@ internal sealed partial class CandidateTracker
         }
     }
 
+    private bool MouseInputConflict(long now) =>
+        gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
+
+    private void ReleaseReductionKey(KeySequenceRelease release)
+    {
+        if (!IndependentResults || release.Key != VK_DOWN)
+            return;
+        if (gestures.Pending is { Route: "win-down" } down)
+            gestures.AwaitResult(down.Gesture, release.At);
+    }
+
+    private void ObserveKeyEpoch(KeySequenceInput input)
+    {
+        if (!KeepsReductionSeries(input))
+            InputEpoch++;
+    }
+
+    private static bool KeepsReductionSeries(KeySequenceInput input) =>
+        !input.Injected && (input.Key is VK_LWIN or VK_RWIN || input.Route == "win-down");
+
     private void KeyCore(
         nint window,
         WindowState? before,
@@ -424,11 +453,9 @@ internal sealed partial class CandidateTracker
         gestures.Drags.Clear();
         gestures.Press = null;
         gestures.Release = null;
-        bool conflict =
-            gestures.Pending is not null
-            && gestures.Pending.Origin == "mouse"
-            && now - gestures.Pending.At <= InputMatchWindowMs;
+        bool conflict = MouseInputConflict(now);
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+        ObserveKeyEpoch(new(key, injected, KeyRoute(key, winDown, shiftDown, altDown, modifiers)));
         if (injected && key is VK_LWIN or VK_RWIN)
             injectedWin.Add(key);
         if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN))

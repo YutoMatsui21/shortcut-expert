@@ -13,6 +13,8 @@ internal sealed class GestureManager
 
     internal sealed record Snapshot(long At, WindowState State);
 
+    internal sealed record SwitchTarget(nint Window, Snapshot Observation);
+
     // In-memory facts only; ID is local and is deliberately independent of transaction numbering.
     internal sealed class Gesture(
         long id,
@@ -33,6 +35,10 @@ internal sealed class GestureManager
         internal string Source { get; } = source;
         internal Snapshot Start { get; } = start;
         internal Snapshot? End { get; set; }
+        internal SwitchTarget? ObservedSwitchTarget { get; set; }
+        internal nint ResultWindow => ObservedSwitchTarget?.Window ?? Window;
+        internal WindowState ResultIdentity =>
+            ObservedSwitchTarget?.Observation.State ?? Start.State;
         internal long? ReleasedAt { get; set; }
         internal nint? Foreground { get; set; }
         internal bool Injected { get; } = injected;
@@ -61,7 +67,7 @@ internal sealed class GestureManager
         bool CaptionPress = false
     )
     {
-        internal nint Window => Gesture.Window;
+        internal nint Window => Gesture.ResultWindow;
     }
 
     private int generation;
@@ -177,8 +183,8 @@ internal sealed class GestureManager
     {
         if (
             !Live(value)
-            || value!.Window != window
-            || value.Start.State.Process != after.Process
+            || value!.ResultWindow != window
+            || value.ResultIdentity.Process != after.Process
             || at < value.Start.At
         )
             return false;
@@ -186,6 +192,23 @@ internal sealed class GestureManager
         value.State = Phase.Completed;
         return true;
     }
+
+    // Switching observes a different target without replacing the physical input identity.
+    // Only switch adapters call this with eligible foreground facts, before completion.
+    internal bool ObserveSwitchTarget(Gesture value, nint window, WindowState state, long at)
+    {
+        if (!Live(value) || !ValidSwitchObservation(window, state, at, value.Start.At))
+            return false;
+        value.ObservedSwitchTarget = new(window, new(at, state));
+        return true;
+    }
+
+    private static bool ValidSwitchObservation(
+        nint window,
+        WindowState state,
+        long at,
+        long started
+    ) => window != 0 && state.Process != 0 && at >= started;
 
     internal bool Cancel(Gesture? value)
     {

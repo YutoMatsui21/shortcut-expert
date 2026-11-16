@@ -37,13 +37,30 @@ internal static partial class MaximizeDetector
         && (facts.Hit == HTMAXBUTTON || facts.Fallback && facts.Activated)
             ? new(
                 facts.Fallback
-                    ? IndependentStateRoute.MouseStateFallback
-                    : IndependentStateRoute.MaxButton,
+                    ? IndependentStateRoute.InactiveStateFallback
+                    : IndependentStateRoute.InactiveMaxButton,
                 IndependentStateAction.Maximize,
                 IndependentBeforeState.Normal,
                 IndependentAfterState.Maximized,
                 facts.Press.Before.Arranged,
                 facts.After.Arranged,
+                500,
+                facts.Press.Before.Monitor
+            )
+            : null;
+}
+
+// Foreground confirmation survives the target minimizing; no state detector verdict is read.
+internal static class CaptionSwitchDetector
+{
+    internal static IndependentSwitchProof? Detect(CaptionCompletionFacts facts) =>
+        facts.Activated
+            ? new(
+                IndependentSwitchRoute.DirectClick,
+                true,
+                true,
+                true,
+                500,
                 500,
                 facts.Press.Before.Monitor
             )

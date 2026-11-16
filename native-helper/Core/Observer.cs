@@ -76,8 +76,13 @@ internal sealed class Observer : IDisposable
         captionClick.Diagnostic = windowDiagnostic;
         taskbar = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds);
         switching = new(
-            protocol,
-            NextTransaction,
+            new WindowSwitchDetector(
+                session,
+                protocol,
+                router,
+                NextTransaction,
+                new(this.independentDetection, windowDiagnostic)
+            ),
             () => clock.ElapsedMilliseconds,
             windowDiagnostic
         );

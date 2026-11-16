@@ -7,6 +7,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile
+      Include="../../../native-helper/Detectors/WindowSwitchDetector.cs"
+      Link="WindowSwitchDetector.cs"
+    />
+    <Compile Include="../../../native-helper/Core/SwitchFactsEvent.cs" Link="SwitchFactsEvent.cs" />
+    <Compile
+      Include="../../../native-helper/Detectors/RestoreMinimizeDetector.cs"
+      Link="RestoreMinimizeDetector.cs"
+    />
+    <Compile
       Include="../../../native-helper/Core/CandidateTracker.InputFacts.cs"
       Link="CandidateTracker.InputFacts.cs"
     />

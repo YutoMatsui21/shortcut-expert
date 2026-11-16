@@ -128,10 +128,7 @@ function stateFields(value: ObjectValue): boolean {
     oneOf(value.before, "normal maximized") &&
     nullableBoolean(value.beforeArranged) &&
     nullableBoolean(value.afterArranged) &&
-    integer(
-      value.inputAgeMs,
-      value.route === "mouse-state-fallback" ? 500 : 1000,
-    ) &&
+    integer(value.inputAgeMs, stateInputLimit(value.route)) &&
     nullableBounds(value.monitor)
   );
 }
@@ -139,15 +136,29 @@ function maximizeState(value: ObjectValue, origin: Origin): boolean {
   const inputValid = originRoute(
     value.route,
     origin,
-    "max-button caption-double-click caption-top-drag mouse-state-fallback",
+    "max-button caption-double-click caption-top-drag mouse-state-fallback inactive-max-button inactive-state-fallback",
     "win-up",
   );
-  const startKnown = origin !== "mouse" || value.beforeArranged !== null;
   return (
     value.before === "normal" &&
     value.after === "maximized" &&
     inputValid &&
-    startKnown
+    knownMaximizeStart(value, origin)
+  );
+}
+function stateInputLimit(route: unknown): number {
+  return oneOf(
+    route,
+    "mouse-state-fallback inactive-max-button inactive-min-button inactive-state-fallback",
+  )
+    ? 500
+    : 1000;
+}
+function knownMaximizeStart(value: ObjectValue, origin: Origin): boolean {
+  return (
+    origin !== "mouse" ||
+    value.beforeArranged !== null ||
+    oneOf(value.route, "inactive-max-button inactive-state-fallback")
   );
 }
 function restoreState(value: ObjectValue, origin: Origin): boolean {
@@ -171,7 +182,7 @@ function minimizeState(value: ObjectValue, origin: Origin): boolean {
     originRoute(
       value.route,
       origin,
-      "min-button mouse-state-fallback",
+      "min-button mouse-state-fallback inactive-min-button inactive-state-fallback",
       "win-down",
     )
   );

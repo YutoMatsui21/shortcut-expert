@@ -124,6 +124,15 @@ internal enum IndependentMoveDirection
 [JsonConverter(typeof(JsonStringEnumConverter<IndependentStateRoute>))]
 internal enum IndependentStateRoute
 {
+    [JsonStringEnumMemberName("inactive-max-button")]
+    InactiveMaxButton,
+
+    [JsonStringEnumMemberName("inactive-min-button")]
+    InactiveMinButton,
+
+    [JsonStringEnumMemberName("inactive-state-fallback")]
+    InactiveStateFallback,
+
     [JsonStringEnumMemberName("max-button")]
     MaxButton,
 
