@@ -163,30 +163,40 @@ internal sealed class WindowCloseDetector(
     internal void Poll(bool exists, bool sameIdentity, long at)
     {
         if (policy.DestroyPending)
-        {
-            var before = input;
-            var completed = policy.ConfirmGone(exists, sameIdentity, at);
-            Complete(completed, at);
-            if (before is not null && policy.Target is null && completed is null)
-                diagnostic?.Invoke(CloseReason.PollCancel);
-        }
+            ConfirmDisappearance(exists, sameIdentity, at);
         else
-        {
-            policy.Poll(!exists || sameIdentity, at);
-            if (policy.Target is null && input is not null)
-            {
-                diagnostic?.Invoke(CloseReason.PollCancel);
-                Cancel();
-            }
-        }
+            CheckIdentityAndDeadline(exists, sameIdentity, at);
+    }
+
+    private void ConfirmDisappearance(bool exists, bool sameIdentity, long at)
+    {
+        var before = input;
+        var completed = policy.ConfirmGone(exists, sameIdentity, at);
+        Complete(completed, at);
+        if (before is not null && policy.Target is null && completed is null)
+            diagnostic?.Invoke(CloseReason.PollCancel);
+    }
+
+    private void CheckIdentityAndDeadline(bool exists, bool sameIdentity, long at)
+    {
+        policy.Poll(!exists || sameIdentity, at);
+        if (policy.Target is not null || input is null)
+            return;
+        diagnostic?.Invoke(CloseReason.PollCancel);
+        Cancel();
+    }
+
+    private void RetireIfTargetGone()
+    {
+        if (policy.Target is null)
+            RetireCancelledInput();
     }
 
     private void Complete(CloseCompletion? completed, long at)
     {
         if (completed is null)
         {
-            if (policy.Target is null && input is not null)
-                Cancel();
+            RetireIfTargetGone();
             return;
         }
         if (input is null || pending is null)
