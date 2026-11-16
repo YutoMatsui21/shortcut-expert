@@ -435,7 +435,7 @@ internal sealed partial class CandidateTracker
         gestures.Release = null;
         bool conflict = MouseInputConflict(now);
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
-        ObserveKeyEpoch(key, injected, KeyRoute(key, winDown, shiftDown, altDown, modifiers));
+        ObserveKeyEpoch(new(key, injected, KeyRoute(key, winDown, shiftDown, altDown, modifiers)));
         if (injected && key is VK_LWIN or VK_RWIN)
             injectedWin.Add(key);
         if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN))

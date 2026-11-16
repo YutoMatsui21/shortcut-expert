@@ -95,14 +95,14 @@ internal sealed partial class CandidateTracker
     private bool MouseInputConflict(long now) =>
         gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
 
-    private void ObserveKeyEpoch(uint key, bool injected, string? route)
+    private void ObserveKeyEpoch(KeySequenceInput input)
     {
-        if (!KeepsReductionSeries(key, injected, route))
+        if (!KeepsReductionSeries(input))
             InputEpoch++;
     }
 
-    private static bool KeepsReductionSeries(uint key, bool injected, string? route) =>
-        !injected && (key is VK_LWIN or VK_RWIN || route == "win-down");
+    private static bool KeepsReductionSeries(KeySequenceInput input) =>
+        !input.Injected && (input.Key is VK_LWIN or VK_RWIN || input.Route == "win-down");
 
     private void ReleaseReductionKey(uint key, long? now)
     {
@@ -112,3 +112,6 @@ internal sealed partial class CandidateTracker
             gestures.AwaitResult(down.Gesture, now);
     }
 }
+
+// Normalized physical key facts used by shared sequence lifetime tracking.
+internal readonly record struct KeySequenceInput(uint Key, bool Injected, string? Route);
