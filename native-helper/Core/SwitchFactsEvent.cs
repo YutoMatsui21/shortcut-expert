@@ -33,7 +33,17 @@ internal sealed record SwitchForegroundEvent(
     uint EventTick,
     bool KnownSwitcher = false,
     bool KnownStaging = false
-) : SwitchFactsEvent(Generation, Target, At);
+) : SwitchFactsEvent(Generation, Target, At)
+{
+    internal SwitchWindow? EligibleTarget()
+    {
+        if (Target != CurrentWindow)
+            return null;
+        if (unchecked((int)(EventTick - InputTick)) < 0)
+            return null;
+        return Current;
+    }
+}
 
 internal sealed record SwitchPollEvent(
     int Generation,

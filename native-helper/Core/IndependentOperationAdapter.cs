@@ -122,11 +122,7 @@ internal sealed class IndependentOperationAdapter
 
     private bool ValidObservedWindow(OperationObservation o)
     {
-        if (
-            o.After is not { } after
-            || o.Injected
-            || o.Foreground != o.Target && CandidateTracker.State(after.Show) != "minimized"
-        )
+        if (o.After is not { } after || !HasForegroundResult(o))
             return false;
         if (after.Process != gestures.Current!.Start.State.Process)
             return false;
@@ -134,12 +130,22 @@ internal sealed class IndependentOperationAdapter
         return layout is null || after.DisplayLayout is null || layout == after.DisplayLayout;
     }
 
+    private static bool HasForegroundResult(OperationObservation observed) =>
+        !observed.Injected
+        && (
+            observed.Foreground == observed.Target
+            || CandidateTracker.State(observed.After!.Show) == "minimized"
+        );
+
+    private bool ReleasedStandaloneKey(bool monitorChord) =>
+        monitorChord || gestures.Pending?.Route == "win-down";
+
     private bool InputStillOpen(nint target)
     {
         if (gestures.Drags.ContainsKey(target) || gestures.Current?.ReleasedAt is null)
             return true;
         bool monitorChord = gestures.Pending is { Route: "win-shift-left" or "win-shift-right" };
-        return tracker.Placement.WinHeld && !monitorChord && gestures.Pending?.Route != "win-down";
+        return tracker.Placement.WinHeld && !ReleasedStandaloneKey(monitorChord);
     }
 
     private OperationDispatch FinishSeries(OperationObservation o)
@@ -220,18 +226,13 @@ internal sealed class IndependentOperationAdapter
             !gestures.Moving.Contains(o.Target)
         );
         bool moving = gestures.Moving.Contains(o.Target);
-        var reductionFacts = RestoreMinimizeDetector.Detect(
-            input,
-            o.After!,
-            o.At,
-            o.Foreground == o.Target,
-            moving
-        );
+        var facts = new ReductionFacts(input, o.After!, o.At, o.Foreground == o.Target, moving);
+        var reductionFacts = RestoreMinimizeDetector.Detect(facts);
         if (maximize is null && reductionFacts is null)
             return OperationDispatch.Pending;
         var reduced = reduction.Select(input, reductionFacts, tracker.InputEpoch);
         bool accepted = results.Finish(o.After!, o.At, null, maximize, null, reduced);
-        reduction.Completed(input, o.After!, reductionFacts, tracker.InputEpoch, accepted);
+        reduction.Completed(facts, reductionFacts, tracker.InputEpoch, accepted);
         gestures.Pending = null;
         return OperationDispatch.Consumed;
     }

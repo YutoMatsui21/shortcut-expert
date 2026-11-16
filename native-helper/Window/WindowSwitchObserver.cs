@@ -6,24 +6,12 @@ using Point = NativeMethods.Point;
 
 // Uses the existing message-thread hooks. No window identity or raw input crosses the protocol.
 internal sealed class WindowSwitchObserver(
-    CandidateSink protocol,
-    Func<int> transaction,
+    WindowSwitchDetector detector,
     Func<long> now,
-    DetectionSession session,
-    DetectionRouter router,
-    bool independent = true,
     Action<WindowDiagnosticReason>? diagnostic = null
 ) : IDisposable
 {
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 50 };
-    private readonly WindowSwitchDetector detector = new(
-        session,
-        protocol,
-        router,
-        transaction,
-        independent,
-        diagnostic
-    );
     private WindowSwitchPolicy policy => detector.Policy;
     private int generation;
     private uint inputTick;
@@ -285,25 +273,30 @@ internal sealed class WindowSwitchObserver(
         try
         {
             Neutral();
-            var current = policy.Pending ? Read(GetForegroundWindow()) : null;
-            if (current is not null && Read(GetForegroundWindow()) != current)
-            {
-                detector.Cancel();
-                return;
-            }
-            detector.Dispatch(
-                new SwitchPollEvent(
-                    generation,
-                    now(),
-                    current,
-                    current is null ? null : DisplayContext.Monitor(current.Handle)
-                )
-            );
+            PollForeground();
         }
         catch
         {
             detector.Cancel();
         }
+    }
+
+    private void PollForeground()
+    {
+        var current = policy.Pending ? Read(GetForegroundWindow()) : null;
+        if (current is not null && Read(GetForegroundWindow()) != current)
+        {
+            detector.Cancel();
+            return;
+        }
+        detector.Dispatch(
+            new SwitchPollEvent(
+                generation,
+                now(),
+                current,
+                current is null ? null : DisplayContext.Monitor(current.Handle)
+            )
+        );
     }
 
     public void Dispose()

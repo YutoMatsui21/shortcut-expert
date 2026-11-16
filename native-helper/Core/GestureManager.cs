@@ -197,11 +197,18 @@ internal sealed class GestureManager
     // Only switch adapters call this with eligible foreground facts, before completion.
     internal bool ObserveSwitchTarget(Gesture value, nint window, WindowState state, long at)
     {
-        if (!Live(value) || window == 0 || state.Process == 0 || at < value.Start.At)
+        if (!Live(value) || !ValidSwitchObservation(window, state, at, value.Start.At))
             return false;
         value.ObservedSwitchTarget = new(window, new(at, state));
         return true;
     }
+
+    private static bool ValidSwitchObservation(
+        nint window,
+        WindowState state,
+        long at,
+        long started
+    ) => window != 0 && state.Process != 0 && at >= started;
 
     internal bool Cancel(Gesture? value)
     {

@@ -12,7 +12,11 @@ internal static partial class Program
                     var f = RestoredReductionFixture();
                     f.Router.Dispatch(new ObservedEvent(ObservedKind.Destroy, 1, destroyed, 50));
                     var before = IndependentNormal();
-                    CompleteReductionKey(f, before, before with { Show = SW_SHOWMINIMIZED }, 100);
+                    CompleteReductionKey(
+                        f,
+                        new(before, before with { Show = SW_SHOWMINIMIZED }),
+                        100
+                    );
                     Equal(destroyed == 11 ? 2 : 1, f.Output.Count);
                 }
             );
@@ -22,7 +26,7 @@ internal static partial class Program
             {
                 var f = RestoredReductionFixture();
                 var before = IndependentNormal() with { Show = SW_SHOWMAXIMIZED };
-                CompleteReductionKey(f, before, before with { Show = SW_SHOWMINIMIZED }, 100);
+                CompleteReductionKey(f, new(before, before with { Show = SW_SHOWMINIMIZED }), 100);
                 Equal(2, f.Output.Count);
             }
         );
@@ -44,23 +48,22 @@ internal static partial class Program
 
     private static void CompleteReductionKey(
         IndependentRouterFixture f,
-        WindowState before,
-        WindowState after,
+        WindowTransition transition,
         long at,
         nint target = 11
     )
     {
-        f.Press(before, VK_DOWN, at, target: target);
+        f.Press(transition.Before, VK_DOWN, at, target: target);
         f.Release(VK_DOWN, at + 10);
-        f.State(after, at + 20, target, target);
-        f.State(after, at + 30, target, target);
+        f.State(transition.After, at + 20, target, target);
+        f.State(transition.After, at + 30, target, target);
     }
 
     private static IndependentRouterFixture RestoredReductionFixture()
     {
         var f = new IndependentRouterFixture();
         var before = IndependentNormal() with { Show = SW_SHOWMAXIMIZED };
-        CompleteReductionKey(f, before, IndependentNormal(), 10);
+        CompleteReductionKey(f, new(before, IndependentNormal()), 10);
         Equal(1, f.Output.Count);
         return f;
     }
@@ -69,7 +72,7 @@ internal static partial class Program
     {
         var f = RestoredReductionFixture();
         var before = IndependentNormal();
-        CompleteReductionKey(f, before, before with { Show = SW_SHOWMINIMIZED }, 10 + gap);
+        CompleteReductionKey(f, new(before, before with { Show = SW_SHOWMINIMIZED }), 10 + gap);
         Equal(gap == 1000 ? 1 : 2, f.Output.Count);
     }
 
@@ -80,11 +83,7 @@ internal static partial class Program
         var before = IndependentNormal();
         CompleteReductionKey(
             f,
-            before,
-            before with
-            {
-                Show = SW_SHOWMINIMIZED,
-            },
+            new(before, before with { Show = SW_SHOWMINIMIZED }),
             100,
             interrupt == "target" ? 12 : 11
         );

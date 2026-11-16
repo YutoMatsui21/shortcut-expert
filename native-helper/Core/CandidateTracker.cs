@@ -203,8 +203,7 @@ internal sealed partial class CandidateTracker
 
     internal void KeyReleased(uint key, long? now = null)
     {
-        if (IndependentResults && key == VK_DOWN && gestures.Pending is { Route: "win-down" } down)
-            gestures.AwaitResult(down.Gesture, now);
+        ReleaseReductionKey(key, now);
         Placement.Released(key, now);
         if (!Placement.WinHeld && gestures.Current?.Source == "key")
             gestures.AwaitResult(gestures.Current, now);
@@ -434,19 +433,9 @@ internal sealed partial class CandidateTracker
         gestures.Drags.Clear();
         gestures.Press = null;
         gestures.Release = null;
-        bool conflict =
-            gestures.Pending is not null
-            && gestures.Pending.Origin == "mouse"
-            && now - gestures.Pending.At <= InputMatchWindowMs;
+        bool conflict = MouseInputConflict(now);
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
-        if (
-            injected
-            || (
-                key is not (VK_LWIN or VK_RWIN)
-                && KeyRoute(key, winDown, shiftDown, altDown, modifiers) != "win-down"
-            )
-        )
-            InputEpoch++;
+        ObserveKeyEpoch(key, injected, KeyRoute(key, winDown, shiftDown, altDown, modifiers));
         if (injected && key is VK_LWIN or VK_RWIN)
             injectedWin.Add(key);
         if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN))

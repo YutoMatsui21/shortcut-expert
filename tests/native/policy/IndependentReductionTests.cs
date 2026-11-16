@@ -33,11 +33,14 @@ internal static partial class Program
         if (mode == "process")
             after = after with { Process = 8 };
         f.State(after, mode == "expired" ? 1011 : 40, foreground: mode == "foreign" ? 12 : 11);
-        bool valid = mode == "valid" || mode == "foreign" && route == "minimize";
+        bool valid = ValidReductionResult(route, mode);
         Equal(valid ? 1 : 0, f.Output.Count);
         if (valid)
             AssertReduction(f, route, after);
     }
+
+    private static bool ValidReductionResult(string route, string mode) =>
+        mode == "valid" || mode == "foreign" && route == "minimize";
 
     private static void PressReduction(IndependentRouterFixture f, WindowState before, string route)
     {

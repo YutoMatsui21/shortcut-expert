@@ -91,14 +91,15 @@ function representativeMonitorShortcut(
 
 function stateShortcut(proof: StateProof): string | null {
   if (proof.action === "maximize") return "Win + ↑";
-  if (
-    proof.action === "restore" ||
+  if (proof.action === "restore") return "Win + ↓";
+  return hasReductionShortcut(proof) ? "Win + ↓" : null;
+}
+
+function hasReductionShortcut(proof: StateProof): boolean {
+  return (
     proof.beforeArranged === false ||
-    proof.route === "inactive-min-button" ||
-    proof.route === "inactive-state-fallback"
-  )
-    return "Win + ↓";
-  return null;
+    ["inactive-min-button", "inactive-state-fallback"].includes(proof.route)
+  );
 }
 
 function placementObservation(

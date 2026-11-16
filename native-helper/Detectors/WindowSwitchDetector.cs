@@ -4,6 +4,12 @@ using static NativeMethods;
 // supply verdicts here; taskbar/close foreground changes cannot start an input.
 internal sealed class WindowSwitchDetector
 {
+    internal sealed record Options(
+        bool Independent = true,
+        Action<WindowDiagnosticReason>? Diagnostic = null,
+        Func<string>? Date = null
+    );
+
     private readonly DetectionSession session;
     private readonly CandidateSink sink;
     private readonly DetectionRouter router;
@@ -22,18 +28,17 @@ internal sealed class WindowSwitchDetector
         CandidateSink sink,
         DetectionRouter router,
         Func<int> transaction,
-        bool independent = true,
-        Action<WindowDiagnosticReason>? diagnostic = null,
-        Func<string>? date = null
+        Options? options = null
     )
     {
         this.session = session;
         this.sink = sink;
         this.router = router;
         this.transaction = transaction;
-        this.independent = independent;
-        this.date = date ?? (() => DateTime.Now.ToString("yyyy-MM-dd"));
-        Policy = new() { Diagnostic = diagnostic };
+        options ??= new();
+        independent = options.Independent;
+        date = options.Date ?? (() => DateTime.Now.ToString("yyyy-MM-dd"));
+        Policy = new() { Diagnostic = options.Diagnostic };
         router.Subscribe(
             new[] { ObservedKind.SwitchFacts },
             (e, _) => Observe((SwitchFactsEvent)e)
@@ -66,7 +71,18 @@ internal sealed class WindowSwitchDetector
 
     private void Observe(SwitchFactsEvent facts)
     {
+        if (facts is SwitchPollEvent poll)
+        {
+            Poll(poll);
+            return;
+        }
         bool wasPending = Policy.Pending;
+        ObserveInput(facts);
+        UpdateInputLifetime(wasPending);
+    }
+
+    private void ObserveInput(SwitchFactsEvent facts)
+    {
         switch (facts)
         {
             case SwitchNeutralEvent e:
@@ -81,14 +97,20 @@ internal sealed class WindowSwitchDetector
             case SwitchForegroundEvent e:
                 Foreground(e);
                 break;
-            case SwitchPollEvent e:
-                Poll(e);
-                return;
         }
+    }
+
+    private void UpdateInputLifetime(bool wasPending)
+    {
         if (!wasPending && Policy.Pending)
             Begin();
         if (input is not null && Policy.ReleasedAt is { } released)
             gestures.AwaitResult(input.Gesture, released);
+        RetireCancelledInput();
+    }
+
+    private void RetireCancelledInput()
+    {
         if (!Policy.Pending)
         {
             gestures.Cancel(input?.Gesture);
@@ -129,26 +151,27 @@ internal sealed class WindowSwitchDetector
             e.KnownSwitcher,
             e.KnownStaging
         );
-        if (
-            input is not null
-            && Policy.Pending
-            && e.Current is { } current
-            && e.Target == e.CurrentWindow
-            && unchecked((int)(e.EventTick - e.InputTick)) >= 0
-        )
+        if (input is null || !Policy.Pending)
+            return;
+        if (e.EligibleTarget() is { } current)
             gestures.ObserveSwitchTarget(input.Gesture, current.Handle, State(current), e.At);
     }
 
     private void Poll(SwitchPollEvent e)
     {
         var completed = Policy.Poll(e.Current, e.At);
-        if (completed is not null && lease?.Invoke() == true && input is not null)
-            Publish(completed, e);
-        if (!Policy.Pending)
-        {
-            gestures.Cancel(input?.Gesture);
-            input = null;
-        }
+        if (completed is not null)
+            PublishIfCurrent(completed, e);
+        RetireCancelledInput();
+    }
+
+    private void PublishIfCurrent(SwitchCompletion completed, SwitchPollEvent e)
+    {
+        if (input is null)
+            return;
+        if (lease?.Invoke() != true)
+            return;
+        Publish(completed, e);
     }
 
     private void Publish(SwitchCompletion completed, SwitchPollEvent e)

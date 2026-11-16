@@ -128,13 +128,7 @@ function stateFields(value: ObjectValue): boolean {
     oneOf(value.before, "normal maximized") &&
     nullableBoolean(value.beforeArranged) &&
     nullableBoolean(value.afterArranged) &&
-    integer(
-      value.inputAgeMs,
-      value.route === "mouse-state-fallback" ||
-        String(value.route).startsWith("inactive-")
-        ? 500
-        : 1000,
-    ) &&
+    integer(value.inputAgeMs, stateInputLimit(value.route)) &&
     nullableBounds(value.monitor)
   );
 }
@@ -145,16 +139,26 @@ function maximizeState(value: ObjectValue, origin: Origin): boolean {
     "max-button caption-double-click caption-top-drag mouse-state-fallback inactive-max-button inactive-state-fallback",
     "win-up",
   );
-  const startKnown =
-    origin !== "mouse" ||
-    value.beforeArranged !== null ||
-    value.route === "inactive-max-button" ||
-    value.route === "inactive-state-fallback";
   return (
     value.before === "normal" &&
     value.after === "maximized" &&
     inputValid &&
-    startKnown
+    knownMaximizeStart(value, origin)
+  );
+}
+function stateInputLimit(route: unknown): number {
+  return oneOf(
+    route,
+    "mouse-state-fallback inactive-max-button inactive-min-button inactive-state-fallback",
+  )
+    ? 500
+    : 1000;
+}
+function knownMaximizeStart(value: ObjectValue, origin: Origin): boolean {
+  return (
+    origin !== "mouse" ||
+    value.beforeArranged !== null ||
+    oneOf(value.route, "inactive-max-button inactive-state-fallback")
   );
 }
 function restoreState(value: ObjectValue, origin: Origin): boolean {

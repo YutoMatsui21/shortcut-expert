@@ -91,4 +91,24 @@ internal sealed partial class CandidateTracker
         )
             gestures.AwaitResult(move.Gesture, now);
     }
+
+    private bool MouseInputConflict(long now) =>
+        gestures.Pending is { Origin: "mouse" } pending && now - pending.At <= InputMatchWindowMs;
+
+    private void ObserveKeyEpoch(uint key, bool injected, string? route)
+    {
+        if (!KeepsReductionSeries(key, injected, route))
+            InputEpoch++;
+    }
+
+    private static bool KeepsReductionSeries(uint key, bool injected, string? route) =>
+        !injected && (key is VK_LWIN or VK_RWIN || route == "win-down");
+
+    private void ReleaseReductionKey(uint key, long? now)
+    {
+        if (!IndependentResults || key != VK_DOWN)
+            return;
+        if (gestures.Pending is { Route: "win-down" } down)
+            gestures.AwaitResult(down.Gesture, now);
+    }
 }
