@@ -228,10 +228,10 @@ internal static partial class Program
 
         private void PressKeys()
         {
-            Detector.Key(VK_LWIN, true, false, false);
-            Detector.Key(0x31, true, mode == "injected", mode == "modifier");
+            Detector.Key(new(VK_LWIN, true, false, false));
+            Detector.Key(new(0x31, true, mode == "injected", mode == "modifier"));
             if (mode == "repeat")
-                Detector.Key(0x31, true, false, false);
+                Detector.Key(new(0x31, true, false, false));
             switching.Dispatch(new SwitchKeyEvent(1, 100, VK_LWIN, true, false, new(12, 8)));
             switching.Dispatch(new SwitchKeyEvent(1, 100, 0x31, true, false, null));
         }

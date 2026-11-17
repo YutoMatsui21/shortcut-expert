@@ -1,6 +1,6 @@
 import { readFile, writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
-import { classify } from "../core/detector.ts";
+import { classifyGesture } from "../core/detector.ts";
 import type {
   Snapshot,
   LearningState,
@@ -10,6 +10,7 @@ import type {
 } from "../shared/coach.ts";
 import { learningState } from "../shared/learning.ts";
 import type { WindowDiagnosticCounts } from "../shared/window-diagnostics.ts";
+import { taskbarCandidateSlot } from "./taskbar-candidate.ts";
 
 type Plan = {
   kind: "mouse" | "key" | "negative";
@@ -91,10 +92,8 @@ export class NaturalInputTrials {
     if (
       this.operation === "W12" &&
       this.active &&
-      value.protocolVersion === 2 &&
-      value.evidence.kind === "taskbar-input" &&
-      classify(value) &&
-      value.evidence.slot !== this.active.plan.slot
+      classifyGesture(value).some((item) => item.operation === "W12") &&
+      taskbarCandidateSlot(value) !== this.active.plan.slot
     )
       this.active.wrongSlot = true;
   }

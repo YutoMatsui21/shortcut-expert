@@ -9,12 +9,13 @@ import { SqliteRepository } from "../../src/main/sqlite-repository.ts";
 import type { Snapshot } from "../../src/shared/coach.ts";
 import {
   taskbarFixture,
+  independentTaskbarFixture,
   snapFixture,
   candidateFixture,
   v2Fixture,
 } from "../support/fixtures.ts";
 
-function harness() {
+function harness(operation: "W08" | "W12" = "W08") {
   const snapshot: Snapshot = {
     counts: {},
     settings: { muted: [], opened: true },
@@ -26,23 +27,26 @@ function harness() {
   let starts = 0,
     stops = 0,
     now = 0;
-  const trials = new NaturalInputTrials({
-    snapshot: () => snapshot,
-    idle: async () => {},
-    now: () => now,
-    start: async (paused) => {
-      starts++;
-      snapshot.observing = true;
-      snapshot.notificationsPaused = paused;
+  const trials = new NaturalInputTrials(
+    {
+      snapshot: () => snapshot,
+      idle: async () => {},
+      now: () => now,
+      start: async (paused) => {
+        starts++;
+        snapshot.observing = true;
+        snapshot.notificationsPaused = paused;
+      },
+      stop: async () => {
+        stops++;
+        snapshot.observing = false;
+      },
+      configure: async (state) => {
+        snapshot.settings.states = { [operation]: state };
+      },
     },
-    stop: async () => {
-      stops++;
-      snapshot.observing = false;
-    },
-    configure: async (state) => {
-      snapshot.settings.states = { W08: state };
-    },
-  });
+    operation,
+  );
   return {
     snapshot,
     trials,
@@ -284,4 +288,25 @@ test("real DurableCoach/SQLite: apply pause after begin, ignore W03 requests and
   coach.stop(); // actual production publish during a manually interrupted trial
   await trials.finish(true);
   assert.equal((trials.results.at(-1) as { valid: boolean }).valid, false);
+});
+
+test("W12 natural harness checks slots in legacy and independent evidence without notification", async () => {
+  for (const fixture of [taskbarFixture, independentTaskbarFixture])
+    for (const origin of ["mouse", "key"] as const)
+      for (const slot of [1, 10]) {
+        const h = harness("W12");
+        await h.trials.arm({ ...plan, kind: origin, paused: true, slot: 10 });
+        h.trials.candidate(fixture(origin, 1, slot));
+        h.snapshot.counts["2026-10-21"] = {
+          W12: {
+            mouse: origin === "mouse" ? 1 : 0,
+            key: origin === "key" ? 1 : 0,
+          },
+        };
+        await h.trials.finish(true);
+        assert.equal(
+          (h.trials.results[0] as { slotMatched: boolean }).slotMatched,
+          slot === 10,
+        );
+      }
 });

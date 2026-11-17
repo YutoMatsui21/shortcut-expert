@@ -89,37 +89,39 @@ test("native counters are copied into the active trial without changing its acce
 });
 
 test("W12 validates the candidate slot even without a notification; midnight invalidates the trial", async () => {
-  const { taskbarFixture } = await import("../support/fixtures.ts");
-  for (const kind of ["key", "mouse"] as const) {
-    const h = harness();
-    await h.trials.arm({
-      ...plan,
-      caseId: kind === "key" ? "P12k" : "P12m",
-      slot: 10,
-      state: "excluded",
-    });
-    h.trials.candidate(taskbarFixture(kind, 1, 1));
-    h.snapshot.counts["2026-10-30"] = {
-      W12: { mouse: kind === "mouse" ? 1 : 0, key: kind === "key" ? 1 : 0 },
-    };
-    await h.trials.finish(true, confirmation);
-    assert.equal(h.trials.results[0].slotMatched, false);
-    assert.equal(h.trials.results[0].recordsPassed, false);
-    const good = harness();
-    await good.trials.arm({
-      ...plan,
-      caseId: kind === "key" ? "P12k" : "P12m",
-      slot: 10,
-      state: "excluded",
-    });
-    good.trials.candidate(taskbarFixture(kind, 1, 10));
-    good.snapshot.counts["2026-10-30"] = {
-      W12: { mouse: kind === "mouse" ? 1 : 0, key: kind === "key" ? 1 : 0 },
-    };
-    await good.trials.finish(true, confirmation);
-    assert.equal(good.trials.results[0].slotMatched, true);
-    assert.equal(good.trials.results[0].recordsPassed, true);
-  }
+  const { taskbarFixture, independentTaskbarFixture } =
+    await import("../support/fixtures.ts");
+  for (const fixture of [taskbarFixture, independentTaskbarFixture])
+    for (const kind of ["key", "mouse"] as const) {
+      const h = harness();
+      await h.trials.arm({
+        ...plan,
+        caseId: kind === "key" ? "P12k" : "P12m",
+        slot: 10,
+        state: "excluded",
+      });
+      h.trials.candidate(fixture(kind, 1, 1));
+      h.snapshot.counts["2026-10-30"] = {
+        W12: { mouse: kind === "mouse" ? 1 : 0, key: kind === "key" ? 1 : 0 },
+      };
+      await h.trials.finish(true, confirmation);
+      assert.equal(h.trials.results[0].slotMatched, false);
+      assert.equal(h.trials.results[0].recordsPassed, false);
+      const good = harness();
+      await good.trials.arm({
+        ...plan,
+        caseId: kind === "key" ? "P12k" : "P12m",
+        slot: 10,
+        state: "excluded",
+      });
+      good.trials.candidate(fixture(kind, 1, 10));
+      good.snapshot.counts["2026-10-30"] = {
+        W12: { mouse: kind === "mouse" ? 1 : 0, key: kind === "key" ? 1 : 0 },
+      };
+      await good.trials.finish(true, confirmation);
+      assert.equal(good.trials.results[0].slotMatched, true);
+      assert.equal(good.trials.results[0].recordsPassed, true);
+    }
   const h = harness();
   await h.trials.arm({ ...plan, caseId: "P03k" });
   h.day("2026-10-31");

@@ -120,7 +120,6 @@ internal static partial class Program
         try
         {
             CheckSessionAllocator();
-            IndependentTaskbarTests();
             Check(
                 "max button + same target + result",
                 () =>
@@ -509,6 +508,7 @@ internal static partial class Program
 
     private static void RunAdditionalPolicyTests()
     {
+        IndependentTaskbarTests();
         var windowStateSamples = CheckWindowStates();
         var placementSamples = CheckPlacement();
         CheckMonitorMoves();

@@ -105,6 +105,35 @@ export function taskbarFixture(
     },
   };
 }
+export function independentTaskbarFixture(
+  origin: "mouse" | "key" = "mouse",
+  sequence = 1,
+  slot = 10,
+): CandidateV2 {
+  const legacy = taskbarFixture(origin, sequence, slot);
+  return {
+    ...legacy,
+    route: "independent-results",
+    evidence: {
+      kind: "independent-results",
+      profile: "independent-results-v1",
+      targetMatched: true,
+      released: true,
+      final: true,
+      results: [
+        {
+          kind: "taskbar",
+          route: origin === "mouse" ? "taskbar-click" : "win-digit",
+          slot,
+          mappingConfirmed: true,
+          snapshotAgeMs: 200,
+          confirmationAgeMs: 250,
+          monitor: { x: 0, y: 0, width: 1920, height: 1080 },
+        },
+      ],
+    },
+  };
+}
 export function snapFixture(
   origin: "mouse" | "key" = "mouse",
   sequence = 1,

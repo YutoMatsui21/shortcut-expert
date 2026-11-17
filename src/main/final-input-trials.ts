@@ -18,6 +18,7 @@ import {
   finalCandidateDiagnostics,
   type FinalDiagnosticKey,
 } from "./final-input-diagnostics.ts";
+import { taskbarCandidateSlot } from "./taskbar-candidate.ts";
 
 type Plan = {
   caseId: string;
@@ -151,8 +152,7 @@ export class FinalInputTrials {
       if (
         item.operation === "W12" &&
         trial.definition.records.includes("W12") &&
-        (value.evidence.kind !== "taskbar-input" ||
-          value.evidence.slot !== trial.plan.slot)
+        taskbarCandidateSlot(value) !== trial.plan.slot
       )
         trial.slotMatched = false;
     }

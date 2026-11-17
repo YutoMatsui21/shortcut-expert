@@ -64,7 +64,7 @@ internal sealed class TaskbarInputObserver(TaskbarDetector detector, Func<long> 
         if (generation == 0)
             return;
         bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
-        detector.Key(key, down, injected, Modifiers());
+        detector.Key(new(key, down, injected, Modifiers()));
         if (down)
             nextQuery = now();
     }

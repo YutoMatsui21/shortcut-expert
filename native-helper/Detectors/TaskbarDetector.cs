@@ -9,6 +9,8 @@ internal sealed class TaskbarDetector(
     Func<string>? date = null
 )
 {
+    internal sealed record KeyFacts(uint Key, bool Down, bool Injected, bool Modifiers);
+
     internal sealed record MouseFacts(
         nint Message,
         Point Point,
@@ -79,8 +81,9 @@ internal sealed class TaskbarDetector(
 
     internal void Neutral(bool released) => keys.Neutral(released);
 
-    internal void Key(uint key, bool down, bool injected, bool modifiers)
+    internal void Key(KeyFacts facts)
     {
+        var (key, down, injected, modifiers) = facts;
         if (generation == 0)
             return;
         if (down)
