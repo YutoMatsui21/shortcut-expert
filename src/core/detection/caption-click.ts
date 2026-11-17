@@ -7,22 +7,10 @@ export function classifyCaptionClick(
 ): Observation[] {
   const e = value.evidence;
   if (
-    e.profile !== "caption-click-v1" ||
-    !validDate(value.date) ||
-    value.origin !== "mouse" ||
-    value.route !== "inactive-caption-click" ||
-    value.injected ||
-    value.conflicted ||
-    !e.targetMatched ||
-    !e.released ||
-    !Number.isFinite(e.inputAgeMs) ||
-    e.inputAgeMs < 0 ||
-    e.inputAgeMs > 500 ||
-    !(
-      e.terminal === null ||
-      e.terminal === "maximized" ||
-      e.terminal === "minimized"
-    )
+    invalidCaptionContext(value) ||
+    invalidCaptionProof(value) ||
+    invalidCaptionTiming(value) ||
+    invalidCaptionTerminal(value)
   )
     return [];
   const base = {
@@ -41,4 +29,45 @@ export function classifyCaptionClick(
       shortcut: e.terminal === "maximized" ? "Win + ↑" : "Win + ↓",
     });
   return results;
+}
+
+function invalidCaptionContext(
+  value: EvidenceCandidate<"caption-click">,
+): boolean {
+  const e = value.evidence;
+  return (
+    e.profile !== "caption-click-v1" ||
+    !validDate(value.date) ||
+    value.origin !== "mouse" ||
+    value.route !== "inactive-caption-click" ||
+    value.injected
+  );
+}
+
+function invalidCaptionProof(
+  value: EvidenceCandidate<"caption-click">,
+): boolean {
+  const e = value.evidence;
+  return value.conflicted || !e.targetMatched;
+}
+
+function invalidCaptionTiming(
+  value: EvidenceCandidate<"caption-click">,
+): boolean {
+  const e = value.evidence;
+  return !e.released || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0;
+}
+
+function invalidCaptionTerminal(
+  value: EvidenceCandidate<"caption-click">,
+): boolean {
+  const e = value.evidence;
+  return (
+    e.inputAgeMs > 500 ||
+    !(
+      e.terminal === null ||
+      e.terminal === "maximized" ||
+      e.terminal === "minimized"
+    )
+  );
 }

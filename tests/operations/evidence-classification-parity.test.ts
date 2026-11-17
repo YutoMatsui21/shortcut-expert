@@ -24,48 +24,10 @@ function legacy(proof: IndependentProof): CandidateV2 {
       };
       break;
     case "monitor-move":
-      evidence = {
-        kind: "window",
-        profile: "legacy-window-v1",
-        result: {
-          app: "ordinary-window",
-          operation: "monitor-move",
-          before: { state: "normal", arranged: false },
-          after: { state: "normal" },
-          moving: false,
-          elevated: false,
-          targetMatched: true,
-          inputAgeMs: proof.inputAgeMs,
-          monitor: proof.toMonitor,
-          afterArranged: false,
-          fromMonitor: proof.fromMonitor,
-          toMonitor: proof.toMonitor,
-          moveDirection: proof.moveDirection,
-          moveConfirmed: true,
-          twoDisplayLayoutConfirmed: proof.twoDisplayLayoutConfirmed,
-        },
-      };
+      evidence = monitorEvidence(proof);
       break;
     case "state":
-      evidence = {
-        kind: "window",
-        profile: "legacy-window-v1",
-        result: {
-          app: "ordinary-window",
-          operation: proof.action,
-          before: { state: proof.before, arranged: proof.beforeArranged },
-          after: { state: proof.after },
-          moving: false,
-          elevated: false,
-          targetMatched: true,
-          inputAgeMs: proof.inputAgeMs,
-          monitor: proof.monitor,
-          afterArranged: proof.afterArranged,
-          fromMonitor: proof.monitor,
-          toMonitor: proof.monitor,
-          moveDirection: null,
-        },
-      };
+      evidence = stateEvidence(proof);
       break;
     case "placement":
       evidence = {
@@ -176,3 +138,53 @@ test("caption and drag compounds preserve ordered observations and single-entry 
     assert.deepEqual(classifyGesture({ ...value, injected: true }), []);
   }
 });
+
+function monitorEvidence(
+  proof: Extract<IndependentProof, { kind: "monitor-move" }>,
+): Evidence {
+  return {
+    kind: "window",
+    profile: "legacy-window-v1",
+    result: {
+      app: "ordinary-window",
+      operation: "monitor-move",
+      before: { state: "normal", arranged: false },
+      after: { state: "normal" },
+      moving: false,
+      elevated: false,
+      targetMatched: true,
+      inputAgeMs: proof.inputAgeMs,
+      monitor: proof.toMonitor,
+      afterArranged: false,
+      fromMonitor: proof.fromMonitor,
+      toMonitor: proof.toMonitor,
+      moveDirection: proof.moveDirection,
+      moveConfirmed: true,
+      twoDisplayLayoutConfirmed: proof.twoDisplayLayoutConfirmed,
+    },
+  };
+}
+
+function stateEvidence(
+  proof: Extract<IndependentProof, { kind: "state" }>,
+): Evidence {
+  return {
+    kind: "window",
+    profile: "legacy-window-v1",
+    result: {
+      app: "ordinary-window",
+      operation: proof.action,
+      before: { state: proof.before, arranged: proof.beforeArranged },
+      after: { state: proof.after },
+      moving: false,
+      elevated: false,
+      targetMatched: true,
+      inputAgeMs: proof.inputAgeMs,
+      monitor: proof.monitor,
+      afterArranged: proof.afterArranged,
+      fromMonitor: proof.monitor,
+      toMonitor: proof.monitor,
+      moveDirection: null,
+    },
+  };
+}

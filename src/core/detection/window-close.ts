@@ -7,18 +7,10 @@ export function classifyWindowClose(
 ): Observation | null {
   const e = value.evidence;
   if (
-    !validDate(value.date) ||
-    value.injected ||
-    value.conflicted ||
-    !e.targetMatched ||
-    !e.destroyed ||
-    e.profile !== "window-close-v1" ||
-    !Number.isFinite(e.inputAgeMs) ||
-    e.inputAgeMs < 0 ||
-    e.inputAgeMs > 1000 ||
-    (value.origin === "mouse"
-      ? value.route !== "close-button"
-      : value.origin !== "key" || value.route !== "alt-f4")
+    invalidCloseContext(value) ||
+    invalidCloseProof(value) ||
+    invalidCloseTiming(value) ||
+    invalidCloseRoute(value)
   )
     return null;
   return {
@@ -29,4 +21,30 @@ export function classifyWindowClose(
     shortcut: "Alt + F4",
     monitor: e.monitor,
   };
+}
+
+function invalidCloseContext(
+  value: EvidenceCandidate<"window-close">,
+): boolean {
+  const e = value.evidence;
+  return !validDate(value.date) || value.injected || value.conflicted;
+}
+
+function invalidCloseProof(value: EvidenceCandidate<"window-close">): boolean {
+  const e = value.evidence;
+  return !e.targetMatched || !e.destroyed || e.profile !== "window-close-v1";
+}
+
+function invalidCloseTiming(value: EvidenceCandidate<"window-close">): boolean {
+  const e = value.evidence;
+  return (
+    !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0 || e.inputAgeMs > 1000
+  );
+}
+
+function invalidCloseRoute(value: EvidenceCandidate<"window-close">): boolean {
+  const e = value.evidence;
+  return value.origin === "mouse"
+    ? value.route !== "close-button"
+    : value.origin !== "key" || value.route !== "alt-f4";
 }

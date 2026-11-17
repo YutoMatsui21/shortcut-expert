@@ -1,8 +1,8 @@
 import type {
   WindowEvidenceResult,
+  Bounds,
   ObserverCandidate,
   Observation,
-  OperationId,
 } from "../../shared/coach.ts";
 import { validDate } from "../dates.ts";
 import { sameMonitor, separateMonitors } from "../monitor-geometry.ts";
@@ -27,162 +27,259 @@ export function classifyWindow(
     : null;
 }
 
-function classifyWindowResult(
-  candidate: WindowEvidenceResult &
-    Pick<
-      ObserverCandidate,
-      | "generation"
-      | "sequence"
-      | "date"
-      | "origin"
-      | "route"
-      | "injected"
-      | "conflicted"
-    >,
-): Observation | null {
+type WindowCandidate = WindowEvidenceResult &
+  Pick<
+    ObserverCandidate,
+    | "generation"
+    | "sequence"
+    | "date"
+    | "origin"
+    | "route"
+    | "injected"
+    | "conflicted"
+  >;
+type ClassifiedWindow = Pick<Observation, "operation" | "shortcut">;
+
+function classifyWindowResult(candidate: WindowCandidate): Observation | null {
   if (
+    invalidWindowIdentity(candidate) ||
+    invalidWindowInput(candidate) ||
+    invalidWindowTiming(candidate)
+  )
+    return null;
+  const result = windowOperation(candidate);
+  if (!result) return null;
+  return {
+    id: `${candidate.generation}:${candidate.sequence}`,
+    ...result,
+    origin: candidate.origin === "key" ? "key" : "mouse",
+    date: candidate.date,
+    monitor: candidate.monitor,
+  };
+}
+
+function windowOperation(candidate: WindowCandidate): ClassifiedWindow | null {
+  switch (candidate.operation) {
+    case "maximize":
+      return maximizeWindow(candidate);
+    case "minimize":
+      return minimizeWindow(candidate);
+    case "restore":
+      return restoreWindow(candidate);
+    case "close":
+      return closeWindow(candidate);
+    case "monitor-move":
+      return moveWindow(candidate);
+    default:
+      return null;
+  }
+}
+function matchesRoute(
+  candidate: WindowCandidate,
+  mouse: string[],
+  key: string[],
+): boolean {
+  return candidate.origin === "mouse"
+    ? mouse.includes(candidate.route)
+    : key.includes(candidate.route);
+}
+
+function maximizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  if (
+    invalidMaximizeStart(candidate) ||
+    !matchesRoute(
+      candidate,
+      [
+        "max-button",
+        "caption-double-click",
+        "caption-top-drag",
+        "mouse-state-fallback",
+      ],
+      ["win-up"],
+    )
+  )
+    return null;
+  if (invalidMaximizeDrag(candidate)) return null;
+  // Representative maximize key, not a promise to reproduce the initial snap layout.
+  return { operation: "W03", shortcut: "Win + ↑" };
+}
+
+function minimizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  let operation: Observation["operation"];
+  let shortcut: string | null;
+  if (
+    !["normal", "maximized"].includes(candidate.before.state) ||
+    candidate.after.state !== "minimized" ||
+    !matchesRoute(
+      candidate,
+      ["min-button", "mouse-state-fallback"],
+      ["win-down"],
+    )
+  )
+    return null;
+  shortcut = candidate.before.arranged === false ? "Win + ↓" : null;
+  if (candidate.origin === "key" && shortcut === null) return null;
+  operation = "W04";
+  return { operation, shortcut };
+}
+
+function restoreWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  if (
+    candidate.before.state !== "maximized" ||
+    candidate.after.state !== "normal" ||
+    candidate.afterArranged !== false ||
+    !matchesRoute(
+      candidate,
+      ["max-button", "caption-double-click", "mouse-state-fallback"],
+      ["win-down"],
+    )
+  )
+    return null;
+  return { operation: "W04", shortcut: "Win + ↓" };
+}
+
+function closeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  if (
+    !["normal", "maximized"].includes(candidate.before.state) ||
+    candidate.after.state !== "closed" ||
+    !matchesRoute(candidate, ["close-button"], ["alt-f4"])
+  )
+    return null;
+  return { operation: "W11", shortcut: "Alt + F4" };
+}
+
+function moveWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  let operation: Observation["operation"];
+  let shortcut: string | null;
+  const from = candidate.fromMonitor,
+    to = candidate.toMonitor;
+  if (
+    candidate.moveConfirmed !== true ||
+    !from ||
+    !to ||
+    sameMonitor(from, to) ||
+    invalidMoveStates(candidate) ||
+    !matchesRoute(
+      candidate,
+      ["caption-drag"],
+      ["win-shift-left", "win-shift-right"],
+    )
+  )
+    return null;
+  if (invalidMoveDirection(candidate.moveDirection)) return null;
+  operation = "W02";
+  shortcut = moveShortcut(candidate, from, to);
+  return { operation, shortcut };
+}
+
+function invalidWindowIdentity(candidate: WindowCandidate): boolean {
+  return (
     !validDate(candidate.date) ||
     !Number.isSafeInteger(candidate.sequence) ||
     candidate.sequence < 1 ||
     !["ordinary-window", "chrome", "obsidian", "code", "chatgpt"].includes(
       candidate.app,
-    ) ||
+    )
+  );
+}
+function invalidWindowInput(candidate: WindowCandidate): boolean {
+  return (
     candidate.elevated !== false ||
     candidate.injected ||
     candidate.conflicted ||
     candidate.moving ||
     !candidate.targetMatched ||
+    !["mouse", "key"].includes(candidate.origin)
+  );
+}
+function invalidWindowTiming(candidate: WindowCandidate): boolean {
+  return (
     candidate.inputAgeMs < 0 ||
     candidate.inputAgeMs > 1000 ||
-    (candidate.route === "mouse-state-fallback" &&
-      candidate.inputAgeMs > 500) ||
-    !["mouse", "key"].includes(candidate.origin)
+    (candidate.route === "mouse-state-fallback" && candidate.inputAgeMs > 500)
+  );
+}
+function maximizedMove(candidate: WindowCandidate): boolean {
+  return (
+    candidate.before.state === "maximized" &&
+    candidate.after.state === "maximized"
+  );
+}
+function invalidMouseMoveTerminal(candidate: WindowCandidate): boolean {
+  return (
+    candidate.origin === "mouse" &&
+    !maximizedMove(candidate) &&
+    (candidate.after.state !== "normal" || candidate.afterArranged !== false)
+  );
+}
+function invalidMoveStates(candidate: WindowCandidate): boolean {
+  return (
+    candidate.before.state === "minimized" ||
+    invalidMouseMoveTerminal(candidate) ||
+    !["normal", "maximized"].includes(candidate.before.state) ||
+    !["normal", "maximized"].includes(candidate.after.state)
+  );
+}
+function invalidMoveDirection(
+  direction: WindowCandidate["moveDirection"],
+): boolean {
+  return (
+    direction !== undefined &&
+    direction !== null &&
+    direction !== "left" &&
+    direction !== "right"
+  );
+}
+function moveDirectionEquivalent(
+  candidate: WindowCandidate,
+  from: Bounds,
+  to: Bounds,
+): boolean {
+  const direction = candidate.moveDirection;
+  const routeMatches =
+    candidate.origin !== "key" || candidate.route === `win-shift-${direction}`;
+  return (
+    !!direction &&
+    from.y === to.y &&
+    directionGeometry(direction, from, to) &&
+    routeMatches
+  );
+}
+function directionGeometry(
+  direction: "left" | "right",
+  from: Bounds,
+  to: Bounds,
+): boolean {
+  return direction === "left"
+    ? to.x + to.width <= from.x
+    : from.x + from.width <= to.x;
+}
+function moveShortcut(
+  candidate: WindowCandidate,
+  from: Bounds,
+  to: Bounds,
+): string | null {
+  if (moveDirectionEquivalent(candidate, from, to))
+    return `Win + Shift + ${candidate.moveDirection === "left" ? "←" : "→"}`;
+  if (
+    candidate.twoDisplayLayoutConfirmed !== true ||
+    !separateMonitors(from, to)
   )
     return null;
-  let operation: OperationId;
-  let shortcut: string | null;
-  const route = (mouse: string[], key: string[]) =>
-    candidate.origin === "mouse"
-      ? mouse.includes(candidate.route)
-      : key.includes(candidate.route);
-  switch (candidate.operation) {
-    case "maximize":
-      if (
-        candidate.before.state !== "normal" ||
-        (candidate.before.arranged === null && candidate.origin !== "key") ||
-        candidate.after.state !== "maximized" ||
-        !route(
-          [
-            "max-button",
-            "caption-double-click",
-            "caption-top-drag",
-            "mouse-state-fallback",
-          ],
-          ["win-up"],
-        )
-      )
-        return null;
-      if (
-        candidate.route === "caption-top-drag" &&
-        (!candidate.fromMonitor ||
-          !candidate.toMonitor ||
-          !sameMonitor(candidate.fromMonitor, candidate.toMonitor))
-      )
-        return null;
-      operation = "W03";
-      // Representative maximize key, not a promise to reproduce the initial snap layout.
-      shortcut = "Win + ↑";
-      break;
-    case "minimize":
-      if (
-        !["normal", "maximized"].includes(candidate.before.state) ||
-        candidate.after.state !== "minimized" ||
-        !route(["min-button", "mouse-state-fallback"], ["win-down"])
-      )
-        return null;
-      shortcut = candidate.before.arranged === false ? "Win + ↓" : null;
-      if (candidate.origin === "key" && shortcut === null) return null;
-      operation = "W04";
-      break;
-    case "restore":
-      if (
-        candidate.before.state !== "maximized" ||
-        candidate.after.state !== "normal" ||
-        candidate.afterArranged !== false ||
-        !route(
-          ["max-button", "caption-double-click", "mouse-state-fallback"],
-          ["win-down"],
-        )
-      )
-        return null;
-      operation = "W04";
-      shortcut = "Win + ↓";
-      break;
-    case "close":
-      if (
-        !["normal", "maximized"].includes(candidate.before.state) ||
-        candidate.after.state !== "closed" ||
-        !route(["close-button"], ["alt-f4"])
-      )
-        return null;
-      operation = "W11";
-      shortcut = "Alt + F4";
-      break;
-    case "monitor-move": {
-      const from = candidate.fromMonitor,
-        to = candidate.toMonitor;
-      if (
-        candidate.moveConfirmed !== true ||
-        !from ||
-        !to ||
-        sameMonitor(from, to) ||
-        candidate.before.state === "minimized" ||
-        (candidate.origin === "mouse" &&
-          !(
-            candidate.before.state === "maximized" &&
-            candidate.after.state === "maximized"
-          ) &&
-          (candidate.after.state !== "normal" ||
-            candidate.afterArranged !== false)) ||
-        !["normal", "maximized"].includes(candidate.before.state) ||
-        !["normal", "maximized"].includes(candidate.after.state) ||
-        !route(["caption-drag"], ["win-shift-left", "win-shift-right"])
-      )
-        return null;
-      const direction = candidate.moveDirection;
-      if (
-        direction !== undefined &&
-        direction !== null &&
-        direction !== "left" &&
-        direction !== "right"
-      )
-        return null;
-      const equivalent =
-        direction &&
-        from.y === to.y &&
-        (direction === "left"
-          ? to.x + to.width <= from.x
-          : from.x + from.width <= to.x) &&
-        (candidate.origin !== "key" ||
-          candidate.route === `win-shift-${direction}`);
-      operation = "W02";
-      shortcut = equivalent
-        ? `Win + Shift + ${direction === "left" ? "←" : "→"}`
-        : candidate.twoDisplayLayoutConfirmed === true &&
-            separateMonitors(from, to)
-          ? `Win + Shift + ${candidate.origin === "key" && candidate.route === "win-shift-right" ? "→" : "←"}`
-          : null;
-      break;
-    }
-    default:
-      return null;
-  }
-  return {
-    id: `${candidate.generation}:${candidate.sequence}`,
-    operation,
-    origin: candidate.origin === "key" ? "key" : "mouse",
-    date: candidate.date,
-    shortcut,
-    monitor: candidate.monitor,
-  };
+  return `Win + Shift + ${candidate.origin === "key" && candidate.route === "win-shift-right" ? "→" : "←"}`;
+}
+function invalidMaximizeStart(candidate: WindowCandidate): boolean {
+  return (
+    candidate.before.state !== "normal" ||
+    (candidate.before.arranged === null && candidate.origin !== "key") ||
+    candidate.after.state !== "maximized"
+  );
+}
+function invalidMaximizeDrag(candidate: WindowCandidate): boolean {
+  return (
+    candidate.route === "caption-top-drag" &&
+    (!candidate.fromMonitor ||
+      !candidate.toMonitor ||
+      !sameMonitor(candidate.fromMonitor, candidate.toMonitor))
+  );
 }

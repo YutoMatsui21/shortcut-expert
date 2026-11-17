@@ -8,26 +8,10 @@ export function classifyCompoundDrag(
 ): Observation[] {
   const e = value.evidence;
   if (
-    e.profile !== "compound-drag-v1" ||
-    !validDate(value.date) ||
-    value.origin !== "mouse" ||
-    value.route !== "compound-caption-drag" ||
-    value.injected ||
-    value.conflicted ||
-    !e.targetMatched ||
-    !e.released ||
-    !e.layoutStable ||
-    !Number.isFinite(e.inputAgeMs) ||
-    e.inputAgeMs < 0 ||
-    e.inputAgeMs > 1000 ||
-    sameMonitor(e.fromMonitor, e.toMonitor) ||
-    ![
-      "maximized",
-      "left-top",
-      "right-top",
-      "left-bottom",
-      "right-bottom",
-    ].includes(e.terminal)
+    invalidDragContext(value) ||
+    invalidDragProof(value) ||
+    invalidDragTiming(value) ||
+    invalidDragTerminal(value)
   )
     return [];
   const equivalent =
@@ -64,4 +48,44 @@ export function classifyCompoundDrag(
           : `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`,
     },
   ];
+}
+
+function invalidDragContext(
+  value: EvidenceCandidate<"compound-drag">,
+): boolean {
+  const e = value.evidence;
+  return (
+    e.profile !== "compound-drag-v1" ||
+    !validDate(value.date) ||
+    value.origin !== "mouse" ||
+    value.route !== "compound-caption-drag" ||
+    value.injected
+  );
+}
+
+function invalidDragProof(value: EvidenceCandidate<"compound-drag">): boolean {
+  const e = value.evidence;
+  return value.conflicted || !e.targetMatched || !e.released;
+}
+
+function invalidDragTiming(value: EvidenceCandidate<"compound-drag">): boolean {
+  const e = value.evidence;
+  return !e.layoutStable || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0;
+}
+
+function invalidDragTerminal(
+  value: EvidenceCandidate<"compound-drag">,
+): boolean {
+  const e = value.evidence;
+  return (
+    e.inputAgeMs > 1000 ||
+    sameMonitor(e.fromMonitor, e.toMonitor) ||
+    ![
+      "maximized",
+      "left-top",
+      "right-top",
+      "left-bottom",
+      "right-bottom",
+    ].includes(e.terminal)
+  );
 }
