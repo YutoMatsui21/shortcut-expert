@@ -508,6 +508,7 @@ internal static partial class Program
 
     private static void RunAdditionalPolicyTests()
     {
+        IndependentTaskbarTests();
         var windowStateSamples = CheckWindowStates();
         var placementSamples = CheckPlacement();
         CheckMonitorMoves();

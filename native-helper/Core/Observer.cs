@@ -75,7 +75,10 @@ internal sealed class Observer : IDisposable
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
-        taskbar = new(protocol, NextTransaction, () => clock.ElapsedMilliseconds);
+        taskbar = new(
+            new TaskbarDetector(session, protocol, () => clock.ElapsedMilliseconds),
+            () => clock.ElapsedMilliseconds
+        );
         switching = new(
             new WindowSwitchDetector(
                 session,

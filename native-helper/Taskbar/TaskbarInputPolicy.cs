@@ -117,14 +117,16 @@ internal sealed class TaskbarConfirmation
 
     internal void Clear() => pending.Clear();
 
+    internal static bool Valid(TaskbarPending value) =>
+        value.Snapshot.Error is null
+        && value.Snapshot.Root != 0
+        && value.Slot >= 1
+        && value.Slot <= Math.Min(10, value.Snapshot.Items.Length)
+        && value.At - value.SnapshotAt is >= 0 and <= 750;
+
     internal void Add(TaskbarPending value)
     {
-        if (
-            value.Snapshot.Error is not null
-            || value.Slot < 1
-            || value.Slot > Math.Min(10, value.Snapshot.Items.Length)
-            || value.At - value.SnapshotAt is < 0 or > 750
-        )
+        if (!Valid(value))
             return;
         if (pending.Count >= 16)
         {
