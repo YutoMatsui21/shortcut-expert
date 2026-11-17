@@ -1,5 +1,5 @@
-// Preserve W12 -> W01 input ordering. Each observer keeps its own target reads,
-// timers, UIA worker, admission and W01/W12 exclusion. No arbitration lives in the router.
+// Preserve W12 -> W01 input ordering. Each OS adapter keeps its own target reads,
+// timers and UIA worker; independent detectors own admission and source exclusion. No arbitration lives in the router.
 internal sealed class DedicatedInputAdapter(
     TaskbarInputObserver taskbar,
     WindowSwitchObserver switching

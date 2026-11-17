@@ -188,3 +188,11 @@ W04はRestoreMinimizeDetectorが共通入力と結果を照合する。物理解
 WindowCloseObserverはOS観測と50ms timerを担当する。Raw入力は専用のRouter購読から受け、WindowCloseDetectorが既存WindowClosePolicyの入力・対象identity・native tick・DESTROY・有界消滅確認を管理する。Switch/Tracker/Taskbarの内部状態には依存しない。HIDEやforeground変更のみでは成立せず、既存の確認ダイアログ取消・HWND再利用・1000ms期限を維持する。
 
 共通Gestureに入力由来と解放／Alt+F4成立時刻を保持し、session leaseとComposerにより単一のclose Proofを送る。Stop/Reset・同一世代の再開始・取消で保留を失効させる。W01は共通Gestureの閉鎖由来を参照して閉鎖後の前面変更を流用せず、次の別入力では由来を退役する。旧window-closeはfixture／読み取り互換として残す。実入力と実OS通知の受入は#186に残す。
+
+## W12の独立Detector移行（#184）
+
+`DedicatedInputAdapter → TaskbarInputObserver → TaskbarDetector → ResultComposer → CandidateSink`が本番経路。ObserverはhookのOS事実取得、単一UIA workerの起動・timeout・message-loop上の完了回収を保持する。Detectorはキー系列、同一アイコンのdown/up、前後snapshot照合と期限を所有し、入力ごとにGestureManagerの結果待ち・終端を管理する。複数の保留入力は互いのGestureを置き換えず、上限16件を維持する。
+
+照会はDetector revisionとDetectionSessionのleaseを捕捉し、Stop/Reset後の旧完了は同じgenerationでも破棄する。UIA確認までは送信せず、root/processと項目の一致後に`independent-results`の`taskbar`証拠を一度だけ発行する。旧Taskbar直接送信は本番から呼ばない。W01はタスクバークラスとWin+数字を入力源で除外する既存経路を維持し、W12の成立・不成立・UIA待機を参照しない。
+
+`IndependentTaskbarTests.cs`とNative→TS→SQLite／通知の共通試験で正常・遅延・失敗・stale・取消・Stop/Reset・重複完了を検証する。人工fixtureの結果は自然入力・実OS通知の受入を示さない。

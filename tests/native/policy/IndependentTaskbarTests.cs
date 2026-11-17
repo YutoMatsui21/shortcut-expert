@@ -1,0 +1,288 @@
+using static NativeMethods;
+
+internal static partial class Program
+{
+    private static void IndependentTaskbarTests()
+    {
+        foreach (string origin in new[] { "mouse", "key" })
+        {
+            foreach (
+                string mode in new[]
+                {
+                    "valid",
+                    "delay",
+                    "unknown",
+                    "slot",
+                    "stale",
+                    "failure",
+                    "reorder",
+                    "early",
+                    "timeout",
+                    "stop",
+                    "reset",
+                    "lease",
+                    "process",
+                    "cancel",
+                }
+            )
+                Check(
+                    $"independent taskbar {origin}/{mode}",
+                    () => new TaskbarReplay(origin, mode).ConfirmAdmission()
+                );
+            foreach (
+                string mode in new[]
+                {
+                    "valid",
+                    "repeat",
+                    "injected",
+                    "modifier",
+                    "unknown",
+                    "delay",
+                    "failure",
+                    "cancel",
+                    "root",
+                    "unreleased",
+                }
+            )
+                Check(
+                    $"taskbar input and W01 exclusion {origin}/{mode}",
+                    () => new TaskbarReplay(origin, mode).ReplayInput()
+                );
+        }
+        Check(
+            "old UIA completion cannot resolve a new gesture after same-generation reset",
+            TaskbarResetCompletion
+        );
+        Check("taskbar pending overflow cancels all results", TaskbarPendingOverflow);
+        Check(
+            "taskbar retains distinct pending gestures and consumes completions once",
+            TaskbarConcurrentInputs
+        );
+    }
+
+    private static void TaskbarConcurrentInputs()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        replay.Add();
+        replay.At = 110;
+        replay.Add();
+        replay.At = 200;
+        var query = replay.Detector.BeginQuery(111);
+        replay.Detector.Complete(query, replay.Layout, 7, null);
+        Equal(2, replay.Output.Count);
+        Equal(
+            2,
+            replay.Output.Cast<CandidateEnvelope>().Select(e => e.transaction).Distinct().Count()
+        );
+        replay.Detector.Complete(query, replay.Layout, 7, null);
+        Equal(2, replay.Output.Count);
+    }
+
+    private static void TaskbarResetCompletion()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        replay.Add();
+        var old = replay.Detector.BeginQuery(101);
+        replay.Detector.Start(1);
+        replay.At = 120;
+        replay.Add();
+        replay.At = 200;
+        replay.Detector.Complete(old, replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+        replay.Detector.Complete(replay.Detector.BeginQuery(121), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
+    }
+
+    private static void TaskbarPendingOverflow()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        for (int i = 0; i < 17; i++)
+            replay.Add();
+        replay.At = 200;
+        replay.Detector.Complete(replay.Detector.BeginQuery(101), replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+    }
+
+    private sealed class TaskbarReplay
+    {
+        private readonly string origin,
+            mode;
+        private readonly DetectionSession session = new();
+        private readonly WindowSwitchDetector switching;
+        internal readonly List<object> Output = new();
+        internal readonly TaskbarDetector Detector;
+        internal long At = 100;
+        internal readonly TaskbarSnapshot Layout = new(
+            null,
+            11,
+            0,
+            0,
+            100,
+            40,
+            new[] { new TaskbarItem("fixture", 0, 0, 40, 40) }
+        );
+        private bool Key => origin == "key";
+
+        internal TaskbarReplay(string origin, string mode)
+        {
+            this.origin = origin;
+            this.mode = mode;
+            session.Start(1);
+            var sink = new CandidateSink(Output.Add);
+            sink.Start(1, 2);
+            Detector = new(session, sink, () => At, () => "2026-11-15");
+            Detector.Start(1);
+            Detector.Neutral(true);
+            switching = new(session, sink, new DetectionRouter(), session.Allocator(1), new());
+            switching.Start(1);
+            switching.Dispatch(new SwitchNeutralEvent(1, 0, true));
+        }
+
+        internal void Add() =>
+            Detector.Add(
+                new(
+                    origin,
+                    mode == "slot" ? 2 : 1,
+                    mode == "unknown" ? TaskbarSnapshot.Unknown : Layout,
+                    mode == "stale" ? -651 : 50,
+                    7
+                )
+            );
+
+        internal void ConfirmAdmission()
+        {
+            var query = Detector.BeginQuery(mode == "early" ? 99 : 101);
+            Add();
+            Equal(0, Output.Count);
+            Interrupt();
+            At =
+                mode == "timeout" ? 2601
+                : mode == "delay" ? 2500
+                : 200;
+            var result = Result();
+            Detector.Complete(query, result, mode == "process" ? 8u : 7u, new(0, 0, 1920, 1080));
+            bool accepted = mode is "valid" or "delay";
+            AssertCount(accepted);
+            Detector.Complete(query, result, 7, null);
+            AssertCount(accepted);
+            if (accepted)
+                Export();
+        }
+
+        private TaskbarSnapshot Result() =>
+            mode switch
+            {
+                "failure" => TaskbarSnapshot.Unknown,
+                "reorder" => Layout with
+                {
+                    Items = new[] { new TaskbarItem("other", 0, 0, 40, 40) },
+                },
+                _ => Layout,
+            };
+
+        private void Interrupt()
+        {
+            switch (mode)
+            {
+                case "stop":
+                    Detector.Stop();
+                    break;
+                case "reset":
+                    Detector.Start(1);
+                    break;
+                case "lease":
+                    session.Stop();
+                    session.Start(1);
+                    break;
+                case "cancel":
+                    Detector.Cancel();
+                    break;
+            }
+        }
+
+        internal void ReplayInput()
+        {
+            At = 50;
+            Detector.Complete(
+                Detector.BeginQuery(0),
+                mode == "unknown" ? TaskbarSnapshot.Unknown : Layout,
+                7,
+                null
+            );
+            At = 100;
+            if (Key)
+                PressKeys();
+            else
+                Click();
+            Equal(0, Output.Count);
+            switching.Dispatch(new SwitchForegroundEvent(1, 150, 13, 13, new(13, 9), 100, 150));
+            switching.Dispatch(new SwitchPollEvent(1, 500, new(13, 9), null));
+            Interrupt();
+            At = mode == "delay" ? 2000 : 200;
+            Detector.Complete(Detector.BeginQuery(151), Result(), 7, null);
+            AssertCount(InputAccepted());
+        }
+
+        private bool InputAccepted() =>
+            mode is "valid" or "repeat" or "delay" || Key && mode is "root" or "unreleased";
+
+        private void PressKeys()
+        {
+            Detector.Key(VK_LWIN, true, false, false);
+            Detector.Key(0x31, true, mode == "injected", mode == "modifier");
+            if (mode == "repeat")
+                Detector.Key(0x31, true, false, false);
+            switching.Dispatch(new SwitchKeyEvent(1, 100, VK_LWIN, true, false, new(12, 8)));
+            switching.Dispatch(new SwitchKeyEvent(1, 100, 0x31, true, false, null));
+        }
+
+        private void Click()
+        {
+            var point = new Point { X = 20, Y = 20 };
+            Detector.Mouse(
+                new(
+                    WM_LBUTTONDOWN,
+                    point,
+                    mode == "root" ? 99 : 11,
+                    mode == "injected",
+                    mode == "modifier"
+                )
+            );
+            if (mode != "unreleased")
+                Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, mode == "modifier"));
+            // Taskbar classes are ineligible W01 targets independently of UIA results.
+            switching.Dispatch(
+                new SwitchMouseEvent(1, 100, WM_LBUTTONDOWN, null, new(12, 8), false, false)
+            );
+            switching.Dispatch(
+                new SwitchMouseEvent(1, 110, WM_LBUTTONUP, null, null, false, false)
+            );
+        }
+
+        private void AssertCount(bool accepted)
+        {
+            Equal(accepted ? 1 : 0, Output.Count);
+            if (!accepted)
+                return;
+            var envelope = (CandidateEnvelope)Output.Single();
+            Equal("independent-results", envelope.route);
+            Equal(
+                true,
+                ((IndependentResultsEvidence)envelope.evidence).results.Single()
+                    is IndependentTaskbarProof { slot: 1, mappingConfirmed: true }
+            );
+        }
+
+        private void Export() =>
+            independentMouseSamples.Add(
+                new
+                {
+                    line = System.Text.Json.JsonSerializer.Serialize(
+                        (CandidateEnvelope)Output.Single()
+                    ),
+                    expected = new[] { "W12" },
+                    origin,
+                }
+            );
+    }
+}

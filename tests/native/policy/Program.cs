@@ -120,6 +120,7 @@ internal static partial class Program
         try
         {
             CheckSessionAllocator();
+            IndependentTaskbarTests();
             Check(
                 "max button + same target + result",
                 () =>

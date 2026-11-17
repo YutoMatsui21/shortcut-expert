@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile
+      Include="../../../native-helper/Detectors/TaskbarDetector.cs"
+      Link="TaskbarDetector.cs"
+    />
+    <Compile
       Include="../../../native-helper/Detectors/WindowCloseDetector.cs"
       Link="WindowCloseDetector.cs"
     />
