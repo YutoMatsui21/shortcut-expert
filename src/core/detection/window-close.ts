@@ -6,13 +6,10 @@ export function classifyWindowClose(
   value: EvidenceCandidate<"window-close">,
 ): Observation | null {
   const e = value.evidence;
-  if (
-    invalidCloseContext(value) ||
-    invalidCloseProof(value) ||
-    invalidCloseTiming(value) ||
-    invalidCloseRoute(value)
-  )
-    return null;
+  if (invalidCloseContext(value)) return null;
+  if (invalidCloseProof(value)) return null;
+  if (invalidCloseTiming(value)) return null;
+  if (invalidCloseRoute(value)) return null;
   return {
     id: `${value.generation}:t${value.transaction}`,
     operation: "W11",
@@ -26,7 +23,6 @@ export function classifyWindowClose(
 function invalidCloseContext(
   value: EvidenceCandidate<"window-close">,
 ): boolean {
-  const e = value.evidence;
   return !validDate(value.date) || value.injected || value.conflicted;
 }
 
@@ -43,7 +39,6 @@ function invalidCloseTiming(value: EvidenceCandidate<"window-close">): boolean {
 }
 
 function invalidCloseRoute(value: EvidenceCandidate<"window-close">): boolean {
-  const e = value.evidence;
   return value.origin === "mouse"
     ? value.route !== "close-button"
     : value.origin !== "key" || value.route !== "alt-f4";

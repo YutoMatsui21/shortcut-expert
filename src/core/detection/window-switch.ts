@@ -7,13 +7,10 @@ export function classifyWindowSwitch(
 ): Observation | null {
   if (value.origin !== "mouse" && value.origin !== "key") return null;
   const e = value.evidence;
-  if (
-    invalidSwitchContext(value) ||
-    invalidSwitchProof(value) ||
-    invalidSwitchTiming(value) ||
-    invalidSwitchRouteTiming(value)
-  )
-    return null;
+  if (invalidSwitchContext(value)) return null;
+  if (invalidSwitchProof(value)) return null;
+  if (invalidSwitchTiming(value)) return null;
+  if (invalidSwitchRouteTiming(value)) return null;
   return {
     id: `${value.generation}:t${value.transaction}`,
     operation: "W01",

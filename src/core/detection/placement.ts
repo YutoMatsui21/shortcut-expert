@@ -6,13 +6,10 @@ export function classifyPlacement(
   value: EvidenceCandidate<"placement">,
 ): Observation | null {
   const e = value.evidence;
-  if (
-    invalidPlacementContext(value) ||
-    invalidPlacementProof(value) ||
-    invalidPlacementTiming(value) ||
-    invalidPlacementRouteOrShape(value)
-  )
-    return null;
+  if (invalidPlacementContext(value)) return null;
+  if (invalidPlacementProof(value)) return null;
+  if (invalidPlacementTiming(value)) return null;
+  if (invalidPlacementRouteOrShape(value)) return null;
   const [side, vertical] = e.shape.split("-");
   const horizontal = side === "left" ? "←" : "→";
   return {
@@ -31,7 +28,6 @@ export function classifyPlacement(
 function invalidPlacementContext(
   value: EvidenceCandidate<"placement">,
 ): boolean {
-  const e = value.evidence;
   return !validDate(value.date) || value.injected || value.conflicted;
 }
 

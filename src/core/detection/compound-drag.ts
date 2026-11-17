@@ -7,45 +7,26 @@ export function classifyCompoundDrag(
   value: EvidenceCandidate<"compound-drag">,
 ): Observation[] {
   const e = value.evidence;
-  if (
-    invalidDragContext(value) ||
-    invalidDragProof(value) ||
-    invalidDragTiming(value) ||
-    invalidDragTerminal(value)
-  )
-    return [];
-  const equivalent =
-    e.moveDirection &&
-    e.fromMonitor.y === e.toMonitor.y &&
-    (e.moveDirection === "left"
-      ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x
-      : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
+  if (invalidDragContext(value)) return [];
+  if (invalidDragProof(value)) return [];
+  if (invalidDragTiming(value)) return [];
+  if (invalidDragTerminal(value)) return [];
   const base = {
     id: `${value.generation}:t${value.transaction}`,
     origin: "mouse" as const,
     date: value.date,
     monitor: e.toMonitor,
   };
-  const [side, vertical] = e.terminal.split("-");
   return [
     {
       ...base,
       operation: "W02",
-      shortcut: equivalent
-        ? `Win + Shift + ${e.moveDirection === "left" ? "←" : "→"}`
-        : e.twoDisplayLayoutConfirmed === true &&
-            separateMonitors(e.fromMonitor, e.toMonitor)
-          ? "Win + Shift + ←"
-          : null,
+      shortcut: dragMoveShortcut(e),
     },
     {
       ...base,
       operation: e.terminal === "maximized" ? "W03" : "W07",
-      shortcut: !e.terminalEquivalent
-        ? null
-        : e.terminal === "maximized"
-          ? "Win + ↑"
-          : `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`,
+      shortcut: dragTerminalShortcut(e),
     },
   ];
 }
@@ -58,19 +39,26 @@ function invalidDragContext(
     e.profile !== "compound-drag-v1" ||
     !validDate(value.date) ||
     value.origin !== "mouse" ||
-    value.route !== "compound-caption-drag" ||
-    value.injected
+    value.route !== "compound-caption-drag"
   );
 }
 
 function invalidDragProof(value: EvidenceCandidate<"compound-drag">): boolean {
   const e = value.evidence;
-  return value.conflicted || !e.targetMatched || !e.released;
+  return (
+    value.injected ||
+    value.conflicted ||
+    !e.targetMatched ||
+    !e.released ||
+    !e.layoutStable
+  );
 }
 
 function invalidDragTiming(value: EvidenceCandidate<"compound-drag">): boolean {
   const e = value.evidence;
-  return !e.layoutStable || !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0;
+  return (
+    !Number.isFinite(e.inputAgeMs) || e.inputAgeMs < 0 || e.inputAgeMs > 1000
+  );
 }
 
 function invalidDragTerminal(
@@ -78,7 +66,6 @@ function invalidDragTerminal(
 ): boolean {
   const e = value.evidence;
   return (
-    e.inputAgeMs > 1000 ||
     sameMonitor(e.fromMonitor, e.toMonitor) ||
     ![
       "maximized",
@@ -88,4 +75,26 @@ function invalidDragTerminal(
       "right-bottom",
     ].includes(e.terminal)
   );
+}
+
+type DragEvidence = EvidenceCandidate<"compound-drag">["evidence"];
+function dragMoveShortcut(e: DragEvidence): string | null {
+  const equivalent =
+    e.moveDirection &&
+    e.fromMonitor.y === e.toMonitor.y &&
+    (e.moveDirection === "left"
+      ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x
+      : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
+  if (equivalent)
+    return `Win + Shift + ${e.moveDirection === "left" ? "←" : "→"}`;
+  return e.twoDisplayLayoutConfirmed === true &&
+    separateMonitors(e.fromMonitor, e.toMonitor)
+    ? "Win + Shift + ←"
+    : null;
+}
+function dragTerminalShortcut(e: DragEvidence): string | null {
+  if (!e.terminalEquivalent) return null;
+  if (e.terminal === "maximized") return "Win + ↑";
+  const [side, vertical] = e.terminal.split("-");
+  return `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`;
 }

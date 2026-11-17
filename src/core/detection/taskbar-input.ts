@@ -7,14 +7,11 @@ export function classifyTaskbarInput(
 ): Observation | null {
   const e = value.evidence;
   if (value.origin !== "mouse" && value.origin !== "key") return null;
-  if (
-    invalidTaskbarContext(value) ||
-    invalidTaskbarSlot(value) ||
-    invalidTaskbarSnapshotAge(value) ||
-    invalidTaskbarConfirmationAge(value) ||
-    invalidTaskbarRoute(value)
-  )
-    return null;
+  if (invalidTaskbarContext(value)) return null;
+  if (invalidTaskbarSlot(value)) return null;
+  if (invalidTaskbarSnapshotAge(value)) return null;
+  if (invalidTaskbarConfirmationAge(value)) return null;
+  if (invalidTaskbarRoute(value)) return null;
   return {
     id: `${value.generation}:t${value.transaction}`,
     operation: "W12",
@@ -75,7 +72,6 @@ function invalidTaskbarConfirmationAge(
 function invalidTaskbarRoute(
   value: EvidenceCandidate<"taskbar-input">,
 ): boolean {
-  const e = value.evidence;
   return value.origin === "mouse"
     ? value.route !== "taskbar-click"
     : value.origin !== "key" || value.route !== "win-digit";

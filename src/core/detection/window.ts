@@ -41,12 +41,9 @@ type WindowCandidate = WindowEvidenceResult &
 type ClassifiedWindow = Pick<Observation, "operation" | "shortcut">;
 
 function classifyWindowResult(candidate: WindowCandidate): Observation | null {
-  if (
-    invalidWindowIdentity(candidate) ||
-    invalidWindowInput(candidate) ||
-    invalidWindowTiming(candidate)
-  )
-    return null;
+  if (invalidWindowIdentity(candidate)) return null;
+  if (invalidWindowInput(candidate)) return null;
+  if (invalidWindowTiming(candidate)) return null;
   const result = windowOperation(candidate);
   if (!result) return null;
   return {
@@ -85,8 +82,8 @@ function matchesRoute(
 }
 
 function maximizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  if (invalidMaximizeStart(candidate)) return null;
   if (
-    invalidMaximizeStart(candidate) ||
     !matchesRoute(
       candidate,
       [
@@ -107,9 +104,9 @@ function maximizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
 function minimizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
   let operation: Observation["operation"];
   let shortcut: string | null;
+  if (!["normal", "maximized"].includes(candidate.before.state)) return null;
+  if (candidate.after.state !== "minimized") return null;
   if (
-    !["normal", "maximized"].includes(candidate.before.state) ||
-    candidate.after.state !== "minimized" ||
     !matchesRoute(
       candidate,
       ["min-button", "mouse-state-fallback"],
@@ -124,10 +121,10 @@ function minimizeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
 }
 
 function restoreWindow(candidate: WindowCandidate): ClassifiedWindow | null {
+  if (candidate.before.state !== "maximized") return null;
+  if (candidate.after.state !== "normal") return null;
+  if (candidate.afterArranged !== false) return null;
   if (
-    candidate.before.state !== "maximized" ||
-    candidate.after.state !== "normal" ||
-    candidate.afterArranged !== false ||
     !matchesRoute(
       candidate,
       ["max-button", "caption-double-click", "mouse-state-fallback"],
@@ -139,12 +136,9 @@ function restoreWindow(candidate: WindowCandidate): ClassifiedWindow | null {
 }
 
 function closeWindow(candidate: WindowCandidate): ClassifiedWindow | null {
-  if (
-    !["normal", "maximized"].includes(candidate.before.state) ||
-    candidate.after.state !== "closed" ||
-    !matchesRoute(candidate, ["close-button"], ["alt-f4"])
-  )
-    return null;
+  if (!["normal", "maximized"].includes(candidate.before.state)) return null;
+  if (candidate.after.state !== "closed") return null;
+  if (!matchesRoute(candidate, ["close-button"], ["alt-f4"])) return null;
   return { operation: "W11", shortcut: "Alt + F4" };
 }
 
@@ -153,12 +147,12 @@ function moveWindow(candidate: WindowCandidate): ClassifiedWindow | null {
   let shortcut: string | null;
   const from = candidate.fromMonitor,
     to = candidate.toMonitor;
+  if (candidate.moveConfirmed !== true) return null;
+  if (!from) return null;
+  if (!to) return null;
+  if (sameMonitor(from, to)) return null;
+  if (invalidMoveStates(candidate)) return null;
   if (
-    candidate.moveConfirmed !== true ||
-    !from ||
-    !to ||
-    sameMonitor(from, to) ||
-    invalidMoveStates(candidate) ||
     !matchesRoute(
       candidate,
       ["caption-drag"],
@@ -223,12 +217,7 @@ function invalidMoveStates(candidate: WindowCandidate): boolean {
 function invalidMoveDirection(
   direction: WindowCandidate["moveDirection"],
 ): boolean {
-  return (
-    direction !== undefined &&
-    direction !== null &&
-    direction !== "left" &&
-    direction !== "right"
-  );
+  return ![undefined, null, "left", "right"].includes(direction);
 }
 function moveDirectionEquivalent(
   candidate: WindowCandidate,
@@ -261,11 +250,8 @@ function moveShortcut(
 ): string | null {
   if (moveDirectionEquivalent(candidate, from, to))
     return `Win + Shift + ${candidate.moveDirection === "left" ? "←" : "→"}`;
-  if (
-    candidate.twoDisplayLayoutConfirmed !== true ||
-    !separateMonitors(from, to)
-  )
-    return null;
+  if (candidate.twoDisplayLayoutConfirmed !== true) return null;
+  if (!separateMonitors(from, to)) return null;
   return `Win + Shift + ${candidate.origin === "key" && candidate.route === "win-shift-right" ? "→" : "←"}`;
 }
 function invalidMaximizeStart(candidate: WindowCandidate): boolean {
