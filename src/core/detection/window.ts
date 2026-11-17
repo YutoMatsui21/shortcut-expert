@@ -168,23 +168,33 @@ function moveWindow(candidate: WindowCandidate): ClassifiedWindow | null {
 
 function invalidWindowIdentity(candidate: WindowCandidate): boolean {
   return (
+    invalidWindowSequenceDate(candidate) || !supportedWindowApp(candidate.app)
+  );
+}
+function invalidWindowSequenceDate(candidate: WindowCandidate): boolean {
+  return (
     !validDate(candidate.date) ||
     !Number.isSafeInteger(candidate.sequence) ||
-    candidate.sequence < 1 ||
-    !["ordinary-window", "chrome", "obsidian", "code", "chatgpt"].includes(
-      candidate.app,
-    )
+    candidate.sequence < 1
+  );
+}
+function supportedWindowApp(app: string): boolean {
+  return ["ordinary-window", "chrome", "obsidian", "code", "chatgpt"].includes(
+    app,
   );
 }
 function invalidWindowInput(candidate: WindowCandidate): boolean {
   return (
-    candidate.elevated !== false ||
-    candidate.injected ||
-    candidate.conflicted ||
-    candidate.moving ||
-    !candidate.targetMatched ||
+    unsafeWindowActivity(candidate) ||
+    uncertainWindowTarget(candidate) ||
     !["mouse", "key"].includes(candidate.origin)
   );
+}
+function unsafeWindowActivity(candidate: WindowCandidate): boolean {
+  return candidate.injected || candidate.conflicted || candidate.moving;
+}
+function uncertainWindowTarget(candidate: WindowCandidate): boolean {
+  return candidate.elevated !== false || !candidate.targetMatched;
 }
 function invalidWindowTiming(candidate: WindowCandidate): boolean {
   return (

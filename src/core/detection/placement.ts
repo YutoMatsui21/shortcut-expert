@@ -10,18 +10,13 @@ export function classifyPlacement(
   if (invalidPlacementProof(value)) return null;
   if (invalidPlacementTiming(value)) return null;
   if (invalidPlacementRouteOrShape(value)) return null;
-  const [side, vertical] = e.shape.split("-");
-  const horizontal = side === "left" ? "←" : "→";
   return {
     id: `${value.generation}:t${value.transaction}`,
-    operation: vertical === "half" ? "W06" : "W07",
+    operation: e.shape.endsWith("-half") ? "W06" : "W07",
     origin: value.origin === "mouse" ? "mouse" : "key",
     date: value.date,
     monitor: e.monitor,
-    shortcut:
-      vertical === "half"
-        ? `Win + ${horizontal}`
-        : `Winを押したまま ${horizontal}、続けて ${vertical === "top" ? "↑" : "↓"}`,
+    shortcut: placementShortcut(e.shape),
   };
 }
 
@@ -62,4 +57,14 @@ function invalidPlacementRouteOrShape(
       "right-bottom",
     ].includes(e.shape)
   );
+}
+
+function placementShortcut(
+  shape: EvidenceCandidate<"placement">["evidence"]["shape"],
+): string {
+  const [side, vertical] = shape.split("-");
+  const horizontal = side === "left" ? "←" : "→";
+  return vertical === "half"
+    ? `Win + ${horizontal}`
+    : `Winを押したまま ${horizontal}、続けて ${vertical === "top" ? "↑" : "↓"}`;
 }

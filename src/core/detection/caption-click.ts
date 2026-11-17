@@ -19,12 +19,8 @@ export function classifyCaptionClick(
   const results: Observation[] = [];
   if (e.switched)
     results.push({ ...base, operation: "W01", shortcut: "Alt + Tab" });
-  if (e.terminal !== null)
-    results.push({
-      ...base,
-      operation: e.terminal === "maximized" ? "W03" : "W04",
-      shortcut: e.terminal === "maximized" ? "Win + ↑" : "Win + ↓",
-    });
+  const terminal = captionTerminal(e, base);
+  if (terminal) results.push(terminal);
   return results;
 }
 
@@ -65,4 +61,16 @@ function invalidCaptionTerminal(
     e.terminal === "maximized" ||
     e.terminal === "minimized"
   );
+}
+
+function captionTerminal(
+  e: EvidenceCandidate<"caption-click">["evidence"],
+  base: Omit<Observation, "operation" | "shortcut">,
+): Observation | null {
+  if (e.terminal === null) return null;
+  return {
+    ...base,
+    operation: e.terminal === "maximized" ? "W03" : "W04",
+    shortcut: e.terminal === "maximized" ? "Win + ↑" : "Win + ↓",
+  };
 }

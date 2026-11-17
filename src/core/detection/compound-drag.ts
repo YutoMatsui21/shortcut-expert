@@ -79,13 +79,7 @@ function invalidDragTerminal(
 
 type DragEvidence = EvidenceCandidate<"compound-drag">["evidence"];
 function dragMoveShortcut(e: DragEvidence): string | null {
-  const equivalent =
-    e.moveDirection &&
-    e.fromMonitor.y === e.toMonitor.y &&
-    (e.moveDirection === "left"
-      ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x
-      : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
-  if (equivalent)
+  if (dragDirectionEquivalent(e))
     return `Win + Shift + ${e.moveDirection === "left" ? "←" : "→"}`;
   return e.twoDisplayLayoutConfirmed === true &&
     separateMonitors(e.fromMonitor, e.toMonitor)
@@ -97,4 +91,14 @@ function dragTerminalShortcut(e: DragEvidence): string | null {
   if (e.terminal === "maximized") return "Win + ↑";
   const [side, vertical] = e.terminal.split("-");
   return `Winを押したまま ${side === "left" ? "←" : "→"}、続けて ${vertical === "top" ? "↑" : "↓"}`;
+}
+
+function dragDirectionEquivalent(e: DragEvidence) {
+  const equivalent =
+    e.moveDirection &&
+    e.fromMonitor.y === e.toMonitor.y &&
+    (e.moveDirection === "left"
+      ? e.toMonitor.x + e.toMonitor.width <= e.fromMonitor.x
+      : e.fromMonitor.x + e.fromMonitor.width <= e.toMonitor.x);
+  return equivalent;
 }
