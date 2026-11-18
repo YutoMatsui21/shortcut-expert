@@ -56,6 +56,10 @@
     <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
     <Compile
+      Include="../../../native-helper/Core/WindowResultPipeline.cs"
+      Link="WindowResultPipeline.cs"
+    />
+    <Compile
       Include="../../../native-helper/Core/TrackerEventAdapter.cs"
       Link="TrackerEventAdapter.cs"
     />

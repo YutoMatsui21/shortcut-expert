@@ -53,13 +53,11 @@ internal sealed class Observer : IDisposable
     {
         protocol = new CandidateSink(emit);
         tracker = new(session);
-        independentCaption = new(session, protocol);
-        independentCaption.Register(router);
-        new TrackerEventAdapter(
+        independentCaption = new WindowResultPipeline(session, protocol).Register(
+            router,
             tracker,
-            new IndependentOperationAdapter(tracker, session, protocol),
             (target, value) => states[target] = value
-        ).Register(router);
+        );
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;

@@ -173,21 +173,15 @@ internal sealed partial class InactiveCaptionPolicy
             State(after, at);
             return null;
         }
-        var facts =
-            after is not null && after.Process == Process && released
-                ? new CaptionCompletionFacts(
-                    PressFacts!,
-                    after,
-                    hit,
-                    switched,
-                    terminal,
-                    releasedAt,
-                    at
-                )
-                : null;
-        if (facts is null || !facts.Activated && facts.MatchedTerminal is null)
+        var facts = CompletionFacts(after, at);
+        if (facts?.HasResult != true)
             Diagnostic?.Invoke(WindowDiagnosticReason.CaptionNoResult);
         Cancel();
         return facts;
     }
+
+    private CaptionCompletionFacts? CompletionFacts(WindowState? after, long at) =>
+        after is not null && after.Process == Process && released
+            ? new(PressFacts!, after, hit, switched, terminal, releasedAt, at)
+            : null;
 }

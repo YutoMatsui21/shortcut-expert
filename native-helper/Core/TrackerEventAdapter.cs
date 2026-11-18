@@ -140,12 +140,14 @@ internal sealed class TrackerEventAdapter(
     private void StateResult(StateObservedEvent observed)
     {
         if (
-            !operations.TryState(
+            operations.TryState(
                 new(observed.Target, observed.After, observed.At, observed.Foreground)
             )
-            && observed.Before is { } previous
-            && previous.Process != observed.After.Process
         )
+            return;
+        if (observed.Before is not { } previous)
+            return;
+        if (previous.Process != observed.After.Process)
             tracker.Forget(observed.Target);
     }
 

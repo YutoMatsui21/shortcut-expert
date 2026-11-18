@@ -21,10 +21,11 @@ internal static partial class Program
             Router.Reset(1);
             Tracker.IndependentResults = independent;
             if (independent)
-                new TrackerEventAdapter(
+                new WindowResultPipeline(Session, Sink).Register(
+                    Router,
                     Tracker,
-                    new(Tracker, Session, Sink, () => "2026-11-15")
-                ).Register(Router);
+                    date: () => "2026-11-15"
+                );
             else
                 new LegacyTrackerEventAdapter(Tracker, Sink).Register(Router);
         }

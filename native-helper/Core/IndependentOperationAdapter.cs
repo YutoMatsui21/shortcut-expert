@@ -106,7 +106,7 @@ internal sealed class IndependentOperationAdapter
             return;
 
         // Retire an unowned key series after release, including a result on a new target.
-        tracker.DiscardKeyResult(e.Target, e.After, e.At, e.Injected);
+        tracker.DiscardKeyResult(observed);
     }
 
     internal bool TryState(OperationObservation observed)
@@ -166,7 +166,7 @@ internal sealed class IndependentOperationAdapter
             return;
         if (!tracker.Placement.ResultObserved(o.After!))
             return;
-        var facts = tracker.Placement.Terminal(o.Target, o.After, o.At, o.Injected);
+        var facts = tracker.Placement.Terminal(o);
         results.Finish(
             o.After!,
             o.At,
@@ -177,11 +177,8 @@ internal sealed class IndependentOperationAdapter
             facts is null ? null : HalfPlacementDetector.Key(facts)
         );
         gestures.Maximize = null;
-        RetireSeries(o);
+        tracker.Placement.Retire(o);
     }
-
-    private void RetireSeries(OperationObservation o) =>
-        tracker.Placement.Retire(o.Target, o.After, o.At, o.Injected);
 
     private void FinishStandalone(OperationObservation o)
     {
@@ -245,11 +242,3 @@ internal sealed class IndependentOperationAdapter
         gestures.Pending = null;
     }
 }
-
-internal sealed record OperationObservation(
-    nint Target,
-    WindowState? After,
-    long At,
-    nint Foreground,
-    bool Injected = false
-);

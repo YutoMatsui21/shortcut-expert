@@ -3,7 +3,7 @@ internal sealed partial class KeyGestureSeries
 {
     internal PlacementResult? Finish(nint window, WindowState? after, long now, bool injected)
     {
-        var pending = RetireSeries(window, after, now, injected);
+        var pending = RetireSeries(new(window, after, now, window, injected));
         if (pending is null)
             return null;
         string? shape = PlacementGeometry.Shape(after!);

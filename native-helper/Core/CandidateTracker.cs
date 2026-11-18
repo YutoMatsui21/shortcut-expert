@@ -137,26 +137,27 @@ internal sealed partial class CandidateTracker
 
     internal int NextTransaction() => allocate();
 
-    internal void DiscardKeyResult(nint target, WindowState? after, long at, bool injected)
+    internal void DiscardKeyResult(OperationObservation result)
     {
-        if (injected)
+        if (result.Injected)
         {
             gestures.Maximize = null;
-            gestures.RetireUnreferenced(Placement.Owns(target));
+            gestures.RetireUnreferenced(Placement.Owns(result.Target));
         }
-        if (
-            gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
-            && move.Window == target
-            && moveKeyReleased
-        )
+        if (HasReleasedMonitorInput(result.Target))
         {
-            if (injected || after is null)
+            if (result.Injected || result.After is null)
                 ClearInput();
             return;
         }
         if (!Placement.WinHeld)
-            Placement.Retire(target, after, at, injected);
+            Placement.Retire(result);
     }
+
+    private bool HasReleasedMonitorInput(nint target) =>
+        moveKeyReleased
+        && gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
+        && move.Window == target;
 
     internal void KeyReleased(uint key, long? now = null)
     {

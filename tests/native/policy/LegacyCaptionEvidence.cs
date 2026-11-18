@@ -2,9 +2,7 @@
 internal sealed partial record CaptionCompletionFacts
 {
     internal CaptionClickEvidence? LegacyEvidence() =>
-        Activated || MatchedTerminal is not null
-            ? new(MatchedTerminal, Activated, true, true, 500, Press.Before.Monitor)
-            : null;
+        HasResult ? new(MatchedTerminal, Activated, true, true, 500, Press.Before.Monitor) : null;
 }
 
 internal sealed partial class InactiveCaptionPolicy

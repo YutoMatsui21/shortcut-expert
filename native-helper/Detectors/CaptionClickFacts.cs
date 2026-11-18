@@ -14,6 +14,8 @@ internal sealed partial record CaptionCompletionFacts(
 )
 {
     internal bool Fallback => Hit is 1 or 0 or -1;
+    internal bool HasResult => Activated || MatchedTerminal is not null;
+
     internal string? MatchedTerminal =>
         (
             ObservedTerminal == "maximized" && After.Show == SW_SHOWMAXIMIZED

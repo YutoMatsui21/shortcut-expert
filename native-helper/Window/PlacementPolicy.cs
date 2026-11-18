@@ -226,9 +226,15 @@ internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
             )
             : null;
 
-    internal TerminalFacts? Terminal(nint window, WindowState? after, long now, bool injected) =>
-        !WinHeld && series is { } s && Valid(s, window, after, now, injected)
-            ? new(s.Before, after!, s.Horizontal, s.Vertical, now - s.Started)
+    internal TerminalFacts? Terminal(OperationObservation observation) =>
+        !WinHeld && series is { } s && Valid(s, observation)
+            ? new(
+                s.Before,
+                observation.After!,
+                s.Horizontal,
+                s.Vertical,
+                observation.At - s.Started
+            )
             : null;
 
     // A read immediately after release can still be the pre-input snapshot.
@@ -453,34 +459,33 @@ internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
         return true;
     }
 
-    private bool Valid(Series pending, nint window, WindowState? after, long now, bool injected) =>
-        !injected
-        && pending.Window == window
-        && after is not null
+    private bool Valid(Series pending, OperationObservation observation) =>
+        !observation.Injected
+        && pending.Window == observation.Target
+        && observation.After is { } after
         && PlacementGeometry.Compatible(pending.Before, after)
         && pending.Before.Monitor == after.Monitor
         && pending.Before.Work == after.Work
         && pending.Before.Dpi == after.Dpi
-        && now - pending.Started is >= 0 and <= 15000
-        && now - pending.Last is >= 0 and <= 1000;
+        && observation.At - pending.Started is >= 0 and <= 15000
+        && observation.At - pending.Last is >= 0 and <= 1000;
 
-    private Series? RetireSeries(nint window, WindowState? after, long now, bool injected)
+    private Series? RetireSeries(OperationObservation observation)
     {
         var pending = series;
         series = null;
         cancelled = false;
-        if (pending is null || !Valid(pending, window, after, now, injected))
+        if (pending is null || !Valid(pending, observation))
         {
-            if (pending is not null && now - pending.Started > 15000)
-                gestures?.Expire(gesture, now, pending.Started + 15000);
+            if (pending is not null && observation.At - pending.Started > 15000)
+                gestures?.Expire(gesture, observation.At, pending.Started + 15000);
             else
                 gestures?.Cancel(gesture);
             return null;
         }
-        gestures?.Complete(gesture, window, after!, now);
+        gestures?.Complete(gesture, observation.Target, observation.After!, observation.At);
         return pending;
     }
 
-    internal void Retire(nint window, WindowState? after, long now, bool injected) =>
-        RetireSeries(window, after, now, injected);
+    internal void Retire(OperationObservation observation) => RetireSeries(observation);
 }
