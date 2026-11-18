@@ -1,3 +1,5 @@
+namespace ShortcutExpert.Detection;
+
 // Legacy placement evidence used by v2 baseline fixtures.
 internal sealed partial class KeyGestureSeries
 {

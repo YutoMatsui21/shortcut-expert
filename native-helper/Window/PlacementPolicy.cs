@@ -1,4 +1,3 @@
-using ShortcutExpert.Detection;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -185,308 +184,314 @@ internal static class PlacementGeometry
     }
 }
 
-internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
+namespace ShortcutExpert.Detection
 {
-    private GestureManager.Gesture? gesture;
-
-    private sealed record Series(
-        nint Window,
-        WindowState Before,
-        int Transaction,
-        long Started,
-        long Last,
-        string? Horizontal,
-        string? Vertical,
-        WindowState LastBefore,
-        uint? LastKey = null,
-        uint UnobservedDirections = 0,
-        uint RepeatedDirections = 0
-    );
-
-    // Neutral input/geometry facts, shared with W03/W07 and the retained W06 policy.
-    internal sealed record TerminalFacts(
-        WindowState Before,
-        WindowState After,
-        string? Horizontal,
-        string? Vertical,
-        long Age
-    );
-
-    internal GestureManager.Input? Input =>
-        series is { } s && gesture is { } g
-            ? new(
-                g,
-                s.Before,
-                "key",
-                "win-held-arrows",
-                s.Started,
-                false,
-                false,
-                true,
-                s.Transaction
-            )
-            : null;
-
-    internal TerminalFacts? Terminal(OperationObservation observation) =>
-        !WinHeld && series is { } s && Valid(s, observation)
-            ? new(
-                s.Before,
-                observation.After!,
-                s.Horizontal,
-                s.Vertical,
-                observation.At - s.Started
-            )
-            : null;
-
-    // A read immediately after release can still be the pre-input snapshot.
-    // Wait for a terminal state/placement change, never infer it from a key alone.
-    internal bool ResultObserved(WindowState after)
+    internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
     {
-        if (series is not { } s || SameResultSnapshot(s.LastBefore, after))
-            return false;
-        if (after.Show == SW_SHOWMAXIMIZED)
-            return s.LastKey == VK_UP;
-        if (after.Show is SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE)
-            return s.LastKey == VK_DOWN;
-        return DirectionalResultObserved(s, PlacementGeometry.Shape(after));
-    }
+        private GestureManager.Gesture? gesture;
 
-    private static bool SameResultSnapshot(WindowState a, WindowState b) =>
-        a.Show == b.Show
-        && a.Arranged == b.Arranged
-        && a.Monitor == b.Monitor
-        && SameResultShape(a, b);
+        private sealed record Series(
+            nint Window,
+            WindowState Before,
+            int Transaction,
+            long Started,
+            long Last,
+            string? Horizontal,
+            string? Vertical,
+            WindowState LastBefore,
+            uint? LastKey = null,
+            uint UnobservedDirections = 0,
+            uint RepeatedDirections = 0
+        );
 
-    private static bool SameResultShape(WindowState a, WindowState b)
-    {
-        var first = PlacementGeometry.Shape(a);
-        var second = PlacementGeometry.Shape(b);
-        return first is not null && second is not null ? first == second : a.Frame == b.Frame;
-    }
+        // Neutral input/geometry facts, shared with W03/W07 and the retained W06 policy.
+        internal sealed record TerminalFacts(
+            WindowState Before,
+            WindowState After,
+            string? Horizontal,
+            string? Vertical,
+            long Age
+        );
 
-    // Bounded direction categories, not an input sequence. Repeated physical
-    // directions without an observed state advance cannot claim an old quarter.
-    private static uint DirectionBit(uint key) =>
-        key switch
+        internal GestureManager.Input? Input =>
+            series is { } s && gesture is { } g
+                ? new(
+                    g,
+                    s.Before,
+                    "key",
+                    "win-held-arrows",
+                    s.Started,
+                    false,
+                    false,
+                    true,
+                    s.Transaction
+                )
+                : null;
+
+        internal TerminalFacts? Terminal(OperationObservation observation) =>
+            !WinHeld && series is { } s && Valid(s, observation)
+                ? new(
+                    s.Before,
+                    observation.After!,
+                    s.Horizontal,
+                    s.Vertical,
+                    observation.At - s.Started
+                )
+                : null;
+
+        // A read immediately after release can still be the pre-input snapshot.
+        // Wait for a terminal state/placement change, never infer it from a key alone.
+        internal bool ResultObserved(WindowState after)
         {
-            VK_LEFT => 1,
-            VK_RIGHT => 2,
-            VK_UP => 4,
-            VK_DOWN => 8,
-            _ => 0,
-        };
-
-    private static Series TrackResultCorrelation(Series previous, uint key, WindowState before)
-    {
-        bool unchanged = SameResultSnapshot(previous.LastBefore, before);
-        uint seen = unchanged ? previous.UnobservedDirections : 0;
-        uint repeated = unchanged ? previous.RepeatedDirections : 0;
-        uint bit = DirectionBit(key);
-        return previous with
-        {
-            LastKey = key,
-            UnobservedDirections = seen | bit,
-            RepeatedDirections = repeated | (seen & bit),
-        };
-    }
-
-    private static bool LastDirectionRepeated(Series s) =>
-        s.LastKey is { } key && (s.RepeatedDirections & DirectionBit(key)) != 0;
-
-    private static bool DirectionalResultObserved(Series s, string? shape)
-    {
-        if (shape is null || s.Horizontal is null || !shape.StartsWith(s.Horizontal + "-"))
-            return false;
-        if (shape.EndsWith("-half"))
-            return s.Vertical is null; // retained W06 behavior
-        return !LastDirectionRepeated(s)
-            && s.Vertical is not null
-            && shape.EndsWith("-" + s.Vertical);
-    }
-
-    internal nint? PendingResultTarget(long now)
-    {
-        if (WinHeld || series is not { } s)
-            return null;
-        if (now - s.Started is < 0 or > 15000 || now - s.Last is < 0 or > 1000)
-        {
-            Cancel();
-            return null;
-        }
-        return s.Window;
-    }
-
-    private Series? series;
-    private bool cancelled;
-    private readonly HashSet<uint> held = new();
-    internal bool WinHeld => held.Contains(VK_LWIN) || held.Contains(VK_RWIN);
-    internal bool Cancelled => cancelled;
-
-    internal bool Owns(nint window) => series?.Window == window;
-
-    internal void Cancel()
-    {
-        gestures?.Cancel(gesture);
-        if (series is not null)
-            cancelled = true;
-        series = null;
-    }
-
-    internal void Reset()
-    {
-        gestures?.Cancel(gesture);
-        gesture = null;
-        series = null;
-        cancelled = false;
-        held.Clear();
-    }
-
-    internal void Foreground(nint window)
-    {
-        if (series?.Window != window)
-            Cancel();
-    }
-
-    internal void Forget(nint window)
-    {
-        if (Owns(window))
-            Cancel();
-    }
-
-    internal void Released(uint key, long? now = null)
-    {
-        held.Remove(key);
-        if (!WinHeld)
-            gestures?.AwaitResult(gesture, now);
-    }
-
-    internal bool Key(
-        nint window,
-        WindowState? before,
-        uint key,
-        bool win,
-        bool modified,
-        long now,
-        uint flags,
-        Func<int> transaction
-    )
-    {
-        if (key is VK_LWIN or VK_RWIN && (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) == 0)
-        {
-            if (!WinHeld && series is null)
-                cancelled = false;
-            held.Add(key);
-            return false;
-        }
-        bool arrow = key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
-        bool active = series is not null;
-        if (cancelled && arrow && win)
-            return true;
-        if (
-            !arrow
-            || !win
-            || modified
-            || before is null
-            || !before.HasCaption
-            || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0
-        )
-        {
-            Cancel();
-            if (win && key is VK_LEFT or VK_RIGHT)
-                cancelled = true;
-            return active && arrow;
-        }
-        if (!held.Add(key))
-            return active; // repeat cannot extend a transaction or its deadline
-        if (
-            series is not null
-            && (
-                series.Window != window
-                || !PlacementGeometry.Compatible(series.Before, before)
-                || series.Before.Monitor != before.Monitor
-                || now - series.Started is < 0 or > 15000
-            )
-        )
-        {
-            Cancel();
-            return true;
-        }
-        if (series is null)
-        {
-            string? initial = PlacementGeometry.Shape(before);
-            if (key is not (VK_LEFT or VK_RIGHT) && initial is null)
+            if (series is not { } s || SameResultSnapshot(s.LastBefore, after))
                 return false;
-            if (before.Arranged == true && initial is null)
+            if (after.Show == SW_SHOWMAXIMIZED)
+                return s.LastKey == VK_UP;
+            if (after.Show is SW_SHOWMINIMIZED or SW_MINIMIZE or SW_SHOWMINNOACTIVE)
+                return s.LastKey == VK_DOWN;
+            return DirectionalResultObserved(s, PlacementGeometry.Shape(after));
+        }
+
+        private static bool SameResultSnapshot(WindowState a, WindowState b) =>
+            a.Show == b.Show
+            && a.Arranged == b.Arranged
+            && a.Monitor == b.Monitor
+            && SameResultShape(a, b);
+
+        private static bool SameResultShape(WindowState a, WindowState b)
+        {
+            var first = PlacementGeometry.Shape(a);
+            var second = PlacementGeometry.Shape(b);
+            return first is not null && second is not null ? first == second : a.Frame == b.Frame;
+        }
+
+        // Bounded direction categories, not an input sequence. Repeated physical
+        // directions without an observed state advance cannot claim an old quarter.
+        private static uint DirectionBit(uint key) =>
+            key switch
             {
-                cancelled = true;
-                return true;
+                VK_LEFT => 1,
+                VK_RIGHT => 2,
+                VK_UP => 4,
+                VK_DOWN => 8,
+                _ => 0,
+            };
+
+        private static Series TrackResultCorrelation(Series previous, uint key, WindowState before)
+        {
+            bool unchanged = SameResultSnapshot(previous.LastBefore, before);
+            uint seen = unchanged ? previous.UnobservedDirections : 0;
+            uint repeated = unchanged ? previous.RepeatedDirections : 0;
+            uint bit = DirectionBit(key);
+            return previous with
+            {
+                LastKey = key,
+                UnobservedDirections = seen | bit,
+                RepeatedDirections = repeated | (seen & bit),
+            };
+        }
+
+        private static bool LastDirectionRepeated(Series s) =>
+            s.LastKey is { } key && (s.RepeatedDirections & DirectionBit(key)) != 0;
+
+        private static bool DirectionalResultObserved(Series s, string? shape)
+        {
+            if (shape is null || s.Horizontal is null || !shape.StartsWith(s.Horizontal + "-"))
+                return false;
+            if (shape.EndsWith("-half"))
+                return s.Vertical is null; // retained W06 behavior
+            return !LastDirectionRepeated(s)
+                && s.Vertical is not null
+                && shape.EndsWith("-" + s.Vertical);
+        }
+
+        internal nint? PendingResultTarget(long now)
+        {
+            if (WinHeld || series is not { } s)
+                return null;
+            if (now - s.Started is < 0 or > 15000 || now - s.Last is < 0 or > 1000)
+            {
+                Cancel();
+                return null;
             }
+            return s.Window;
+        }
+
+        private Series? series;
+        private bool cancelled;
+        private readonly HashSet<uint> held = new();
+        internal bool WinHeld => held.Contains(VK_LWIN) || held.Contains(VK_RWIN);
+        internal bool Cancelled => cancelled;
+
+        internal bool Owns(nint window) => series?.Window == window;
+
+        internal void Cancel()
+        {
+            gestures?.Cancel(gesture);
+            if (series is not null)
+                cancelled = true;
+            series = null;
+        }
+
+        internal void Reset()
+        {
+            gestures?.Cancel(gesture);
+            gesture = null;
+            series = null;
+            cancelled = false;
+            held.Clear();
+        }
+
+        internal void Foreground(nint window)
+        {
+            if (series?.Window != window)
+                Cancel();
+        }
+
+        internal void Forget(nint window)
+        {
+            if (Owns(window))
+                Cancel();
+        }
+
+        internal void Released(uint key, long? now = null)
+        {
+            held.Remove(key);
+            if (!WinHeld)
+                gestures?.AwaitResult(gesture, now);
+        }
+
+        internal bool Key(
+            nint window,
+            WindowState? before,
+            uint key,
+            bool win,
+            bool modified,
+            long now,
+            uint flags,
+            Func<int> transaction
+        )
+        {
             if (
-                before.Arranged is null
-                || before.Monitor is null
-                || before.DisplayLayout is null
-                || before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED)
+                key is VK_LWIN or VK_RWIN
+                && (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) == 0
             )
             {
-                cancelled = true;
+                if (!WinHeld && series is null)
+                    cancelled = false;
+                held.Add(key);
+                return false;
+            }
+            bool arrow = key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
+            bool active = series is not null;
+            if (cancelled && arrow && win)
+                return true;
+            if (
+                !arrow
+                || !win
+                || modified
+                || before is null
+                || !before.HasCaption
+                || (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0
+            )
+            {
+                Cancel();
+                if (win && key is VK_LEFT or VK_RIGHT)
+                    cancelled = true;
+                return active && arrow;
+            }
+            if (!held.Add(key))
+                return active; // repeat cannot extend a transaction or its deadline
+            if (
+                series is not null
+                && (
+                    series.Window != window
+                    || !PlacementGeometry.Compatible(series.Before, before)
+                    || series.Before.Monitor != before.Monitor
+                    || now - series.Started is < 0 or > 15000
+                )
+            )
+            {
+                Cancel();
                 return true;
             }
-            gesture = gestures?.StartKeySeries(window, before, now);
-            series = new(
-                window,
-                before,
-                transaction(),
-                now,
-                now,
-                initial?.Split('-')[0],
-                null,
-                before
-            );
+            if (series is null)
+            {
+                string? initial = PlacementGeometry.Shape(before);
+                if (key is not (VK_LEFT or VK_RIGHT) && initial is null)
+                    return false;
+                if (before.Arranged == true && initial is null)
+                {
+                    cancelled = true;
+                    return true;
+                }
+                if (
+                    before.Arranged is null
+                    || before.Monitor is null
+                    || before.DisplayLayout is null
+                    || before.Show is not (SW_SHOWNORMAL or SW_SHOWMAXIMIZED)
+                )
+                {
+                    cancelled = true;
+                    return true;
+                }
+                gesture = gestures?.StartKeySeries(window, before, now);
+                series = new(
+                    window,
+                    before,
+                    transaction(),
+                    now,
+                    now,
+                    initial?.Split('-')[0],
+                    null,
+                    before
+                );
+            }
+            series = TrackResultCorrelation(series, key, before);
+            series = series with
+            {
+                Last = now,
+                LastBefore = before,
+                Horizontal =
+                    key == VK_LEFT ? "left"
+                    : key == VK_RIGHT ? "right"
+                    : series.Horizontal,
+                Vertical =
+                    key == VK_UP ? "top"
+                    : key == VK_DOWN ? "bottom"
+                    : series.Vertical,
+            };
+            return true;
         }
-        series = TrackResultCorrelation(series, key, before);
-        series = series with
-        {
-            Last = now,
-            LastBefore = before,
-            Horizontal =
-                key == VK_LEFT ? "left"
-                : key == VK_RIGHT ? "right"
-                : series.Horizontal,
-            Vertical =
-                key == VK_UP ? "top"
-                : key == VK_DOWN ? "bottom"
-                : series.Vertical,
-        };
-        return true;
-    }
 
-    private static bool Valid(Series pending, OperationObservation observation) =>
-        !observation.Injected
-        && pending.Window == observation.Target
-        && observation.After is { } after
-        && PlacementGeometry.Compatible(pending.Before, after)
-        && pending.Before.Monitor == after.Monitor
-        && pending.Before.Work == after.Work
-        && pending.Before.Dpi == after.Dpi
-        && observation.At - pending.Started is >= 0 and <= 15000
-        && observation.At - pending.Last is >= 0 and <= 1000;
+        private static bool Valid(Series pending, OperationObservation observation) =>
+            !observation.Injected
+            && pending.Window == observation.Target
+            && observation.After is { } after
+            && PlacementGeometry.Compatible(pending.Before, after)
+            && pending.Before.Monitor == after.Monitor
+            && pending.Before.Work == after.Work
+            && pending.Before.Dpi == after.Dpi
+            && observation.At - pending.Started is >= 0 and <= 15000
+            && observation.At - pending.Last is >= 0 and <= 1000;
 
-    private Series? RetireSeries(OperationObservation observation)
-    {
-        var pending = series;
-        series = null;
-        cancelled = false;
-        if (pending is null || !Valid(pending, observation))
+        private Series? RetireSeries(OperationObservation observation)
         {
-            if (pending is not null && observation.At - pending.Started > 15000)
-                gestures?.Expire(gesture, observation.At, pending.Started + 15000);
-            else
-                gestures?.Cancel(gesture);
-            return null;
+            var pending = series;
+            series = null;
+            cancelled = false;
+            if (pending is null || !Valid(pending, observation))
+            {
+                if (pending is not null && observation.At - pending.Started > 15000)
+                    gestures?.Expire(gesture, observation.At, pending.Started + 15000);
+                else
+                    gestures?.Cancel(gesture);
+                return null;
+            }
+            gestures?.Complete(gesture, observation.Target, observation.After!, observation.At);
+            return pending;
         }
-        gestures?.Complete(gesture, observation.Target, observation.After!, observation.At);
-        return pending;
-    }
 
-    internal void Retire(OperationObservation observation) => RetireSeries(observation);
+        internal void Retire(OperationObservation observation) => RetireSeries(observation);
+    }
 }
