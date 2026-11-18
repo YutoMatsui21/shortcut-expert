@@ -409,37 +409,8 @@ internal sealed partial class CandidateTracker
             return;
         }
         string? route = KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified);
-        if (input.Key == VK_UP)
-        {
-            if (upHeld)
-            {
-                if (injected)
-                    ClearInput();
-                return;
-            }
-            upHeld = true;
-            gestures.Maximize =
-                route == "win-up"
-                && input.Before is { Show: SW_SHOWNORMAL }
-                && !injected
-                && injectedWin.Count == 0
-                && !conflict
-                && !gestures.Moving.Contains(input.Target)
-                && !Placement.Cancelled
-                    ? gestures.Begin(
-                        input.Target,
-                        input.Before,
-                        "key",
-                        "win-up",
-                        input.At,
-                        false,
-                        false,
-                        true,
-                        NextTransaction(),
-                        ContinueSeries: Placement.Owns(input.Target)
-                    )
-                    : null;
-        }
+        if (HandleMaximizePress(input, route, conflict, injected))
+            return;
         if (
             route is "win-shift-left" or "win-shift-right"
             && gestures.Pending?.Route == route
@@ -501,6 +472,54 @@ internal sealed partial class CandidateTracker
         );
         moveKeyReleased = false;
     }
+
+    // Returns true when a repeated press has already been consumed.
+    private bool HandleMaximizePress(
+        KeyPressEvent input,
+        string? route,
+        bool conflict,
+        bool injected
+    )
+    {
+        if (input.Key != VK_UP)
+            return false;
+        if (upHeld)
+        {
+            if (injected)
+                ClearInput();
+            return true;
+        }
+        upHeld = true;
+        gestures.Maximize = CanStartMaximize(input, route, conflict, injected)
+            ? gestures.Begin(
+                input.Target,
+                input.Before!,
+                "key",
+                "win-up",
+                input.At,
+                false,
+                false,
+                true,
+                NextTransaction(),
+                ContinueSeries: Placement.Owns(input.Target)
+            )
+            : null;
+        return false;
+    }
+
+    private bool CanStartMaximize(
+        KeyPressEvent input,
+        string? route,
+        bool conflict,
+        bool injected
+    ) =>
+        route == "win-up"
+        && input.Before is { Show: SW_SHOWNORMAL }
+        && !injected
+        && injectedWin.Count == 0
+        && !conflict
+        && !gestures.Moving.Contains(input.Target)
+        && !Placement.Cancelled;
 
     internal static string? KeyRoute(uint key, bool win, bool shift, bool alt, bool other) =>
         other
