@@ -45,6 +45,13 @@ jobs:
             --output-format xml `
             --output .tools/sonar-native-coverage.xml > .tools/sonar-policy-output.log
 
+          $coverage = [xml](Get-Content .tools/sonar-native-coverage.xml -Raw)
+          $coveredSource = "//module//range[@covered='yes' and @source_id=ancestor::module/source_files/source_file[contains(@path, '\native-helper\')]/@id]"
+          if (!$coverage.SelectSingleNode($coveredSource)) {
+            Get-Content .tools/sonar-policy-output.log | Where-Object { !$_.StartsWith('{') } | Select-Object -Last 20
+            throw "No native-helper coverage was collected from the policy suite."
+          }
+
       - name: Analyze
         shell: pwsh
         env:
