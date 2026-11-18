@@ -53,17 +53,7 @@ internal sealed class LegacyTrackerEventAdapter(
                 );
                 break;
             case MousePressEvent e:
-                tracker.Mouse(
-                    e.Target,
-                    e.Before,
-                    e.Hit,
-                    e.Point,
-                    e.At,
-                    e.DoubleClickTime,
-                    e.Flags,
-                    e.Modified,
-                    e.Foreground
-                );
+                tracker.Mouse(e);
                 break;
         }
     }
@@ -73,17 +63,7 @@ internal sealed class LegacyTrackerEventAdapter(
         switch (observed)
         {
             case KeyPressEvent e:
-                tracker.Key(
-                    e.Target,
-                    e.Before,
-                    e.Key,
-                    e.Win,
-                    e.Modified,
-                    e.At,
-                    e.Flags,
-                    e.Shift,
-                    e.Alt
-                );
+                tracker.Key(e);
                 break;
             case KeyReleaseEvent e:
                 tracker.KeyReleased(e.Key, e.At);

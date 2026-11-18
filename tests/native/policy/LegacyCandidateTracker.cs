@@ -1,4 +1,5 @@
 using static NativeMethods;
+using Point = NativeMethods.Point;
 
 // Frozen legacy candidate generation for the #172 v2 compatibility baseline.
 // The policy test project links the shared input collector and adds these fixtures.
@@ -54,6 +55,33 @@ internal sealed partial class CandidateTracker
     }
 
     partial void ClearBaselineReduction() => completedWinDown = null;
+
+    internal void Mouse(
+        nint window,
+        WindowState before,
+        int hit,
+        Point point,
+        long now,
+        uint doubleClickTime,
+        uint flags,
+        bool modifiers,
+        bool foreground
+    ) =>
+        Mouse(
+            new(0, window, now, before, hit, point, doubleClickTime, flags, modifiers, foreground)
+        );
+
+    internal void Key(
+        nint window,
+        WindowState? before,
+        uint key,
+        bool winDown,
+        bool modifiers,
+        long now,
+        uint flags,
+        bool shiftDown = false,
+        bool altDown = false
+    ) => Key(new(0, window, now, before, key, winDown, modifiers, flags, shiftDown, altDown));
 
     internal WindowCandidate? ConfirmMaximize(
         nint window,

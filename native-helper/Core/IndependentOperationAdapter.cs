@@ -90,13 +90,14 @@ internal sealed class IndependentOperationAdapter
     {
         if (gestures.Pending is not { } input || input.Window != target)
             return false;
-        return input.Route switch
-        {
-            "win-shift-left" or "win-shift-right" or "win-down" => true,
-            "min-button" => true,
-            "max-button" or "caption-double-click" or "unknown" => true,
-            _ => false,
-        };
+        return input.Route
+            is "win-shift-left"
+                or "win-shift-right"
+                or "win-down"
+                or "min-button"
+                or "max-button"
+                or "caption-double-click"
+                or "unknown";
     }
 
     internal void KeyResult(KeyResultEvent e)

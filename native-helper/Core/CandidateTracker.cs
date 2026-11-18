@@ -289,17 +289,7 @@ internal sealed partial class CandidateTracker
                 or VK_LMENU
                 or VK_RMENU;
 
-    internal void Mouse(
-        nint window,
-        WindowState before,
-        int hit,
-        Point point,
-        long now,
-        uint doubleClickTime,
-        uint flags,
-        bool modifiers,
-        bool foreground
-    )
+    internal void Mouse(MousePressEvent input)
     {
         InputEpoch++;
         Placement.Cancel();
@@ -307,9 +297,9 @@ internal sealed partial class CandidateTracker
         gestures.Drags.Clear();
         gestures.Release = null;
         ClearBaselineReduction();
-        clickPoint = point;
+        clickPoint = input.Point;
         clickReleased = false;
-        string route = hit switch
+        string route = input.Hit switch
         {
             HTMAXBUTTON => "max-button",
             HTMINBUTTON => "min-button",
@@ -318,52 +308,42 @@ internal sealed partial class CandidateTracker
             _ => "unknown",
         };
         if (
-            hit == HTCAPTION
-            && lastCaption == window
-            && lastCaptionProcess == before.Process
-            && now - lastCaptionAt <= doubleClickTime
-            && Math.Abs(point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx
-            && Math.Abs(point.Y - lastCaptionPoint.Y) <= CaptionDoubleClickDistancePx
+            input.Hit == HTCAPTION
+            && lastCaption == input.Target
+            && lastCaptionProcess == input.Before.Process
+            && input.At - lastCaptionAt <= input.DoubleClickTime
+            && Math.Abs(input.Point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx
+            && Math.Abs(input.Point.Y - lastCaptionPoint.Y) <= CaptionDoubleClickDistancePx
         )
             route = "caption-double-click";
-        lastCaption = hit == HTCAPTION ? window : 0;
-        lastCaptionProcess = before.Process;
-        lastCaptionAt = now;
-        lastCaptionPoint = point;
+        lastCaption = input.Hit == HTCAPTION ? input.Target : 0;
+        lastCaptionProcess = input.Before.Process;
+        lastCaptionAt = input.At;
+        lastCaptionPoint = input.Point;
         gestures.Pending = gestures.Begin(
-            window,
-            before,
+            input.Target,
+            input.Before,
             route is "unknown" or "caption-press" ? "unknown" : "mouse",
             route,
-            now,
-            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
-            modifiers,
-            foreground,
+            input.At,
+            (input.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
+            input.Modified,
+            input.Foreground,
             NextTransaction(),
             CaptionPress: route == "caption-press"
         );
         // Explicit resize borders and caption buttons remain outside window-move detection.
         gestures.Press =
-            (route is "unknown" or "caption-press") && hit is not (>= 10 and <= 18)
+            (route is "unknown" or "caption-press") && input.Hit is not (>= 10 and <= 18)
                 ? gestures.Pending
                 : null;
     }
 
-    internal void Key(
-        nint window,
-        WindowState? before,
-        uint key,
-        bool winDown,
-        bool modifiers,
-        long now,
-        uint flags,
-        bool shiftDown = false,
-        bool altDown = false
-    )
+    internal void Key(KeyPressEvent input)
     {
         try
         {
-            KeyCore(window, before, key, winDown, modifiers, now, flags, shiftDown, altDown);
+            KeyCore(input);
         }
         finally
         {
@@ -393,38 +373,43 @@ internal sealed partial class CandidateTracker
     private static bool KeepsReductionSeries(KeySequenceInput input) =>
         !input.Injected && (input.Key is VK_LWIN or VK_RWIN || input.Route == "win-down");
 
-    private void KeyCore(
-        nint window,
-        WindowState? before,
-        uint key,
-        bool winDown,
-        bool modifiers,
-        long now,
-        uint flags,
-        bool shiftDown = false,
-        bool altDown = false
-    )
+    private void KeyCore(KeyPressEvent input)
     {
         gestures.Drags.Clear();
         gestures.Press = null;
         gestures.Release = null;
-        bool conflict = MouseInputConflict(now);
-        bool injected = (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
-        ObserveKeyEpoch(new(key, injected, KeyRoute(key, winDown, shiftDown, altDown, modifiers)));
-        if (injected && key is VK_LWIN or VK_RWIN)
-            injectedWin.Add(key);
-        if (injected || key != VK_UP && key is not (VK_LWIN or VK_RWIN))
+        bool conflict = MouseInputConflict(input.At);
+        bool injected = (input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+        ObserveKeyEpoch(
+            new(
+                input.Key,
+                injected,
+                KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified)
+            )
+        );
+        if (injected && input.Key is VK_LWIN or VK_RWIN)
+            injectedWin.Add(input.Key);
+        if (injected || input.Key != VK_UP && input.Key is not (VK_LWIN or VK_RWIN))
             gestures.Maximize = null;
-        if (IsModifier(key))
+        if (IsModifier(input.Key))
         {
-            Placement.Key(window, before, key, winDown, modifiers, now, flags, NextTransaction);
-            BaselineModifier(key, injected);
+            Placement.Key(
+                input.Target,
+                input.Before,
+                input.Key,
+                input.Win,
+                input.Modified,
+                input.At,
+                input.Flags,
+                NextTransaction
+            );
+            BaselineModifier(input.Key, injected);
             if (gestures.Pending is not null)
                 gestures.Pending = gestures.Pending with { Conflicted = true };
             return;
         }
-        string? route = KeyRoute(key, winDown, shiftDown, altDown, modifiers);
-        if (key == VK_UP)
+        string? route = KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified);
+        if (input.Key == VK_UP)
         {
             if (upHeld)
             {
@@ -435,23 +420,23 @@ internal sealed partial class CandidateTracker
             upHeld = true;
             gestures.Maximize =
                 route == "win-up"
-                && before is { Show: SW_SHOWNORMAL }
+                && input.Before is { Show: SW_SHOWNORMAL }
                 && !injected
                 && injectedWin.Count == 0
                 && !conflict
-                && !gestures.Moving.Contains(window)
+                && !gestures.Moving.Contains(input.Target)
                 && !Placement.Cancelled
                     ? gestures.Begin(
-                        window,
-                        before,
+                        input.Target,
+                        input.Before,
                         "key",
                         "win-up",
-                        now,
+                        input.At,
                         false,
                         false,
                         true,
                         NextTransaction(),
-                        ContinueSeries: Placement.Owns(window)
+                        ContinueSeries: Placement.Owns(input.Target)
                     )
                     : null;
         }
@@ -461,46 +446,55 @@ internal sealed partial class CandidateTracker
             && !moveKeyReleased
         )
         {
-            if ((flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
+            if ((input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
                 ClearInput();
             return;
         }
         bool placementKey =
-            winDown
-            && !modifiers
-            && !shiftDown
-            && !altDown
-            && key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
+            input.Win
+            && !input.Modified
+            && !input.Shift
+            && !input.Alt
+            && input.Key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
         if (!placementKey)
             Placement.Cancel();
         if (
             placementKey
-            && Placement.Key(window, before, key, winDown, conflict, now, flags, NextTransaction)
+            && Placement.Key(
+                input.Target,
+                input.Before,
+                input.Key,
+                input.Win,
+                conflict,
+                input.At,
+                input.Flags,
+                NextTransaction
+            )
         )
         {
             gestures.Pending = null;
             ClearBaselineReduction();
             return;
         }
-        BaselineKey(window, route);
-        if (key == VK_DOWN)
+        BaselineKey(input.Target, route);
+        if (input.Key == VK_DOWN)
         {
             if (winDownHeld)
                 return;
             winDownHeld = true;
         }
-        if (route is null || route == "win-up" && !injected && !conflict || before is null)
+        if (route is null || route == "win-up" && !injected && !conflict || input.Before is null)
         {
             gestures.Pending = null;
             return;
         }
         gestures.Pending = gestures.Begin(
-            window,
-            before,
+            input.Target,
+            input.Before,
             "key",
             route,
-            now,
-            (flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
+            input.At,
+            (input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
             conflict,
             true,
             NextTransaction()

@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
     <Compile
       Include="../../../native-helper/Core/CandidateTracker.InputFacts.cs"
       Link="CandidateTracker.InputFacts.cs"
