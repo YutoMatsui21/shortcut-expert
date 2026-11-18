@@ -21,9 +21,9 @@
 
 ## 3. 通信・複合配置との境界
 
-W07は独立Detectorから`independent-results`で送る。W06と切戻し経路は従来どおり、Nativeの`placement-v1`証拠へ終端shape・対象一致・入力の経過・monitor変更・通知monitorを載せる。Mainが厳格parse、Coreが由来・経路・期限・結果を再確認。W06/W07は操作別の件数・キー率・学習状態として保存し、W07は**Winを保持した順次方向キー**として案内する。
+W06/W07は独立Detectorから終端shape・対象一致・入力の経過・通知monitorを`independent-results`で送る。旧`placement-v1`は受信・fixture互換に残す。Mainが厳格parse、Coreが由来・経路・期限・結果を再確認。W06/W07は操作別の件数・キー率・学習状態として保存し、W07は**Winを保持した順次方向キー**として案内する。
 
-**別monitorのW02＋W07**は[複合契約](compound-drag.md)で各1件を原子保存し、通知を1つへまとめる。cross-monitor quarterはW02とW07の成立Proofを1つのEnvelopeにまとめる。quarter自体が不成立でも共通入力が有効ならW02を残す。cross-monitor halfはW02だけで、W06の自動対応はしない。切戻し経路の旧`CompoundMoveResult`・全体棄却は維持する。
+**別monitorのW02＋W07**は[複合契約](compound-drag.md)で各1件を原子保存し、通知を1つへまとめる。cross-monitor quarterはW02とW07の成立Proofを1つのEnvelopeにまとめる。quarter自体が不成立でも共通入力が有効ならW02を残す。cross-monitor halfはW02だけで、W06の自動対応はしない。
 
 ## 4. 検証と未確認条件
 

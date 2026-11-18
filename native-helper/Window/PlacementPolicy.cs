@@ -184,7 +184,7 @@ internal static class PlacementGeometry
     }
 }
 
-internal sealed class KeyGestureSeries(GestureManager? gestures = null)
+internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
 {
     private GestureManager.Gesture? gesture;
 
@@ -464,7 +464,7 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
         && now - pending.Started is >= 0 and <= 15000
         && now - pending.Last is >= 0 and <= 1000;
 
-    internal PlacementResult? Finish(nint window, WindowState? after, long now, bool injected)
+    private Series? RetireSeries(nint window, WindowState? after, long now, bool injected)
     {
         var pending = series;
         series = null;
@@ -478,24 +478,9 @@ internal sealed class KeyGestureSeries(GestureManager? gestures = null)
             return null;
         }
         gestures?.Complete(gesture, window, after!, now);
-        string? shape = PlacementGeometry.Shape(after!);
-        string? initial = PlacementGeometry.Shape(pending.Before);
-        if (
-            shape is null
-            || shape == initial
-            || pending.Horizontal is null
-            || !shape.StartsWith(pending.Horizontal + "-")
-            || (
-                shape.EndsWith("-half")
-                    ? pending.Vertical is not null
-                    : !shape.EndsWith("-" + pending.Vertical)
-            )
-        )
-            return null;
-        return new(
-            pending.Transaction,
-            "key",
-            new(shape, true, now - pending.Started, false, after!.Monitor)
-        );
+        return pending;
     }
+
+    internal void Retire(nint window, WindowState? after, long now, bool injected) =>
+        RetireSeries(window, after, now, injected);
 }

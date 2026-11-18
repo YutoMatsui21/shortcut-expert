@@ -36,10 +36,6 @@
       Link="CaptionClickResultAdapter.cs"
     />
     <Compile
-      Include="../../../native-helper/Core/DetectionMigration.cs"
-      Link="DetectionMigration.cs"
-    />
-    <Compile
       Include="../../../native-helper/Detectors/InputDetectors.cs"
       Link="InputDetectors.cs"
     />

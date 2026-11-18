@@ -2,7 +2,7 @@
 
 **責務**：同一ウィンドウの入力前後の状態を確証し、最大化（W03）と最大化解除・最小化（W04）を分類する。ドラッグ中の派生復元や連続キーによる二重計上を防ぐ。[製品要件](../ui-requirements.md)、[技術調査](../research/compound-drag-validation.md)。
 
-W03・W04は通常起動で独立Detectorを使用する。W04も共通Gestureの物理解放後に確定し、Win+↓の連続操作の期限と取消条件を維持する。W03のキー・ボタンクリックは、既存期限内の物理解放と確定結果が揃うまで発行しない。Win保持中の配置列は両Win解放後の最終結果だけを使う。以下の入力適格性・結果読取の条件は共通で、解放前即時確定・配置列の消費という旧W03の振る舞いは切戻し経路だけに残す。詳細は[現行構成](../research/detection-architecture/current.md#independent-detectors-181)。
+W03・W04は通常起動で独立Detectorを使用する。W04も共通Gestureの物理解放後に確定し、Win+↓の連続操作の期限と取消条件を維持する。W03のキー・ボタンクリックは、既存期限内の物理解放と確定結果が揃うまで発行しない。Win保持中の配置列は両Win解放後の最終結果だけを使う。以下の入力適格性・結果読取の条件は共通で、解放前即時確定・配置列の消費という旧W03の振る舞いは互換fixtureで再現する。詳細は[現行構成](../research/detection-architecture/current.md#independent-detectors-181)。
 
 ## 1. 共有する判定
 

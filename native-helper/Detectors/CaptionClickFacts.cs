@@ -3,7 +3,7 @@ using static NativeMethods;
 internal sealed record CaptionPressFacts(nint Target, WindowState Before, long At, int Transaction);
 
 // Completed physical click observations, not another detector's success/failure.
-internal sealed record CaptionCompletionFacts(
+internal sealed partial record CaptionCompletionFacts(
     CaptionPressFacts Press,
     WindowState After,
     int Hit,
@@ -20,11 +20,6 @@ internal sealed record CaptionCompletionFacts(
             || ObservedTerminal == "minimized" && After.Show == SW_SHOWMINIMIZED
         ) && (!Fallback || Activated)
             ? ObservedTerminal
-            : null;
-
-    internal CaptionClickEvidence? LegacyEvidence() =>
-        Activated || MatchedTerminal is not null
-            ? new(MatchedTerminal, Activated, true, true, 500, Press.Before.Monitor)
             : null;
 }
 

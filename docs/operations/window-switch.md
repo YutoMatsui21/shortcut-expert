@@ -25,7 +25,7 @@
 
 ## 3. 通信・記録
 
-通常起動はRouterからWindowSwitchDetectorへ事実を配送し、共通GestureとComposerから`independent-results`のswitch proofを1回出力する。入力開始snapshot・transactionを維持し、観測済み切替先と最終foregroundを照合する。異なる対象・入力源・適格性・foreground一致・経過時間・通知monitorを載せる。`window-switch/window-switch-v1`は切戻し・fixture互換に残す。Mainが必須項目を厳格に検証し、Coreがmouse/direct-click、key/alt-tabの成立を確認する。HWND、process名、タイトル、URL、キー列・座標履歴は送信・保存しない。既存のtransaction重複除外、SQLite日別集計・学習状態・保存後通知を使い、v1へは出力しない。
+通常起動はRouterからWindowSwitchDetectorへ事実を配送し、共通GestureとComposerから`independent-results`のswitch proofを1回出力する。入力開始snapshot・transactionを維持し、観測済み切替先と最終foregroundを照合する。異なる対象・入力源・適格性・foreground一致・経過時間・通知monitorを載せる。`window-switch/window-switch-v1`は受信・fixture互換に残す。Mainが必須項目を厳格に検証し、Coreがmouse/direct-click、key/alt-tabの成立を確認する。HWND、process名、タイトル、URL、キー列・座標履歴は送信・保存しない。既存のtransaction重複除外、SQLite日別集計・学習状態・保存後通知を使い、v1へは出力しない。
 
 ## 4. 検証と未確認条件
 

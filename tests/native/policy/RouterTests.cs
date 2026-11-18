@@ -5,7 +5,7 @@ internal static partial class Program
     private static MousePressEvent RouterDragPress(IndependentDetection.Drag g) =>
         new(1, 11, 0, g.Before, g.Hit, default, 500, g.Physical ? 0u : LLMHF_INJECTED, false, true);
 
-    // Replay the unchanged #172 drag fixtures through the production router/adapter and
+    // Replay the unchanged #172 drag fixtures through the router and legacy fixture adapter and
     // compare complete envelopes with the existing direct-policy baseline.
     private static void VerifyRouterDrag(
         string name,
@@ -24,7 +24,7 @@ internal static partial class Program
                 sink.Start(1, 2);
                 var router = new DetectionRouter();
                 router.Reset(1);
-                new TrackerEventAdapter(tracker, sink).Register(router);
+                new LegacyTrackerEventAdapter(tracker, sink).Register(router);
                 router.Dispatch(RouterDragPress(g));
                 router.Dispatch(new ObservedEvent(ObservedKind.MoveStart, 1, 11, g.StartAge));
                 router.Dispatch(
@@ -342,7 +342,7 @@ internal static partial class Program
         sink.Start(1, 2);
         var router = new DetectionRouter();
         router.Reset(1);
-        new TrackerEventAdapter(routed, sink, (_, value) => cached = value).Register(router);
+        new LegacyTrackerEventAdapter(routed, sink, (_, value) => cached = value).Register(router);
         uint key = (uint)(mode == "placement" ? VK_LEFT : VK_UP);
         uint flags = mode == "injected" ? LLKHF_INJECTED : 0;
         direct.Key(11, before, key, true, false, 0, flags);
@@ -369,7 +369,7 @@ internal static partial class Program
         sink.Start(1, 2);
         var router = new DetectionRouter();
         router.Reset(1);
-        new TrackerEventAdapter(tracker, sink).Register(router);
+        new LegacyTrackerEventAdapter(tracker, sink).Register(router);
         DetectionRouter.Delivery? delivery = null;
         router.Subscribe(new[] { ObservedKind.MousePress }, (e, d) => delivery = d);
         router.Dispatch(

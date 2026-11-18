@@ -5,7 +5,6 @@ using static NativeMethods;
 internal sealed class WindowSwitchDetector
 {
     internal sealed record Options(
-        bool Independent = true,
         Action<WindowDiagnosticReason>? Diagnostic = null,
         Func<string>? Date = null
     );
@@ -15,7 +14,6 @@ internal sealed class WindowSwitchDetector
     private readonly DetectionRouter router;
     private readonly Func<int> transaction;
     private readonly Func<string> date;
-    private readonly bool independent;
     private readonly GestureManager gestures = new();
     private GestureManager.Input? input;
     private Func<bool>? lease;
@@ -36,7 +34,6 @@ internal sealed class WindowSwitchDetector
         this.router = router;
         this.transaction = transaction;
         options ??= new();
-        independent = options.Independent;
         date = options.Date ?? (() => DateTime.Now.ToString("yyyy-MM-dd"));
         Policy = new() { Diagnostic = options.Diagnostic };
         router.Subscribe(
@@ -176,17 +173,6 @@ internal sealed class WindowSwitchDetector
 
     private void Publish(SwitchCompletion completed, SwitchPollEvent e)
     {
-        if (!independent)
-        {
-            sink.Switch(
-                generation,
-                input!.Transaction,
-                inputDate,
-                completed.Origin,
-                new(true, true, true, true, completed.InputAgeMs, completed.SettleMs, e.Monitor)
-            );
-            return;
-        }
         var gesture = input!.Gesture;
         var terminal = State(completed.Target, e.Monitor);
         if (!gestures.Complete(gesture, completed.Target.Handle, terminal, e.At))

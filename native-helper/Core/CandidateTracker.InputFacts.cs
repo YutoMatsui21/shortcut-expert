@@ -1,6 +1,6 @@
 using static NativeMethods;
 
-// Neutral input lifetime queries shared by Observer and the migration adapters.
+// Neutral input lifetime queries shared by Observer and the detection adapters.
 internal sealed partial class CandidateTracker
 {
     internal nint? MaximizeTarget(long now)
@@ -27,7 +27,7 @@ internal sealed partial class CandidateTracker
     }
 
     internal nint? ClickResultTarget =>
-        IndependentResults
+        !UsesLegacyBaseline
         && gestures.Pending
             is { Route: "max-button" or "min-button" or "caption-double-click" } click
             ? click.Window
@@ -37,10 +37,10 @@ internal sealed partial class CandidateTracker
     {
         if (MaximizeTarget(now) is { } key)
             return key != excluded ? key : null;
-        if (IndependentResults && Placement.PendingResultTarget(now) is { } series)
+        if (!UsesLegacyBaseline && Placement.PendingResultTarget(now) is { } series)
             return series != excluded ? series : null;
         if (
-            !IndependentResults
+            UsesLegacyBaseline
             || gestures.Drags.Count != 0
             || gestures.Pending is not { } click
             || click.Route
@@ -64,15 +64,6 @@ internal sealed partial class CandidateTracker
     internal uint? MaximizeProcess(nint window, long now) =>
         MaximizeTarget(now) == window ? gestures.Maximize!.Before.Process : null;
 
-    private bool RetainsOperation(
-        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? operation
-    ) =>
-        operation is not null
-        && (
-            !IndependentResults
-            || operation is not ("maximize" or "monitor-move" or "restore" or "minimize")
-        );
-
     private bool ReleasedMonitorKey(uint key) =>
         (gestures.Pending?.Route, key)
             is
@@ -86,7 +77,7 @@ internal sealed partial class CandidateTracker
             return;
         moveKeyReleased = true;
         if (
-            IndependentResults
+            !UsesLegacyBaseline
             && gestures.Pending is { Route: "win-shift-left" or "win-shift-right" } move
         )
             gestures.AwaitResult(move.Gesture, now);

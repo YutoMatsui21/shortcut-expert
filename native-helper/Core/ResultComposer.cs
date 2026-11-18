@@ -28,8 +28,7 @@ internal sealed class ResultComposer(
             throw new InvalidOperationException("ResultComposer requires its message-loop thread");
     }
 
-    // Fix subscriptions at input routing time. Existing detectors retain their
-    // legacy outlets until their individual migration to this entry point.
+    // Fix subscriptions at input routing time.
     internal Pending Begin(GestureContext context, IEnumerable<Subscription> subscriptions)
     {
         VerifyThread();

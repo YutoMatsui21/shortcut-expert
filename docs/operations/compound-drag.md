@@ -1,6 +1,6 @@
 # 複合ドラッグ：W02＋W03／W07
 
-**#177の確定設計との境界**：以下の2件・組合せ・全体棄却は現行の旧compound経路の説明。[独立結果Envelope契約](../research/detection-architecture/result-envelope.md)では成立した既存操作を全件採用し、W02＋W06・部分採用・3件以上を原子的に保存する。W02/W03/W07は本番切替済み。新経路は各Detectorの成立を独立に評価し、最大化release・quarter release・cross-monitor halfの個別不成立でも共通入力が有効ならW02だけを採用する。設定変更・対象不一致・解放先不一致などの共通不正は全破棄。W02＋W06の自動対応はこの移行の対象外。以下の旧経路は `COACH_DETECTION_MODE=legacy` による切戻しと既存fixtureの回帰用に維持する。
+**現行の動作**は[独立結果Envelope契約](../research/detection-architecture/result-envelope.md)に従う。成立した既存操作を同じtransactionで原子保存し、W03/W07の個別不成立でも共通入力が有効ならW02を採用する。共通の対象・解放先や構成の不一致では全件を破棄する。cross-monitor halfはW02として扱う。以下は旧`compound-drag`の受信互換と固定fixtureを説明する。
 
 同じマウスドラッグで別画面移動と最大化／四隅配置が確定した場合の横断契約。[製品要件](../ui-requirements.md#compound-gesture)を正本とする。
 

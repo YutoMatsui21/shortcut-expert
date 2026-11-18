@@ -6,14 +6,12 @@ internal static partial class Program
 
     private static void IndependentInputTests()
     {
+        Check("independent detector registration", IndependentDetectorRegistration);
         IndependentHalfTests();
         IndependentCaptionTests();
         IndependentSwitchTests();
         IndependentReductionTests();
         IndependentReductionSeriesTests();
-        Equal(true, DetectionMigration.Enabled(null));
-        Equal(true, DetectionMigration.Enabled("independent"));
-        Equal(false, DetectionMigration.Enabled("legacy"));
         foreach (
             string mode in new[]
             {

@@ -3,7 +3,7 @@ using Point = NativeMethods.Point;
 
 // One physical, explicitly hit-tested inactive caption click owns its transaction.
 // Identities and input coordinates remain transient; the wire carries only confirmed results.
-internal sealed class InactiveCaptionPolicy
+internal sealed partial class InactiveCaptionPolicy
 {
     internal nint Target { get; private set; }
     internal uint Process { get; private set; }
@@ -157,15 +157,6 @@ internal sealed class InactiveCaptionPolicy
     internal CaptionPressFacts? PressFacts =>
         Pending && before is not null ? new(Target, before, started, transaction) : null;
 
-    internal (int Transaction, CaptionClickEvidence Evidence)? Poll(WindowState? after, long at)
-    {
-        var facts = PollFacts(after, at);
-        if (facts is null)
-            return null;
-        var evidence = facts.LegacyEvidence();
-        return evidence is null ? null : (facts.Press.Transaction, evidence);
-    }
-
     internal CaptionCompletionFacts? PollFacts(WindowState? after, long at)
     {
         if (!Pending)
@@ -194,7 +185,7 @@ internal sealed class InactiveCaptionPolicy
                     at
                 )
                 : null;
-        if (facts?.LegacyEvidence() is null)
+        if (facts is null || !facts.Activated && facts.MatchedTerminal is null)
             Diagnostic?.Invoke(WindowDiagnosticReason.CaptionNoResult);
         Cancel();
         return facts;

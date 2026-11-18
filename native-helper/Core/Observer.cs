@@ -14,11 +14,9 @@ internal sealed class Observer : IDisposable
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly DetectionSession session = new();
     private readonly CandidateTracker tracker;
-    private readonly bool independentDetection;
     private readonly CaptionClickResultAdapter independentCaption;
     private readonly DetectionRouter router = new();
     private readonly InactiveCaptionPolicy captionClick = new();
-    private string captionDate = "";
 
     private void CancelCaption()
     {
@@ -50,26 +48,17 @@ internal sealed class Observer : IDisposable
         Action<object> emit,
         bool fixture = false,
         Action<CloseReason>? closeDiagnostic = null,
-        Action<WindowDiagnosticReason>? windowDiagnostic = null,
-        bool? independentDetection = null
+        Action<WindowDiagnosticReason>? windowDiagnostic = null
     )
     {
         protocol = new CandidateSink(emit);
         tracker = new(session);
         independentCaption = new(session, protocol);
         independentCaption.Register(router);
-        this.independentDetection =
-            independentDetection
-            ?? DetectionMigration.Enabled(
-                Environment.GetEnvironmentVariable("COACH_DETECTION_MODE")
-            );
         new TrackerEventAdapter(
             tracker,
-            protocol,
-            (target, value) => states[target] = value,
-            this.independentDetection
-                ? new IndependentOperationAdapter(tracker, session, protocol)
-                : null
+            new IndependentOperationAdapter(tracker, session, protocol),
+            (target, value) => states[target] = value
         ).Register(router);
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
@@ -85,7 +74,7 @@ internal sealed class Observer : IDisposable
                 protocol,
                 router,
                 NextTransaction,
-                new(this.independentDetection, windowDiagnostic)
+                new(Diagnostic: windowDiagnostic)
             ),
             () => clock.ElapsedMilliseconds,
             windowDiagnostic,
@@ -398,14 +387,14 @@ internal sealed class Observer : IDisposable
 
     private void BeginCaptionResults()
     {
-        captionDate = DateTime.Now.ToString("yyyy-MM-dd");
-        if (independentDetection && captionClick.PressFacts is { } pressFacts)
-            router.Dispatch(new CaptionPressEvent(epoch, pressFacts, captionDate));
+        if (captionClick.PressFacts is { } pressFacts)
+            router.Dispatch(
+                new CaptionPressEvent(epoch, pressFacts, DateTime.Now.ToString("yyyy-MM-dd"))
+            );
     }
 
     private bool ReadsKeyResult(uint key) =>
-        key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT
-        || independentDetection && key is VK_UP or VK_DOWN;
+        key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT || key is VK_UP or VK_DOWN;
 
     private nint OnMouse(int code, nint message, nint data)
     {
@@ -821,24 +810,10 @@ internal sealed class Observer : IDisposable
             {
                 bool fallback = captionClick.Fallback;
                 var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
-                var result = independentDetection
-                    ? null
-                    : captionClick.Poll(after, clock.ElapsedMilliseconds);
-                if (
-                    independentDetection
-                    && captionClick.PollFacts(after, clock.ElapsedMilliseconds)
-                        is { } completedFacts
-                )
+                if (captionClick.PollFacts(after, clock.ElapsedMilliseconds) is { } completedFacts)
                     router.Dispatch(new CaptionResultEvent(epoch, completedFacts));
                 if (fallback && !captionClick.Pending)
                     tracker.CancelMouseState();
-                if (result is { } completed)
-                    protocol.CaptionClick(
-                        epoch,
-                        completed.Transaction,
-                        captionDate,
-                        completed.Evidence
-                    );
             }
             if (
                 !fixture
