@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program

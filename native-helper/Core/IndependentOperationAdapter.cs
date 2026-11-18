@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal sealed class IndependentOperationAdapter

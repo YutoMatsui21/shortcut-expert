@@ -1,3 +1,5 @@
+using ShortcutExpert.Detection;
+
 internal sealed class TrackerEventAdapter(
     CandidateTracker tracker,
     IndependentOperationAdapter operations,

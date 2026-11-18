@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -459,7 +460,7 @@ internal sealed partial class KeyGestureSeries(GestureManager? gestures = null)
         return true;
     }
 
-    private bool Valid(Series pending, OperationObservation observation) =>
+    private static bool Valid(Series pending, OperationObservation observation) =>
         !observation.Injected
         && pending.Window == observation.Target
         && observation.After is { } after

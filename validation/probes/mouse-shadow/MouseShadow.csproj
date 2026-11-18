@@ -7,6 +7,10 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile
+      Include="../../../native-helper/Core/OperationObservation.cs"
+      Link="OperationObservation.cs"
+    />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
     <Compile
       Include="../../../native-helper/Core/CandidateTracker.InputFacts.cs"
@@ -77,6 +81,30 @@
     <Compile
       Include="../../../tests/native/policy/LegacyCaptionEvidence.cs"
       Link="LegacyCaptionEvidence.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyDragReplay.cs"
+      Link="LegacyDragReplay.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyWindowStateReplay.cs"
+      Link="LegacyWindowStateReplay.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyWindowCandidateBuilder.cs"
+      Link="LegacyWindowCandidateBuilder.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyDragMoveReplay.cs"
+      Link="LegacyDragMoveReplay.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyDragMaximizeReplay.cs"
+      Link="LegacyDragMaximizeReplay.cs"
+    />
+    <Compile
+      Include="../../../tests/native/policy/LegacyReductionReplay.cs"
+      Link="LegacyReductionReplay.cs"
     />
     <Compile Include="../MouseDetectionShadow.cs" Link="MouseDetectionShadow.cs" />
     <Compile Include="../../../native-helper/Platform/DisplayContext.cs" Link="DisplayContext.cs" />

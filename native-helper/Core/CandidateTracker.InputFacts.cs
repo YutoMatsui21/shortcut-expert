@@ -88,11 +88,3 @@ internal sealed partial class CandidateTracker
 internal readonly record struct KeySequenceInput(uint Key, bool Injected, string? Route);
 
 internal readonly record struct KeySequenceRelease(uint Key, long? At);
-
-internal sealed record OperationObservation(
-    nint Target,
-    WindowState? After,
-    long At,
-    nint Foreground,
-    bool Injected = false
-);

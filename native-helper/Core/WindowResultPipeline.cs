@@ -1,3 +1,5 @@
+namespace ShortcutExpert.Detection;
+
 internal sealed class WindowResultPipeline(DetectionSession session, CandidateSink sink)
 {
     internal CaptionClickResultAdapter Register(

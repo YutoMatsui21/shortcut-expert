@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using ShortcutExpert.Detection;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -391,7 +392,7 @@ internal sealed class Observer : IDisposable
             );
     }
 
-    private bool ReadsKeyResult(uint key) =>
+    private static bool ReadsKeyResult(uint key) =>
         key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT || key is VK_UP or VK_DOWN;
 
     private nint OnMouse(int code, nint message, nint data)
