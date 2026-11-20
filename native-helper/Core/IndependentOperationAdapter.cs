@@ -238,10 +238,7 @@ internal sealed class IndependentOperationAdapter
         var reductionFacts = RestoreMinimizeDetector.Detect(facts);
         if (maximize is null && reductionFacts is null)
             return;
-        long reductionEpoch =
-            reductionFacts?.action == IndependentStateAction.Minimize
-                ? tracker.MinimizeInputEpoch(input.Gesture, o.Foreground)
-                : tracker.InputEpoch;
+        long reductionEpoch = tracker.MinimizeInputEpoch(input.Gesture, o.Foreground);
         var reduced = reduction.Select(input, reductionFacts, reductionEpoch);
         bool accepted = results.Finish(o.After!, o.At, null, maximize, null, reduced);
         reduction.Completed(facts, reductionFacts, tracker.InputEpoch, accepted);

@@ -95,7 +95,7 @@ internal sealed class TrackerEventAdapter(
         switch (e.Kind)
         {
             case ObservedKind.Foreground:
-                tracker.ForegroundChanged(e.Target, (e as ForegroundObservedEvent)?.NativeTick);
+                tracker.ForegroundChanged(e.Target, e as ForegroundObservedEvent);
                 break;
             case ObservedKind.MinimizeStart:
                 tracker.MinimizeStarted((MinimizeStartedEvent)e);

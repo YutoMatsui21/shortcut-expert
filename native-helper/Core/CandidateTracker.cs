@@ -181,7 +181,8 @@ internal sealed partial class CandidateTracker
     {
         if (reductionPress is not { } press || !MatchesReductionTarget(press.Gesture, observed))
             return;
-        if (unchecked(observed.NativeTick - press.Tick) <= InputMatchWindowMs)
+        uint age = unchecked(observed.NativeTick - press.Tick);
+        if (age is > 0 and <= (uint)InputMatchWindowMs)
             reductionMinimizeStart ??= (press.Gesture, observed.NativeTick);
     }
 
@@ -194,13 +195,13 @@ internal sealed partial class CandidateTracker
         && input.Window == observed.Target
         && input.Before.Process == observed.Process;
 
-    internal void ForegroundChanged(nint window, uint? nativeTick = null)
+    internal void ForegroundChanged(nint window, ForegroundObservedEvent? observed = null)
     {
         reductionDeparture = null;
         if (gestures.Current?.Window != window)
         {
             InputEpoch++;
-            if (IsMinimizeDeparture(window, nativeTick))
+            if (IsMinimizeDeparture(window, observed))
                 reductionDeparture = (gestures.Pending!.Gesture, window, InputEpoch);
         }
         Placement.Foreground(window);
@@ -210,13 +211,18 @@ internal sealed partial class CandidateTracker
         BaselineForeground(window);
     }
 
-    private bool IsMinimizeDeparture(nint window, uint? nativeTick) =>
-        nativeTick is { } at
-        && reductionMinimizeStart is { } start
+    internal (nint Window, uint Process)? MinimizeDepartureTarget(nint foreground) =>
+        reductionMinimizeStart is { } start
         && gestures.Pending is { } input
         && input.Gesture == start.Gesture
-        && input.Window != window
-        && unchecked(at - start.Tick) <= InputMatchWindowMs;
+        && input.Window != foreground
+            ? (input.Window, input.Before.Process)
+            : null;
+
+    private bool IsMinimizeDeparture(nint window, ForegroundObservedEvent? observed) =>
+        observed is { MinimizedWindow: { } minimized }
+        && MinimizeDepartureTarget(window) == minimized
+        && observed.NativeTick == reductionMinimizeStart!.Value.Tick;
 
     // A pending Win+Down can cause its own terminal foreground departure.
     internal long MinimizeInputEpoch(GestureManager.Gesture gesture, nint foreground) =>
@@ -459,7 +465,7 @@ internal sealed partial class CandidateTracker
             && !moveKeyReleased
         )
         {
-            if ((input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
+            if (injected)
                 ClearInput();
             return;
         }
@@ -501,13 +507,18 @@ internal sealed partial class CandidateTracker
             gestures.Pending = null;
             return;
         }
+        StartStandaloneKey(input, route, injected, conflict);
+    }
+
+    private void StartStandaloneKey(KeyPressEvent input, string route, bool injected, bool conflict)
+    {
         gestures.Pending = gestures.Begin(
             input.Target,
-            input.Before,
+            input.Before!,
             "key",
             route,
             input.At,
-            (input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
+            injected,
             conflict,
             true,
             NextTransaction()

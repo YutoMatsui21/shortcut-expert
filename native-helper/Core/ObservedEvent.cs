@@ -141,7 +141,8 @@ namespace ShortcutExpert.Detection
         int Generation,
         nint Target,
         long At,
-        uint NativeTick
+        uint NativeTick,
+        (nint Window, uint Process)? MinimizedWindow = null
     ) : ObservedEvent(ObservedKind.Foreground, Generation, Target, At);
 
     internal sealed record MinimizeStartedEvent(

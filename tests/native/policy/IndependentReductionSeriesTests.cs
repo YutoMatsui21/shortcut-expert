@@ -38,8 +38,12 @@ internal static partial class Program
             {
                 "terminal",
                 "unrelated",
+                "without-start",
                 "delayed-departure",
                 "pre-press-start",
+                "start-tied-to-press",
+                "departure-delivered-first",
+                "later-departure",
                 "second-departure",
                 "foreground-mismatch",
             }
@@ -98,21 +102,36 @@ internal static partial class Program
             new KeyPressEvent(1, 11, 100, before, VK_DOWN, true, false, 0, NativeTick: 100)
         );
         var gesture = f.Tracker.Gestures.Current!;
-        if (mode != "unrelated")
-            f.Router.Dispatch(
-                new MinimizeStartedEvent(
-                    1,
-                    11,
-                    103,
-                    before.Process,
-                    mode == "pre-press-start" ? 99u : 103u
-                )
-            );
+        uint startTick = mode switch
+        {
+            "pre-press-start" => 99,
+            "start-tied-to-press" => 100,
+            _ => 103,
+        };
+        var start = new MinimizeStartedEvent(1, 11, 103, before.Process, startTick);
+        if (mode is not ("without-start" or "departure-delivered-first"))
+            f.Router.Dispatch(start);
+        uint departureTick = mode switch
+        {
+            "delayed-departure" => 102,
+            "later-departure" => 104,
+            _ => 103,
+        };
         f.Router.Dispatch(
-            new ForegroundObservedEvent(1, 12, 105, mode == "delayed-departure" ? 102u : 105u)
+            new ForegroundObservedEvent(
+                1,
+                12,
+                105,
+                departureTick,
+                mode == "unrelated" ? null : (11, before.Process)
+            )
         );
+        if (mode == "departure-delivered-first")
+            f.Router.Dispatch(start);
         if (mode == "second-departure")
-            f.Router.Dispatch(new ForegroundObservedEvent(1, 13, 106, 106));
+            f.Router.Dispatch(
+                new ForegroundObservedEvent(1, 13, 106, departureTick, (11, before.Process))
+            );
         nint foreground = mode is "second-departure" or "foreground-mismatch" ? 13 : 12;
         f.State(minimized, 107, foreground: foreground);
         Equal(GestureManager.Phase.Observing, gesture.State);

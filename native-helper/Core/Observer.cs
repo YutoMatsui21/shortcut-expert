@@ -157,10 +157,9 @@ internal sealed class Observer : IDisposable
             (uint min, uint max) in new[]
             {
                 (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
-                (EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND),
-                (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
+                // One out-of-context subscription preserves the order of equal-tick system events.
+                (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND),
                 (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
-                (EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND),
             }
         )
         {
@@ -740,38 +739,7 @@ internal sealed class Observer : IDisposable
                 );
                 return CallNextHookEx(0, code, message, data);
             }
-            bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
-            bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
-                alt = GetAsyncKeyState(VK_MENU) < 0;
-            bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
-            WindowState? before = null;
-            bool maximizeKey =
-                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) == "win-up";
-            if (
-                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null
-                && (maximizeKey || states.ContainsKey(target))
-            )
-            {
-                states.TryGetValue(target, out WindowState? cached);
-                before = Read(target, cached);
-                if (before is not null)
-                    states[target] = before;
-            }
-            router.Dispatch(
-                new KeyPressEvent(
-                    epoch,
-                    target,
-                    clock.ElapsedMilliseconds,
-                    before,
-                    key.Key,
-                    win,
-                    modifiers,
-                    key.Flags,
-                    shift,
-                    alt,
-                    key.Time
-                )
-            );
+            DispatchWindowKey(target, key);
         }
         catch
         {
@@ -785,6 +753,38 @@ internal sealed class Observer : IDisposable
             SyncMaximizeTimer();
         }
         return CallNextHookEx(0, code, message, data);
+    }
+
+    private void DispatchWindowKey(nint target, KeyData key)
+    {
+        bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
+        bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
+            alt = GetAsyncKeyState(VK_MENU) < 0;
+        bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
+        WindowState? before = null;
+        string? route = CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers);
+        if (route is not null && (route == "win-up" || states.ContainsKey(target)))
+        {
+            states.TryGetValue(target, out WindowState? cached);
+            before = Read(target, cached);
+            if (before is not null)
+                states[target] = before;
+        }
+        router.Dispatch(
+            new KeyPressEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                before,
+                key.Key,
+                win,
+                modifiers,
+                key.Flags,
+                shift,
+                alt,
+                key.Time
+            )
+        );
     }
 
     private void SyncMaximizeTimer()
@@ -856,10 +856,11 @@ internal sealed class Observer : IDisposable
         uint time
     )
     {
-        if (fixture || !Active || window == 0)
+        if (fixture || !Active || window == 0 || IgnoreSystemEvent(kind))
             return;
         try
         {
+            var foregroundObservation = ObserveForeground(kind, window, time);
             if (captionClick.Pending)
             {
                 bool fallback = captionClick.Fallback;
@@ -883,11 +884,9 @@ internal sealed class Observer : IDisposable
                     tracker.CancelMouseState();
             }
             closing.Event(kind, window, obj, child, thread, time);
-            if (kind == EVENT_SYSTEM_FOREGROUND)
+            if (foregroundObservation is not null)
             {
-                router.Dispatch(
-                    new ForegroundObservedEvent(epoch, window, clock.ElapsedMilliseconds, time)
-                );
+                router.Dispatch(foregroundObservation);
                 switching.Foreground(window, time);
             }
             if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
@@ -944,38 +943,7 @@ internal sealed class Observer : IDisposable
                 && (obj != OBJID_WINDOW || child != CHILDID_SELF)
             )
                 return;
-            states.TryGetValue(window, out WindowState? previous);
-            WindowState? after = ReadStateChange(window, previous);
-            if (after is null)
-            {
-                tracker.Forget(window);
-                return;
-            }
-            states[window] = after;
-            if (captionClick.Target == window)
-                return;
-            if (kind == EVENT_SYSTEM_MINIMIZESTART)
-                router.Dispatch(
-                    new MinimizeStartedEvent(
-                        epoch,
-                        window,
-                        clock.ElapsedMilliseconds,
-                        after.Process,
-                        time
-                    )
-                );
-            router.Dispatch(
-                new StateObservedEvent(
-                    epoch,
-                    window,
-                    clock.ElapsedMilliseconds,
-                    previous,
-                    after,
-                    GetForegroundWindow(),
-                    DateTime.Now.ToString("yyyy-MM-dd"),
-                    DisplayContext.Bounds(window)
-                )
-            );
+            DispatchStateChange(window, kind, time);
         }
         catch
         {
@@ -984,6 +952,77 @@ internal sealed class Observer : IDisposable
             switching.Cancel();
             closing.Cancel();
         }
+    }
+
+    private static bool IgnoreSystemEvent(uint kind) =>
+        kind is >= EVENT_SYSTEM_FOREGROUND and <= EVENT_SYSTEM_MINIMIZEEND
+        && kind
+            is not (
+                EVENT_SYSTEM_FOREGROUND
+                or EVENT_SYSTEM_MOVESIZESTART
+                or EVENT_SYSTEM_MOVESIZEEND
+                or EVENT_SYSTEM_MINIMIZESTART
+                or EVENT_SYSTEM_MINIMIZEEND
+            );
+
+    private ForegroundObservedEvent? ObserveForeground(uint kind, nint window, uint time) =>
+        kind == EVENT_SYSTEM_FOREGROUND
+            ? new(
+                epoch,
+                window,
+                clock.ElapsedMilliseconds,
+                time,
+                ReadDisplacedMinimizedWindow(window)
+            )
+            : null;
+
+    private (nint Window, uint Process)? ReadDisplacedMinimizedWindow(nint foreground)
+    {
+        if (tracker.MinimizeDepartureTarget(foreground) is not { } target)
+            return null;
+        if (GetForegroundWindow() != foreground || !IsIconic(target.Window))
+            return null;
+        return
+            GetWindowThreadProcessId(target.Window, out uint process) != 0
+            && process == target.Process
+            ? target
+            : null;
+    }
+
+    private void DispatchStateChange(nint window, uint kind, uint time)
+    {
+        states.TryGetValue(window, out WindowState? previous);
+        WindowState? after = ReadStateChange(window, previous);
+        if (after is null)
+        {
+            tracker.Forget(window);
+            return;
+        }
+        states[window] = after;
+        if (captionClick.Target == window)
+            return;
+        if (kind == EVENT_SYSTEM_MINIMIZESTART)
+            router.Dispatch(
+                new MinimizeStartedEvent(
+                    epoch,
+                    window,
+                    clock.ElapsedMilliseconds,
+                    after.Process,
+                    time
+                )
+            );
+        router.Dispatch(
+            new StateObservedEvent(
+                epoch,
+                window,
+                clock.ElapsedMilliseconds,
+                previous,
+                after,
+                GetForegroundWindow(),
+                DateTime.Now.ToString("yyyy-MM-dd"),
+                DisplayContext.Bounds(window)
+            )
+        );
     }
 
     public void Dispose()
