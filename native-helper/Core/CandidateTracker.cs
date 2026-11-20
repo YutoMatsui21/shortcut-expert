@@ -105,6 +105,7 @@ internal sealed partial class CandidateTracker
 
     internal KeyGestureSeries Placement { get; }
     internal long InputEpoch { get; private set; }
+    private (GestureManager.Gesture Gesture, nint Foreground, long Epoch)? reductionDeparture;
     internal bool MoveKeyReleased => moveKeyReleased;
     internal bool ClickReleased => clickReleased;
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
@@ -176,8 +177,13 @@ internal sealed partial class CandidateTracker
 
     internal void ForegroundChanged(nint window)
     {
+        reductionDeparture = null;
         if (gestures.Current?.Window != window)
+        {
             InputEpoch++;
+            if (gestures.Pending is { Route: "win-down" } reduction && reduction.Window != window)
+                reductionDeparture = (reduction.Gesture, window, InputEpoch);
+        }
         Placement.Foreground(window);
         if (gestures.Drags.Keys.Any(target => target != window))
             Diagnostic?.Invoke(WindowDiagnosticReason.DragForegroundCancelled);
@@ -185,9 +191,14 @@ internal sealed partial class CandidateTracker
         BaselineForeground(window);
     }
 
+    // A pending Win+Down can cause its own terminal foreground departure.
+    internal long MinimizeInputEpoch(GestureManager.Gesture gesture, nint foreground) =>
+        reductionDeparture == (gesture, foreground, InputEpoch) ? InputEpoch - 1 : InputEpoch;
+
     internal void Reset(int newGeneration)
     {
         InputEpoch++;
+        reductionDeparture = null;
         ResetBaseline(newGeneration);
         if (ownsSession)
         {
@@ -211,6 +222,7 @@ internal sealed partial class CandidateTracker
     internal void ClearInput()
     {
         InputEpoch++;
+        reductionDeparture = null;
         if (gestures.Drags.Count > 0)
             Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled);
         Placement.Cancel();

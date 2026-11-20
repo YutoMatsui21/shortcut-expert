@@ -32,6 +32,8 @@ internal static partial class Program
         );
         foreach (long gap in new[] { 1000L, 1001L })
             Check($"independent WinDown grouping at {gap}ms", () => CheckReductionGap(gap));
+        foreach (var mode in new[] { "terminal", "second-departure", "foreground-mismatch" })
+            Check("WinDown minimize with " + mode, () => CheckReductionDeparture(mode));
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
             Check(
                 "independent WinDown interrupted by " + interrupt,
@@ -74,6 +76,26 @@ internal static partial class Program
         var before = IndependentNormal();
         CompleteReductionKey(f, new(before, before with { Show = SW_SHOWMINIMIZED }), 10 + gap);
         Equal(gap == 1000 ? 1 : 2, f.Output.Count);
+    }
+
+    private static void CheckReductionDeparture(string mode)
+    {
+        var f = RestoredReductionFixture();
+        var before = IndependentNormal();
+        f.Press(before, VK_DOWN, 100);
+        f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 12, 105));
+        if (mode == "second-departure")
+            f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 13, 108));
+        f.Release(VK_DOWN, 110);
+        f.State(
+            before with
+            {
+                Show = SW_SHOWMINIMIZED,
+            },
+            120,
+            foreground: mode == "terminal" ? 12 : 13
+        );
+        Equal(mode == "terminal" ? 1 : 2, f.Output.Count);
     }
 
     private static void CheckReductionInterruption(string interrupt)
