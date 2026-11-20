@@ -34,7 +34,15 @@ internal static partial class Program
         foreach (long gap in new[] { 1000L, 1001L })
             Check($"independent WinDown grouping at {gap}ms", () => CheckReductionGap(gap));
         foreach (
-            var mode in new[] { "terminal", "unrelated", "second-departure", "foreground-mismatch" }
+            var mode in new[]
+            {
+                "terminal",
+                "unrelated",
+                "delayed-departure",
+                "pre-press-start",
+                "second-departure",
+                "foreground-mismatch",
+            }
         )
             Check("WinDown minimize with " + mode, () => CheckReductionDeparture(mode));
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
@@ -86,19 +94,26 @@ internal static partial class Program
         var f = RestoredReductionFixture();
         var before = IndependentNormal();
         var minimized = before with { Show = SW_SHOWMINIMIZED };
-        f.Press(before, VK_DOWN, 100);
-        var gesture = f.Tracker.Gestures.Current!;
         f.Router.Dispatch(
-            new ForegroundObservedEvent(
-                1,
-                12,
-                105,
-                mode == "unrelated" ? null : (11, before.Process)
-            )
+            new KeyPressEvent(1, 11, 100, before, VK_DOWN, true, false, 0, NativeTick: 100)
+        );
+        var gesture = f.Tracker.Gestures.Current!;
+        if (mode != "unrelated")
+            f.Router.Dispatch(
+                new MinimizeStartedEvent(
+                    1,
+                    11,
+                    103,
+                    before.Process,
+                    mode == "pre-press-start" ? 99u : 103u
+                )
+            );
+        f.Router.Dispatch(
+            new ForegroundObservedEvent(1, 12, 105, mode == "delayed-departure" ? 102u : 105u)
         );
         if (mode == "second-departure")
-            f.Router.Dispatch(new ForegroundObservedEvent(1, 13, 106, (11, before.Process)));
-        nint foreground = mode is "terminal" or "unrelated" ? 12 : 13;
+            f.Router.Dispatch(new ForegroundObservedEvent(1, 13, 106, 106));
+        nint foreground = mode is "second-departure" or "foreground-mismatch" ? 13 : 12;
         f.State(minimized, 107, foreground: foreground);
         Equal(GestureManager.Phase.Observing, gesture.State);
         Equal(1, f.Output.Count);

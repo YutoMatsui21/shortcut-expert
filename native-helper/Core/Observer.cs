@@ -211,19 +211,6 @@ internal sealed class Observer : IDisposable
     private WindowState? ReadStateChange(nint window, WindowState? cached = null) =>
         Read(window, cached, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
 
-    private (nint Window, uint Process)? ReadDisplacedMinimizedWindow(nint foreground)
-    {
-        if (tracker.DisplacedWinDownTarget(foreground) is not { } target)
-            return null;
-        if (GetForegroundWindow() != foreground || !IsIconic(target.Window))
-            return null;
-        return
-            GetWindowThreadProcessId(target.Window, out uint process) != 0
-            && process == target.Process
-            ? target
-            : null;
-    }
-
     private static long? ReadResultStyle(nint window, int index)
     {
         nint value = GetWindowStyleChecked(window, index);
@@ -781,7 +768,8 @@ internal sealed class Observer : IDisposable
                     modifiers,
                     key.Flags,
                     shift,
-                    alt
+                    alt,
+                    key.Time
                 )
             );
         }
@@ -898,12 +886,7 @@ internal sealed class Observer : IDisposable
             if (kind == EVENT_SYSTEM_FOREGROUND)
             {
                 router.Dispatch(
-                    new ForegroundObservedEvent(
-                        epoch,
-                        window,
-                        clock.ElapsedMilliseconds,
-                        ReadDisplacedMinimizedWindow(window)
-                    )
+                    new ForegroundObservedEvent(epoch, window, clock.ElapsedMilliseconds, time)
                 );
                 switching.Foreground(window, time);
             }
@@ -971,6 +954,16 @@ internal sealed class Observer : IDisposable
             states[window] = after;
             if (captionClick.Target == window)
                 return;
+            if (kind == EVENT_SYSTEM_MINIMIZESTART)
+                router.Dispatch(
+                    new MinimizeStartedEvent(
+                        epoch,
+                        window,
+                        clock.ElapsedMilliseconds,
+                        after.Process,
+                        time
+                    )
+                );
             router.Dispatch(
                 new StateObservedEvent(
                     epoch,

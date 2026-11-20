@@ -27,7 +27,13 @@ internal sealed class TrackerEventAdapter(
             (e, _) => Key(e)
         );
         router.Subscribe(
-            new[] { ObservedKind.Foreground, ObservedKind.MoveStart, ObservedKind.Destroy },
+            new[]
+            {
+                ObservedKind.Foreground,
+                ObservedKind.MinimizeStart,
+                ObservedKind.MoveStart,
+                ObservedKind.Destroy,
+            },
             (e, _) =>
             {
                 Lifecycle(e);
@@ -89,10 +95,10 @@ internal sealed class TrackerEventAdapter(
         switch (e.Kind)
         {
             case ObservedKind.Foreground:
-                tracker.ForegroundChanged(
-                    e.Target,
-                    (e as ForegroundObservedEvent)?.MinimizedWindow
-                );
+                tracker.ForegroundChanged(e.Target, (e as ForegroundObservedEvent)?.NativeTick);
+                break;
+            case ObservedKind.MinimizeStart:
+                tracker.MinimizeStarted((MinimizeStartedEvent)e);
                 break;
             case ObservedKind.MoveStart:
                 tracker.MoveStart(e.Target, e.At);

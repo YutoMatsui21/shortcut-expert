@@ -106,6 +106,8 @@ internal sealed partial class CandidateTracker
     internal KeyGestureSeries Placement { get; }
     internal long InputEpoch { get; private set; }
     private (GestureManager.Gesture Gesture, nint Foreground, long Epoch)? reductionDeparture;
+    private (GestureManager.Gesture Gesture, uint Tick)? reductionPress;
+    private (GestureManager.Gesture Gesture, uint Tick)? reductionMinimizeStart;
     internal bool MoveKeyReleased => moveKeyReleased;
     internal bool ClickReleased => clickReleased;
     internal Action<WindowDiagnosticReason>? Diagnostic { get; set; }
@@ -175,19 +177,30 @@ internal sealed partial class CandidateTracker
         ReleaseMonitorKey(key, now);
     }
 
-    internal (nint Window, uint Process)? DisplacedWinDownTarget(nint foreground) =>
-        gestures.Pending is { Route: "win-down", Before.Show: SW_SHOWNORMAL } reduction
-        && reduction.Window != foreground
-            ? (reduction.Window, reduction.Before.Process)
-            : null;
+    internal void MinimizeStarted(MinimizeStartedEvent observed)
+    {
+        if (reductionPress is not { } press || !MatchesReductionTarget(press.Gesture, observed))
+            return;
+        if (unchecked(observed.NativeTick - press.Tick) <= InputMatchWindowMs)
+            reductionMinimizeStart ??= (press.Gesture, observed.NativeTick);
+    }
 
-    internal void ForegroundChanged(nint window, (nint Window, uint Process)? minimized = null)
+    private bool MatchesReductionTarget(
+        GestureManager.Gesture gesture,
+        MinimizeStartedEvent observed
+    ) =>
+        gestures.Pending is { } input
+        && input.Gesture == gesture
+        && input.Window == observed.Target
+        && input.Before.Process == observed.Process;
+
+    internal void ForegroundChanged(nint window, uint? nativeTick = null)
     {
         reductionDeparture = null;
         if (gestures.Current?.Window != window)
         {
             InputEpoch++;
-            if (minimized is not null && DisplacedWinDownTarget(window) == minimized)
+            if (IsMinimizeDeparture(window, nativeTick))
                 reductionDeparture = (gestures.Pending!.Gesture, window, InputEpoch);
         }
         Placement.Foreground(window);
@@ -197,6 +210,14 @@ internal sealed partial class CandidateTracker
         BaselineForeground(window);
     }
 
+    private bool IsMinimizeDeparture(nint window, uint? nativeTick) =>
+        nativeTick is { } at
+        && reductionMinimizeStart is { } start
+        && gestures.Pending is { } input
+        && input.Gesture == start.Gesture
+        && input.Window != window
+        && unchecked(at - start.Tick) <= InputMatchWindowMs;
+
     // A pending Win+Down can cause its own terminal foreground departure.
     internal long MinimizeInputEpoch(GestureManager.Gesture gesture, nint foreground) =>
         reductionDeparture == (gesture, foreground, InputEpoch) ? InputEpoch - 1 : InputEpoch;
@@ -205,6 +226,7 @@ internal sealed partial class CandidateTracker
     {
         InputEpoch++;
         reductionDeparture = null;
+        reductionPress = reductionMinimizeStart = null;
         ResetBaseline(newGeneration);
         if (ownsSession)
         {
@@ -229,6 +251,7 @@ internal sealed partial class CandidateTracker
     {
         InputEpoch++;
         reductionDeparture = null;
+        reductionPress = reductionMinimizeStart = null;
         if (gestures.Drags.Count > 0)
             Diagnostic?.Invoke(WindowDiagnosticReason.DragInputCancelled);
         Placement.Cancel();
@@ -489,7 +512,17 @@ internal sealed partial class CandidateTracker
             true,
             NextTransaction()
         );
+        RememberReductionPress(input.NativeTick, gestures.Pending);
         moveKeyReleased = false;
+    }
+
+    private void RememberReductionPress(uint? tick, GestureManager.Input input)
+    {
+        reductionMinimizeStart = null;
+        reductionPress =
+            tick is { } at && input is { Route: "win-down", Before.Show: SW_SHOWNORMAL }
+                ? (input.Gesture, at)
+                : null;
     }
 
     // Returns true when a repeated press has already been consumed.
