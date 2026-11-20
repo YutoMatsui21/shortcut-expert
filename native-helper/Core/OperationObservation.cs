@@ -5,6 +5,5 @@ internal sealed record OperationObservation(
     WindowState? After,
     long At,
     nint Foreground,
-    bool Injected = false,
-    bool Polled = false
+    bool Injected = false
 );

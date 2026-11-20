@@ -22,11 +22,7 @@ internal sealed class RestoreMinimizeDetector
         restoreEpoch = epoch;
     }
 
-    internal bool Continues(
-        GestureManager.Input input,
-        IndependentStateProof? proof,
-        long? epoch
-    ) =>
+    private bool Continues(GestureManager.Input input, IndependentStateProof? proof, long? epoch) =>
         proof is not null
         && IsContinuationInput(input, proof)
         && SameRestoreTarget(input, epoch)

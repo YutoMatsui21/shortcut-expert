@@ -39,11 +39,11 @@ internal static partial class Program
                 () => CheckReductionDeparture(scenario)
             );
         Check(
-            "WinDown waits for verified foreground after terminal state",
+            "WinDown records terminal minimize before late matching foreground",
             () => CheckTerminalBeforeForeground(true)
         );
         Check(
-            "WinDown poll preserves standalone minimize when foreground is missing",
+            "WinDown records a terminal minimize at the deadline when foreground is missing",
             () => CheckTerminalBeforeForeground(false)
         );
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
@@ -171,14 +171,13 @@ internal static partial class Program
         var gesture = PressReductionAgain(f, before);
         f.Release(VK_DOWN, 105);
         f.Router.Dispatch(new MinimizeStartedEvent(1, 11, 108, before.Process, 103));
-        f.State(minimized, 109, foreground: 12);
-        Equal(GestureManager.Phase.AwaitingResult, gesture.State);
-        Equal(1, f.Output.Count);
-        if (matchingForegroundArrives)
-            f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 110, 103, (11, before.Process)));
-        f.Router.Dispatch(new TickEvent(1, 11, 150, minimized, 12, "2026-11-15"));
+        f.State(minimized, 1100, foreground: 12);
         Equal(GestureManager.Phase.Completed, gesture.State);
-        Equal(matchingForegroundArrives ? 1 : 2, f.Output.Count);
+        Equal(2, f.Output.Count);
+        if (matchingForegroundArrives)
+            f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 1101, 103, (11, before.Process)));
+        f.Router.Dispatch(new TickEvent(1, 11, 1150, minimized, 12, "2026-11-15"));
+        Equal(2, f.Output.Count);
     }
 
     private static void CheckReductionInterruption(string interrupt)
