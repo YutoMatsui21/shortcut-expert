@@ -171,12 +171,15 @@ internal static partial class Program
         var gesture = PressReductionAgain(f, before);
         f.Release(VK_DOWN, 105);
         f.Router.Dispatch(new MinimizeStartedEvent(1, 11, 108, before.Process, 103));
-        f.State(minimized, 1100, foreground: 12);
+        long terminalAt = matchingForegroundArrives ? 109 : 1100;
+        f.State(minimized, terminalAt, foreground: 12);
         Equal(GestureManager.Phase.Completed, gesture.State);
         Equal(2, f.Output.Count);
         if (matchingForegroundArrives)
-            f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 1101, 103, (11, before.Process)));
-        f.Router.Dispatch(new TickEvent(1, 11, 1150, minimized, 12, "2026-11-15"));
+            f.Router.Dispatch(
+                new ForegroundObservedEvent(1, 12, terminalAt + 1, 103, (11, before.Process))
+            );
+        f.Router.Dispatch(new TickEvent(1, 11, terminalAt + 50, minimized, 12, "2026-11-15"));
         Equal(2, f.Output.Count);
     }
 
