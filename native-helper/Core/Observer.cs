@@ -211,6 +211,19 @@ internal sealed class Observer : IDisposable
     private WindowState? ReadStateChange(nint window, WindowState? cached = null) =>
         Read(window, cached, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
 
+    private (nint Window, uint Process)? ReadDisplacedMinimizedWindow(nint foreground)
+    {
+        if (tracker.DisplacedWinDownTarget(foreground) is not { } target)
+            return null;
+        if (GetForegroundWindow() != foreground || !IsIconic(target.Window))
+            return null;
+        return
+            GetWindowThreadProcessId(target.Window, out uint process) != 0
+            && process == target.Process
+            ? target
+            : null;
+    }
+
     private static long? ReadResultStyle(nint window, int index)
     {
         nint value = GetWindowStyleChecked(window, index);
@@ -885,11 +898,11 @@ internal sealed class Observer : IDisposable
             if (kind == EVENT_SYSTEM_FOREGROUND)
             {
                 router.Dispatch(
-                    new ObservedEvent(
-                        ObservedKind.Foreground,
+                    new ForegroundObservedEvent(
                         epoch,
                         window,
-                        clock.ElapsedMilliseconds
+                        clock.ElapsedMilliseconds,
+                        ReadDisplacedMinimizedWindow(window)
                     )
                 );
                 switching.Foreground(window, time);

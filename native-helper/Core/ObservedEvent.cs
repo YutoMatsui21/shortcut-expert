@@ -132,3 +132,13 @@ internal sealed record CaptionPressEvent(int Generation, CaptionPressFacts Facts
 
 internal sealed record CaptionResultEvent(int Generation, CaptionCompletionFacts Facts)
     : ObservedEvent(ObservedKind.CaptionResult, Generation, Facts.Press.Target, Facts.At);
+
+namespace ShortcutExpert.Detection
+{
+    internal sealed record ForegroundObservedEvent(
+        int Generation,
+        nint Target,
+        long At,
+        (nint Window, uint Process)? MinimizedWindow
+    ) : ObservedEvent(ObservedKind.Foreground, Generation, Target, At);
+}

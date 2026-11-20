@@ -89,7 +89,10 @@ internal sealed class TrackerEventAdapter(
         switch (e.Kind)
         {
             case ObservedKind.Foreground:
-                tracker.ForegroundChanged(e.Target);
+                tracker.ForegroundChanged(
+                    e.Target,
+                    (e as ForegroundObservedEvent)?.MinimizedWindow
+                );
                 break;
             case ObservedKind.MoveStart:
                 tracker.MoveStart(e.Target, e.At);

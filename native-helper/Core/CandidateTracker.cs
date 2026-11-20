@@ -175,14 +175,20 @@ internal sealed partial class CandidateTracker
         ReleaseMonitorKey(key, now);
     }
 
-    internal void ForegroundChanged(nint window)
+    internal (nint Window, uint Process)? DisplacedWinDownTarget(nint foreground) =>
+        gestures.Pending is { Route: "win-down", Before.Show: SW_SHOWNORMAL } reduction
+        && reduction.Window != foreground
+            ? (reduction.Window, reduction.Before.Process)
+            : null;
+
+    internal void ForegroundChanged(nint window, (nint Window, uint Process)? minimized = null)
     {
         reductionDeparture = null;
         if (gestures.Current?.Window != window)
         {
             InputEpoch++;
-            if (gestures.Pending is { Route: "win-down" } reduction && reduction.Window != window)
-                reductionDeparture = (reduction.Gesture, window, InputEpoch);
+            if (minimized is not null && DisplacedWinDownTarget(window) == minimized)
+                reductionDeparture = (gestures.Pending!.Gesture, window, InputEpoch);
         }
         Placement.Foreground(window);
         if (gestures.Drags.Keys.Any(target => target != window))

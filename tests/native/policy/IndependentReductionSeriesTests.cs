@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program
@@ -32,7 +33,9 @@ internal static partial class Program
         );
         foreach (long gap in new[] { 1000L, 1001L })
             Check($"independent WinDown grouping at {gap}ms", () => CheckReductionGap(gap));
-        foreach (var mode in new[] { "terminal", "second-departure", "foreground-mismatch" })
+        foreach (
+            var mode in new[] { "terminal", "unrelated", "second-departure", "foreground-mismatch" }
+        )
             Check("WinDown minimize with " + mode, () => CheckReductionDeparture(mode));
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
             Check(
@@ -82,19 +85,26 @@ internal static partial class Program
     {
         var f = RestoredReductionFixture();
         var before = IndependentNormal();
+        var minimized = before with { Show = SW_SHOWMINIMIZED };
         f.Press(before, VK_DOWN, 100);
-        f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 12, 105));
-        if (mode == "second-departure")
-            f.Router.Dispatch(new ObservedEvent(ObservedKind.Foreground, 1, 13, 108));
-        f.Release(VK_DOWN, 110);
-        f.State(
-            before with
-            {
-                Show = SW_SHOWMINIMIZED,
-            },
-            120,
-            foreground: mode == "terminal" ? 12 : 13
+        var gesture = f.Tracker.Gestures.Current!;
+        f.Router.Dispatch(
+            new ForegroundObservedEvent(
+                1,
+                12,
+                105,
+                mode == "unrelated" ? null : (11, before.Process)
+            )
         );
+        if (mode == "second-departure")
+            f.Router.Dispatch(new ForegroundObservedEvent(1, 13, 106, (11, before.Process)));
+        nint foreground = mode is "terminal" or "unrelated" ? 12 : 13;
+        f.State(minimized, 107, foreground: foreground);
+        Equal(GestureManager.Phase.Observing, gesture.State);
+        Equal(1, f.Output.Count);
+        f.Release(VK_DOWN, 110);
+        f.State(minimized, 120, foreground: foreground);
+        Equal(GestureManager.Phase.Completed, gesture.State);
         Equal(mode == "terminal" ? 1 : 2, f.Output.Count);
     }
 
