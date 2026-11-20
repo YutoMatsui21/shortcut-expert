@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program
@@ -108,7 +109,14 @@ internal static partial class Program
             f.State(t.After, 31, foreground: t.After.Show == SW_SHOWMINIMIZED ? 12 : 11);
         if (mode != "key-grouped-down")
             return;
-        f.Press(t.After, VK_DOWN, 40);
+        f.Router.Dispatch(
+            new KeyPressEvent(1, 11, 40, t.After, VK_DOWN, true, false, 0, NativeTick: 40)
+        );
+        if (f.Tracker.IndependentResults)
+        {
+            f.Router.Dispatch(new MinimizeStartedEvent(1, 11, 45, t.After.Process, 45));
+            f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 46, 45, (11, t.After.Process)));
+        }
         f.State(t.After with { Show = SW_SHOWMINIMIZED }, 50, foreground: 12);
         f.Release(VK_DOWN, 60);
         if (f.Tracker.IndependentResults)

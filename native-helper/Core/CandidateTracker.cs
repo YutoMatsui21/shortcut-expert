@@ -224,9 +224,28 @@ internal sealed partial class CandidateTracker
         && MinimizeDepartureTarget(window) == minimized
         && observed.NativeTick == reductionMinimizeStart!.Value.Tick;
 
-    // A pending Win+Down can cause its own terminal foreground departure.
-    internal long MinimizeInputEpoch(GestureManager.Gesture gesture, nint foreground) =>
-        reductionDeparture == (gesture, foreground, InputEpoch) ? InputEpoch - 1 : InputEpoch;
+    internal bool TryMinimizeInputEpoch(
+        GestureManager.Gesture gesture,
+        OperationObservation result,
+        out long? epoch
+    )
+    {
+        if (result.Foreground == gesture.Window)
+        {
+            epoch = InputEpoch;
+            return true;
+        }
+        if (reductionDeparture == (gesture, result.Foreground, InputEpoch))
+        {
+            epoch = InputEpoch - 1;
+            return true;
+        }
+        epoch = null;
+        // Allow a queued foreground callback to arrive before the next existing timer poll.
+        return result.Polled
+            || gesture.Foreground is not null
+            || reductionPress?.Gesture != gesture;
+    }
 
     internal void Reset(int newGeneration)
     {

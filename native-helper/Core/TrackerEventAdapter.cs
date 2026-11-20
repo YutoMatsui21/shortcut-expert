@@ -122,7 +122,7 @@ internal sealed class TrackerEventAdapter(
                 Remember(e.Target, e.After);
                 break;
             case TickEvent e:
-                operations.TryState(new(e.Target, e.After, e.At, e.Foreground));
+                operations.TryState(new(e.Target, e.After, e.At, e.Foreground, Polled: true));
                 Remember(e.Target, e.After);
                 break;
         }

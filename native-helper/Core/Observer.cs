@@ -39,6 +39,13 @@ internal sealed class Observer : IDisposable
         keyCallback;
     private readonly EventHook eventCallback;
     private readonly List<nint> eventHooks = new();
+    private static readonly (uint Min, uint Max)[] winEventRanges =
+    [
+        (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
+        // One out-of-context subscription preserves the order of equal-tick system events.
+        (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND),
+        (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
+    ];
     private nint mouseHook,
         keyHook;
     private int epoch;
@@ -100,7 +107,8 @@ internal sealed class Observer : IDisposable
 
     private int NextTransaction() => session.Allocator(epoch)();
 
-    internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
+    internal bool Active =>
+        mouseHook != 0 && keyHook != 0 && eventHooks.Count == winEventRanges.Length;
 
     internal void InvalidateDisplay()
     {
@@ -153,15 +161,7 @@ internal sealed class Observer : IDisposable
         nint module = GetModuleHandleW(null);
         mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
         keyHook = SetWindowsHookExW(WH_KEYBOARD_LL, keyCallback, module, 0);
-        foreach (
-            (uint min, uint max) in new[]
-            {
-                (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
-                // One out-of-context subscription preserves the order of equal-tick system events.
-                (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND),
-                (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
-            }
-        )
+        foreach (var (min, max) in winEventRanges)
         {
             nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
             if (hook != 0)

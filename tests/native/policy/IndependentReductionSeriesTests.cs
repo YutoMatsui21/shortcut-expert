@@ -33,22 +33,19 @@ internal static partial class Program
         );
         foreach (long gap in new[] { 1000L, 1001L })
             Check($"independent WinDown grouping at {gap}ms", () => CheckReductionGap(gap));
-        foreach (
-            var mode in new[]
-            {
-                "terminal",
-                "unrelated",
-                "without-start",
-                "delayed-departure",
-                "pre-press-start",
-                "start-tied-to-press",
-                "departure-delivered-first",
-                "later-departure",
-                "second-departure",
-                "foreground-mismatch",
-            }
-        )
-            Check("WinDown minimize with " + mode, () => CheckReductionDeparture(mode));
+        foreach (var scenario in reductionDepartures)
+            Check(
+                "WinDown minimize with " + scenario.Name,
+                () => CheckReductionDeparture(scenario)
+            );
+        Check(
+            "WinDown waits for verified foreground after terminal state",
+            () => CheckTerminalBeforeForeground(true)
+        );
+        Check(
+            "WinDown poll preserves standalone minimize when foreground is missing",
+            () => CheckTerminalBeforeForeground(false)
+        );
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
             Check(
                 "independent WinDown interrupted by " + interrupt,
@@ -93,53 +90,95 @@ internal static partial class Program
         Equal(gap == 1000 ? 1 : 2, f.Output.Count);
     }
 
-    private static void CheckReductionDeparture(string mode)
+    private sealed record DepartureScenario(string Name)
+    {
+        internal uint? StartTick { get; init; } = 103;
+        internal uint DepartureTick { get; init; } = 103;
+        internal bool Iconic { get; init; } = true;
+        internal bool DeliverStartLast { get; init; }
+        internal bool ExtraDeparture { get; init; }
+        internal nint FinalForeground { get; init; } = 12;
+        internal int Count { get; init; } = 2;
+    }
+
+    private static readonly DepartureScenario[] reductionDepartures =
+    [
+        new("terminal") { Count = 1 },
+        new("unrelated") { Iconic = false },
+        new("without-start") { StartTick = null },
+        new("delayed-departure") { DepartureTick = 102 },
+        new("pre-press-start") { StartTick = 99 },
+        new("start-tied-to-press") { StartTick = 100 },
+        new("departure-delivered-first") { DeliverStartLast = true },
+        new("later-departure") { DepartureTick = 104 },
+        new("second-departure") { ExtraDeparture = true, FinalForeground = 13 },
+        new("foreground-mismatch") { FinalForeground = 13 },
+    ];
+
+    private static GestureManager.Gesture PressReductionAgain(
+        IndependentRouterFixture f,
+        WindowState before
+    )
+    {
+        f.Router.Dispatch(
+            new KeyPressEvent(1, 11, 100, before, VK_DOWN, true, false, 0, NativeTick: 100)
+        );
+        return f.Tracker.Gestures.Current!;
+    }
+
+    private static void DispatchReductionDeparture(
+        IndependentRouterFixture f,
+        WindowState before,
+        DepartureScenario scenario
+    )
+    {
+        MinimizeStartedEvent? start = scenario.StartTick is { } tick
+            ? new(1, 11, 103, before.Process, tick)
+            : null;
+        if (start is not null && !scenario.DeliverStartLast)
+            f.Router.Dispatch(start);
+        (nint Window, uint Process)? iconic = scenario.Iconic ? (11, before.Process) : null;
+        f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 105, scenario.DepartureTick, iconic));
+        if (start is not null && scenario.DeliverStartLast)
+            f.Router.Dispatch(start);
+        if (scenario.ExtraDeparture)
+            f.Router.Dispatch(
+                new ForegroundObservedEvent(1, 13, 106, scenario.DepartureTick, iconic)
+            );
+    }
+
+    private static void CheckReductionDeparture(DepartureScenario scenario)
     {
         var f = RestoredReductionFixture();
         var before = IndependentNormal();
         var minimized = before with { Show = SW_SHOWMINIMIZED };
-        f.Router.Dispatch(
-            new KeyPressEvent(1, 11, 100, before, VK_DOWN, true, false, 0, NativeTick: 100)
-        );
-        var gesture = f.Tracker.Gestures.Current!;
-        uint startTick = mode switch
-        {
-            "pre-press-start" => 99,
-            "start-tied-to-press" => 100,
-            _ => 103,
-        };
-        var start = new MinimizeStartedEvent(1, 11, 103, before.Process, startTick);
-        if (mode is not ("without-start" or "departure-delivered-first"))
-            f.Router.Dispatch(start);
-        uint departureTick = mode switch
-        {
-            "delayed-departure" => 102,
-            "later-departure" => 104,
-            _ => 103,
-        };
-        f.Router.Dispatch(
-            new ForegroundObservedEvent(
-                1,
-                12,
-                105,
-                departureTick,
-                mode == "unrelated" ? null : (11, before.Process)
-            )
-        );
-        if (mode == "departure-delivered-first")
-            f.Router.Dispatch(start);
-        if (mode == "second-departure")
-            f.Router.Dispatch(
-                new ForegroundObservedEvent(1, 13, 106, departureTick, (11, before.Process))
-            );
-        nint foreground = mode is "second-departure" or "foreground-mismatch" ? 13 : 12;
-        f.State(minimized, 107, foreground: foreground);
+        var gesture = PressReductionAgain(f, before);
+        DispatchReductionDeparture(f, before, scenario);
+        f.State(minimized, 107, foreground: scenario.FinalForeground);
         Equal(GestureManager.Phase.Observing, gesture.State);
         Equal(1, f.Output.Count);
         f.Release(VK_DOWN, 110);
-        f.State(minimized, 120, foreground: foreground);
+        f.State(minimized, 120, foreground: scenario.FinalForeground);
         Equal(GestureManager.Phase.Completed, gesture.State);
-        Equal(mode == "terminal" ? 1 : 2, f.Output.Count);
+        Equal(scenario.Count, f.Output.Count);
+    }
+
+    private static void CheckTerminalBeforeForeground(bool matchingForegroundArrives)
+    {
+        var f = RestoredReductionFixture();
+        var before = IndependentNormal();
+        var minimized = before with { Show = SW_SHOWMINIMIZED };
+        var gesture = PressReductionAgain(f, before);
+        f.Release(VK_DOWN, 105);
+        f.Router.Dispatch(new MinimizeStartedEvent(1, 11, 108, before.Process, 103));
+        f.State(minimized, 109, foreground: 12);
+        Equal(GestureManager.Phase.AwaitingResult, gesture.State);
+        Equal(1, f.Output.Count);
+        if (matchingForegroundArrives)
+            f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 110, 103, (11, before.Process)));
+        f.Router.Dispatch(new TickEvent(1, 11, 150, minimized, 12, "2026-11-15"));
+        Equal(GestureManager.Phase.Completed, gesture.State);
+        Equal(matchingForegroundArrives ? 1 : 2, f.Output.Count);
     }
 
     private static void CheckReductionInterruption(string interrupt)
