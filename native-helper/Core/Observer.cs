@@ -739,7 +739,38 @@ internal sealed class Observer : IDisposable
                 );
                 return CallNextHookEx(0, code, message, data);
             }
-            DispatchWindowKey(target, key);
+            bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
+            bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
+                alt = GetAsyncKeyState(VK_MENU) < 0;
+            bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
+            WindowState? before = null;
+            bool maximizeKey =
+                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) == "win-up";
+            if (
+                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null
+                && (maximizeKey || states.ContainsKey(target))
+            )
+            {
+                states.TryGetValue(target, out WindowState? cached);
+                before = Read(target, cached);
+                if (before is not null)
+                    states[target] = before;
+            }
+            router.Dispatch(
+                new KeyPressEvent(
+                    epoch,
+                    target,
+                    clock.ElapsedMilliseconds,
+                    before,
+                    key.Key,
+                    win,
+                    modifiers,
+                    key.Flags,
+                    shift,
+                    alt,
+                    key.Time
+                )
+            );
         }
         catch
         {
@@ -753,38 +784,6 @@ internal sealed class Observer : IDisposable
             SyncMaximizeTimer();
         }
         return CallNextHookEx(0, code, message, data);
-    }
-
-    private void DispatchWindowKey(nint target, KeyData key)
-    {
-        bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
-        bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
-            alt = GetAsyncKeyState(VK_MENU) < 0;
-        bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
-        WindowState? before = null;
-        string? route = CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers);
-        if (route is not null && (route == "win-up" || states.ContainsKey(target)))
-        {
-            states.TryGetValue(target, out WindowState? cached);
-            before = Read(target, cached);
-            if (before is not null)
-                states[target] = before;
-        }
-        router.Dispatch(
-            new KeyPressEvent(
-                epoch,
-                target,
-                clock.ElapsedMilliseconds,
-                before,
-                key.Key,
-                win,
-                modifiers,
-                key.Flags,
-                shift,
-                alt,
-                key.Time
-            )
-        );
     }
 
     private void SyncMaximizeTimer()
@@ -856,7 +855,9 @@ internal sealed class Observer : IDisposable
         uint time
     )
     {
-        if (fixture || !Active || window == 0 || IgnoreSystemEvent(kind))
+        if (fixture || !Active || window == 0)
+            return;
+        if (IgnoreSystemEvent(kind))
             return;
         try
         {
@@ -943,7 +944,29 @@ internal sealed class Observer : IDisposable
                 && (obj != OBJID_WINDOW || child != CHILDID_SELF)
             )
                 return;
-            DispatchStateChange(window, kind, time);
+            states.TryGetValue(window, out WindowState? previous);
+            WindowState? after = ReadStateChange(window, previous);
+            if (after is null)
+            {
+                tracker.Forget(window);
+                return;
+            }
+            states[window] = after;
+            if (captionClick.Target == window)
+                return;
+            DispatchMinimizeStart(kind, window, after.Process, time);
+            router.Dispatch(
+                new StateObservedEvent(
+                    epoch,
+                    window,
+                    clock.ElapsedMilliseconds,
+                    previous,
+                    after,
+                    GetForegroundWindow(),
+                    DateTime.Now.ToString("yyyy-MM-dd"),
+                    DisplayContext.Bounds(window)
+                )
+            );
         }
         catch
         {
@@ -989,40 +1012,12 @@ internal sealed class Observer : IDisposable
             : null;
     }
 
-    private void DispatchStateChange(nint window, uint kind, uint time)
+    private void DispatchMinimizeStart(uint kind, nint window, uint process, uint time)
     {
-        states.TryGetValue(window, out WindowState? previous);
-        WindowState? after = ReadStateChange(window, previous);
-        if (after is null)
-        {
-            tracker.Forget(window);
-            return;
-        }
-        states[window] = after;
-        if (captionClick.Target == window)
-            return;
         if (kind == EVENT_SYSTEM_MINIMIZESTART)
             router.Dispatch(
-                new MinimizeStartedEvent(
-                    epoch,
-                    window,
-                    clock.ElapsedMilliseconds,
-                    after.Process,
-                    time
-                )
+                new MinimizeStartedEvent(epoch, window, clock.ElapsedMilliseconds, process, time)
             );
-        router.Dispatch(
-            new StateObservedEvent(
-                epoch,
-                window,
-                clock.ElapsedMilliseconds,
-                previous,
-                after,
-                GetForegroundWindow(),
-                DateTime.Now.ToString("yyyy-MM-dd"),
-                DisplayContext.Bounds(window)
-            )
-        );
     }
 
     public void Dispose()
