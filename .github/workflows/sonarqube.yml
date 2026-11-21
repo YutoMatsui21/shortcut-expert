@@ -33,7 +33,12 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner --version 12.1.0
 
+      - name: Build the helper for process fixtures
+        timeout-minutes: 5
+        run: npm.cmd run helper:build
+
       - name: Collect native policy coverage
+        timeout-minutes: 5
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -41,7 +46,7 @@ jobs:
 
           dotnet tool install --tool-path .tools/sonar-coverage dotnet-coverage --version 18.1.0
           .tools/sonar-coverage/dotnet-coverage collect `
-            "dotnet run --project tests/native/policy/WindowObserver.PolicyTests.csproj --configuration Release" `
+            "dotnet run --project tests/native/policy/WindowObserver.PolicyTests.csproj --configuration Release --disable-build-servers" `
             --output-format xml `
             --output .tools/sonar-native-coverage.xml > .tools/sonar-policy-output.log
 
@@ -50,6 +55,24 @@ jobs:
           if (!$coverage.SelectSingleNode($coveredSource)) {
             Get-Content .tools/sonar-policy-output.log | Where-Object { !$_.StartsWith('{') } | Select-Object -Last 20
             throw "No native-helper coverage was collected from the policy suite."
+          }
+
+      - name: Collect helper process fixture coverage
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          .tools/sonar-coverage/dotnet-coverage collect `
+            "node scripts/test/test.mjs native --file=native/helper-process-contract.test.ts" `
+            --output-format xml `
+            --output .tools/sonar-helper-coverage.xml
+
+          $helperCoverage = [xml](Get-Content .tools/sonar-helper-coverage.xml -Raw)
+          $coveredHost = "//module//range[@covered='yes' and @source_id=ancestor::module/source_files/source_file[contains(@path, '\Core\ObserverHost.cs')]/@id]"
+          if (!$helperCoverage.SelectSingleNode($coveredHost)) {
+            throw "No ObserverHost coverage was collected from the helper process fixtures."
           }
 
       - name: Analyze
@@ -65,7 +88,7 @@ jobs:
             /o:"yutomatsui21" `
             /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.projectBaseDir="$((Get-Location).Path)" `
-            /d:sonar.cs.vscoveragexml.reportsPaths=".tools/sonar-native-coverage.xml"
+            /d:sonar.cs.vscoveragexml.reportsPaths=".tools/sonar-native-coverage.xml,.tools/sonar-helper-coverage.xml"
 
           dotnet build native-helper/WindowObserver.csproj --no-incremental --disable-build-servers
 

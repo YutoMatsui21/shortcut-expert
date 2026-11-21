@@ -1,6 +1,6 @@
 # 複合ドラッグ：W02＋W03／W07
 
-**現行の動作**は[独立結果Envelope契約](../research/detection-architecture/result-envelope.md)に従う。成立した既存操作を同じtransactionで原子保存し、W03/W07の個別不成立でも共通入力が有効ならW02を採用する。共通の対象・解放先や構成の不一致では全件を破棄する。cross-monitor halfはW02として扱う。以下は旧`compound-drag`の受信互換と固定fixtureを説明する。
+**現行の動作**は[独立結果Envelope契約](../research/detection-architecture/result-envelope.md)に従う。成立した既存操作を同じtransactionで原子保存し、W03/W07の個別不成立でも共通入力が有効ならW02を採用する。共通の対象・解放先や構成の不一致では全件を破棄する。別画面へのドラッグで最終halfも確証できれば、W02とW06を同じEnvelopeにまとめる。以下は旧`compound-drag`の受信互換と固定fixtureを説明する。
 
 同じマウスドラッグで別画面移動と最大化／四隅配置が確定した場合の横断契約。[製品要件](../ui-requirements.md#compound-gesture)を正本とする。
 
@@ -26,6 +26,6 @@
 - 隔離storage smoke：helper fixture→Main→実SQLite→IPC→両画面。通常buildと同梱buildで同じfixtureを使用する。
 - 一般アプリの実入力、混在monitor・DPI、実OS Toastの表示、NSIS、同一最終buildのR02／J04は[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)へ残す。fixture成功を自然入力PASSと扱わない。
 
-W02＋W07のdirect side解放も[配置側のOS docking閾値](window-placement.md#osの早期スナップ閾値)を共用する。設定が安定し厳密なquarter終端が成立したときだけ2件を確定し、距離条件や他条件が失敗したgestureを単独W02へ分割しない。
+旧 `compound-drag` のW02＋W07も[配置側のOS docking閾値](window-placement.md#osの早期スナップ閾値)を共用する。旧形式の複合証拠では、quarterの距離条件などが不成立なら全体を棄却する。
 
 W01＋W03／W04のボタンクリックも、[複合クリック契約](compound-caption-click.md)から同じ原子保存・複数行通知の経路を使う。

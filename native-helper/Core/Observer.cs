@@ -14,6 +14,7 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly DetectionSession session = new();
+    private readonly DisplayTopology displayTopology = new(DisplayTopology.Read);
     private readonly CandidateTracker tracker;
     private readonly CaptionClickResultAdapter independentCaption;
     private readonly DetectionRouter router = new();
@@ -71,7 +72,13 @@ internal sealed class Observer : IDisposable
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
         taskbar = new(
-            new TaskbarDetector(session, protocol, () => clock.ElapsedMilliseconds),
+            TaskbarDetector.Register(
+                router,
+                session,
+                protocol,
+                () => clock.ElapsedMilliseconds,
+                displayTopology.Capture
+            ),
             () => clock.ElapsedMilliseconds
         );
         switching = new(
@@ -110,12 +117,17 @@ internal sealed class Observer : IDisposable
     internal bool Active =>
         mouseHook != 0 && keyHook != 0 && eventHooks.Count == winEventRanges.Length;
 
+    internal void NoteDisplayChange() => displayTopology.Changed();
+
     internal void InvalidateDisplay()
     {
         CancelCaption();
         tracker.ClearInput();
         maximizeTimer.Stop();
         closing.Cancel();
+        router.Dispatch(
+            new ObservedEvent(ObservedKind.DisplayInvalidated, epoch, 0, clock.ElapsedMilliseconds)
+        );
         mouseDockThresholdPx = null;
     }
 

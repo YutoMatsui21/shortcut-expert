@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program
@@ -56,26 +57,182 @@ internal static partial class Program
         Check("taskbar pending overflow cancels all results", TaskbarPendingOverflow);
         Check(
             "taskbar retains distinct pending gestures and consumes completions once",
-            TaskbarConcurrentInputs
+            () => TaskbarConcurrentInputs(false)
+        );
+        TaskbarDisplayTests();
+    }
+
+    private static void TaskbarDisplayTests()
+    {
+        Check(
+            "display notification invalidates an unchanged layout before router dispatch",
+            TaskbarDisplayRoundTrip
+        );
+        Check(
+            "taskbar display notifications are observed before dispatcher delivery",
+            TaskbarDisplayNotificationThread
+        );
+        Check("display change invalidates taskbar input and UIA snapshots", TaskbarDisplayChange);
+        Check(
+            "taskbar display topology is order-independent and rejects incomplete reads",
+            TaskbarDisplayTopology
+        );
+        Check(
+            "display change before router delivery rejects an in-flight UIA query",
+            () => TaskbarTopologyChange(false)
+        );
+        Check(
+            "fresh UIA query cannot confirm input from the old display topology",
+            () => TaskbarTopologyChange(true)
+        );
+        Check(
+            "an unreadable display topology cannot confirm taskbar input",
+            () => TaskbarTopologyChange(true, null)
+        );
+        Check(
+            "display change during output discards remaining taskbar gestures",
+            () => TaskbarConcurrentInputs(true)
         );
     }
 
-    private static void TaskbarConcurrentInputs()
+    private static void TaskbarDisplayNotificationThread()
+    {
+        var previous = SynchronizationContext.Current;
+        var dispatcherContext = new SynchronizationContext();
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(dispatcherContext);
+            DisplayTopology.SubscribeWithoutMarshalling(() =>
+                Equal<SynchronizationContext?>(null, SynchronizationContext.Current)
+            );
+            Equal(dispatcherContext, SynchronizationContext.Current);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
+
+    private static void TaskbarDisplayRoundTrip()
     {
         var replay = new TaskbarReplay("mouse", "valid");
+        replay.Add();
+        var query = replay.Detector.BeginQuery(101);
+        replay.Topology.Changed();
+        replay.Topology.Changed();
+        replay.At = 120;
+        replay.Detector.Complete(query, replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+        replay.Add();
+        replay.At = 140;
+        replay.Detector.Complete(replay.Detector.BeginQuery(121), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
+    }
+
+    private static void TaskbarDisplayTopology()
+    {
+        int secondaryScale = 150;
+        bool Monitor(nint handle, ref MonitorInfo info)
+        {
+            info.Monitor = new Rect { Left = (int)handle * 100, Right = (int)handle * 100 + 100 };
+            return handle != 3;
+        }
+        int Scale(nint handle, out int scale)
+        {
+            scale = handle == 1 ? 100 : secondaryScale;
+            return handle == 4 ? -1 : 0;
+        }
+        string? Read(params int[] handles) =>
+            DisplayTopology.Read(
+                callback => handles.All(handle => callback(handle, 0, 0, 0)),
+                Monitor,
+                Scale
+            );
+
+        string? initial = Read(1, 2);
+        Equal(true, initial is not null);
+        Equal(initial, Read(2, 1));
+        Equal(false, initial == Read(1));
+        secondaryScale = 200;
+        Equal(false, initial == Read(1, 2));
+        Equal<string?>(null, Read(1, 3));
+        Equal<string?>(null, Read(1, 4));
+        Equal<string?>(null, Read());
+    }
+
+    private static void TaskbarTopologyChange(bool queryAfterChange, string? topology = "changed")
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        var detector = replay.Detector;
+        var point = new Point { X = 20, Y = 20 };
+        detector.Complete(detector.BeginQuery(50), replay.Layout, 7, null);
+        detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+
+        var query = detector.BeginQuery(101);
+        replay.DisplayTopology = topology;
+        if (queryAfterChange)
+            query = detector.BeginQuery(102);
+        replay.At = 110;
+        detector.Complete(query, replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+
+        replay.DisplayTopology = "changed";
+        replay.At = 115;
+        detector.Complete(detector.BeginQuery(111), replay.Layout, 7, null);
+        replay.At = 120;
+        detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 130;
+        detector.Complete(detector.BeginQuery(121), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
+    }
+
+    private static void TaskbarDisplayChange()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        replay.Detector.Complete(replay.Detector.BeginQuery(50), replay.Layout, 7, null);
+        var point = new Point { X = 20, Y = 20 };
+        replay.Add();
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        var old = replay.Detector.BeginQuery(101);
+
+        replay.At = 110;
+        replay.Router.Dispatch(new ObservedEvent(ObservedKind.DisplayInvalidated, 1, 0, replay.At));
+        replay.Detector.Complete(old, replay.Layout, 7, null);
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 130;
+        replay.Detector.Complete(replay.Detector.BeginQuery(120), replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 150;
+        replay.Detector.Complete(replay.Detector.BeginQuery(140), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
+    }
+
+    private static void TaskbarConcurrentInputs(bool displayChanges)
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        if (displayChanges)
+            replay.AfterOutput = () => replay.DisplayTopology = "changed";
         replay.Add();
         replay.At = 110;
         replay.Add();
         replay.At = 200;
         var query = replay.Detector.BeginQuery(111);
         replay.Detector.Complete(query, replay.Layout, 7, null);
-        Equal(2, replay.Output.Count);
+        int expected = displayChanges ? 1 : 2;
+        Equal(expected, replay.Output.Count);
         Equal(
-            2,
+            expected,
             replay.Output.Cast<CandidateEnvelope>().Select(e => e.transaction).Distinct().Count()
         );
         replay.Detector.Complete(query, replay.Layout, 7, null);
-        Equal(2, replay.Output.Count);
+        Equal(expected, replay.Output.Count);
     }
 
     private static void TaskbarResetCompletion()
@@ -110,8 +267,12 @@ internal static partial class Program
         private readonly DetectionSession session = new();
         private readonly WindowSwitchDetector switching;
         internal readonly List<object> Output = new();
+        internal readonly DetectionRouter Router = new();
         internal readonly TaskbarDetector Detector;
+        internal readonly DisplayTopology Topology;
         internal long At = 100;
+        internal string? DisplayTopology = "initial";
+        internal Action? AfterOutput;
         internal readonly TaskbarSnapshot Layout = new(
             null,
             11,
@@ -128,9 +289,22 @@ internal static partial class Program
             this.origin = origin;
             this.mode = mode;
             session.Start(1);
-            var sink = new CandidateSink(Output.Add);
+            var sink = new CandidateSink(candidate =>
+            {
+                Output.Add(candidate);
+                AfterOutput?.Invoke();
+            });
             sink.Start(1, 2);
-            Detector = new(session, sink, () => At, () => "2026-11-15");
+            Router.Reset(1);
+            Topology = new(() => DisplayTopology);
+            Detector = TaskbarDetector.Register(
+                Router,
+                session,
+                sink,
+                () => At,
+                Topology.Capture,
+                () => "2026-11-15"
+            );
             Detector.Start(1);
             Detector.Neutral(true);
             switching = new(session, sink, new DetectionRouter(), session.Allocator(1), new());

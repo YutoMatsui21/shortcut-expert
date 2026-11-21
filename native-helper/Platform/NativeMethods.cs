@@ -171,6 +171,7 @@ internal static class NativeMethods
         uint time
     );
     internal delegate bool Enumerate(nint window, nint data);
+    internal delegate bool MonitorEnum(nint monitor, nint dc, nint bounds, nint data);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     internal delegate int Arranged(nint window);
@@ -292,6 +293,17 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     internal static extern bool GetMonitorInfoW(nint monitor, ref MonitorInfo info);
+
+    [DllImport("user32.dll")]
+    internal static extern bool EnumDisplayMonitors(
+        nint dc,
+        nint bounds,
+        MonitorEnum callback,
+        nint data
+    );
+
+    [DllImport("shcore.dll")]
+    internal static extern int GetScaleFactorForMonitor(nint monitor, out int scale);
 
     [DllImport("user32.dll")]
     internal static extern nint SendMessageTimeoutW(
