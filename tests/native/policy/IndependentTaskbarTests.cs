@@ -56,9 +56,44 @@ internal static partial class Program
         Check("taskbar pending overflow cancels all results", TaskbarPendingOverflow);
         Check("display change invalidates taskbar input and UIA snapshots", TaskbarDisplayChange);
         Check(
+            "display change before router delivery rejects an in-flight UIA query",
+            () => TaskbarTopologyChange(false)
+        );
+        Check(
+            "fresh UIA query cannot confirm input from the old display topology",
+            () => TaskbarTopologyChange(true)
+        );
+        Check(
             "taskbar retains distinct pending gestures and consumes completions once",
             TaskbarConcurrentInputs
         );
+    }
+
+    private static void TaskbarTopologyChange(bool queryAfterChange)
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        var detector = replay.Detector;
+        var point = new Point { X = 20, Y = 20 };
+        detector.Complete(detector.BeginQuery(50), replay.Layout, 7, null);
+        detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+
+        var query = detector.BeginQuery(101);
+        replay.DisplayTopology++;
+        if (queryAfterChange)
+            query = detector.BeginQuery(102);
+        replay.At = 110;
+        detector.Complete(query, replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+
+        replay.At = 115;
+        detector.Complete(detector.BeginQuery(111), replay.Layout, 7, null);
+        replay.At = 120;
+        detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 130;
+        detector.Complete(detector.BeginQuery(121), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
     }
 
     private static void TaskbarDisplayChange()
@@ -140,6 +175,7 @@ internal static partial class Program
         internal readonly DetectionRouter Router = new();
         internal readonly TaskbarDetector Detector;
         internal long At = 100;
+        internal uint DisplayTopology = 1;
         internal readonly TaskbarSnapshot Layout = new(
             null,
             11,
@@ -164,6 +200,7 @@ internal static partial class Program
                 session,
                 sink,
                 () => At,
+                () => DisplayTopology,
                 () => "2026-11-15"
             );
             Detector.Start(1);

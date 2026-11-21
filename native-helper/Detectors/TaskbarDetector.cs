@@ -6,6 +6,7 @@ internal sealed class TaskbarDetector(
     DetectionSession session,
     CandidateSink sink,
     Func<long> now,
+    Func<uint> displayTopology,
     Func<string>? date = null
 )
 {
@@ -27,7 +28,7 @@ internal sealed class TaskbarDetector(
         uint Process
     );
 
-    internal sealed record Query(long Revision, long At, Func<bool> Lease);
+    internal sealed record Query(long Revision, long At, Func<bool> Lease, uint DisplayTopology);
 
     private sealed record Completion(
         Query Query,
@@ -49,6 +50,7 @@ internal sealed class TaskbarDetector(
     private TaskbarSnapshot snapshot = TaskbarSnapshot.Unknown;
     private long snapshotAt;
     private uint snapshotProcess;
+    private uint? snapshotTopology;
     private (int Slot, TaskbarSnapshot Snapshot, long At, uint Process)? mouse;
     private int generation;
     private long revision;
@@ -58,10 +60,11 @@ internal sealed class TaskbarDetector(
         DetectionSession session,
         CandidateSink sink,
         Func<long> now,
+        Func<uint> displayTopology,
         Func<string>? date = null
     )
     {
-        var detector = new TaskbarDetector(session, sink, now, date);
+        var detector = new TaskbarDetector(session, sink, now, displayTopology, date);
         router.Subscribe(
             new[] { ObservedKind.DisplayInvalidated },
             (_, _) => detector.ResetInput()
@@ -86,6 +89,7 @@ internal sealed class TaskbarDetector(
         Cancel();
         keys = new();
         snapshot = TaskbarSnapshot.Unknown;
+        snapshotTopology = null;
         mouse = null;
     }
 
@@ -165,7 +169,8 @@ internal sealed class TaskbarDetector(
         int slot
     ) => slot == press.Slot && press.Snapshot.Same(snapshot);
 
-    internal Query BeginQuery(long at) => new(revision, at, session.Lease(generation));
+    internal Query BeginQuery(long at) =>
+        new(revision, at, session.Lease(generation), displayTopology());
 
     internal void Add(Admission admission)
     {
@@ -226,7 +231,7 @@ internal sealed class TaskbarDetector(
         MonitorBounds? monitor
     )
     {
-        if (!Current(query))
+        if (!Current(query) || !RefreshDisplay(query))
             return;
         if (!this.snapshot.Same(snapshot))
             mouse = null;
@@ -235,6 +240,18 @@ internal sealed class TaskbarDetector(
         snapshotProcess = process;
         foreach (var item in pending.ToArray())
             Resolve(item, new(query, snapshot, process, monitor));
+    }
+
+    private bool RefreshDisplay(Query query)
+    {
+        uint topology = displayTopology();
+        bool queryMatches = query.DisplayTopology == topology;
+        if (!queryMatches || snapshotTopology.GetValueOrDefault(topology) != topology)
+            ResetInput();
+        if (!queryMatches)
+            return false;
+        snapshotTopology = topology;
+        return true;
     }
 
     private void Resolve(Pending item, Completion completed)

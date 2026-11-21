@@ -266,6 +266,9 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     internal static extern int GetSystemMetrics(int index);
 
+    [DllImport("user32.dll", ExactSpelling = true)]
+    internal static extern uint GetCurrentMonitorTopologyId();
+
     [DllImport("kernel32.dll")]
     internal static extern nint OpenProcess(uint access, bool inherit, uint process);
 
