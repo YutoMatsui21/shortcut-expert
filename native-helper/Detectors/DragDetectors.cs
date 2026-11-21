@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -28,23 +29,26 @@ internal sealed record DragDetectionFacts(
         && After.Work == ReleaseWork;
 }
 
-internal static class CaptionDragPlacement
+namespace ShortcutExpert.Detection
 {
-    internal static string? TerminalShape(DragDetectionFacts facts)
+    internal static class CaptionDragPlacement
     {
-        if (!facts.Valid || !facts.CaptionPress)
-            return null;
-        return PlacementGeometry
-            .Drag(
-                facts.Before,
-                facts.After,
-                facts.ReleasePoint,
-                facts.ReleaseMonitor,
-                facts.ReleaseWork,
-                facts.StartAge,
-                true
-            )
-            ?.shape;
+        internal static string? TerminalShape(DragDetectionFacts facts)
+        {
+            if (!facts.Valid || !facts.CaptionPress)
+                return null;
+            return PlacementGeometry
+                .Drag(
+                    facts.Before,
+                    facts.After,
+                    facts.ReleasePoint,
+                    facts.ReleaseMonitor,
+                    facts.ReleaseWork,
+                    facts.StartAge,
+                    true
+                )
+                ?.shape;
+        }
     }
 }
 

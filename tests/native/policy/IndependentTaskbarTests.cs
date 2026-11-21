@@ -64,9 +64,6 @@ internal static partial class Program
     private static void TaskbarDisplayChange()
     {
         var replay = new TaskbarReplay("mouse", "valid");
-        var router = new DetectionRouter();
-        router.Reset(1);
-        replay.Detector.Register(router);
         replay.Detector.Complete(replay.Detector.BeginQuery(50), replay.Layout, 7, null);
         var point = new Point { X = 20, Y = 20 };
         replay.Add();
@@ -74,7 +71,7 @@ internal static partial class Program
         var old = replay.Detector.BeginQuery(101);
 
         replay.At = 110;
-        router.Dispatch(new ObservedEvent(ObservedKind.DisplayInvalidated, 1, 0, replay.At));
+        replay.Router.Dispatch(new ObservedEvent(ObservedKind.DisplayInvalidated, 1, 0, replay.At));
         replay.Detector.Complete(old, replay.Layout, 7, null);
         replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
         replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
@@ -140,6 +137,7 @@ internal static partial class Program
         private readonly DetectionSession session = new();
         private readonly WindowSwitchDetector switching;
         internal readonly List<object> Output = new();
+        internal readonly DetectionRouter Router = new();
         internal readonly TaskbarDetector Detector;
         internal long At = 100;
         internal readonly TaskbarSnapshot Layout = new(
@@ -160,7 +158,14 @@ internal static partial class Program
             session.Start(1);
             var sink = new CandidateSink(Output.Add);
             sink.Start(1, 2);
-            Detector = new(session, sink, () => At, () => "2026-11-15");
+            Router.Reset(1);
+            Detector = TaskbarDetector.Register(
+                Router,
+                session,
+                sink,
+                () => At,
+                () => "2026-11-15"
+            );
             Detector.Start(1);
             Detector.Neutral(true);
             switching = new(session, sink, new DetectionRouter(), session.Allocator(1), new());
