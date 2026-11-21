@@ -6,7 +6,7 @@ internal sealed class TaskbarDetector(
     DetectionSession session,
     CandidateSink sink,
     Func<long> now,
-    Func<uint> displayTopology,
+    Func<string?> displayTopology,
     Func<string>? date = null
 )
 {
@@ -28,7 +28,7 @@ internal sealed class TaskbarDetector(
         uint Process
     );
 
-    internal sealed record Query(long Revision, long At, Func<bool> Lease, uint DisplayTopology);
+    internal sealed record Query(long Revision, long At, Func<bool> Lease, string? DisplayTopology);
 
     private sealed record Completion(
         Query Query,
@@ -50,7 +50,7 @@ internal sealed class TaskbarDetector(
     private TaskbarSnapshot snapshot = TaskbarSnapshot.Unknown;
     private long snapshotAt;
     private uint snapshotProcess;
-    private uint? snapshotTopology;
+    private string? snapshotTopology;
     private (int Slot, TaskbarSnapshot Snapshot, long At, uint Process)? mouse;
     private int generation;
     private long revision;
@@ -60,7 +60,7 @@ internal sealed class TaskbarDetector(
         DetectionSession session,
         CandidateSink sink,
         Func<long> now,
-        Func<uint> displayTopology,
+        Func<string?> displayTopology,
         Func<string>? date = null
     )
     {
@@ -239,14 +239,18 @@ internal sealed class TaskbarDetector(
         snapshotAt = query.At;
         snapshotProcess = process;
         foreach (var item in pending.ToArray())
+        {
+            if (!RefreshDisplay(query))
+                return;
             Resolve(item, new(query, snapshot, process, monitor));
+        }
     }
 
     private bool RefreshDisplay(Query query)
     {
-        uint topology = displayTopology();
-        bool queryMatches = query.DisplayTopology == topology;
-        if (!queryMatches || snapshotTopology.GetValueOrDefault(topology) != topology)
+        string? topology = displayTopology();
+        bool queryMatches = topology is not null && query.DisplayTopology == topology;
+        if (!queryMatches || (snapshotTopology ?? topology) != topology)
             ResetInput();
         if (!queryMatches)
             return false;

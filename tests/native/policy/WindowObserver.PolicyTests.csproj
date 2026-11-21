@@ -87,6 +87,7 @@
     />
     <Compile Include="../../../native-helper/Window/PlacementPolicy.cs" Link="PlacementPolicy.cs" />
     <Compile Include="../../../native-helper/Platform/NativeMethods.cs" Link="NativeMethods.cs" />
+    <Compile Include="../../../native-helper/Platform/DisplayTopology.cs" Link="DisplayTopology.cs" />
     <Compile Include="../../../native-helper/Core/CandidateTracker.cs" Link="CandidateTracker.cs" />
     <Compile Include="../../../native-helper/Window/WindowCaption.cs" Link="WindowCaption.cs" />
     <Compile

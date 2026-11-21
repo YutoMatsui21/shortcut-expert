@@ -76,7 +76,7 @@ internal sealed class Observer : IDisposable
                 session,
                 protocol,
                 () => clock.ElapsedMilliseconds,
-                GetCurrentMonitorTopologyId
+                DisplayTopology.Read
             ),
             () => clock.ElapsedMilliseconds
         );
