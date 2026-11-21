@@ -53,6 +53,22 @@ internal sealed class TaskbarDetector(
     private int generation;
     private long revision;
 
+    internal static TaskbarDetector Register(
+        DetectionRouter router,
+        DetectionSession session,
+        CandidateSink sink,
+        Func<long> now,
+        Func<string>? date = null
+    )
+    {
+        var detector = new TaskbarDetector(session, sink, now, date);
+        router.Subscribe(
+            new[] { ObservedKind.DisplayInvalidated },
+            (_, _) => detector.ResetInput()
+        );
+        return detector;
+    }
+
     internal void Start(int epoch)
     {
         Stop();
@@ -61,8 +77,13 @@ internal sealed class TaskbarDetector(
 
     internal void Stop()
     {
-        Cancel();
         generation = 0;
+        ResetInput();
+    }
+
+    private void ResetInput()
+    {
+        Cancel();
         keys = new();
         snapshot = TaskbarSnapshot.Unknown;
         mouse = null;

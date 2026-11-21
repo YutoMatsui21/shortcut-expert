@@ -93,7 +93,7 @@ flowchart TD
 
 ## 通信・TypeScriptとの境界
 
-現行の外部Protocol v2は、任意の独立検出結果リストを表現できない。**独立検出への移行には通信契約の設計・実装が必要**であり、既存`compound-drag`等のEvidenceを単純に流用しただけでは完了しない。
+Protocol v2に追加した `independent-results-v1` が、確定した独立検出結果をリストとして表現する。
 
 - C#からは**同一ジェスチャにつき原則1つのEnvelope**を送り、複数の確定結果を同一出力単位にまとめる。
 - Envelopeのgeneration・sequence・transaction・再配送防止の意味を維持する。

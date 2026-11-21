@@ -71,7 +71,7 @@ internal sealed class Observer : IDisposable
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
         taskbar = new(
-            new TaskbarDetector(session, protocol, () => clock.ElapsedMilliseconds),
+            TaskbarDetector.Register(router, session, protocol, () => clock.ElapsedMilliseconds),
             () => clock.ElapsedMilliseconds
         );
         switching = new(
@@ -116,6 +116,9 @@ internal sealed class Observer : IDisposable
         tracker.ClearInput();
         maximizeTimer.Stop();
         closing.Cancel();
+        router.Dispatch(
+            new ObservedEvent(ObservedKind.DisplayInvalidated, epoch, 0, clock.ElapsedMilliseconds)
+        );
         mouseDockThresholdPx = null;
     }
 

@@ -54,10 +54,37 @@ internal static partial class Program
             TaskbarResetCompletion
         );
         Check("taskbar pending overflow cancels all results", TaskbarPendingOverflow);
+        Check("display change invalidates taskbar input and UIA snapshots", TaskbarDisplayChange);
         Check(
             "taskbar retains distinct pending gestures and consumes completions once",
             TaskbarConcurrentInputs
         );
+    }
+
+    private static void TaskbarDisplayChange()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        replay.Detector.Complete(replay.Detector.BeginQuery(50), replay.Layout, 7, null);
+        var point = new Point { X = 20, Y = 20 };
+        replay.Add();
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        var old = replay.Detector.BeginQuery(101);
+
+        replay.At = 110;
+        replay.Router.Dispatch(new ObservedEvent(ObservedKind.DisplayInvalidated, 1, 0, replay.At));
+        replay.Detector.Complete(old, replay.Layout, 7, null);
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 130;
+        replay.Detector.Complete(replay.Detector.BeginQuery(120), replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+
+        replay.Detector.Mouse(new(WM_LBUTTONDOWN, point, 11, false, false));
+        replay.Detector.Mouse(new(WM_LBUTTONUP, point, 11, false, false));
+        replay.At = 150;
+        replay.Detector.Complete(replay.Detector.BeginQuery(140), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
     }
 
     private static void TaskbarConcurrentInputs()
@@ -110,6 +137,7 @@ internal static partial class Program
         private readonly DetectionSession session = new();
         private readonly WindowSwitchDetector switching;
         internal readonly List<object> Output = new();
+        internal readonly DetectionRouter Router = new();
         internal readonly TaskbarDetector Detector;
         internal long At = 100;
         internal readonly TaskbarSnapshot Layout = new(
@@ -130,7 +158,14 @@ internal static partial class Program
             session.Start(1);
             var sink = new CandidateSink(Output.Add);
             sink.Start(1, 2);
-            Detector = new(session, sink, () => At, () => "2026-11-15");
+            Router.Reset(1);
+            Detector = TaskbarDetector.Register(
+                Router,
+                session,
+                sink,
+                () => At,
+                () => "2026-11-15"
+            );
             Detector.Start(1);
             Detector.Neutral(true);
             switching = new(session, sink, new DetectionRouter(), session.Allocator(1), new());
