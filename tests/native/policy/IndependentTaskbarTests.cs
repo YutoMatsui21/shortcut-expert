@@ -64,6 +64,14 @@ internal static partial class Program
 
     private static void TaskbarDisplayTests()
     {
+        Check(
+            "display notification invalidates an unchanged layout before router dispatch",
+            TaskbarDisplayRoundTrip
+        );
+        Check(
+            "taskbar display notifications are observed before dispatcher delivery",
+            TaskbarDisplayNotificationThread
+        );
         Check("display change invalidates taskbar input and UIA snapshots", TaskbarDisplayChange);
         Check(
             "taskbar display topology is order-independent and rejects incomplete reads",
@@ -85,6 +93,40 @@ internal static partial class Program
             "display change during output discards remaining taskbar gestures",
             () => TaskbarConcurrentInputs(true)
         );
+    }
+
+    private static void TaskbarDisplayNotificationThread()
+    {
+        var previous = SynchronizationContext.Current;
+        var dispatcherContext = new SynchronizationContext();
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(dispatcherContext);
+            DisplayTopology.SubscribeWithoutMarshalling(() =>
+                Equal<SynchronizationContext?>(null, SynchronizationContext.Current)
+            );
+            Equal(dispatcherContext, SynchronizationContext.Current);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
+
+    private static void TaskbarDisplayRoundTrip()
+    {
+        var replay = new TaskbarReplay("mouse", "valid");
+        replay.Add();
+        var query = replay.Detector.BeginQuery(101);
+        replay.Topology.Changed();
+        replay.Topology.Changed();
+        replay.At = 120;
+        replay.Detector.Complete(query, replay.Layout, 7, null);
+        Equal(0, replay.Output.Count);
+        replay.Add();
+        replay.At = 140;
+        replay.Detector.Complete(replay.Detector.BeginQuery(121), replay.Layout, 7, null);
+        Equal(1, replay.Output.Count);
     }
 
     private static void TaskbarDisplayTopology()
@@ -227,6 +269,7 @@ internal static partial class Program
         internal readonly List<object> Output = new();
         internal readonly DetectionRouter Router = new();
         internal readonly TaskbarDetector Detector;
+        internal readonly DisplayTopology Topology;
         internal long At = 100;
         internal string? DisplayTopology = "initial";
         internal Action? AfterOutput;
@@ -253,12 +296,13 @@ internal static partial class Program
             });
             sink.Start(1, 2);
             Router.Reset(1);
+            Topology = new(() => DisplayTopology);
             Detector = TaskbarDetector.Register(
                 Router,
                 session,
                 sink,
                 () => At,
-                () => DisplayTopology,
+                Topology.Capture,
                 () => "2026-11-15"
             );
             Detector.Start(1);

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Windows.Forms;
+using ShortcutExpert.Detection;
 
 internal static class ObserverHost
 {
@@ -9,6 +10,45 @@ internal static class ObserverHost
     {
         lock (outputLock)
             Console.WriteLine(JsonSerializer.Serialize(value));
+    }
+
+    private static void EmitReady() =>
+        Emit(
+            new
+            {
+                type = "ready",
+                protocolVersion = 2,
+                arrangedAvailable = Observer.ArrangedAvailable,
+            }
+        );
+
+    private static void PostDisplayChange(Control dispatcher, Observer observer, Action update)
+    {
+        observer.NoteDisplayChange();
+        try
+        {
+            dispatcher.BeginInvoke(update);
+        }
+        catch (InvalidOperationException) { }
+    }
+
+    private static void EmitDiagnostics(
+        Dictionary<CloseReason, int>? closeCounts,
+        WindowDiagnosticAccumulator? windowCounts
+    )
+    {
+        if (closeCounts is not null)
+            Emit(new { type = "close-diagnostics", counts = closeCounts });
+        var diagnostic = windowCounts?.Take();
+        if (diagnostic is not null)
+            Emit(
+                new
+                {
+                    type = "window-diagnostics",
+                    generation = diagnostic.Generation,
+                    counts = diagnostic.Counts,
+                }
+            );
     }
 
     internal static int SelfTest()
@@ -55,35 +95,18 @@ internal static class ObserverHost
             closeValidation || windowValidation ? CloseDiagnostic : null,
             windowValidation ? WindowDiagnostic : null
         );
-        // Marshal display/settings invalidation to the same thread as input and WinEvent callbacks.
-        void DisplayChanged(object? sender, EventArgs args)
+        void DisplayChanged(object? sender, EventArgs args) =>
+            PostDisplayChange(dispatcher, observer, observer.InvalidateDisplay);
+        void SettingsChanged(object? sender, EventArgs args) =>
+            PostDisplayChange(dispatcher, observer, observer.RefreshDockThreshold);
+        DisplayTopology.SubscribeWithoutMarshalling(() =>
         {
-            try
-            {
-                dispatcher.BeginInvoke(() => observer.InvalidateDisplay());
-            }
-            catch (InvalidOperationException) { }
-        }
-        void SettingsChanged(object? sender, EventArgs args)
-        {
-            try
-            {
-                dispatcher.BeginInvoke(() => observer.RefreshDockThreshold());
-            }
-            catch (InvalidOperationException) { }
-        }
-        Microsoft.Win32.SystemEvents.DisplaySettingsChanging += DisplayChanged;
-        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += SettingsChanged;
-        Microsoft.Win32.SystemEvents.UserPreferenceChanged += SettingsChanged;
-        Microsoft.Win32.SystemEvents.UserPreferenceChanging += DisplayChanged;
-        Emit(
-            new
-            {
-                type = "ready",
-                protocolVersion = 2,
-                arrangedAvailable = Observer.ArrangedAvailable,
-            }
-        );
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanging += DisplayChanged;
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += SettingsChanged;
+            Microsoft.Win32.SystemEvents.UserPreferenceChanging += DisplayChanged;
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged += SettingsChanged;
+        });
+        EmitReady();
         _ = Task.Run(() =>
         {
             try
@@ -119,20 +142,7 @@ internal static class ObserverHost
                                     break;
                                 case "stop":
                                     observer.Stop();
-                                    if (closeCounts is not null)
-                                        Emit(
-                                            new { type = "close-diagnostics", counts = closeCounts }
-                                        );
-                                    var diagnostic = windowCounts?.Take();
-                                    if (diagnostic is not null)
-                                        Emit(
-                                            new
-                                            {
-                                                type = "window-diagnostics",
-                                                generation = diagnostic.Generation,
-                                                counts = diagnostic.Counts,
-                                            }
-                                        );
+                                    EmitDiagnostics(closeCounts, windowCounts);
                                     Emit(new { type = "stopped", requestId });
                                     break;
                                 case "fixtureCandidate" when fixture:
@@ -207,8 +217,8 @@ internal static class ObserverHost
         {
             Microsoft.Win32.SystemEvents.DisplaySettingsChanging -= DisplayChanged;
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= SettingsChanged;
-            Microsoft.Win32.SystemEvents.UserPreferenceChanged -= SettingsChanged;
             Microsoft.Win32.SystemEvents.UserPreferenceChanging -= DisplayChanged;
+            Microsoft.Win32.SystemEvents.UserPreferenceChanged -= SettingsChanged;
         }
     }
 }

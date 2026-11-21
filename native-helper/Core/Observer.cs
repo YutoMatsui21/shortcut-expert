@@ -14,6 +14,7 @@ internal sealed class Observer : IDisposable
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly DetectionSession session = new();
+    private readonly DisplayTopology displayTopology = new(DisplayTopology.Read);
     private readonly CandidateTracker tracker;
     private readonly CaptionClickResultAdapter independentCaption;
     private readonly DetectionRouter router = new();
@@ -76,7 +77,7 @@ internal sealed class Observer : IDisposable
                 session,
                 protocol,
                 () => clock.ElapsedMilliseconds,
-                DisplayTopology.Read
+                displayTopology.Capture
             ),
             () => clock.ElapsedMilliseconds
         );
@@ -115,6 +116,8 @@ internal sealed class Observer : IDisposable
 
     internal bool Active =>
         mouseHook != 0 && keyHook != 0 && eventHooks.Count == winEventRanges.Length;
+
+    internal void NoteDisplayChange() => displayTopology.Changed();
 
     internal void InvalidateDisplay()
     {
