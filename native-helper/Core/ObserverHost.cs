@@ -33,7 +33,7 @@ internal static class ObserverHost
     }
 
     private static void EmitDiagnostics(
-        Dictionary<CloseReason, int>? closeCounts,
+        Dictionary<string, int>? closeCounts,
         WindowDiagnosticAccumulator? windowCounts
     )
     {
