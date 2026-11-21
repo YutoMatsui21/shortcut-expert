@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program
@@ -19,11 +20,15 @@ internal static partial class Program
             Sink = new(Output.Add);
             Sink.Start(1, 2);
             Router.Reset(1);
-            new TrackerEventAdapter(
-                Tracker,
-                Sink,
-                independent: independent ? new(Tracker, Session, Sink, () => "2026-11-15") : null
-            ).Register(Router);
+            Tracker.IndependentResults = independent;
+            if (independent)
+                new WindowResultPipeline(Session, Sink).Register(
+                    Router,
+                    Tracker,
+                    date: () => "2026-11-15"
+                );
+            else
+                new LegacyTrackerEventAdapter(Tracker, Sink).Register(Router);
         }
 
         internal void Press(

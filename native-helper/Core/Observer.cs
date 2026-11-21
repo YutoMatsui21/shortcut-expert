@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using ShortcutExpert.Detection;
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
@@ -14,11 +15,9 @@ internal sealed class Observer : IDisposable
     private readonly Dictionary<nint, WindowState> states = new();
     private readonly DetectionSession session = new();
     private readonly CandidateTracker tracker;
-    private readonly bool independentDetection;
     private readonly CaptionClickResultAdapter independentCaption;
     private readonly DetectionRouter router = new();
     private readonly InactiveCaptionPolicy captionClick = new();
-    private string captionDate = "";
 
     private void CancelCaption()
     {
@@ -40,6 +39,13 @@ internal sealed class Observer : IDisposable
         keyCallback;
     private readonly EventHook eventCallback;
     private readonly List<nint> eventHooks = new();
+    private static readonly (uint Min, uint Max)[] winEventRanges =
+    [
+        (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
+        // One out-of-context subscription preserves the order of equal-tick system events.
+        (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND),
+        (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
+    ];
     private nint mouseHook,
         keyHook;
     private int epoch;
@@ -50,27 +56,16 @@ internal sealed class Observer : IDisposable
         Action<object> emit,
         bool fixture = false,
         Action<CloseReason>? closeDiagnostic = null,
-        Action<WindowDiagnosticReason>? windowDiagnostic = null,
-        bool? independentDetection = null
+        Action<WindowDiagnosticReason>? windowDiagnostic = null
     )
     {
         protocol = new CandidateSink(emit);
         tracker = new(session);
-        independentCaption = new(session, protocol);
-        independentCaption.Register(router);
-        this.independentDetection =
-            independentDetection
-            ?? DetectionMigration.Enabled(
-                Environment.GetEnvironmentVariable("COACH_DETECTION_MODE")
-            );
-        new TrackerEventAdapter(
+        independentCaption = new WindowResultPipeline(session, protocol).Register(
+            router,
             tracker,
-            protocol,
-            (target, value) => states[target] = value,
-            this.independentDetection
-                ? new IndependentOperationAdapter(tracker, session, protocol)
-                : null
-        ).Register(router);
+            (target, value) => states[target] = value
+        );
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
@@ -85,7 +80,7 @@ internal sealed class Observer : IDisposable
                 protocol,
                 router,
                 NextTransaction,
-                new(this.independentDetection, windowDiagnostic)
+                new(Diagnostic: windowDiagnostic)
             ),
             () => clock.ElapsedMilliseconds,
             windowDiagnostic,
@@ -112,7 +107,8 @@ internal sealed class Observer : IDisposable
 
     private int NextTransaction() => session.Allocator(epoch)();
 
-    internal bool Active => mouseHook != 0 && keyHook != 0 && eventHooks.Count == 5;
+    internal bool Active =>
+        mouseHook != 0 && keyHook != 0 && eventHooks.Count == winEventRanges.Length;
 
     internal void InvalidateDisplay()
     {
@@ -165,16 +161,7 @@ internal sealed class Observer : IDisposable
         nint module = GetModuleHandleW(null);
         mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
         keyHook = SetWindowsHookExW(WH_KEYBOARD_LL, keyCallback, module, 0);
-        foreach (
-            (uint min, uint max) in new[]
-            {
-                (EVENT_OBJECT_LOCATIONCHANGE, EVENT_OBJECT_LOCATIONCHANGE),
-                (EVENT_SYSTEM_MOVESIZESTART, EVENT_SYSTEM_MOVESIZEEND),
-                (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
-                (EVENT_OBJECT_CREATE, EVENT_OBJECT_HIDE),
-                (EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND),
-            }
-        )
+        foreach (var (min, max) in winEventRanges)
         {
             nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
             if (hook != 0)
@@ -398,14 +385,14 @@ internal sealed class Observer : IDisposable
 
     private void BeginCaptionResults()
     {
-        captionDate = DateTime.Now.ToString("yyyy-MM-dd");
-        if (independentDetection && captionClick.PressFacts is { } pressFacts)
-            router.Dispatch(new CaptionPressEvent(epoch, pressFacts, captionDate));
+        if (captionClick.PressFacts is { } pressFacts)
+            router.Dispatch(
+                new CaptionPressEvent(epoch, pressFacts, DateTime.Now.ToString("yyyy-MM-dd"))
+            );
     }
 
-    private bool ReadsKeyResult(uint key) =>
-        key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT
-        || independentDetection && key is VK_UP or VK_DOWN;
+    private static bool ReadsKeyResult(uint key) =>
+        key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT || key is VK_UP or VK_DOWN;
 
     private nint OnMouse(int code, nint message, nint data)
     {
@@ -780,7 +767,8 @@ internal sealed class Observer : IDisposable
                     modifiers,
                     key.Flags,
                     shift,
-                    alt
+                    alt,
+                    key.Time
                 )
             );
         }
@@ -821,24 +809,10 @@ internal sealed class Observer : IDisposable
             {
                 bool fallback = captionClick.Fallback;
                 var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
-                var result = independentDetection
-                    ? null
-                    : captionClick.Poll(after, clock.ElapsedMilliseconds);
-                if (
-                    independentDetection
-                    && captionClick.PollFacts(after, clock.ElapsedMilliseconds)
-                        is { } completedFacts
-                )
+                if (captionClick.PollFacts(after, clock.ElapsedMilliseconds) is { } completedFacts)
                     router.Dispatch(new CaptionResultEvent(epoch, completedFacts));
                 if (fallback && !captionClick.Pending)
                     tracker.CancelMouseState();
-                if (result is { } completed)
-                    protocol.CaptionClick(
-                        epoch,
-                        completed.Transaction,
-                        captionDate,
-                        completed.Evidence
-                    );
             }
             if (
                 !fixture
@@ -883,8 +857,11 @@ internal sealed class Observer : IDisposable
     {
         if (fixture || !Active || window == 0)
             return;
+        if (IgnoreSystemEvent(kind))
+            return;
         try
         {
+            var foregroundObservation = ObserveForeground(kind, window, time);
             if (captionClick.Pending)
             {
                 bool fallback = captionClick.Fallback;
@@ -908,16 +885,9 @@ internal sealed class Observer : IDisposable
                     tracker.CancelMouseState();
             }
             closing.Event(kind, window, obj, child, thread, time);
-            if (kind == EVENT_SYSTEM_FOREGROUND)
+            if (foregroundObservation is not null)
             {
-                router.Dispatch(
-                    new ObservedEvent(
-                        ObservedKind.Foreground,
-                        epoch,
-                        window,
-                        clock.ElapsedMilliseconds
-                    )
-                );
+                router.Dispatch(foregroundObservation);
                 switching.Foreground(window, time);
             }
             if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
@@ -984,6 +954,7 @@ internal sealed class Observer : IDisposable
             states[window] = after;
             if (captionClick.Target == window)
                 return;
+            DispatchMinimizeStart(kind, window, after.Process, time);
             router.Dispatch(
                 new StateObservedEvent(
                     epoch,
@@ -1004,6 +975,49 @@ internal sealed class Observer : IDisposable
             switching.Cancel();
             closing.Cancel();
         }
+    }
+
+    private static bool IgnoreSystemEvent(uint kind) =>
+        kind is >= EVENT_SYSTEM_FOREGROUND and <= EVENT_SYSTEM_MINIMIZEEND
+        && kind
+            is not (
+                EVENT_SYSTEM_FOREGROUND
+                or EVENT_SYSTEM_MOVESIZESTART
+                or EVENT_SYSTEM_MOVESIZEEND
+                or EVENT_SYSTEM_MINIMIZESTART
+                or EVENT_SYSTEM_MINIMIZEEND
+            );
+
+    private ForegroundObservedEvent? ObserveForeground(uint kind, nint window, uint time) =>
+        kind == EVENT_SYSTEM_FOREGROUND
+            ? new(
+                epoch,
+                window,
+                clock.ElapsedMilliseconds,
+                time,
+                ReadDisplacedMinimizedWindow(window)
+            )
+            : null;
+
+    private (nint Window, uint Process)? ReadDisplacedMinimizedWindow(nint foreground)
+    {
+        if (tracker.MinimizeDepartureTarget(foreground) is not { } target)
+            return null;
+        if (GetForegroundWindow() != foreground || !IsIconic(target.Window))
+            return null;
+        return
+            GetWindowThreadProcessId(target.Window, out uint process) != 0
+            && process == target.Process
+            ? target
+            : null;
+    }
+
+    private void DispatchMinimizeStart(uint kind, nint window, uint process, uint time)
+    {
+        if (kind == EVENT_SYSTEM_MINIMIZESTART)
+            router.Dispatch(
+                new MinimizeStartedEvent(epoch, window, clock.ElapsedMilliseconds, process, time)
+            );
     }
 
     public void Dispose()

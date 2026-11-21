@@ -1,8 +1,32 @@
 # 現在の検出アーキテクチャ
 
-**これは現行実装の説明**。リファクタリング後の設計ではない。構造は2026-11-06の[コード](https://github.com/YutoMatsui21/shortcut-expert/tree/c1203ec79cf0976a2dad1e65b8c2451fcbe14ef7)で確認した。以下の基礎図表はその時点の構成。CandidateSink・GestureManager・DetectionRouter導入後の本番経路と残存責務は末尾の各節を参照する。
+## 現行の本番経路（#186）
 
-## 処理の全体像
+```mermaid
+flowchart TD
+    OS["Windows hook / WinEvent / UIA"] --> O["Observer・観測アダプター"]
+    O --> R["DetectionRouter"]
+    R --> I["CandidateTracker・GestureManager・KeyGestureSeries"]
+    R --> D["操作別Detector"]
+    I --> D
+    D --> C["ResultComposer"]
+    C --> S["CandidateSink・ObserverHost"]
+    S --> M["Main 厳格parser"]
+    M --> K["Core 分類・世代/重複確認"]
+    K --> DB["SQLite 原子保存 → 適格なら通知"]
+```
+
+8操作の本番候補は、成立したProofを含むv2の `independent-results` で送る。Trackerは入力・配置系列の記憶、対象の同定、取消を担当し、候補の生成は各DetectorとComposerが担当する。Observerは共通の観測、状態取得、入力源による配送・取消、タイマーを扱う。画面をまたぐhalfはW02のみ、同じ画面のhalfはW06として扱う。共通入力が有効な複合操作は、個別に成立したProofだけを同一transactionにまとめる。
+
+旧モードへの環境変数切替と旧候補の本番発行を撤去した。旧v2の読取・分類は維持し、固定baselineと研究probeで使う旧生成コードは製品ビルド外へ移した。送信には入力列やウィンドウ識別情報を含めず、世代・sequence・transactionを照合して保存後に通知する。
+
+`IndependentDetectorRegistrationTests.cs` は、既存の観測イベントから仮Detectorを同じRouterへ登録し、既存の出力が一致すること、同一Sinkで追加候補が採番されること、Stop後は配送されないことを検証する。新しい観測事実やEvidenceが必要な場合は、観測元または通信契約の拡張が必要になる。自然入力、複数画面・DPI、OS通知の実表示は同じ同梱ビルドで別途確認する。
+
+## 移行前の構成（2026-11-06）
+
+以下の基礎図表は[当時のコード](https://github.com/YutoMatsui21/shortcut-expert/tree/c1203ec79cf0976a2dad1e65b8c2451fcbe14ef7)を記録したもの。後続の節は各Issueで導入した構成を記録する。
+
+### 処理の全体像
 
 ```mermaid
 flowchart TD
@@ -78,7 +102,7 @@ C#側の`WindowCandidate`内部に古い`protocolVersion=1`表記があっても
 
 → **新しい構成は[目標アーキテクチャ](target.md)**。
 
-## Candidate Sink (Issue #173)
+## Candidate Sink導入時（Issue #173）
 
 All production candidates pass through `CandidateSink.Submit(CandidateDraft)`. The existing operation adapters construct drafts; only Submit assigns the wire sequence and invokes the output callback under the generation gate. ObserverHost retains its outputLock. Transaction IDs remain input IDs assigned by existing policies; cancellation and duplicate completion prevention remain in those policies, and delivery deduplication remains in DurableCoach.
 
@@ -155,11 +179,11 @@ Windows hook / WinEvent / 50ms poll
 - `closing.Event`、`switching.Foreground`と各専用ObserverのStart/Stop、timer、W11のDESTROY待ち、W12のUIA worker・完了post・対象／generation照合は既存のまま。これらをRouterのpending状態へ統合しない。W01/W12排他も各既存処理に残す。
 - captionのStart/Mouse/State/Foreground/Poll、専用Observer内のWin32/UIA取得とSink出力、検証専用Snap経路は未移行。今回の対象は配送の分離であり、8操作の独立Detector化やResultComposer、Protocol変更は行わない。
 
-`RouterTests.cs`で購読・順序・処理状態・対象／process／入力源／Gesture不一致、取消・Stop/Reset・別スレッドの完了、TrackerとGestureManagerの共存、キー／poll／破棄の互換性を検証する。#172の既存baselineは変更せず、既存ドラッグfixtureも本番Router／アダプターで再生し、Candidateの件数・順序とEnvelope全体を直呼び出しと比較する。W11/W12等の未移行状態機械は既存Policy・helper結合試験で保護する。これらは隔離fixtureの証拠で、自然入力や実OSの順序・通知表示の受入ではない。
+`RouterTests.cs`で購読・順序・処理状態・対象／process／入力源／Gesture不一致、取消・Stop/Reset・別スレッドの完了、TrackerとGestureManagerの共存、キー／poll／破棄の互換性を検証する。#172の既存baselineは変更せず、既存ドラッグfixtureもRouterと旧形式の試験用アダプターで再生し、Candidateの件数・順序とEnvelope全体を直呼び出しと比較する。W11/W12等の未移行状態機械は既存Policy・helper結合試験で保護する。これらは隔離fixtureの証拠で、自然入力や実OSの順序・通知表示の受入ではない。
 
 <a id="independent-detectors-180"></a>
 
-## W02・W03・W07の独立判定（Issue #180）
+## W02・W03・W07の独立判定導入時（Issue #180）
 
 通常起動では `IndependentOperationAdapter` をRouterの互換配送に接続する。物理入力の開始時に `OperationResultSession` が3つの購読を固定し、`MonitorMoveDetector`・`MaximizeDetector`・`QuarterPlacementDetector` が共通の入力・終端snapshotだけを評価する。他Detectorの結果は参照しない。`KeyGestureSeries` は旧PlacementPolicyから取り出したWin保持列の中立factsを持ち、未移行のW06も同じfactsを使う。
 
@@ -169,11 +193,11 @@ Windows hook / WinEvent / 50ms poll
 
 非アクティブcaptionは `CaptionPressEvent` / `CaptionResultEvent` をRouterへ渡し、`CaptionClickResultAdapter` が別の共通GestureとComposerで統合する。W03は `MaximizeDetector.InactiveClick` が入力・activation観測・終端を独立評価する。未移行W01/W04の判定と原子保存を保つため、外部には引き続き1つの `caption-click` Envelopeを送る。これは開始arranged不明を従来どおり扱う互換出口でもあり、不明値を推測で補完しない。W01/W04自体の独立Detector移行は後続Issue。
 
-切戻しはhelper起動前の環境変数 `COACH_DETECTION_MODE=legacy`。未指定・空・`independent` は新経路、不明値は起動エラーとする。アプリを完全終了して再起動することで経路を選び、測定中の動的切替はしない。旧基準fixtureは旧経路の回帰として維持し、新経路の部分採用・未解放抑止は別試験で確認する。自然入力・実OS通知の最終受入は #186 に残す。
+この段階では切戻し用の起動モードがあった。#186でこのモードを撤去した。
 
 <a id="independent-detectors-181"></a>
 
-## W01・W04と背後窓captionの独立判定（Issue #181）
+## W01・W04と背後窓captionの独立判定導入時（Issue #181）
 
 通常起動ではW01・W04も独立結果を出力する。W01はWindowSwitchObserverが取得した中立・物理入力・foreground・最終照会の事実をRouter経由でWindowSwitchDetectorへ渡す。既存WindowSwitchPolicyの入力適格性、時刻比較、Shell中間窓、Alt保持・取消・期限を維持し、GestureManagerが入力のIDと開始snapshotを保持したまま観測済み切替先を関連付ける。タスクバー・閉じる由来のforegroundからW01を開始しない。入力源はdirect-click/alt-tabで区別する。
 

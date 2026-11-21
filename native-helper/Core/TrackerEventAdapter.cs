@@ -1,15 +1,13 @@
-// Shared input collection stays in CandidateTracker / KeyGestureSeries / GestureManager.
-// Migrated verdicts go through independent predicates and Composer; retained operations use the legacy outlet.
+using ShortcutExpert.Detection;
+
 internal sealed class TrackerEventAdapter(
     CandidateTracker tracker,
-    CandidateSink sink,
-    Action<nint, WindowState>? remember = null,
-    IndependentOperationAdapter? independent = null
+    IndependentOperationAdapter operations,
+    Action<nint, WindowState>? remember = null
 )
 {
     internal void Register(DetectionRouter router)
     {
-        tracker.IndependentResults = independent is not null;
         router.Subscribe(
             new[]
             {
@@ -21,7 +19,7 @@ internal sealed class TrackerEventAdapter(
             (e, _) =>
             {
                 Mouse(e);
-                independent?.Observe(e);
+                operations.Observe(e);
             }
         );
         router.Subscribe(
@@ -29,11 +27,17 @@ internal sealed class TrackerEventAdapter(
             (e, _) => Key(e)
         );
         router.Subscribe(
-            new[] { ObservedKind.Foreground, ObservedKind.MoveStart, ObservedKind.Destroy },
+            new[]
+            {
+                ObservedKind.Foreground,
+                ObservedKind.MinimizeStart,
+                ObservedKind.MoveStart,
+                ObservedKind.Destroy,
+            },
             (e, _) =>
             {
                 Lifecycle(e);
-                independent?.Observe(e);
+                operations.Observe(e);
             }
         );
         router.Subscribe(
@@ -64,17 +68,7 @@ internal sealed class TrackerEventAdapter(
                 );
                 break;
             case MousePressEvent e:
-                tracker.Mouse(
-                    e.Target,
-                    e.Before,
-                    e.Hit,
-                    e.Point,
-                    e.At,
-                    e.DoubleClickTime,
-                    e.Flags,
-                    e.Modified,
-                    e.Foreground
-                );
+                tracker.Mouse(e);
                 break;
         }
     }
@@ -84,30 +78,14 @@ internal sealed class TrackerEventAdapter(
         switch (observed)
         {
             case KeyPressEvent e:
-                tracker.Key(
-                    e.Target,
-                    e.Before,
-                    e.Key,
-                    e.Win,
-                    e.Modified,
-                    e.At,
-                    e.Flags,
-                    e.Shift,
-                    e.Alt
-                );
-                independent?.Observe(e);
+                tracker.Key(e);
+                operations.Observe(e);
                 break;
             case KeyReleaseEvent e:
                 tracker.KeyReleased(e.Key, e.At);
                 break;
             case KeyResultEvent e:
-                if (HandledResult(new(e.Target, e.After, e.At, e.Target, e.Injected)))
-                    break;
-                Emit(
-                    tracker.FinishKey(e.Target, e.After, e.At, e.Injected, e.Date),
-                    e.Generation,
-                    e.Date
-                );
+                operations.KeyResult(e);
                 break;
         }
     }
@@ -117,7 +95,10 @@ internal sealed class TrackerEventAdapter(
         switch (e.Kind)
         {
             case ObservedKind.Foreground:
-                tracker.ForegroundChanged(e.Target);
+                tracker.ForegroundChanged(e.Target, e as ForegroundObservedEvent);
+                break;
+            case ObservedKind.MinimizeStart:
+                tracker.MinimizeStarted((MinimizeStartedEvent)e);
                 break;
             case ObservedKind.MoveStart:
                 tracker.MoveStart(e.Target, e.At);
@@ -128,9 +109,6 @@ internal sealed class TrackerEventAdapter(
         }
     }
 
-    private bool HandledResult(OperationObservation observed) =>
-        independent?.State(observed) is OperationDispatch.Pending or OperationDispatch.Consumed;
-
     private void Result(ObservedEvent observed)
     {
         switch (observed)
@@ -139,83 +117,34 @@ internal sealed class TrackerEventAdapter(
                 StateResult(e);
                 break;
             case MoveEndEvent e:
-                MoveResult(e);
+                operations.Finish(e);
+                tracker.MoveEnd(e.Target);
+                Remember(e.Target, e.After);
                 break;
             case TickEvent e:
-                TickResult(e);
+                operations.TryState(new(e.Target, e.After, e.At, e.Foreground));
+                Remember(e.Target, e.After);
                 break;
         }
     }
 
-    private void StateResult(StateObservedEvent e)
+    private void StateResult(StateObservedEvent observed)
     {
-        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
-            return;
         if (
-            tracker.Complete(e.Target, e.Before, e.After, e.At, e.Foreground, e.Date, e.Monitor)
-            is WindowCandidate candidate
+            operations.TryState(
+                new(observed.Target, observed.After, observed.At, observed.Foreground)
+            )
         )
-            Emit(candidate, e.Generation, e.Date);
-    }
-
-    private void MoveResult(MoveEndEvent e)
-    {
-        if (independent?.Finish(e) == true)
-        {
-            tracker.MoveEnd(e.Target);
-            Remember(e.Target, e.After);
             return;
-        }
-        var move = tracker.FinishMove(e.Target, e.After, e.At, e.Foreground, e.Date);
-        Remember(e.Target, e.After);
-        Emit(move, e.Generation, e.Date);
-    }
-
-    private void TickResult(TickEvent e)
-    {
-        if (HandledResult(new(e.Target, e.After, e.At, e.Foreground)))
-        {
-            Remember(e.Target, e.After);
+        if (observed.Before is not { } previous)
             return;
-        }
-        var maximized = tracker.ConfirmMaximize(e.Target, e.After, e.At, e.Foreground, e.Date);
-        Remember(e.Target, e.After);
-        if (maximized is not null)
-            sink.Complete(maximized);
+        if (previous.Process != observed.After.Process)
+            tracker.Forget(observed.Target);
     }
 
     private void Remember(nint target, WindowState? after)
     {
         if (after is not null)
             remember?.Invoke(target, after);
-    }
-
-    private void Emit(object? result, int generation, string date)
-    {
-        if (
-            independent is not null
-            && (
-                result
-                    is WindowCandidate
-                    {
-                        operation: "maximize" or "monitor-move" or "restore" or "minimize"
-                    }
-                || result is PlacementResult p && !p.Evidence.shape.EndsWith("-half")
-                || result is CompoundMoveResult
-            )
-        )
-            return;
-        switch (result)
-        {
-            case WindowCandidate candidate:
-                sink.Complete(candidate);
-                break;
-            case PlacementResult placement:
-                sink.Placement(generation, date, placement);
-                break;
-            case CompoundMoveResult compound:
-                sink.Compound(generation, date, compound);
-                break;
-        }
     }
 }

@@ -12,6 +12,7 @@ internal enum ObservedKind
     KeyRelease,
     KeyResult,
     Foreground,
+    MinimizeStart,
     MoveStart,
     MoveEnd,
     Destroy,
@@ -48,7 +49,8 @@ internal sealed record KeyPressEvent(
     bool Modified,
     uint Flags,
     bool Shift = false,
-    bool Alt = false
+    bool Alt = false,
+    uint? NativeTick = null
 ) : ObservedEvent(ObservedKind.KeyPress, Generation, Target, At);
 
 internal sealed record KeyReleaseEvent(int Generation, long At, uint Key)
@@ -132,3 +134,22 @@ internal sealed record CaptionPressEvent(int Generation, CaptionPressFacts Facts
 
 internal sealed record CaptionResultEvent(int Generation, CaptionCompletionFacts Facts)
     : ObservedEvent(ObservedKind.CaptionResult, Generation, Facts.Press.Target, Facts.At);
+
+namespace ShortcutExpert.Detection
+{
+    internal sealed record ForegroundObservedEvent(
+        int Generation,
+        nint Target,
+        long At,
+        uint NativeTick,
+        (nint Window, uint Process)? MinimizedWindow = null
+    ) : ObservedEvent(ObservedKind.Foreground, Generation, Target, At);
+
+    internal sealed record MinimizeStartedEvent(
+        int Generation,
+        nint Target,
+        long At,
+        uint Process,
+        uint NativeTick
+    ) : ObservedEvent(ObservedKind.MinimizeStart, Generation, Target, At);
+}

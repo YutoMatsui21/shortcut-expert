@@ -8,8 +8,8 @@ internal sealed class RestoreMinimizeDetector
     internal IndependentStateProof? Select(
         GestureManager.Input input,
         IndependentStateProof? proof,
-        long epoch
-    ) => proof is not null && Continues(input, proof, epoch) ? null : proof;
+        long? epoch
+    ) => Continues(input, proof, epoch) ? null : proof;
 
     internal void Completed(
         ReductionFacts facts,
@@ -22,8 +22,9 @@ internal sealed class RestoreMinimizeDetector
         restoreEpoch = epoch;
     }
 
-    private bool Continues(GestureManager.Input input, IndependentStateProof proof, long epoch) =>
-        IsContinuationInput(input, proof)
+    private bool Continues(GestureManager.Input input, IndependentStateProof? proof, long? epoch) =>
+        proof is not null
+        && IsContinuationInput(input, proof)
         && SameRestoreTarget(input, epoch)
         && input.At - restored!.At is >= 0 and <= 1000;
 
@@ -35,7 +36,7 @@ internal sealed class RestoreMinimizeDetector
         && input.Before.Show == SW_SHOWNORMAL
         && proof.action == IndependentStateAction.Minimize;
 
-    private bool SameRestoreTarget(GestureManager.Input input, long epoch) =>
+    private bool SameRestoreTarget(GestureManager.Input input, long? epoch) =>
         restored is not null
         && restoreEpoch == epoch
         && restored.Window == input.Window

@@ -49,6 +49,7 @@ internal static partial class Program
                     session.Start(1);
                     var tracker = new CandidateTracker(session);
                     tracker.Reset(1);
+                    tracker.IndependentResults = true;
                     var output = new List<object>();
                     var sink = new CandidateSink(output.Add);
                     sink.Start(1, 2);
@@ -56,8 +57,7 @@ internal static partial class Program
                     router.Reset(1);
                     new TrackerEventAdapter(
                         tracker,
-                        sink,
-                        independent: new(tracker, session, sink, () => "2026-11-15")
+                        new(tracker, session, sink, () => "2026-11-15")
                     ).Register(router);
                     var start =
                         mode == "max-max" ? before with { Show = SW_SHOWMAXIMIZED } : before;

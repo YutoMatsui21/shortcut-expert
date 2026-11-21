@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal static partial class Program
@@ -32,6 +33,19 @@ internal static partial class Program
         );
         foreach (long gap in new[] { 1000L, 1001L })
             Check($"independent WinDown grouping at {gap}ms", () => CheckReductionGap(gap));
+        foreach (var scenario in reductionDepartures)
+            Check(
+                "WinDown minimize with " + scenario.Name,
+                () => CheckReductionDeparture(scenario)
+            );
+        Check(
+            "WinDown records terminal minimize before late matching foreground",
+            () => CheckTerminalBeforeForeground(true)
+        );
+        Check(
+            "WinDown records a terminal minimize at the deadline when foreground is missing",
+            () => CheckTerminalBeforeForeground(false)
+        );
         foreach (string interrupt in new[] { "key", "target", "foreground", "reset", "restart" })
             Check(
                 "independent WinDown interrupted by " + interrupt,
@@ -74,6 +88,99 @@ internal static partial class Program
         var before = IndependentNormal();
         CompleteReductionKey(f, new(before, before with { Show = SW_SHOWMINIMIZED }), 10 + gap);
         Equal(gap == 1000 ? 1 : 2, f.Output.Count);
+    }
+
+    private sealed record DepartureScenario(string Name)
+    {
+        internal uint? StartTick { get; init; } = 103;
+        internal uint DepartureTick { get; init; } = 103;
+        internal bool Iconic { get; init; } = true;
+        internal bool DeliverStartLast { get; init; }
+        internal bool ExtraDeparture { get; init; }
+        internal nint FinalForeground { get; init; } = 12;
+        internal int Count { get; init; } = 2;
+    }
+
+    private static readonly DepartureScenario[] reductionDepartures =
+    [
+        new("terminal") { Count = 1 },
+        new("unrelated") { Iconic = false },
+        new("without-start") { StartTick = null },
+        new("delayed-departure") { DepartureTick = 102 },
+        new("pre-press-start") { StartTick = 99 },
+        new("start-tied-to-press") { StartTick = 100 },
+        new("departure-delivered-first") { DeliverStartLast = true },
+        new("later-departure") { DepartureTick = 104 },
+        new("second-departure") { ExtraDeparture = true, FinalForeground = 13 },
+        new("foreground-mismatch") { FinalForeground = 13 },
+    ];
+
+    private static GestureManager.Gesture PressReductionAgain(
+        IndependentRouterFixture f,
+        WindowState before
+    )
+    {
+        f.Router.Dispatch(
+            new KeyPressEvent(1, 11, 100, before, VK_DOWN, true, false, 0, NativeTick: 100)
+        );
+        return f.Tracker.Gestures.Current!;
+    }
+
+    private static void DispatchReductionDeparture(
+        IndependentRouterFixture f,
+        WindowState before,
+        DepartureScenario scenario
+    )
+    {
+        MinimizeStartedEvent? start = scenario.StartTick is { } tick
+            ? new(1, 11, 103, before.Process, tick)
+            : null;
+        if (start is not null && !scenario.DeliverStartLast)
+            f.Router.Dispatch(start);
+        (nint Window, uint Process)? iconic = scenario.Iconic ? (11, before.Process) : null;
+        f.Router.Dispatch(new ForegroundObservedEvent(1, 12, 105, scenario.DepartureTick, iconic));
+        if (start is not null && scenario.DeliverStartLast)
+            f.Router.Dispatch(start);
+        if (scenario.ExtraDeparture)
+            f.Router.Dispatch(
+                new ForegroundObservedEvent(1, 13, 106, scenario.DepartureTick, iconic)
+            );
+    }
+
+    private static void CheckReductionDeparture(DepartureScenario scenario)
+    {
+        var f = RestoredReductionFixture();
+        var before = IndependentNormal();
+        var minimized = before with { Show = SW_SHOWMINIMIZED };
+        var gesture = PressReductionAgain(f, before);
+        DispatchReductionDeparture(f, before, scenario);
+        f.State(minimized, 107, foreground: scenario.FinalForeground);
+        Equal(GestureManager.Phase.Observing, gesture.State);
+        Equal(1, f.Output.Count);
+        f.Release(VK_DOWN, 110);
+        f.State(minimized, 120, foreground: scenario.FinalForeground);
+        Equal(GestureManager.Phase.Completed, gesture.State);
+        Equal(scenario.Count, f.Output.Count);
+    }
+
+    private static void CheckTerminalBeforeForeground(bool matchingForegroundArrives)
+    {
+        var f = RestoredReductionFixture();
+        var before = IndependentNormal();
+        var minimized = before with { Show = SW_SHOWMINIMIZED };
+        var gesture = PressReductionAgain(f, before);
+        f.Release(VK_DOWN, 105);
+        f.Router.Dispatch(new MinimizeStartedEvent(1, 11, 108, before.Process, 103));
+        long terminalAt = matchingForegroundArrives ? 109 : 1100;
+        f.State(minimized, terminalAt, foreground: 12);
+        Equal(GestureManager.Phase.Completed, gesture.State);
+        Equal(2, f.Output.Count);
+        if (matchingForegroundArrives)
+            f.Router.Dispatch(
+                new ForegroundObservedEvent(1, 12, terminalAt + 1, 103, (11, before.Process))
+            );
+        f.Router.Dispatch(new TickEvent(1, 11, terminalAt + 50, minimized, 12, "2026-11-15"));
+        Equal(2, f.Output.Count);
     }
 
     private static void CheckReductionInterruption(string interrupt)

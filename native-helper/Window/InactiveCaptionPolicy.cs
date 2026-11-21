@@ -3,7 +3,7 @@ using Point = NativeMethods.Point;
 
 // One physical, explicitly hit-tested inactive caption click owns its transaction.
 // Identities and input coordinates remain transient; the wire carries only confirmed results.
-internal sealed class InactiveCaptionPolicy
+internal sealed partial class InactiveCaptionPolicy
 {
     internal nint Target { get; private set; }
     internal uint Process { get; private set; }
@@ -157,15 +157,6 @@ internal sealed class InactiveCaptionPolicy
     internal CaptionPressFacts? PressFacts =>
         Pending && before is not null ? new(Target, before, started, transaction) : null;
 
-    internal (int Transaction, CaptionClickEvidence Evidence)? Poll(WindowState? after, long at)
-    {
-        var facts = PollFacts(after, at);
-        if (facts is null)
-            return null;
-        var evidence = facts.LegacyEvidence();
-        return evidence is null ? null : (facts.Press.Transaction, evidence);
-    }
-
     internal CaptionCompletionFacts? PollFacts(WindowState? after, long at)
     {
         if (!Pending)
@@ -182,21 +173,15 @@ internal sealed class InactiveCaptionPolicy
             State(after, at);
             return null;
         }
-        var facts =
-            after is not null && after.Process == Process && released
-                ? new CaptionCompletionFacts(
-                    PressFacts!,
-                    after,
-                    hit,
-                    switched,
-                    terminal,
-                    releasedAt,
-                    at
-                )
-                : null;
-        if (facts?.LegacyEvidence() is null)
+        var facts = CompletionFacts(after, at);
+        if (facts?.HasResult != true)
             Diagnostic?.Invoke(WindowDiagnosticReason.CaptionNoResult);
         Cancel();
         return facts;
     }
+
+    private CaptionCompletionFacts? CompletionFacts(WindowState? after, long at) =>
+        after is not null && after.Process == Process && released
+            ? new(PressFacts!, after, hit, switched, terminal, releasedAt, at)
+            : null;
 }

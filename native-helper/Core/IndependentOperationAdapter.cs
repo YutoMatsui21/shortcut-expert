@@ -1,3 +1,4 @@
+using ShortcutExpert.Detection;
 using static NativeMethods;
 
 internal sealed class IndependentOperationAdapter
@@ -48,12 +49,16 @@ internal sealed class IndependentOperationAdapter
         }
     }
 
-    internal bool Finish(MoveEndEvent e)
+    internal void Finish(MoveEndEvent e)
     {
         if (!gestures.Drags.TryGetValue(e.Target, out var input))
-            return false;
+        {
+            gestures.Release = null;
+            tracker.Diagnostic?.Invoke(WindowDiagnosticReason.DragNoSource);
+            return;
+        }
         if (e.After is not { } after || gestures.Release is not { } release)
-            return true;
+            return;
         var f = new DragDetectionFacts(
             input.Before,
             after,
@@ -74,46 +79,60 @@ internal sealed class IndependentOperationAdapter
             null,
             HalfPlacementDetector.Drag(f)
         );
-        return true;
     }
 
-    private bool MigratedInput(nint target) =>
+    private bool TracksInput(nint target) =>
         gestures.Drags.ContainsKey(target)
         || tracker.Placement.Owns(target)
         || gestures.Maximize?.Window == target
-        || MigratedPendingInput(target);
+        || TracksPendingInput(target);
 
-    private bool MigratedPendingInput(nint target)
+    private bool TracksPendingInput(nint target)
     {
         if (gestures.Pending is not { } input || input.Window != target)
             return false;
-        return input.Route switch
-        {
-            "win-shift-left" or "win-shift-right" or "win-down" => true,
-            "min-button" => true,
-            "max-button" or "caption-double-click" or "unknown" => true,
-            _ => false,
-        };
+        return input.Route
+            is "win-shift-left"
+                or "win-shift-right"
+                or "win-down"
+                or "min-button"
+                or "max-button"
+                or "caption-double-click"
+                or "unknown";
     }
 
-    internal OperationDispatch State(OperationObservation observed)
+    internal void KeyResult(KeyResultEvent e)
     {
-        if (!OwnsObservation(observed))
-            return OperationDispatch.Legacy;
+        var observed = new OperationObservation(e.Target, e.After, e.At, e.Target, e.Injected);
+        if (TryState(observed))
+            return;
+
+        // Retire an unowned key series after release, including a result on a new target.
+        tracker.DiscardKeyResult(observed);
+    }
+
+    internal bool TryState(OperationObservation observed)
+    {
+        if (gestures.Current?.Window != observed.Target || !TracksInput(observed.Target))
+            return false;
+        ProcessState(observed);
+        return true;
+    }
+
+    private void ProcessState(OperationObservation observed)
+    {
         if (!ValidObservedWindow(observed))
         {
             tracker.ClearInput();
-            return OperationDispatch.Consumed;
+            return;
         }
         if (InputStillOpen(observed.Target))
-            return OperationDispatch.Pending;
+            return;
         if (tracker.Placement.Owns(observed.Target))
-            return FinishSeries(observed);
-        return FinishStandalone(observed);
+            FinishSeries(observed);
+        else
+            FinishStandalone(observed);
     }
-
-    private bool OwnsObservation(OperationObservation observed) =>
-        gestures.Current?.Window == observed.Target && MigratedInput(observed.Target);
 
     private bool ValidObservedWindow(OperationObservation o)
     {
@@ -143,13 +162,13 @@ internal sealed class IndependentOperationAdapter
         return tracker.Placement.WinHeld && !ReleasedStandaloneKey(monitorChord);
     }
 
-    private OperationDispatch FinishSeries(OperationObservation o)
+    private void FinishSeries(OperationObservation o)
     {
         if (tracker.Placement.PendingResultTarget(o.At) is null)
-            return OperationDispatch.Consumed;
+            return;
         if (!tracker.Placement.ResultObserved(o.After!))
-            return OperationDispatch.Pending;
-        var facts = tracker.Placement.Terminal(o.Target, o.After, o.At, o.Injected);
+            return;
+        var facts = tracker.Placement.Terminal(o);
         results.Finish(
             o.After!,
             o.At,
@@ -160,57 +179,54 @@ internal sealed class IndependentOperationAdapter
             facts is null ? null : HalfPlacementDetector.Key(facts)
         );
         gestures.Maximize = null;
-        RetireSeries(o);
-        return OperationDispatch.Consumed;
+        tracker.Placement.Retire(o);
     }
 
-    private void RetireSeries(OperationObservation o) =>
-        tracker.Placement.Finish(o.Target, o.After, o.At, o.Injected);
-
-    private OperationDispatch FinishStandalone(OperationObservation o)
+    private void FinishStandalone(OperationObservation o)
     {
         if (gestures.Maximize is { } up && up.Window == o.Target)
-            return up.Gesture.ReleasedAt is not null
-                ? FinishMaximize(up, o)
-                : OperationDispatch.Pending;
+        {
+            if (up.Gesture.ReleasedAt is not null)
+                FinishMaximize(up, o);
+            return;
+        }
         if (gestures.Pending is not { } input || input.Window != o.Target)
-            return OperationDispatch.Legacy;
-        return input.Route is "win-shift-left" or "win-shift-right"
-            ? FinishMonitorChord(input, o)
-            : FinishClick(input, o);
+            return;
+        if (input.Route is "win-shift-left" or "win-shift-right")
+            FinishMonitorChord(input, o);
+        else
+            FinishClick(input, o);
     }
 
-    private OperationDispatch FinishMaximize(GestureManager.Input input, OperationObservation o)
+    private void FinishMaximize(GestureManager.Input input, OperationObservation o)
     {
         var proof = MaximizeDetector.Key(input, o.After!, o.At);
         if (proof is null)
-            return OperationDispatch.Pending;
+            return;
         results.Finish(o.After!, o.At, null, proof, null);
         gestures.Maximize = null;
-        return OperationDispatch.Consumed;
     }
 
-    private OperationDispatch FinishMonitorChord(GestureManager.Input input, OperationObservation o)
+    private void FinishMonitorChord(GestureManager.Input input, OperationObservation o)
     {
         if (!tracker.MoveKeyReleased)
-            return OperationDispatch.Pending;
+            return;
         if (!InputDetectionFacts.MoveContext(input.Before, o.After!))
         {
             tracker.ClearInput();
-            return OperationDispatch.Consumed;
+            return;
         }
         var proof = MonitorMoveDetector.Key(input, o.After!, o.At);
         if (proof is null)
-            return OperationDispatch.Pending;
+            return;
         results.Finish(o.After!, o.At, proof, null, null);
         gestures.Pending = null;
-        return OperationDispatch.Consumed;
     }
 
-    private OperationDispatch FinishClick(GestureManager.Input input, OperationObservation o)
+    private void FinishClick(GestureManager.Input input, OperationObservation o)
     {
         if (input.Origin != "key" && !tracker.ClickReleased)
-            return OperationDispatch.Pending;
+            return;
         var maximize = MaximizeDetector.Click(
             input,
             o.After!,
@@ -221,26 +237,14 @@ internal sealed class IndependentOperationAdapter
         var facts = new ReductionFacts(input, o.After!, o.At, o.Foreground == o.Target, moving);
         var reductionFacts = RestoreMinimizeDetector.Detect(facts);
         if (maximize is null && reductionFacts is null)
-            return OperationDispatch.Pending;
-        var reduced = reduction.Select(input, reductionFacts, tracker.InputEpoch);
+            return;
+        var reduced = reduction.Select(
+            input,
+            reductionFacts,
+            tracker.MinimizeInputEpoch(input.Gesture, o.Foreground)
+        );
         bool accepted = results.Finish(o.After!, o.At, null, maximize, null, reduced);
         reduction.Completed(facts, reductionFacts, tracker.InputEpoch, accepted);
         gestures.Pending = null;
-        return OperationDispatch.Consumed;
     }
-}
-
-internal sealed record OperationObservation(
-    nint Target,
-    WindowState? After,
-    long At,
-    nint Foreground,
-    bool Injected = false
-);
-
-internal enum OperationDispatch
-{
-    Legacy,
-    Pending,
-    Consumed,
 }

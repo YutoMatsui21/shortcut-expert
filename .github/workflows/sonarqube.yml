@@ -33,6 +33,25 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner --version 12.1.0
 
+      - name: Collect native policy coverage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          dotnet tool install --tool-path .tools/sonar-coverage dotnet-coverage --version 18.1.0
+          .tools/sonar-coverage/dotnet-coverage collect `
+            "dotnet run --project tests/native/policy/WindowObserver.PolicyTests.csproj --configuration Release" `
+            --output-format xml `
+            --output .tools/sonar-native-coverage.xml > .tools/sonar-policy-output.log
+
+          $coverage = [xml](Get-Content .tools/sonar-native-coverage.xml -Raw)
+          $coveredSource = "//module//range[@covered='yes' and @source_id=ancestor::module/source_files/source_file[contains(@path, '\native-helper\')]/@id]"
+          if (!$coverage.SelectSingleNode($coveredSource)) {
+            Get-Content .tools/sonar-policy-output.log | Where-Object { !$_.StartsWith('{') } | Select-Object -Last 20
+            throw "No native-helper coverage was collected from the policy suite."
+          }
+
       - name: Analyze
         shell: pwsh
         env:
@@ -45,7 +64,8 @@ jobs:
             /k:"YutoMatsui21_shortcut-expert" `
             /o:"yutomatsui21" `
             /d:sonar.token="$env:SONAR_TOKEN" `
-            /d:sonar.projectBaseDir="$((Get-Location).Path)"
+            /d:sonar.projectBaseDir="$((Get-Location).Path)" `
+            /d:sonar.cs.vscoveragexml.reportsPaths=".tools/sonar-native-coverage.xml"
 
           dotnet build native-helper/WindowObserver.csproj --no-incremental --disable-build-servers
 

@@ -7,6 +7,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile
+      Include="../../../native-helper/Core/OperationObservation.cs"
+      Link="OperationObservation.cs"
+    />
+    <Compile
       Include="../../../native-helper/Detectors/TaskbarDetector.cs"
       Link="TaskbarDetector.cs"
     />
@@ -36,10 +40,6 @@
       Link="CaptionClickResultAdapter.cs"
     />
     <Compile
-      Include="../../../native-helper/Core/DetectionMigration.cs"
-      Link="DetectionMigration.cs"
-    />
-    <Compile
       Include="../../../native-helper/Detectors/InputDetectors.cs"
       Link="InputDetectors.cs"
     />
@@ -59,6 +59,10 @@
     <Compile Include="../../../native-helper/Detectors/DragDetectors.cs" Link="DragDetectors.cs" />
     <Compile Include="../../../native-helper/Core/DetectionRouter.cs" Link="DetectionRouter.cs" />
     <Compile Include="../../../native-helper/Core/ObservedEvent.cs" Link="ObservedEvent.cs" />
+    <Compile
+      Include="../../../native-helper/Core/WindowResultPipeline.cs"
+      Link="WindowResultPipeline.cs"
+    />
     <Compile
       Include="../../../native-helper/Core/TrackerEventAdapter.cs"
       Link="TrackerEventAdapter.cs"
