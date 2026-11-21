@@ -32,25 +32,6 @@ internal static class ObserverHost
         catch (InvalidOperationException) { }
     }
 
-    private static void EmitDiagnostics(
-        Dictionary<string, int>? closeCounts,
-        WindowDiagnosticAccumulator? windowCounts
-    )
-    {
-        if (closeCounts is not null)
-            Emit(new { type = "close-diagnostics", counts = closeCounts });
-        var diagnostic = windowCounts?.Take();
-        if (diagnostic is not null)
-            Emit(
-                new
-                {
-                    type = "window-diagnostics",
-                    generation = diagnostic.Generation,
-                    counts = diagnostic.Counts,
-                }
-            );
-    }
-
     internal static int SelfTest()
     {
         using var observer = new Observer(_ => { }, fixture: true);
@@ -142,7 +123,7 @@ internal static class ObserverHost
                                     break;
                                 case "stop":
                                     observer.Stop();
-                                    EmitDiagnostics(closeCounts, windowCounts);
+                                    ObserverDiagnosticOutput.Emit(Emit, closeCounts, windowCounts);
                                     Emit(new { type = "stopped", requestId });
                                     break;
                                 case "fixtureCandidate" when fixture:
