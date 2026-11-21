@@ -53,6 +53,9 @@ internal sealed class TaskbarDetector(
     private int generation;
     private long revision;
 
+    internal void Register(DetectionRouter router) =>
+        router.Subscribe(new[] { ObservedKind.DisplayInvalidated }, (_, _) => ResetInput());
+
     internal void Start(int epoch)
     {
         Stop();
@@ -61,8 +64,13 @@ internal sealed class TaskbarDetector(
 
     internal void Stop()
     {
-        Cancel();
         generation = 0;
+        ResetInput();
+    }
+
+    private void ResetInput()
+    {
+        Cancel();
         keys = new();
         snapshot = TaskbarSnapshot.Unknown;
         mouse = null;

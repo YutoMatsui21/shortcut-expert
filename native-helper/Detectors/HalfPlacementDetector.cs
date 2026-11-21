@@ -3,26 +3,13 @@ using static NativeMethods;
 
 internal static partial class HalfPlacementDetector
 {
-    internal static IndependentPlacementProof? Drag(DragDetectionFacts f)
-    {
-        if (!f.Valid || !f.CaptionPress)
-            return null;
-        var evidence = PlacementGeometry.Drag(
-            f.Before,
-            f.After,
-            f.ReleasePoint,
-            f.ReleaseMonitor,
-            f.ReleaseWork,
-            f.StartAge,
-            true
-        );
-        return Proof(
-            evidence?.shape,
+    internal static IndependentPlacementProof? Drag(DragDetectionFacts f) =>
+        Proof(
+            CaptionDragPlacement.TerminalShape(f),
             IndependentPlacementRoute.CaptionEdgeDrag,
             f.StartAge,
             f.After.Monitor
         );
-    }
 
     private static IndependentPlacementProof? Proof(
         string? shape,

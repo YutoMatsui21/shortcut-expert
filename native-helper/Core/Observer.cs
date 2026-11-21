@@ -70,10 +70,13 @@ internal sealed class Observer : IDisposable
         this.windowDiagnostic = windowDiagnostic;
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
-        taskbar = new(
-            new TaskbarDetector(session, protocol, () => clock.ElapsedMilliseconds),
+        var taskbarDetector = new TaskbarDetector(
+            session,
+            protocol,
             () => clock.ElapsedMilliseconds
         );
+        taskbarDetector.Register(router);
+        taskbar = new(taskbarDetector, () => clock.ElapsedMilliseconds);
         switching = new(
             new WindowSwitchDetector(
                 session,
@@ -116,6 +119,9 @@ internal sealed class Observer : IDisposable
         tracker.ClearInput();
         maximizeTimer.Stop();
         closing.Cancel();
+        router.Dispatch(
+            new ObservedEvent(ObservedKind.DisplayInvalidated, epoch, 0, clock.ElapsedMilliseconds)
+        );
         mouseDockThresholdPx = null;
     }
 

@@ -28,6 +28,26 @@ internal sealed record DragDetectionFacts(
         && After.Work == ReleaseWork;
 }
 
+internal static class CaptionDragPlacement
+{
+    internal static string? TerminalShape(DragDetectionFacts facts)
+    {
+        if (!facts.Valid || !facts.CaptionPress)
+            return null;
+        return PlacementGeometry
+            .Drag(
+                facts.Before,
+                facts.After,
+                facts.ReleasePoint,
+                facts.ReleaseMonitor,
+                facts.ReleaseWork,
+                facts.StartAge,
+                true
+            )
+            ?.shape;
+    }
+}
+
 internal static partial class MonitorMoveDetector
 {
     internal static IndependentMonitorMoveProof? Drag(DragDetectionFacts f)
@@ -105,18 +125,7 @@ internal static partial class QuarterPlacementDetector
 {
     internal static IndependentPlacementProof? Drag(DragDetectionFacts f)
     {
-        if (!f.Valid || !f.CaptionPress)
-            return null;
-        var evidence = PlacementGeometry.Drag(
-            f.Before,
-            f.After,
-            f.ReleasePoint,
-            f.ReleaseMonitor,
-            f.ReleaseWork,
-            f.StartAge,
-            true
-        );
-        IndependentPlacementShape? shape = evidence?.shape switch
+        IndependentPlacementShape? shape = CaptionDragPlacement.TerminalShape(f) switch
         {
             "left-top" => IndependentPlacementShape.LeftTop,
             "right-top" => IndependentPlacementShape.RightTop,

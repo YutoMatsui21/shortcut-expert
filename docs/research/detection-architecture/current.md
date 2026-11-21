@@ -16,11 +16,11 @@ flowchart TD
     K --> DB["SQLite 原子保存 → 適格なら通知"]
 ```
 
-8操作の本番候補は、成立したProofを含むv2の `independent-results` で送る。Trackerは入力・配置系列の記憶、対象の同定、取消を担当し、候補の生成は各DetectorとComposerが担当する。Observerは共通の観測、状態取得、入力源による配送・取消、タイマーを扱う。画面をまたぐhalfはW02のみ、同じ画面のhalfはW06として扱う。共通入力が有効な複合操作は、個別に成立したProofだけを同一transactionにまとめる。
+8操作の本番候補は、成立したProofを含むv2の `independent-results` で送る。Trackerは入力・配置系列の記憶、対象の同定、取消を担当し、候補の生成は各DetectorとComposerが担当する。Observerは共通の観測、状態取得、入力源による配送・取消、タイマーを扱う。別画面へのドラッグで最終halfも確証できればW02とW06を採用する。同じ画面のhalfはW06として扱う。共通入力が有効な複合操作は、個別に成立したProofだけを同一transactionにまとめる。
 
 旧モードへの環境変数切替と旧候補の本番発行を撤去した。旧v2の読取・分類は維持し、固定baselineと研究probeで使う旧生成コードは製品ビルド外へ移した。送信には入力列やウィンドウ識別情報を含めず、世代・sequence・transactionを照合して保存後に通知する。
 
-`IndependentDetectorRegistrationTests.cs` は、既存の観測イベントから仮Detectorを同じRouterへ登録し、既存の出力が一致すること、同一Sinkで追加候補が採番されること、Stop後は配送されないことを検証する。新しい観測事実やEvidenceが必要な場合は、観測元または通信契約の拡張が必要になる。自然入力、複数画面・DPI、OS通知の実表示は同じ同梱ビルドで別途確認する。
+`IndependentDetectorRegistrationTests.cs` は、既存の観測イベントから仮Detectorを同じRouterへ登録し、既存の出力が一致すること、同一Sinkで追加候補が採番されること、Stop後は配送されないことを検証する。新しい観測事実やEvidenceが必要な場合は、観測元または通信契約の拡張が必要になる。画面構成・設定の変更通知はRouterを通じてW12にも配送し、保留中の入力と変更前のUIAスナップショットを無効化する。実機検証の実施範囲は[PR #206](https://github.com/YutoMatsui21/shortcut-expert/pull/206)を参照。
 
 ## 移行前の構成（2026-11-06）
 

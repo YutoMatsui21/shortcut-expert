@@ -23,13 +23,13 @@
 
 W06/W07は独立Detectorから終端shape・対象一致・入力の経過・通知monitorを`independent-results`で送る。旧`placement-v1`は受信・fixture互換に残す。Mainが厳格parse、Coreが由来・経路・期限・結果を再確認。W06/W07は操作別の件数・キー率・学習状態として保存し、W07は**Winを保持した順次方向キー**として案内する。
 
-**別monitorのW02＋W07**は[複合契約](compound-drag.md)で各1件を原子保存し、通知を1つへまとめる。cross-monitor quarterはW02とW07の成立Proofを1つのEnvelopeにまとめる。quarter自体が不成立でも共通入力が有効ならW02を残す。cross-monitor halfはW02だけで、W06の自動対応はしない。
+別モニターへのドラッグでは、W02と最終配置（W06またはW07）の成立Proofを1つのEnvelopeにまとめ、[複合契約](compound-drag.md)に従って原子保存し、適格な通知を1つにまとめる。最終配置が不成立でも、共通入力が有効でW02が成立すればW02を残す。
 
 ## 4. 検証と未確認条件
 
 - `tests/native/policy/PlacementTests.cs`：DPI・作業域・負座標・形状・サイズ制限、同一Win列と独立操作、取消・途中状態・注入・重複の人工列。
 - `tests/operations/window-snap-placement.test.ts`、`tests/native/native-operation-policy.test.ts`、`tests/integration/candidate-to-page-model-data-flow.test.ts`：v2 parse→Core→SQLite、mouse／keyと3学習状態、保存後通知、停止・ACK喪失・再配送、一覧／記録の整合。隔離smokeで本番Rendererへ接続する。
-- **未確認**：側端8pxの上限で一般Windowsの自然ドラッグを十分に扱えるか、実機の結果遅着／混在DPI／画面構成変更、実OS通知、最終buildのR02／J04。配置済み起点は開始shape不明なら棄却し、同monitor・同shapeへの戻しも記録しない。異なるmonitorのquarterは既存複合契約、halfは対象外。採用条件と実機検証の範囲は[本番改善検証](../research/detection-architecture/independence/production-reposition-validation-20261107.md)を参照。単独W06/W07の局所実装と[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)を区別する。
+- **未確認**：側端8pxの上限で一般Windowsの自然ドラッグを十分に扱えるか、実機の結果遅着／混在DPI／画面構成変更、実OS通知、最終buildのR02／J04。配置済み起点は開始shape不明なら棄却し、同monitor・同shapeへの戻しも記録しない。異なるモニターのhalf・quarterの採用は人工fixtureで確認済み。採用条件と実機検証の範囲は[本番改善検証](../research/detection-architecture/independence/production-reposition-validation-20261107.md)を参照。単独W06/W07の局所実装と[最終受入 #47](https://github.com/YutoMatsui21/shortcut-expert/issues/47)を区別する。
 
 ## OSの早期スナップ閾値
 
