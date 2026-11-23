@@ -155,8 +155,8 @@ EXPORT int DwmGetWindowAttribute(Handle window, unsigned attribute, void *value,
         *(int *)value = 0;
         return 0;
     }
-    if (attribute == 9 && size == sizeof(Rect) && GetWindowRect(window, (Rect *)value)) return 0;
-    return -1;
+    if (attribute != 9 || size != sizeof(Rect)) return -1;
+    return GetWindowRect(window, (Rect *)value) ? 0 : -1;
 }
 
 Handle FixtureOpenProcess(unsigned access, int inherit, unsigned pid) { return pid == target_pid; }
