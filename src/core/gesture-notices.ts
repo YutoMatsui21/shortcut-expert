@@ -16,6 +16,8 @@ type PreparedNotice = {
   tokens: NoticeToken[];
 };
 
+type NoticeDelivery = { notify(value: ShortcutNotice): Promise<boolean> };
+
 export class GestureNotices {
   private epoch = 0;
   private operationEpochs = new Map<OperationId, number>();
@@ -51,7 +53,7 @@ export class GestureNotices {
   deliver(
     notice: PreparedNotice,
     settings: Settings,
-    delivery: { notify(value: ShortcutNotice): Promise<boolean> },
+    delivery: NoticeDelivery,
   ): void {
     if (notice.epoch !== this.epoch) return;
     const items = notice.tokens
@@ -70,13 +72,21 @@ export class GestureNotices {
       }));
     if (!items.length) return;
     // One consumed delivery token per gesture, including unknown OS outcomes.
-    try {
-      void delivery
-        .notify({ ...items[0], ...(items.length > 1 ? { items } : {}) })
-        .catch(() => {});
-    } catch {
-      /* An unknown delivery result must never trigger an automatic resend. */
-    }
+    void sendNotice(delivery, {
+      ...items[0],
+      ...(items.length > 1 ? { items } : {}),
+    });
+  }
+}
+
+async function sendNotice(
+  delivery: NoticeDelivery,
+  notice: ShortcutNotice,
+): Promise<void> {
+  try {
+    await delivery.notify(notice);
+  } catch {
+    /* An unknown delivery result must never trigger an automatic resend. */
   }
 }
 
