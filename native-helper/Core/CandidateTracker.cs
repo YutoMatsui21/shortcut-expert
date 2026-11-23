@@ -115,29 +115,30 @@ internal sealed partial class CandidateTracker
 
     internal void MouseMoved(Point point, uint flags)
     {
-        if (
-            (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0
-            && (gestures.Press is not null || HasDrag)
-        )
+        bool injected = IsInjectedMouse(flags);
+        if (injected && HasActiveMouseGesture())
         {
             ClearInput();
             return;
         }
         foreach (var drag in gestures.Drags.Values)
             drag.Probe?.Sample(point, flags);
-        if (
-            MouseStateTarget is not null
-            && (
-                (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0
-                || !clickReleased
-                    && (
-                        Math.Abs((long)point.X - clickPoint.X) > ClickMovementPx
-                        || Math.Abs((long)point.Y - clickPoint.Y) > ClickMovementPx
-                    )
-            )
-        )
+        if (MouseStateTarget is not null && (injected || MovedBeforeClickRelease(point)))
             CancelMouseState();
     }
+
+    private bool HasActiveMouseGesture() => gestures.Press is not null || HasDrag;
+
+    private bool MovedBeforeClickRelease(Point point)
+    {
+        if (clickReleased)
+            return false;
+        return Math.Abs((long)point.X - clickPoint.X) > ClickMovementPx
+            || Math.Abs((long)point.Y - clickPoint.Y) > ClickMovementPx;
+    }
+
+    private static bool IsInjectedMouse(uint flags) =>
+        (flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0;
 
     internal int NextTransaction() => allocate();
 
@@ -301,7 +302,7 @@ internal sealed partial class CandidateTracker
         long? releasedAt = null
     )
     {
-        if ((flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0)
+        if (IsInjectedMouse(flags))
         {
             ClearInput();
             return;
@@ -311,19 +312,16 @@ internal sealed partial class CandidateTracker
         clickReleased = true;
         if (gestures.Current?.Source == "caption")
             gestures.AwaitResult(gestures.Current, releasedAt);
-        if (
-            gestures.Drags.Count == 1
-            && monitor is not null
-            && work is not null
-            && Diagnostic is { } diagnostic
-        )
+        if (!HasDrag || monitor is null || work is null)
+        {
+            gestures.Release = null;
+            return;
+        }
+        if (Diagnostic is { } diagnostic)
             gestures
                 .Drags.Values.First()
                 .Probe?.Record(point, monitor, work, physicalBefore, physicalAfter, diagnostic);
-        gestures.Release =
-            gestures.Drags.Count == 1 && monitor is not null && work is not null
-                ? (monitor, work, point)
-                : null;
+        gestures.Release = HasDrag ? (monitor, work, point) : null;
     }
 
     internal static bool IsModifier(uint key) =>
@@ -350,34 +348,15 @@ internal sealed partial class CandidateTracker
         ClearBaselineReduction();
         clickPoint = input.Point;
         clickReleased = false;
-        string route = input.Hit switch
-        {
-            HTMAXBUTTON => "max-button",
-            HTMINBUTTON => "min-button",
-            HTCLOSE => "close-button",
-            HTCAPTION => "caption-press",
-            _ => "unknown",
-        };
-        if (
-            input.Hit == HTCAPTION
-            && lastCaption == input.Target
-            && lastCaptionProcess == input.Before.Process
-            && input.At - lastCaptionAt <= input.DoubleClickTime
-            && Math.Abs(input.Point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx
-            && Math.Abs(input.Point.Y - lastCaptionPoint.Y) <= CaptionDoubleClickDistancePx
-        )
-            route = "caption-double-click";
-        lastCaption = input.Hit == HTCAPTION ? input.Target : 0;
-        lastCaptionProcess = input.Before.Process;
-        lastCaptionAt = input.At;
-        lastCaptionPoint = input.Point;
+        string route = MouseRoute(input);
+        bool canStartDrag = route is "unknown" or "caption-press";
         gestures.Pending = gestures.Begin(
             input.Target,
             input.Before,
-            route is "unknown" or "caption-press" ? "unknown" : "mouse",
+            canStartDrag ? "unknown" : "mouse",
             route,
             input.At,
-            (input.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) != 0,
+            IsInjectedMouse(input.Flags),
             input.Modified,
             input.Foreground,
             NextTransaction(),
@@ -385,9 +364,34 @@ internal sealed partial class CandidateTracker
         );
         // Explicit resize borders and caption buttons remain outside window-move detection.
         gestures.Press =
-            (route is "unknown" or "caption-press") && input.Hit is not (>= 10 and <= 18)
-                ? gestures.Pending
-                : null;
+            canStartDrag && input.Hit is not (>= 10 and <= 18) ? gestures.Pending : null;
+    }
+
+    private string MouseRoute(MousePressEvent input)
+    {
+        string route = input.Hit switch
+        {
+            HTMAXBUTTON => "max-button",
+            HTMINBUTTON => "min-button",
+            HTCLOSE => "close-button",
+            HTCAPTION => IsCaptionDoubleClick(input) ? "caption-double-click" : "caption-press",
+            _ => "unknown",
+        };
+        lastCaption = input.Hit == HTCAPTION ? input.Target : 0;
+        lastCaptionProcess = input.Before.Process;
+        lastCaptionAt = input.At;
+        lastCaptionPoint = input.Point;
+        return route;
+    }
+
+    private bool IsCaptionDoubleClick(MousePressEvent input)
+    {
+        if (lastCaption != input.Target || lastCaptionProcess != input.Before.Process)
+            return false;
+        if (input.At - lastCaptionAt > input.DoubleClickTime)
+            return false;
+        return Math.Abs(input.Point.X - lastCaptionPoint.X) <= CaptionDoubleClickDistancePx
+            && Math.Abs(input.Point.Y - lastCaptionPoint.Y) <= CaptionDoubleClickDistancePx;
     }
 
     internal void Key(KeyPressEvent input)
@@ -431,58 +435,78 @@ internal sealed partial class CandidateTracker
         gestures.Release = null;
         bool conflict = MouseInputConflict(input.At);
         bool injected = (input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
-        ObserveKeyEpoch(
-            new(
-                input.Key,
-                injected,
-                KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified)
-            )
-        );
-        if (injected && input.Key is VK_LWIN or VK_RWIN)
-            injectedWin.Add(input.Key);
-        if (injected || input.Key != VK_UP && input.Key is not (VK_LWIN or VK_RWIN))
-            gestures.Maximize = null;
+        string? route = KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified);
+        ObserveKeyEpoch(new(input.Key, injected, route));
+        TrackMaximizeModifiers(input.Key, injected);
         if (IsModifier(input.Key))
         {
-            Placement.Key(
-                input.Target,
-                input.Before,
-                input.Key,
-                input.Win,
-                input.Modified,
-                input.At,
-                input.Flags,
-                NextTransaction
-            );
-            BaselineModifier(input.Key, injected);
-            if (gestures.Pending is not null)
-                gestures.Pending = gestures.Pending with { Conflicted = true };
+            TrackModifier(input, injected);
             return;
         }
-        string? route = KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified);
         if (HandleMaximizePress(input, route, conflict, injected))
             return;
-        if (
-            route is "win-shift-left" or "win-shift-right"
-            && gestures.Pending?.Route == route
-            && !moveKeyReleased
-        )
+        if (ConsumeRepeatedMonitorMove(route, injected))
+            return;
+        if (TrackPlacement(input, route, conflict))
+            return;
+
+        BaselineKey(input.Target, route);
+        if (ConsumeRepeatedReduction(input.Key))
+            return;
+        if (input.Before is null || !CanStartStandaloneKey(route, injected, conflict))
         {
-            if (injected)
-                ClearInput();
+            gestures.Pending = null;
             return;
         }
-        bool placementKey =
-            input.Win
-            && !input.Modified
-            && !input.Shift
-            && !input.Alt
-            && input.Key is VK_LEFT or VK_RIGHT or VK_UP or VK_DOWN;
-        if (!placementKey)
+        StartStandaloneKey(input, route!, injected, conflict);
+    }
+
+    private void TrackMaximizeModifiers(uint key, bool injected)
+    {
+        bool winKey = key is VK_LWIN or VK_RWIN;
+        if (injected && winKey)
+            injectedWin.Add(key);
+        if (injected || (!winKey && key != VK_UP))
+            gestures.Maximize = null;
+    }
+
+    private void TrackModifier(KeyPressEvent input, bool injected)
+    {
+        Placement.Key(
+            input.Target,
+            input.Before,
+            input.Key,
+            input.Win,
+            input.Modified,
+            input.At,
+            input.Flags,
+            NextTransaction
+        );
+        BaselineModifier(input.Key, injected);
+        if (gestures.Pending is { } pending)
+            gestures.Pending = pending with { Conflicted = true };
+    }
+
+    private bool ConsumeRepeatedMonitorMove(string? route, bool injected)
+    {
+        if (route is not ("win-shift-left" or "win-shift-right"))
+            return false;
+        if (moveKeyReleased || gestures.Pending?.Route != route)
+            return false;
+        if (injected)
+            ClearInput();
+        return true;
+    }
+
+    private bool TrackPlacement(KeyPressEvent input, string? route, bool conflict)
+    {
+        if (route is not ("win-left" or "win-right" or "win-up" or "win-down"))
+        {
             Placement.Cancel();
+            return false;
+        }
         if (
-            placementKey
-            && Placement.Key(
+            !Placement.Key(
                 input.Target,
                 input.Before,
                 input.Key,
@@ -493,25 +517,24 @@ internal sealed partial class CandidateTracker
                 NextTransaction
             )
         )
-        {
-            gestures.Pending = null;
-            ClearBaselineReduction();
-            return;
-        }
-        BaselineKey(input.Target, route);
-        if (input.Key == VK_DOWN)
-        {
-            if (winDownHeld)
-                return;
-            winDownHeld = true;
-        }
-        if (route is null || route == "win-up" && !injected && !conflict || input.Before is null)
-        {
-            gestures.Pending = null;
-            return;
-        }
-        StartStandaloneKey(input, route, injected, conflict);
+            return false;
+        gestures.Pending = null;
+        ClearBaselineReduction();
+        return true;
     }
+
+    private bool ConsumeRepeatedReduction(uint key)
+    {
+        if (key != VK_DOWN)
+            return false;
+        if (winDownHeld)
+            return true;
+        winDownHeld = true;
+        return false;
+    }
+
+    private static bool CanStartStandaloneKey(string? route, bool injected, bool conflict) =>
+        route is not null && (route != "win-up" || injected || conflict);
 
     private void StartStandaloneKey(KeyPressEvent input, string route, bool injected, bool conflict)
     {
