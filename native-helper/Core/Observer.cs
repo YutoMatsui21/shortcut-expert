@@ -7,7 +7,7 @@ using Point = NativeMethods.Point;
 
 internal sealed class Observer : IDisposable
 {
-    private const uint HitTestTimeoutMs = 10;
+    private readonly CaptionHitTest captionHit;
     private readonly CandidateSink protocol;
     private readonly bool fixture;
     private readonly Action<WindowDiagnosticReason>? windowDiagnostic;
@@ -27,7 +27,10 @@ internal sealed class Observer : IDisposable
     }
 
     private static bool CaptionModifiers() =>
-        new[] { VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN }.Any(k => GetAsyncKeyState(k) < 0);
+        GetAsyncKeyState(VK_SHIFT) < 0
+        || GetAsyncKeyState(VK_CONTROL) < 0
+        || GetAsyncKeyState(VK_MENU) < 0
+        || WinPressed();
 
     private readonly System.Windows.Forms.Timer maximizeTimer = new() { Interval = 50 };
     private readonly TaskbarInputObserver taskbar;
@@ -69,6 +72,7 @@ internal sealed class Observer : IDisposable
         );
         this.fixture = fixture;
         this.windowDiagnostic = windowDiagnostic;
+        captionHit = new(windowDiagnostic);
         tracker.Diagnostic = windowDiagnostic;
         captionClick.Diagnostic = windowDiagnostic;
         taskbar = new(
@@ -108,7 +112,8 @@ internal sealed class Observer : IDisposable
         closing.Register(router);
         mouseCallback = OnMouse;
         keyCallback = OnKey;
-        eventCallback = OnEvent;
+        eventCallback = (_, kind, window, obj, child, thread, time) =>
+            OnEvent(new(kind, window, obj, child, thread, time));
         maximizeTimer.Tick += (_, _) => PollMaximize();
     }
 
@@ -170,15 +175,7 @@ internal sealed class Observer : IDisposable
                 },
                 0
             );
-        nint module = GetModuleHandleW(null);
-        mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
-        keyHook = SetWindowsHookExW(WH_KEYBOARD_LL, keyCallback, module, 0);
-        foreach (var (min, max) in winEventRanges)
-        {
-            nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
-            if (hook != 0)
-                eventHooks.Add(hook);
-        }
+        InstallHooks();
         if (!Active)
         {
             Stop();
@@ -189,6 +186,19 @@ internal sealed class Observer : IDisposable
             taskbar.Start(newGeneration);
             switching.Start(newGeneration);
             closing.Start(newGeneration);
+        }
+    }
+
+    private void InstallHooks()
+    {
+        nint module = GetModuleHandleW(null);
+        mouseHook = SetWindowsHookExW(WH_MOUSE_LL, mouseCallback, module, 0);
+        keyHook = SetWindowsHookExW(WH_KEYBOARD_LL, keyCallback, module, 0);
+        foreach (var (min, max) in winEventRanges)
+        {
+            nint hook = SetWinEventHook(min, max, 0, eventCallback, 0, 0, 0);
+            if (hook != 0)
+                eventHooks.Add(hook);
         }
     }
 
@@ -219,8 +229,8 @@ internal sealed class Observer : IDisposable
             throw new InvalidOperationException("hook-release-failed");
     }
 
-    private WindowState? ReadStateChange(nint window, WindowState? cached = null) =>
-        Read(window, cached, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
+    private WindowState? ReadStateChange(nint window) =>
+        Read(window, tracker.MaximizeProcess(window, clock.ElapsedMilliseconds));
 
     private static long? ReadResultStyle(nint window, int index)
     {
@@ -228,20 +238,12 @@ internal sealed class Observer : IDisposable
         return value == 0 && Marshal.GetLastPInvokeError() != 0 ? null : value.ToInt64();
     }
 
-    private WindowState? Read(nint window, WindowState? cached = null, uint? maximizeProcess = null)
+    private WindowState? Read(nint window, uint? maximizeProcess = null)
     {
-        if (window == 0 || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window))
+        if (ReadWindowProcess(window) is not { } pid)
             return null;
-        if (window == GetDesktopWindow() || window == GetShellWindow())
-            return null;
-        if (GetWindowThreadProcessId(window, out uint pid) == 0)
-            return null;
-        var cls = new StringBuilder(256);
-        string? windowClass = GetClassNameW(window, cls, cls.Capacity) > 0 ? cls.ToString() : null;
-        bool? cloaked =
-            DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0
-                ? cloak != 0
-                : null;
+        string? windowClass = ReadWindowClass(window);
+        bool? cloaked = ReadCloaked(window);
         long? style = ReadResultStyle(window, GWL_STYLE),
             extended = ReadResultStyle(window, -20);
         bool allowed = maximizeProcess is { } expectedProcess
@@ -270,6 +272,33 @@ internal sealed class Observer : IDisposable
                 );
         if (!allowed)
             return null;
+        return ReadPlacement(window, pid, style!.Value);
+    }
+
+    private static uint? ReadWindowProcess(nint window)
+    {
+        if (window == 0 || GetAncestor(window, GA_ROOT) != window)
+            return null;
+        if (!IsWindowVisible(window))
+            return null;
+        if (window == GetDesktopWindow() || window == GetShellWindow())
+            return null;
+        return GetWindowThreadProcessId(window, out uint pid) == 0 ? null : pid;
+    }
+
+    private static string? ReadWindowClass(nint window)
+    {
+        var name = new StringBuilder(256);
+        return GetClassNameW(window, name, name.Capacity) > 0 ? name.ToString() : null;
+    }
+
+    private static bool? ReadCloaked(nint window) =>
+        DwmGetWindowAttribute(window, DWMWA_CLOAKED, out int cloak, sizeof(int)) == 0
+            ? cloak != 0
+            : null;
+
+    private WindowState? ReadPlacement(nint window, uint pid, long style)
+    {
         var placement = new Placement { Length = (uint)Marshal.SizeOf<Placement>() };
         if (!GetWindowPlacement(window, ref placement))
             return null;
@@ -302,7 +331,7 @@ internal sealed class Observer : IDisposable
             mouseDockThresholdPx
         )
         {
-            HasCaption = (style!.Value & WS_CAPTION) == WS_CAPTION,
+            HasCaption = (style & WS_CAPTION) == WS_CAPTION,
         };
     }
 
@@ -335,8 +364,7 @@ internal sealed class Observer : IDisposable
 
     private void Remember(nint window)
     {
-        states.TryGetValue(window, out WindowState? cached);
-        WindowState? state = Read(window, cached);
+        WindowState? state = Read(window);
         if (state is not null)
             states[window] = state;
     }
@@ -374,7 +402,7 @@ internal sealed class Observer : IDisposable
         if (clicked is not { } target || captionClick.Target == target)
             return;
         states.TryGetValue(target, out WindowState? previous);
-        var after = ReadStateChange(target, previous);
+        var after = ReadStateChange(target);
         if (after is null)
         {
             tracker.Forget(target);
@@ -406,396 +434,352 @@ internal sealed class Observer : IDisposable
     private static bool ReadsKeyResult(uint key) =>
         key is VK_LWIN or VK_RWIN or VK_LEFT or VK_RIGHT || key is VK_UP or VK_DOWN;
 
+    private bool ObservingLiveWindows => !fixture && Active;
+
+    private bool AcceptsInputHook(int code) => code >= 0 && ObservingLiveWindows;
+
+    private void CancelInput()
+    {
+        CancelCaption();
+        tracker.ClearInput();
+        switching.Cancel();
+        closing.Cancel();
+    }
+
     private nint OnMouse(int code, nint message, nint data)
     {
         try
         {
-            if (code < 0 || fixture || !Active)
+            if (!AcceptsInputHook(code) || !ObserveMouse(message, data))
                 return CallNextHookEx(0, code, message, data);
-            var taskbarMouse = Marshal.PtrToStructure<MouseData>(data);
-            nint pressForeground = GetForegroundWindow();
-            if (captionClick.Pending)
-            {
-                if (message == WM_LBUTTONDOWN)
-                    CancelCaption();
-                else
-                {
-                    bool fallback = captionClick.Fallback;
-                    nint root = GetAncestor(WindowFromPhysicalPoint(taskbarMouse.Point), GA_ROOT);
-                    GetWindowThreadProcessId(root, out uint process);
-                    captionClick.Mouse(
-                        message,
-                        taskbarMouse.Point,
-                        taskbarMouse.Flags,
-                        CaptionModifiers(),
-                        root,
-                        process,
-                        clock.ElapsedMilliseconds
-                    );
-                    if (fallback && !captionClick.Pending)
-                        tracker.CancelMouseState();
-                    if (!fallback)
-                        return CallNextHookEx(0, code, message, data);
-                }
-            }
-            router.Dispatch(new MouseMessageEvent(epoch, clock.ElapsedMilliseconds, message));
-            bool probeRelease =
-                windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
-            Point? physicalBefore =
-                probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
-            router.Dispatch(
-                new RawMouseEvent(
-                    epoch,
-                    clock.ElapsedMilliseconds,
-                    message,
-                    taskbarMouse.Point,
-                    taskbarMouse.Flags,
-                    taskbarMouse.Time
-                )
-            );
-            if (message == 0x200)
-                router.Dispatch(
-                    new MouseMoveEvent(
-                        epoch,
-                        clock.ElapsedMilliseconds,
-                        taskbarMouse.Point,
-                        taskbarMouse.Flags
-                    )
-                );
-            if (message != WM_LBUTTONDOWN)
-            {
-                if (message == WM_LBUTTONUP)
-                {
-                    ObserveMouseRelease(taskbarMouse, probeRelease, physicalBefore);
-                }
-                if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL)
-                    tracker.ClearInput();
-                return CallNextHookEx(0, code, message, data);
-            }
-            var mouse = Marshal.PtrToStructure<MouseData>(data);
-            windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseDown);
-            nint target = GetAncestor(WindowFromPoint(mouse.Point), GA_ROOT);
-            if (!states.TryGetValue(target, out WindowState? cached))
-            {
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetMissing);
-                tracker.ClearInput();
-                return CallNextHookEx(0, code, message, data);
-            }
-            WindowState? before = Read(target, cached);
-            if (before is null)
-            {
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetRejected);
-                tracker.ClearInput();
-                return CallNextHookEx(0, code, message, data);
-            }
-            states[target] = before;
-            long packed = (uint)((mouse.Point.Y & 0xffff) << 16) | (uint)(mouse.Point.X & 0xffff);
-            int hit = -1;
-            if (
-                SendMessageTimeoutW(
-                    target,
-                    WM_NCHITTEST,
-                    0,
-                    (nint)packed,
-                    SMTO_ABORTIFHUNG,
-                    HitTestTimeoutMs,
-                    out nuint result
-                ) != 0
-            )
-                hit = unchecked((int)result);
-            windowDiagnostic?.Invoke(
-                hit == HTCAPTION ? WindowDiagnosticReason.RawCaption
-                : hit == 1 ? WindowDiagnosticReason.RawClient
-                : hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.RawButton
-                : WindowDiagnosticReason.RawOther
-            );
-            if (hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE)
-                windowDiagnostic?.Invoke(
-                    hit == HTMINBUTTON ? WindowDiagnosticReason.RawMinButton
-                    : hit == HTMAXBUTTON ? WindowDiagnosticReason.RawMaxButton
-                    : WindowDiagnosticReason.RawCloseButton
-                );
-            bool rootCaptionRead = false;
-            if (
-                GetWindowRect(target, out Rect rect)
-                && WindowCaption.Read(target, out TitleInfo title)
-            )
-            {
-                rootCaptionRead = true;
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadOk);
-                windowDiagnostic?.Invoke(
-                    SnapGeometry.Contains(title.Bar, mouse.Point)
-                        ? WindowDiagnosticReason.TitleContainsPoint
-                        : WindowDiagnosticReason.TitleOutsidePoint
-                );
-                hit = WindowCaption.Hit(title, rect, mouse.Point, hit, windowDiagnostic);
-            }
-            else
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.TitleReadFail);
-            if (hit == 1 && rootCaptionRead || windowDiagnostic is not null)
-            {
-                nint hitWindow = WindowFromPhysicalPoint(mouse.Point);
-                if (hitWindow == target)
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.HitRoot);
-                else if (
-                    hitWindow == 0
-                    || GetAncestor(hitWindow, GA_ROOT) != target
-                    || GetWindowThreadProcessId(hitWindow, out uint childProcess) == 0
-                    || childProcess != before.Process
-                )
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
-                else
-                {
-                    int childHit = -1;
-                    bool known =
-                        SendMessageTimeoutW(
-                            hitWindow,
-                            WM_NCHITTEST,
-                            0,
-                            (nint)packed,
-                            SMTO_ABORTIFHUNG,
-                            HitTestTimeoutMs,
-                            out nuint value
-                        ) != 0;
-                    if (known)
-                        childHit = unchecked((int)value);
-                    // Revalidate after the bounded cross-window query; never use another process or a reparented child.
-                    bool sameRoot = GetAncestor(hitWindow, GA_ROOT) == target;
-                    bool sameProcess =
-                        GetWindowThreadProcessId(hitWindow, out uint checkedProcess) != 0
-                        && checkedProcess == before.Process;
-                    if (sameRoot && sameProcess)
-                    {
-                        windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildSameProcess);
-                        if (known)
-                            windowDiagnostic?.Invoke(
-                                childHit == HTCAPTION ? WindowDiagnosticReason.ChildCaption
-                                : childHit == 1 ? WindowDiagnosticReason.ChildClient
-                                : WindowDiagnosticReason.ChildOther
-                            );
-                        else
-                            windowDiagnostic?.Invoke(WindowDiagnosticReason.ChildHitFailed);
-                        if (windowDiagnostic is not null)
-                        {
-                            if (WindowCaption.Read(hitWindow, out TitleInfo childTitle))
-                                windowDiagnostic(
-                                    SnapGeometry.Contains(childTitle.Bar, mouse.Point)
-                                        ? WindowDiagnosticReason.ChildTitleContainsPoint
-                                        : WindowDiagnosticReason.ChildTitleOutsidePoint
-                                );
-                            else
-                                windowDiagnostic(WindowDiagnosticReason.ChildTitleReadFail);
-                        }
-                    }
-                    else
-                        windowDiagnostic?.Invoke(WindowDiagnosticReason.HitChildUnmatched);
-                    if (rootCaptionRead)
-                        hit = WindowCaption.ResolveChildCaption(
-                            hit,
-                            childHit,
-                            sameRoot,
-                            sameProcess
-                        );
-                }
-            }
-            windowDiagnostic?.Invoke(
-                hit == HTCAPTION ? WindowDiagnosticReason.FinalCaption
-                : hit is HTMINBUTTON or HTMAXBUTTON or HTCLOSE ? WindowDiagnosticReason.FinalButton
-                : WindowDiagnosticReason.FinalOther
-            );
-            windowDiagnostic?.Invoke(
-                GetForegroundWindow() == target
-                    ? WindowDiagnosticReason.ForegroundMatched
-                    : WindowDiagnosticReason.ForegroundOther
-            );
-            // Diagnostic categories do not alter admission or retain window/input data.
-            if (pressForeground != target)
-            {
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionInactivePress);
-                if (!switching.MousePending)
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionSwitchMissing);
-                if (!before.HasCaption)
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStyleMissing);
-                if (hit is not (HTMINBUTTON or HTMAXBUTTON))
-                    windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionButtonUnknown);
-            }
-            if (
-                pressForeground != target
-                && hit is HTMINBUTTON or HTMAXBUTTON or 1 or 0 or -1
-                && captionClick.Start(
-                    target,
-                    before,
-                    hit,
-                    mouse.Point,
-                    clock.ElapsedMilliseconds,
-                    mouse.Time,
-                    NextTransaction(),
-                    InactiveCaptionPolicy.EligiblePress(
-                        switching.CaptionPressReady,
-                        WindowSwitchObserver.Read(pressForeground, requireCaption: false),
-                        WindowSwitchObserver.Read(target, requireCaption: false),
-                        before.Process
-                    ),
-                    (mouse.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) == 0,
-                    CaptionModifiers()
-                )
-            )
-            {
-                BeginCaptionResults();
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStartAccepted);
-                // Preserve the existing drag press for unidentified client/caption surfaces.
-                // MOVESIZESTART cancels this click policy and leaves drag ownership unchanged.
-                if (!captionClick.Fallback)
-                    tracker.ClearInput();
-                switching.Cancel();
-                closing.Cancel();
-                SyncMaximizeTimer();
-                if (!captionClick.Fallback)
-                    return CallNextHookEx(0, code, message, data);
-            }
-            router.Dispatch(
-                new MousePressEvent(
-                    epoch,
-                    target,
-                    clock.ElapsedMilliseconds,
-                    before,
-                    hit,
-                    mouse.Point,
-                    GetDoubleClickTime(),
-                    mouse.Flags,
-                    GetAsyncKeyState(VK_SHIFT) < 0
-                        || GetAsyncKeyState(VK_CONTROL) < 0
-                        || GetAsyncKeyState(VK_MENU) < 0
-                        || GetAsyncKeyState(VK_LWIN) < 0
-                        || GetAsyncKeyState(VK_RWIN) < 0,
-                    GetForegroundWindow() == target
-                )
-            );
         }
         catch
         {
-            CancelCaption();
-            tracker.ClearInput();
-            switching.Cancel();
-            closing.Cancel();
+            CancelInput();
         }
         return CallNextHookEx(0, code, message, data);
     }
+
+    private bool ObserveMouse(nint message, nint data)
+    {
+        var mouse = Marshal.PtrToStructure<MouseData>(data);
+        nint pressForeground = GetForegroundWindow();
+        if (!ContinueMouseAfterCaption(message, mouse))
+            return false;
+        router.Dispatch(new MouseMessageEvent(epoch, clock.ElapsedMilliseconds, message));
+        bool probeRelease = ShouldProbeMouseRelease(message);
+        Point? physicalBefore =
+            probeRelease && GetPhysicalCursorPos(out Point entry) ? entry : null;
+        DispatchRawMouse(message, mouse);
+        if (message == WM_LBUTTONDOWN)
+            return ObserveMousePress(Marshal.PtrToStructure<MouseData>(data), pressForeground);
+        CompleteMouseMessage(message, mouse, probeRelease, physicalBefore);
+        return false;
+    }
+
+    private bool ContinueMouseAfterCaption(nint message, MouseData mouse)
+    {
+        if (!captionClick.Pending)
+            return true;
+        if (message == WM_LBUTTONDOWN)
+        {
+            CancelCaption();
+            return true;
+        }
+        bool fallback = captionClick.Fallback;
+        nint root = GetAncestor(WindowFromPhysicalPoint(mouse.Point), GA_ROOT);
+        GetWindowThreadProcessId(root, out uint process);
+        captionClick.Mouse(
+            message,
+            mouse.Point,
+            mouse.Flags,
+            CaptionModifiers(),
+            root,
+            process,
+            clock.ElapsedMilliseconds
+        );
+        CancelExpiredMouseFallback(fallback);
+        return fallback;
+    }
+
+    private void CancelExpiredMouseFallback(bool fallback)
+    {
+        if (fallback && !captionClick.Pending)
+            tracker.CancelMouseState();
+    }
+
+    private bool ShouldProbeMouseRelease(nint message) =>
+        windowDiagnostic is not null && message == WM_LBUTTONUP && tracker.HasDrag;
+
+    private void DispatchRawMouse(nint message, MouseData mouse)
+    {
+        router.Dispatch(
+            new RawMouseEvent(
+                epoch,
+                clock.ElapsedMilliseconds,
+                message,
+                mouse.Point,
+                mouse.Flags,
+                mouse.Time
+            )
+        );
+        if (message == 0x200)
+            router.Dispatch(
+                new MouseMoveEvent(epoch, clock.ElapsedMilliseconds, mouse.Point, mouse.Flags)
+            );
+    }
+
+    private void CompleteMouseMessage(
+        nint message,
+        MouseData mouse,
+        bool probeRelease,
+        Point? physicalBefore
+    )
+    {
+        if (message == WM_LBUTTONUP)
+            ObserveMouseRelease(mouse, probeRelease, physicalBefore);
+        if (message is WM_RBUTTONDOWN or WM_MBUTTONDOWN or WM_MOUSEWHEEL)
+            tracker.ClearInput();
+    }
+
+    private bool ObserveMousePress(MouseData mouse, nint pressForeground)
+    {
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.MouseDown);
+        nint target = GetAncestor(WindowFromPoint(mouse.Point), GA_ROOT);
+        if (ReadMousePressTarget(target) is not { } before)
+            return false;
+        int hit = captionHit.Read(target, before.Process, mouse.Point);
+        windowDiagnostic?.Invoke(
+            GetForegroundWindow() == target
+                ? WindowDiagnosticReason.ForegroundMatched
+                : WindowDiagnosticReason.ForegroundOther
+        );
+        if (
+            pressForeground != target
+            && ConsumeInactiveCaptionPress(target, before, hit, mouse, pressForeground)
+        )
+            return false;
+        DispatchMousePress(target, before, hit, mouse);
+        return true;
+    }
+
+    private WindowState? ReadMousePressTarget(nint target)
+    {
+        if (!states.ContainsKey(target))
+        {
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetMissing);
+            tracker.ClearInput();
+            return null;
+        }
+        WindowState? before = Read(target);
+        if (before is null)
+        {
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.TargetRejected);
+            tracker.ClearInput();
+            return null;
+        }
+        states[target] = before;
+        return before;
+    }
+
+    private bool ConsumeInactiveCaptionPress(
+        nint target,
+        WindowState before,
+        int hit,
+        MouseData mouse,
+        nint pressForeground
+    )
+    {
+        ReportInactiveCaptionPress(before, hit);
+        if (hit is not (HTMINBUTTON or HTMAXBUTTON or 1 or 0 or -1))
+            return false;
+        if (!TryStartCaptionPress(target, before, hit, mouse, pressForeground))
+            return false;
+        BeginCaptionResults();
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStartAccepted);
+        // Preserve the existing drag press for unidentified client/caption surfaces.
+        // MOVESIZESTART cancels this click policy and leaves drag ownership unchanged.
+        if (!captionClick.Fallback)
+            tracker.ClearInput();
+        switching.Cancel();
+        closing.Cancel();
+        SyncMaximizeTimer();
+        return !captionClick.Fallback;
+    }
+
+    private void ReportInactiveCaptionPress(WindowState before, int hit)
+    {
+        // Diagnostic categories do not alter admission or retain window/input data.
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionInactivePress);
+        if (!switching.MousePending)
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionSwitchMissing);
+        if (!before.HasCaption)
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionStyleMissing);
+        if (hit is not (HTMINBUTTON or HTMAXBUTTON))
+            windowDiagnostic?.Invoke(WindowDiagnosticReason.CaptionButtonUnknown);
+    }
+
+    private bool TryStartCaptionPress(
+        nint target,
+        WindowState before,
+        int hit,
+        MouseData mouse,
+        nint pressForeground
+    ) =>
+        captionClick.Start(
+            target,
+            before,
+            hit,
+            mouse.Point,
+            clock.ElapsedMilliseconds,
+            mouse.Time,
+            NextTransaction(),
+            InactiveCaptionPolicy.EligiblePress(
+                switching.CaptionPressReady,
+                WindowSwitchObserver.Read(pressForeground, requireCaption: false),
+                WindowSwitchObserver.Read(target, requireCaption: false),
+                before.Process
+            ),
+            (mouse.Flags & (LLMHF_INJECTED | LLMHF_LOWER_IL_INJECTED)) == 0,
+            CaptionModifiers()
+        );
+
+    private void DispatchMousePress(nint target, WindowState before, int hit, MouseData mouse) =>
+        router.Dispatch(
+            new MousePressEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                before,
+                hit,
+                mouse.Point,
+                GetDoubleClickTime(),
+                mouse.Flags,
+                CaptionModifiers(),
+                GetForegroundWindow() == target
+            )
+        );
 
     private nint OnKey(int code, nint message, nint data)
     {
         try
         {
-            if (code < 0 || fixture || !Active)
+            // Forward filtered, release, and modifier events before synchronizing the timer.
+            if (!AcceptsInputHook(code) || !ObserveKey(message, data))
                 return CallNextHookEx(0, code, message, data);
-            var key = Marshal.PtrToStructure<KeyData>(data);
-            CancelCaption();
-            tracker.CancelMouseState();
-            bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-            router.Dispatch(
-                new RawKeyEvent(
-                    epoch,
-                    clock.ElapsedMilliseconds,
-                    key.Key,
-                    down,
-                    key.Flags,
-                    key.Time
-                )
-            );
-            // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
-            if (
-                key.Key is >= 0x30 and <= 0x39
-                && (GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0)
-            )
-            {
-                tracker.ClearInput();
-                return CallNextHookEx(0, code, message, data);
-            }
-            if (!down)
-            {
-                if ((key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0)
-                    tracker.ClearInput();
-                router.Dispatch(new KeyReleaseEvent(epoch, clock.ElapsedMilliseconds, key.Key));
-                if (ReadsKeyResult(key.Key))
-                {
-                    nint releasedTarget = GetForegroundWindow();
-                    states.TryGetValue(releasedTarget, out WindowState? releasedCached);
-                    var releasedAfter = ReadStateChange(releasedTarget, releasedCached);
-                    router.Dispatch(
-                        new KeyResultEvent(
-                            epoch,
-                            releasedTarget,
-                            clock.ElapsedMilliseconds,
-                            releasedAfter,
-                            (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0,
-                            DateTime.Now.ToString("yyyy-MM-dd")
-                        )
-                    );
-                }
-                return CallNextHookEx(0, code, message, data);
-            }
-            nint target = GetForegroundWindow();
-            if (CandidateTracker.IsModifier(key.Key))
-            {
-                router.Dispatch(
-                    new KeyPressEvent(
-                        epoch,
-                        target,
-                        clock.ElapsedMilliseconds,
-                        null,
-                        key.Key,
-                        false,
-                        false,
-                        key.Flags
-                    )
-                );
-                return CallNextHookEx(0, code, message, data);
-            }
-            bool win = GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
-            bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
-                alt = GetAsyncKeyState(VK_MENU) < 0;
-            bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
-            WindowState? before = null;
-            bool maximizeKey =
-                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) == "win-up";
-            if (
-                CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers) is not null
-                && (maximizeKey || states.ContainsKey(target))
-            )
-            {
-                states.TryGetValue(target, out WindowState? cached);
-                before = Read(target, cached);
-                if (before is not null)
-                    states[target] = before;
-            }
-            router.Dispatch(
-                new KeyPressEvent(
-                    epoch,
-                    target,
-                    clock.ElapsedMilliseconds,
-                    before,
-                    key.Key,
-                    win,
-                    modifiers,
-                    key.Flags,
-                    shift,
-                    alt,
-                    key.Time
-                )
-            );
         }
         catch
         {
-            CancelCaption();
-            tracker.ClearInput();
-            switching.Cancel();
-            closing.Cancel();
+            CancelInput();
         }
         finally
         {
             SyncMaximizeTimer();
         }
         return CallNextHookEx(0, code, message, data);
+    }
+
+    private bool ObserveKey(nint message, nint data)
+    {
+        var key = Marshal.PtrToStructure<KeyData>(data);
+        CancelCaption();
+        tracker.CancelMouseState();
+        bool down = message is WM_KEYDOWN or WM_SYSKEYDOWN;
+        router.Dispatch(
+            new RawKeyEvent(epoch, clock.ElapsedMilliseconds, key.Key, down, key.Flags, key.Time)
+        );
+        // Win+digit belongs to W12, including unknown mappings. Never reuse it as window input.
+        if (key.Key is >= 0x30 and <= 0x39 && WinPressed())
+        {
+            tracker.ClearInput();
+            return false;
+        }
+        if (!down)
+        {
+            ObserveKeyRelease(key);
+            return false;
+        }
+        return ObserveKeyPress(key);
+    }
+
+    private static bool WinPressed() =>
+        GetAsyncKeyState(VK_LWIN) < 0 || GetAsyncKeyState(VK_RWIN) < 0;
+
+    private void ObserveKeyRelease(KeyData key)
+    {
+        bool injected = (key.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+        if (injected)
+            tracker.ClearInput();
+        router.Dispatch(new KeyReleaseEvent(epoch, clock.ElapsedMilliseconds, key.Key));
+        if (!ReadsKeyResult(key.Key))
+            return;
+        nint target = GetForegroundWindow();
+        var after = ReadStateChange(target);
+        router.Dispatch(
+            new KeyResultEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                after,
+                injected,
+                DateTime.Now.ToString("yyyy-MM-dd")
+            )
+        );
+    }
+
+    private bool ObserveKeyPress(KeyData key)
+    {
+        nint target = GetForegroundWindow();
+        if (CandidateTracker.IsModifier(key.Key))
+        {
+            router.Dispatch(
+                new KeyPressEvent(
+                    epoch,
+                    target,
+                    clock.ElapsedMilliseconds,
+                    null,
+                    key.Key,
+                    false,
+                    false,
+                    key.Flags
+                )
+            );
+            return false;
+        }
+        bool win = WinPressed();
+        bool shift = GetAsyncKeyState(VK_SHIFT) < 0,
+            alt = GetAsyncKeyState(VK_MENU) < 0;
+        bool modifiers = GetAsyncKeyState(VK_CONTROL) < 0;
+        string? route = CandidateTracker.KeyRoute(key.Key, win, shift, alt, modifiers);
+        WindowState? before = ReadKeyPressTarget(target, route);
+        router.Dispatch(
+            new KeyPressEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                before,
+                key.Key,
+                win,
+                modifiers,
+                key.Flags,
+                shift,
+                alt,
+                key.Time
+            )
+        );
+        return true;
+    }
+
+    private WindowState? ReadKeyPressTarget(nint target, string? route)
+    {
+        if (route is null)
+            return null;
+        if (route != "win-up" && !states.ContainsKey(target))
+            return null;
+        var before = Read(target);
+        if (before is not null)
+            states[target] = before;
+        return before;
     }
 
     private void SyncMaximizeTimer()
@@ -817,34 +801,8 @@ internal sealed class Observer : IDisposable
     {
         try
         {
-            if (!fixture && Active && captionClick.Pending)
-            {
-                bool fallback = captionClick.Fallback;
-                var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
-                if (captionClick.PollFacts(after, clock.ElapsedMilliseconds) is { } completedFacts)
-                    router.Dispatch(new CaptionResultEvent(epoch, completedFacts));
-                if (fallback && !captionClick.Pending)
-                    tracker.CancelMouseState();
-            }
-            if (
-                !fixture
-                && Active
-                && tracker.ResultTarget(clock.ElapsedMilliseconds, captionClick.Target)
-                    is { } target
-            )
-            {
-                WindowState? after = ReadStateChange(target);
-                router.Dispatch(
-                    new TickEvent(
-                        epoch,
-                        target,
-                        clock.ElapsedMilliseconds,
-                        after,
-                        GetForegroundWindow(),
-                        DateTime.Now.ToString("yyyy-MM-dd")
-                    )
-                );
-            }
+            PollCaptionResult();
+            PollTrackerResult();
         }
         catch
         {
@@ -857,137 +815,189 @@ internal sealed class Observer : IDisposable
         }
     }
 
-    private void OnEvent(
-        nint hook,
-        uint kind,
-        nint window,
-        int obj,
-        int child,
-        uint thread,
-        uint time
+    private void PollCaptionResult()
+    {
+        if (!ObservingLiveWindows || !captionClick.Pending)
+            return;
+        bool fallback = captionClick.Fallback;
+        var after = Read(captionClick.Target, maximizeProcess: captionClick.Process);
+        if (captionClick.PollFacts(after, clock.ElapsedMilliseconds) is { } completedFacts)
+            router.Dispatch(new CaptionResultEvent(epoch, completedFacts));
+        CancelExpiredMouseFallback(fallback);
+    }
+
+    private void PollTrackerResult()
+    {
+        if (!ObservingLiveWindows)
+            return;
+        if (tracker.ResultTarget(clock.ElapsedMilliseconds, captionClick.Target) is not { } target)
+            return;
+        WindowState? after = ReadStateChange(target);
+        router.Dispatch(
+            new TickEvent(
+                epoch,
+                target,
+                clock.ElapsedMilliseconds,
+                after,
+                GetForegroundWindow(),
+                DateTime.Now.ToString("yyyy-MM-dd")
+            )
+        );
+    }
+
+    private readonly record struct WindowEvent(
+        uint Kind,
+        nint Window,
+        int ObjectId,
+        int ChildId,
+        uint Thread,
+        uint Time
     )
     {
-        if (fixture || !Active || window == 0)
-            return;
-        if (IgnoreSystemEvent(kind))
+        internal bool IsWindow => ObjectId == OBJID_WINDOW && ChildId == CHILDID_SELF;
+    }
+
+    private void OnEvent(WindowEvent notification)
+    {
+        if (!CanObserveWindowEvent(notification))
             return;
         try
         {
-            var foregroundObservation = ObserveForeground(kind, window, time);
-            if (captionClick.Pending)
-            {
-                bool fallback = captionClick.Fallback;
-                if (
-                    kind == EVENT_SYSTEM_MOVESIZESTART
-                    || kind == EVENT_OBJECT_DESTROY
-                        && window == captionClick.Target
-                        && obj == OBJID_WINDOW
-                )
-                    CancelCaption();
-                else
-                {
-                    captionClick.State(
-                        Read(captionClick.Target, maximizeProcess: captionClick.Process),
-                        clock.ElapsedMilliseconds
-                    );
-                    if (kind == EVENT_SYSTEM_FOREGROUND)
-                        captionClick.Foreground(window, GetForegroundWindow(), time);
-                }
-                if (fallback && !captionClick.Pending)
-                    tracker.CancelMouseState();
-            }
+            var (kind, window, obj, child, thread, time) = notification;
+            var foreground = ObserveForeground(kind, window, time);
+            UpdateCaptionFromEvent(notification);
             closing.Event(kind, window, obj, child, thread, time);
-            if (foregroundObservation is not null)
+            if (foreground is not null)
             {
-                router.Dispatch(foregroundObservation);
+                router.Dispatch(foreground);
                 switching.Foreground(window, time);
             }
-            if (kind == EVENT_OBJECT_DESTROY && obj == OBJID_WINDOW && child == CHILDID_SELF)
-            {
+            ObserveWindowEvent(notification);
+        }
+        catch
+        {
+            CancelInput();
+        }
+    }
+
+    private bool CanObserveWindowEvent(WindowEvent notification) =>
+        ObservingLiveWindows && notification.Window != 0 && !IgnoreSystemEvent(notification.Kind);
+
+    private void UpdateCaptionFromEvent(WindowEvent notification)
+    {
+        if (!captionClick.Pending)
+            return;
+        bool fallback = captionClick.Fallback;
+        if (CancelsCaption(notification))
+            CancelCaption();
+        else
+        {
+            captionClick.State(
+                Read(captionClick.Target, maximizeProcess: captionClick.Process),
+                clock.ElapsedMilliseconds
+            );
+            if (notification.Kind == EVENT_SYSTEM_FOREGROUND)
+                captionClick.Foreground(
+                    notification.Window,
+                    GetForegroundWindow(),
+                    notification.Time
+                );
+        }
+        CancelExpiredMouseFallback(fallback);
+    }
+
+    private bool CancelsCaption(WindowEvent notification) =>
+        notification.Kind == EVENT_SYSTEM_MOVESIZESTART
+        || (
+            notification.Kind == EVENT_OBJECT_DESTROY
+            && notification.Window == captionClick.Target
+            && notification.ObjectId == OBJID_WINDOW
+        );
+
+    private void ObserveWindowEvent(WindowEvent notification)
+    {
+        switch (notification.Kind)
+        {
+            case EVENT_OBJECT_DESTROY when notification.IsWindow:
                 router.Dispatch(
                     new ObservedEvent(
                         ObservedKind.Destroy,
                         epoch,
-                        window,
+                        notification.Window,
                         clock.ElapsedMilliseconds
                     )
                 );
-                states.Remove(window);
-                return;
-            }
-            if (kind == EVENT_SYSTEM_MOVESIZESTART)
-            {
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveStart);
-                switching.Cancel();
-                router.Dispatch(
-                    new ObservedEvent(
-                        ObservedKind.MoveStart,
-                        epoch,
-                        window,
-                        clock.ElapsedMilliseconds
-                    )
-                );
-                return;
-            }
-            if (kind == EVENT_SYSTEM_MOVESIZEEND)
-            {
-                windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveEnd);
-                states.TryGetValue(window, out WindowState? cached);
-                WindowState? end = Read(window, cached);
-                router.Dispatch(
-                    new MoveEndEvent(
-                        epoch,
-                        window,
-                        clock.ElapsedMilliseconds,
-                        end,
-                        GetForegroundWindow(),
-                        DateTime.Now.ToString("yyyy-MM-dd")
-                    )
-                );
-                return;
-            }
-            if (
-                kind
-                    is not (
-                        EVENT_SYSTEM_FOREGROUND
-                        or EVENT_SYSTEM_MINIMIZESTART
-                        or EVENT_SYSTEM_MINIMIZEEND
-                    )
-                && (obj != OBJID_WINDOW || child != CHILDID_SELF)
-            )
-                return;
-            states.TryGetValue(window, out WindowState? previous);
-            WindowState? after = ReadStateChange(window, previous);
-            if (after is null)
-            {
-                tracker.Forget(window);
-                return;
-            }
-            states[window] = after;
-            if (captionClick.Target == window)
-                return;
-            DispatchMinimizeStart(kind, window, after.Process, time);
-            router.Dispatch(
-                new StateObservedEvent(
-                    epoch,
-                    window,
-                    clock.ElapsedMilliseconds,
-                    previous,
-                    after,
-                    GetForegroundWindow(),
-                    DateTime.Now.ToString("yyyy-MM-dd"),
-                    DisplayContext.Bounds(window)
-                )
-            );
-        }
-        catch
-        {
-            CancelCaption();
-            tracker.ClearInput();
-            switching.Cancel();
-            closing.Cancel();
+                states.Remove(notification.Window);
+                break;
+            case EVENT_SYSTEM_MOVESIZESTART:
+                ObserveMoveStart(notification.Window);
+                break;
+            case EVENT_SYSTEM_MOVESIZEEND:
+                ObserveMoveEnd(notification.Window);
+                break;
+            default:
+                ObserveWindowState(notification);
+                break;
         }
     }
+
+    private void ObserveMoveStart(nint window)
+    {
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveStart);
+        switching.Cancel();
+        router.Dispatch(
+            new ObservedEvent(ObservedKind.MoveStart, epoch, window, clock.ElapsedMilliseconds)
+        );
+    }
+
+    private void ObserveMoveEnd(nint window)
+    {
+        windowDiagnostic?.Invoke(WindowDiagnosticReason.MoveEnd);
+        WindowState? end = Read(window);
+        router.Dispatch(
+            new MoveEndEvent(
+                epoch,
+                window,
+                clock.ElapsedMilliseconds,
+                end,
+                GetForegroundWindow(),
+                DateTime.Now.ToString("yyyy-MM-dd")
+            )
+        );
+    }
+
+    private void ObserveWindowState(WindowEvent notification)
+    {
+        var (kind, window, _, _, _, time) = notification;
+        if (!notification.IsWindow && !CarriesWindowState(kind))
+            return;
+        states.TryGetValue(window, out WindowState? previous);
+        WindowState? after = ReadStateChange(window);
+        if (after is null)
+        {
+            tracker.Forget(window);
+            return;
+        }
+        states[window] = after;
+        if (captionClick.Target == window)
+            return;
+        DispatchMinimizeStart(kind, window, after.Process, time);
+        router.Dispatch(
+            new StateObservedEvent(
+                epoch,
+                window,
+                clock.ElapsedMilliseconds,
+                previous,
+                after,
+                GetForegroundWindow(),
+                DateTime.Now.ToString("yyyy-MM-dd"),
+                DisplayContext.Bounds(window)
+            )
+        );
+    }
+
+    private static bool CarriesWindowState(uint kind) =>
+        kind is EVENT_SYSTEM_FOREGROUND or EVENT_SYSTEM_MINIMIZESTART or EVENT_SYSTEM_MINIMIZEEND;
 
     private static bool IgnoreSystemEvent(uint kind) =>
         kind is >= EVENT_SYSTEM_FOREGROUND and <= EVENT_SYSTEM_MINIMIZEEND
