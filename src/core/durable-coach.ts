@@ -6,12 +6,7 @@ import type {
   Snapshot,
   SnapshotErrorKind,
 } from "../shared/coach.ts";
-import {
-  learningOperations,
-  learningState,
-  withLearningState,
-  type LearningState,
-} from "../shared/learning.ts";
+import { withLearningState, type LearningState } from "../shared/learning.ts";
 import { defaultRecordsQuery, type RecordsQuery } from "../shared/records.ts";
 import type {
   DurableRepository,
@@ -19,8 +14,10 @@ import type {
   StorageState,
 } from "../shared/storage.ts";
 import { daysBefore } from "../shared/storage.ts";
+import { CandidateOrder } from "./candidate-order.ts";
 import { validDate } from "./dates.ts";
 import { classifyGesture } from "./detector.ts";
+import { GestureNotices } from "./gesture-notices.ts";
 import { learningReadModel } from "./learning.ts";
 import {
   prepareRecordChange,
@@ -39,6 +36,7 @@ type Dependencies = {
   notify(value: ShortcutNotice): Promise<boolean>;
   changed(value: Snapshot): void;
 };
+
 // Single product runtime: durable SQLite storage and v2 gesture observations.
 export class DurableCoach {
   private data: StorageState = {
@@ -51,8 +49,7 @@ export class DurableCoach {
   };
   private observing = false;
   private paused = false;
-  private noticeEpoch = 0;
-  private operationNoticeEpoch = new Map<OperationId, number>();
+  private notices = new GestureNotices();
   private error: string | null = null;
   private errorKind: SnapshotErrorKind | null = null;
   private clockError: string | null = null;
@@ -60,9 +57,7 @@ export class DurableCoach {
   private settingsError: string | null = null;
   private loaded = false;
   private generation = 0;
-  private candidateSequence = 0;
-  private transactions = new Set<number>();
-  private latestTransaction = 0;
+  private candidateOrder = new CandidateOrder();
   private writeSequence = 0;
   private session: string;
   private pending: RecordMutation | null = null;
@@ -76,23 +71,29 @@ export class DurableCoach {
     this.session = deps.session;
   }
   async initialize(): Promise<void> {
-    if (this.pending || this.pendingSettings || this.deleting) return;
+    if (this.hasPendingSave()) return;
     this.loaded = false;
     try {
-      this.data = await this.deps.repository.load(this.deps.date());
-      this.loaded = true;
-      this.error = null;
-      this.errorKind = null;
+      this.applyLoaded(await this.deps.repository.load(this.deps.date()));
       this.clockError = null;
       this.observerError = null;
-      this.baseline = null;
       await this.tick();
     } catch {
-      this.fail(
-        "保存データを読み込めません。元のデータは保持しています。",
-        "storage",
-      );
+      this.failLoad();
     }
+  }
+  private applyLoaded(data: StorageState): void {
+    this.data = data;
+    this.loaded = true;
+    this.error = null;
+    this.errorKind = null;
+    this.baseline = null;
+  }
+  private failLoad(): void {
+    this.fail(
+      "保存データを読み込めません。元のデータは保持しています。",
+      "storage",
+    );
   }
   private publish(): void {
     this.deps.changed(this.snapshot());
@@ -110,21 +111,14 @@ export class DurableCoach {
   }
   begin(generation: number): void {
     if (
-      !this.loaded ||
+      !this.canSaveRecords() ||
       this.data.settings.recordingEnabled === false ||
-      this.error ||
-      this.clockError ||
-      this.observerError ||
-      this.pending ||
-      this.pendingSettings ||
-      this.deleting
+      this.observerError
     )
       return;
     this.generation = generation;
-    this.candidateSequence = 0;
+    this.candidateOrder.reset();
     this.observing = true;
-    this.transactions.clear();
-    this.latestTransaction = 0;
     this.baseline = {
       day: this.deps.date(),
       time: this.deps.now(),
@@ -149,7 +143,7 @@ export class DurableCoach {
   }
   pauseNotifications(paused: boolean): void {
     if (this.observing) {
-      if (paused) this.noticeEpoch++;
+      if (paused) this.notices.invalidate();
       this.paused = paused;
       this.publish();
     }
@@ -230,57 +224,48 @@ export class DurableCoach {
   }
   tick(): Promise<void> {
     return this.queue.run(async () => {
-      if (
-        this.pending ||
-        this.error ||
-        this.clockError ||
-        this.pendingSettings ||
-        this.deleting
-      )
-        return;
-      const value = this.prepare();
+      const value = this.prepareCoverage();
       if (value) await this.persist(value);
     });
   }
+  private hasPendingWrite(): boolean {
+    return this.pending !== null || this.pendingSettings !== null;
+  }
+  private hasPendingSave(): boolean {
+    return this.hasPendingWrite() || this.deleting;
+  }
+  private recordWritesBlocked(): boolean {
+    return this.hasPendingSave() || !!this.error || !!this.clockError;
+  }
+  private canSaveRecords(): boolean {
+    return this.loaded && !this.recordWritesBlocked();
+  }
+  private prepareCoverage(): RecordMutation | null {
+    return this.recordWritesBlocked() ? null : this.prepare();
+  }
+  private needsStorageReload(): boolean {
+    return this.errorKind === "storage" && !this.hasPendingWrite();
+  }
+  private prepareReset(): RecordMutation | null {
+    return this.pending ? null : this.prepare(undefined, true);
+  }
   retrySave(): Promise<void> {
     return this.queue.run(async () => {
-      if (this.pending || this.pendingSettings || this.errorKind === "storage")
+      if (this.hasPendingWrite() || this.errorKind === "storage")
         await this.deps.repository.reconnect();
       if (this.pending) await this.persist(this.pending);
       if (this.pendingSettings) await this.settings(this.pendingSettings);
-      if (
-        this.errorKind === "storage" &&
-        !this.pending &&
-        !this.pendingSettings
-      ) {
+      if (this.needsStorageReload()) {
         try {
-          this.data = await this.deps.repository.load(this.deps.date());
-          this.loaded = true;
-          this.error = null;
-          this.errorKind = null;
-          this.baseline = null;
+          this.applyLoaded(await this.deps.repository.load(this.deps.date()));
         } catch {
-          this.fail(
-            "保存データを読み込めません。元のデータは保持しています。",
-            "storage",
-          );
+          this.failLoad();
         }
       }
-      if (this.deleting && !this.pending) {
-        const value = this.prepare(undefined, true);
-        if (value) await this.persist(value);
-      }
-      if (
-        this.loaded &&
-        !this.pending &&
-        !this.pendingSettings &&
-        !this.deleting &&
-        !this.error &&
-        !this.clockError
-      ) {
-        const value = this.prepare();
-        if (value) await this.persist(value);
-      }
+      const reset = this.deleting ? this.prepareReset() : null;
+      if (reset) await this.persist(reset);
+      const coverage = this.loaded ? this.prepareCoverage() : null;
+      if (coverage) await this.persist(coverage);
       this.publish();
     });
   }
@@ -310,11 +295,7 @@ export class DurableCoach {
   }
   setLearningState(id: OperationId, state: LearningState): Promise<void> {
     // Invalidate before entering the writer queue: a save may currently be awaiting I/O.
-    if (state !== "learning")
-      this.operationNoticeEpoch.set(
-        id,
-        (this.operationNoticeEpoch.get(id) ?? 0) + 1,
-      );
+    if (state !== "learning") this.notices.invalidateOperation(id);
     return this.queue.run(() =>
       this.settings(
         withLearningState(
@@ -379,103 +360,45 @@ export class DurableCoach {
       if (!this.loaded) return;
       // Resolve a possible committed write before advancing epoch; never discard an unknown ACK.
       if (this.pending) await this.persist(this.pending);
-      if (this.pending) return;
-      const value = this.prepare(undefined, true);
+      const value = this.prepareReset();
       if (value) await this.persist(value);
     });
+  }
+  private isCurrentCandidate(candidate: ObserverCandidate): boolean {
+    return (
+      this.observing && candidate.generation === this.generation && !this.error
+    );
   }
   accept(value: ObserverCandidate): Promise<void> {
     const candidate = structuredClone(value);
     return this.queue.run(async () => {
-      if (
-        !Number.isInteger(candidate.sequence) ||
-        candidate.sequence < 1 ||
-        candidate.sequence > 0x7fffffff
-      )
-        return;
-      if (
-        !this.observing ||
-        this.error ||
-        candidate.generation !== this.generation ||
-        candidate.sequence <= this.candidateSequence
-      )
-        return;
-      if (candidate.protocolVersion !== 2) return;
-      this.candidateSequence = candidate.sequence;
-      if (candidate.protocolVersion === 2) {
-        const id = candidate.transaction;
-        if (
-          !Number.isInteger(id) ||
-          id < 1 ||
-          id > 0x7fffffff ||
-          this.transactions.has(id) ||
-          id <= this.latestTransaction - 4096
-        )
-          return;
-        this.latestTransaction = Math.max(this.latestTransaction, id);
-        this.transactions.add(id);
-        for (const seen of this.transactions)
-          if (seen <= this.latestTransaction - 4096)
-            this.transactions.delete(seen);
-      }
+      if (!this.isCurrentCandidate(candidate)) return;
+      if (!this.candidateOrder.accept(candidate)) return;
       const observations = classifyGesture(candidate);
       if (!observations.length) return;
-      const epoch = this.noticeEpoch;
-      const tokens = observations.map((observation) => ({
-        observation,
-        operationEpoch:
-          this.operationNoticeEpoch.get(observation.operation) ?? 0,
-        eligible:
-          !this.paused &&
-          observation.origin === "mouse" &&
-          !!observation.shortcut &&
-          learningState(this.data.settings, observation.operation) ===
-            "learning",
+      const notice = this.notices.prepare(
+        observations,
+        this.data.settings,
+        this.paused,
+      );
+      const counts = observations.map(({ date, operation, origin }) => ({
+        day: date,
+        operation,
+        origin,
       }));
-      const counts = observations.map((o) => ({
-        day: o.date,
-        operation: o.operation,
-        origin: o.origin,
-      }));
-      const value = this.prepare(counts);
-      if (!value) return;
-      await this.persist(value);
-      if (
-        epoch !== this.noticeEpoch ||
-        this.error ||
-        this.pending ||
-        !this.observing ||
-        candidate.generation !== this.generation ||
-        this.paused
-      )
-        return;
-      const items = tokens
-        .filter(
-          (token) =>
-            token.eligible &&
-            token.operationEpoch ===
-              (this.operationNoticeEpoch.get(token.observation.operation) ??
-                0) &&
-            learningState(this.data.settings, token.observation.operation) ===
-              "learning",
-        )
-        .map(({ observation }) => ({
-          operation: observation.operation,
-          label: learningOperations.find(
-            (op) => op.id === observation.operation,
-          )!.label,
-          shortcut: observation.shortcut!,
-        }));
-      if (!items.length) return;
-      // One consumed delivery token per gesture, including unknown OS outcomes.
-      try {
-        void this.deps
-          .notify({ ...items[0], ...(items.length > 1 ? { items } : {}) })
-          .catch(() => {});
-      } catch {
-        /* An unknown delivery result must never trigger an automatic resend. */
-      }
+      const mutation = this.prepare(counts);
+      if (!mutation) return;
+      await this.persist(mutation);
+      if (!this.isCurrentCandidate(candidate)) return;
+      if (this.pending || this.paused) return;
+      this.notices.deliver(notice, this.data.settings, this.deps);
     });
+  }
+  private snapshotErrorKind(): SnapshotErrorKind | null {
+    if (this.observerError) return "observer";
+    if (this.clockError) return "clock";
+    if (this.error) return this.errorKind;
+    return this.settingsError ? "settings-save" : null;
   }
   snapshot(): Snapshot {
     return {
@@ -490,21 +413,9 @@ export class DurableCoach {
         this.clockError ??
         this.error ??
         this.settingsError,
-      errorKind: this.observerError
-        ? "observer"
-        : this.clockError
-          ? "clock"
-          : this.error
-            ? this.errorKind
-            : this.settingsError
-              ? "settings-save"
-              : null,
-      canRetrySave:
-        !!this.pending ||
-        !!this.pendingSettings ||
-        this.deleting ||
-        this.errorKind === "storage",
-      pendingSave: !!this.pending || !!this.pendingSettings || this.deleting,
+      errorKind: this.snapshotErrorKind(),
+      canRetrySave: this.hasPendingSave() || this.errorKind === "storage",
+      pendingSave: this.hasPendingSave(),
     };
   }
 }

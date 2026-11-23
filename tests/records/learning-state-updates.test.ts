@@ -208,6 +208,7 @@ for (const action of [
   "stop-restart",
   "failure",
   "delivery-unknown",
+  "delivery-throws",
   "delivery-hung",
 ] as const) {
   test(`notification after persistence: ${action}`, async (t) => {
@@ -229,11 +230,13 @@ for (const action of [
       now: () => now,
       capabilities: () => [],
       changed: () => {},
-      notify: async () => {
+      notify: () => {
         requests++;
-        if (action === "delivery-unknown") throw new Error("unknown");
+        if (action === "delivery-throws") throw new Error("unknown");
+        if (action === "delivery-unknown")
+          return Promise.reject(new Error("unknown"));
         if (action === "delivery-hung") return new Promise<boolean>(() => {});
-        return true;
+        return Promise.resolve(true);
       },
     });
     await coach.initialize();
@@ -282,9 +285,12 @@ for (const action of [
     release.resolve();
     await pending;
     await stateChange;
-    const delivered = ["delay", "delivery-unknown", "delivery-hung"].includes(
-      action,
-    )
+    const delivered = [
+      "delay",
+      "delivery-unknown",
+      "delivery-throws",
+      "delivery-hung",
+    ].includes(action)
       ? 1
       : 0;
     assert.equal(requests, delivered);
