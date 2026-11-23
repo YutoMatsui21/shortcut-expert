@@ -14,6 +14,7 @@ import type {
   StorageState,
 } from "../shared/storage.ts";
 import { daysBefore } from "../shared/storage.ts";
+import { CandidateOrder } from "./candidate-order.ts";
 import { validDate } from "./dates.ts";
 import { classifyGesture } from "./detector.ts";
 import { GestureNotices } from "./gesture-notices.ts";
@@ -36,10 +37,6 @@ type Dependencies = {
   changed(value: Snapshot): void;
 };
 
-function validCandidateId(id: number): boolean {
-  return Number.isInteger(id) && id >= 1 && id <= 0x7fffffff;
-}
-
 // Single product runtime: durable SQLite storage and v2 gesture observations.
 export class DurableCoach {
   private data: StorageState = {
@@ -60,9 +57,7 @@ export class DurableCoach {
   private settingsError: string | null = null;
   private loaded = false;
   private generation = 0;
-  private candidateSequence = 0;
-  private transactions = new Set<number>();
-  private latestTransaction = 0;
+  private candidateOrder = new CandidateOrder();
   private writeSequence = 0;
   private session: string;
   private pending: RecordMutation | null = null;
@@ -122,10 +117,8 @@ export class DurableCoach {
     )
       return;
     this.generation = generation;
-    this.candidateSequence = 0;
+    this.candidateOrder.reset();
     this.observing = true;
-    this.transactions.clear();
-    this.latestTransaction = 0;
     this.baseline = {
       day: this.deps.date(),
       time: this.deps.now(),
@@ -371,31 +364,16 @@ export class DurableCoach {
       if (value) await this.persist(value);
     });
   }
-  private isCurrentGeneration(generation: number): boolean {
-    return this.observing && generation === this.generation && !this.error;
-  }
-  private acceptCandidate(candidate: ObserverCandidate): boolean {
-    if (!this.isCurrentGeneration(candidate.generation)) return false;
-    if (!validCandidateId(candidate.sequence)) return false;
-    if (candidate.sequence <= this.candidateSequence) return false;
-    if (candidate.protocolVersion !== 2) return false;
-    this.candidateSequence = candidate.sequence;
-    return this.acceptTransaction(candidate.transaction);
-  }
-  private acceptTransaction(id: number): boolean {
-    if (!validCandidateId(id) || this.transactions.has(id)) return false;
-    if (id <= this.latestTransaction - 4096) return false;
-    this.latestTransaction = Math.max(this.latestTransaction, id);
-    this.transactions.add(id);
-    for (const seen of this.transactions) {
-      if (seen <= this.latestTransaction - 4096) this.transactions.delete(seen);
-    }
-    return true;
+  private isCurrentCandidate(candidate: ObserverCandidate): boolean {
+    return (
+      this.observing && candidate.generation === this.generation && !this.error
+    );
   }
   accept(value: ObserverCandidate): Promise<void> {
     const candidate = structuredClone(value);
     return this.queue.run(async () => {
-      if (!this.acceptCandidate(candidate)) return;
+      if (!this.isCurrentCandidate(candidate)) return;
+      if (!this.candidateOrder.accept(candidate)) return;
       const observations = classifyGesture(candidate);
       if (!observations.length) return;
       const notice = this.notices.prepare(
@@ -411,7 +389,7 @@ export class DurableCoach {
       const mutation = this.prepare(counts);
       if (!mutation) return;
       await this.persist(mutation);
-      if (!this.isCurrentGeneration(candidate.generation)) return;
+      if (!this.isCurrentCandidate(candidate)) return;
       if (this.pending || this.paused) return;
       this.notices.deliver(notice, this.data.settings, this.deps);
     });

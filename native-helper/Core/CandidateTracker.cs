@@ -436,41 +436,41 @@ internal sealed partial class CandidateTracker
         bool conflict = MouseInputConflict(input.At);
         bool injected = (input.Flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
         string? route = KeyRoute(input.Key, input.Win, input.Shift, input.Alt, input.Modified);
-        ObserveKeyEpoch(new(input.Key, injected, route));
-        TrackMaximizeModifiers(input.Key, injected);
+        var keyPress = new KeySequenceInput(input.Key, injected, route);
+        ObserveKeyEpoch(keyPress);
+        TrackMaximizeModifiers(keyPress);
         if (IsModifier(input.Key))
         {
-            TrackModifier(input, injected);
+            TrackModifier(input, keyPress);
             return;
         }
-        if (HandleMaximizePress(input, route, conflict, injected))
+        if (HandleMaximizePress(input, keyPress, conflict))
             return;
-        if (ConsumeRepeatedMonitorMove(route, injected))
+        if (ConsumeRepeatedMonitorMove(keyPress))
             return;
-        if (TrackPlacement(input, route, conflict))
+        if (TrackPlacement(input, keyPress, conflict))
             return;
 
         BaselineKey(input.Target, route);
-        if (ConsumeRepeatedReduction(input.Key))
+        if (ConsumeRepeatedReduction(keyPress))
             return;
-        if (input.Before is null || !CanStartStandaloneKey(route, injected, conflict))
+        if (input.Before is null || !CanStartStandaloneKey(keyPress, conflict))
         {
             gestures.Pending = null;
             return;
         }
-        StartStandaloneKey(input, route!, injected, conflict);
+        StartStandaloneKey(input, keyPress, conflict);
     }
 
-    private void TrackMaximizeModifiers(uint key, bool injected)
+    private void TrackMaximizeModifiers(KeySequenceInput keyPress)
     {
-        bool winKey = key is VK_LWIN or VK_RWIN;
-        if (injected && winKey)
-            injectedWin.Add(key);
-        if (injected || (!winKey && key != VK_UP))
+        if (keyPress is { Injected: true, Key: VK_LWIN or VK_RWIN })
+            injectedWin.Add(keyPress.Key);
+        if (keyPress is { Injected: true } or { Key: not (VK_UP or VK_LWIN or VK_RWIN) })
             gestures.Maximize = null;
     }
 
-    private void TrackModifier(KeyPressEvent input, bool injected)
+    private void TrackModifier(KeyPressEvent input, KeySequenceInput keyPress)
     {
         Placement.Key(
             input.Target,
@@ -482,25 +482,25 @@ internal sealed partial class CandidateTracker
             input.Flags,
             NextTransaction
         );
-        BaselineModifier(input.Key, injected);
+        BaselineModifier(input.Key, keyPress.Injected);
         if (gestures.Pending is { } pending)
             gestures.Pending = pending with { Conflicted = true };
     }
 
-    private bool ConsumeRepeatedMonitorMove(string? route, bool injected)
+    private bool ConsumeRepeatedMonitorMove(KeySequenceInput keyPress)
     {
-        if (route is not ("win-shift-left" or "win-shift-right"))
+        if (keyPress.Route is not ("win-shift-left" or "win-shift-right"))
             return false;
-        if (moveKeyReleased || gestures.Pending?.Route != route)
+        if (moveKeyReleased || gestures.Pending?.Route != keyPress.Route)
             return false;
-        if (injected)
+        if (keyPress.Injected)
             ClearInput();
         return true;
     }
 
-    private bool TrackPlacement(KeyPressEvent input, string? route, bool conflict)
+    private bool TrackPlacement(KeyPressEvent input, KeySequenceInput keyPress, bool conflict)
     {
-        if (route is not ("win-left" or "win-right" or "win-up" or "win-down"))
+        if (keyPress.Route is not ("win-left" or "win-right" or "win-up" or "win-down"))
         {
             Placement.Cancel();
             return false;
@@ -523,9 +523,9 @@ internal sealed partial class CandidateTracker
         return true;
     }
 
-    private bool ConsumeRepeatedReduction(uint key)
+    private bool ConsumeRepeatedReduction(KeySequenceInput keyPress)
     {
-        if (key != VK_DOWN)
+        if (keyPress.Key != VK_DOWN)
             return false;
         if (winDownHeld)
             return true;
@@ -533,18 +533,18 @@ internal sealed partial class CandidateTracker
         return false;
     }
 
-    private static bool CanStartStandaloneKey(string? route, bool injected, bool conflict) =>
-        route is not null && (route != "win-up" || injected || conflict);
+    private static bool CanStartStandaloneKey(KeySequenceInput keyPress, bool conflict) =>
+        keyPress.Route is not null && (keyPress.Route != "win-up" || keyPress.Injected || conflict);
 
-    private void StartStandaloneKey(KeyPressEvent input, string route, bool injected, bool conflict)
+    private void StartStandaloneKey(KeyPressEvent input, KeySequenceInput keyPress, bool conflict)
     {
         gestures.Pending = gestures.Begin(
             input.Target,
             input.Before!,
             "key",
-            route,
+            keyPress.Route!,
             input.At,
-            injected,
+            keyPress.Injected,
             conflict,
             true,
             NextTransaction()
@@ -563,23 +563,18 @@ internal sealed partial class CandidateTracker
     }
 
     // Returns true when a repeated press has already been consumed.
-    private bool HandleMaximizePress(
-        KeyPressEvent input,
-        string? route,
-        bool conflict,
-        bool injected
-    )
+    private bool HandleMaximizePress(KeyPressEvent input, KeySequenceInput keyPress, bool conflict)
     {
         if (input.Key != VK_UP)
             return false;
         if (upHeld)
         {
-            if (injected)
+            if (keyPress.Injected)
                 ClearInput();
             return true;
         }
         upHeld = true;
-        gestures.Maximize = CanStartMaximize(input, route, conflict, injected)
+        gestures.Maximize = CanStartMaximize(input, keyPress, conflict)
             ? gestures.Begin(
                 input.Target,
                 input.Before!,
@@ -596,15 +591,10 @@ internal sealed partial class CandidateTracker
         return false;
     }
 
-    private bool CanStartMaximize(
-        KeyPressEvent input,
-        string? route,
-        bool conflict,
-        bool injected
-    ) =>
-        route == "win-up"
+    private bool CanStartMaximize(KeyPressEvent input, KeySequenceInput keyPress, bool conflict) =>
+        keyPress.Route == "win-up"
         && input.Before is { Show: SW_SHOWNORMAL }
-        && !injected
+        && !keyPress.Injected
         && injectedWin.Count == 0
         && !conflict
         && !gestures.Moving.Contains(input.Target)

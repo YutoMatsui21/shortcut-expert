@@ -53,6 +53,10 @@ internal static partial class Program
                     Equal(boundary != "continuous", second is WindowCandidate);
                 }
             );
+    }
+
+    private static void CheckWinDownRepeat()
+    {
         Check(
             "Win+Down repeat cannot renew input",
             () =>

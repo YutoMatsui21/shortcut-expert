@@ -31,6 +31,10 @@ internal static partial class Program
                 samples.Add(result);
             }
         );
+    }
+
+    private static void CheckMouseInputAge()
+    {
         foreach (
             var (at, origin) in new[]
             {
@@ -51,7 +55,7 @@ internal static partial class Program
             );
     }
 
-    private static void CheckInjectedAndConflictingInput()
+    private static void CheckInjectedInput()
     {
         foreach (uint flags in new[] { LLMHF_INJECTED, LLMHF_LOWER_IL_INJECTED })
             Check(
@@ -75,6 +79,10 @@ internal static partial class Program
                     Equal(true, Complete(tracker).GetProperty("injected").GetBoolean());
                 }
             );
+    }
+
+    private static void CheckInputConflicts()
+    {
         foreach (
             uint modifier in new uint[]
             {
@@ -110,7 +118,7 @@ internal static partial class Program
         );
     }
 
-    private static void CheckCaptionClickRecognition()
+    private static void CheckUnknownMouseOrigin()
     {
         Check(
             "program change has unknown origin",
@@ -129,6 +137,10 @@ internal static partial class Program
                 Equal(JsonValueKind.Null, Complete(tracker).ValueKind);
             }
         );
+    }
+
+    private static void CheckCaptionDoubleClick()
+    {
         Check(
             "caption double click",
             () =>
@@ -174,7 +186,7 @@ internal static partial class Program
         );
     }
 
-    private static void CheckUnmatchedKeysAndForeground()
+    private static void CheckUnmatchedKeys()
     {
         Check(
             "key without Win",
@@ -204,6 +216,10 @@ internal static partial class Program
                 Equal("unknown", Complete(tracker).GetProperty("origin").GetString());
             }
         );
+    }
+
+    private static void CheckForegroundMismatch()
+    {
         Check(
             "foreground changed",
             () =>
@@ -264,6 +280,10 @@ internal static partial class Program
                 Equal("unknown", Complete(tracker).GetProperty("origin").GetString());
             }
         );
+    }
+
+    private static void CheckClearAndReset()
+    {
         Check(
             "other input clears old origin",
             () =>
@@ -329,6 +349,10 @@ internal static partial class Program
                 );
             }
         );
+    }
+
+    private static void CheckReusedWindowHandle()
+    {
         Check(
             "reused window handle cannot join different processes",
             () =>

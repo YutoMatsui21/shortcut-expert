@@ -121,14 +121,21 @@ internal static partial class Program
         {
             CheckSessionAllocator();
             CheckMaximizeSources();
-            CheckInjectedAndConflictingInput();
-            CheckCaptionClickRecognition();
-            CheckUnmatchedKeysAndForeground();
+            CheckMouseInputAge();
+            CheckInjectedInput();
+            CheckInputConflicts();
+            CheckUnknownMouseOrigin();
+            CheckCaptionDoubleClick();
+            CheckUnmatchedKeys();
+            CheckForegroundMismatch();
             CheckInputCancellation();
+            CheckClearAndReset();
             CheckWindowTransitionIdentity();
+            CheckReusedWindowHandle();
             CheckCaptionClickIdentity();
             CheckLegacyOperations();
             CheckWinDownGrouping();
+            CheckWinDownRepeat();
             RunAdditionalPolicyTests();
             return 0;
         }

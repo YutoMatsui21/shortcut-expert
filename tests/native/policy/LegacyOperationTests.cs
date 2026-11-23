@@ -158,14 +158,7 @@ internal static partial class Program
                     var tracker = Tracker();
                     tracker.Mouse(11, left, HTCAPTION, default, 0, 500, 0, false, true);
                     tracker.MoveStart(11, reason == "expired" ? 1001 : 100);
-                    if (reason == "key")
-                        tracker.Key(11, null, VK_SHIFT, false, false, 200, 0);
-                    if (reason == "read-failure")
-                        tracker.ClearInput();
-                    if (reason == "no-end")
-                    {
-                        tracker.Reset(2);
-                    }
+                    InterruptDrag(tracker, reason);
                     var after = reason switch
                     {
                         "process" => right with { Process = 8 },
@@ -175,6 +168,18 @@ internal static partial class Program
                     Equal<object?>(null, tracker.FinishMove(11, after, 5000, 11, "2026-10-11"));
                 }
             );
+    }
+
+    private static void InterruptDrag(CandidateTracker tracker, string reason)
+    {
+        if (reason == "key")
+            tracker.Key(11, null, VK_SHIFT, false, false, 200, 0);
+        if (reason == "read-failure")
+            tracker.ClearInput();
+        if (reason == "no-end")
+        {
+            tracker.Reset(2);
+        }
     }
 
     private static void CheckIntermediateMonitorMoveRestore(WindowState left, WindowState right)
