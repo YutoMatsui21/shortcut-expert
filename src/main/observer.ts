@@ -1,52 +1,18 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import {
-  independentCandidate,
-  usesIndependentResults,
-} from "../core/independent-results.ts";
-import { parseObserverMessage } from "./observer-json.ts";
-export { parseObserverMessage } from "./observer-json.ts";
-import type {
-  Bounds,
-  CandidateV2,
-  Evidence,
-  ObserverCandidate,
-  WindowEvidenceResult,
-} from "../shared/coach";
+import type { ObserverCandidate } from "../shared/coach";
 import {
   parseWindowDiagnostics,
   type WindowDiagnosticCounts,
 } from "../shared/window-diagnostics.ts";
+import { candidateV2 } from "./observer-candidate.ts";
+import { protocolId, record } from "./observer-fields.ts";
+import { parseObserverMessage } from "./observer-json.ts";
 
-function record(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function protocolId(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= 0x7fffffff
-  );
-}
-function bounds(value: unknown): Bounds | null {
-  if (
-    !record(value) ||
-    !["x", "y", "width", "height"].every(
-      (key) => typeof value[key] === "number" && Number.isFinite(value[key]),
-    ) ||
-    (value.width as number) <= 0 ||
-    (value.height as number) <= 0
-  )
-    return null;
-  return {
-    x: value.x as number,
-    y: value.y as number,
-    width: value.width as number,
-    height: value.height as number,
-  };
-}
+export { candidateV2 } from "./observer-candidate.ts";
+export { parseObserverMessage } from "./observer-json.ts";
+
 const responseTypes: Record<string, string> = {
   start: "started",
   stop: "stopped",
@@ -54,398 +20,6 @@ const responseTypes: Record<string, string> = {
   fixtureCandidate: "injected",
   fixtureFocus: "focus",
 };
-function windowResult(value: unknown): WindowEvidenceResult | null {
-  if (
-    !record(value) ||
-    typeof value.app !== "string" ||
-    typeof value.operation !== "string" ||
-    !record(value.before) ||
-    typeof value.before.state !== "string" ||
-    !(
-      value.before.arranged === null ||
-      typeof value.before.arranged === "boolean"
-    ) ||
-    !record(value.after) ||
-    typeof value.after.state !== "string" ||
-    !["moving", "targetMatched", "elevated"].every(
-      (key) => typeof value[key] === "boolean",
-    ) ||
-    typeof value.inputAgeMs !== "number" ||
-    !Number.isFinite(value.inputAgeMs) ||
-    !(
-      value.afterArranged === null || typeof value.afterArranged === "boolean"
-    ) ||
-    !["monitor", "fromMonitor", "toMonitor"].every(
-      (key) => value[key] === null || bounds(value[key]),
-    ) ||
-    !(
-      value.moveDirection === null ||
-      value.moveDirection === "left" ||
-      value.moveDirection === "right"
-    ) ||
-    ("moveConfirmed" in value && typeof value.moveConfirmed !== "boolean") ||
-    ("twoDisplayLayoutConfirmed" in value &&
-      typeof value.twoDisplayLayoutConfirmed !== "boolean")
-  )
-    return null;
-  return {
-    app: value.app,
-    operation: value.operation,
-    before: { state: value.before.state, arranged: value.before.arranged },
-    after: { state: value.after.state },
-    afterArranged: value.afterArranged,
-    moving: value.moving as boolean,
-    elevated: value.elevated as boolean,
-    targetMatched: value.targetMatched as boolean,
-    inputAgeMs: value.inputAgeMs,
-    monitor: bounds(value.monitor),
-    fromMonitor: bounds(value.fromMonitor),
-    toMonitor: bounds(value.toMonitor),
-    moveDirection: value.moveDirection,
-    ...("moveConfirmed" in value
-      ? { moveConfirmed: value.moveConfirmed as boolean }
-      : {}),
-    ...("twoDisplayLayoutConfirmed" in value
-      ? {
-          twoDisplayLayoutConfirmed: value.twoDisplayLayoutConfirmed as boolean,
-        }
-      : {}),
-  };
-}
-
-function nullableBoolean(value: unknown): value is boolean | null {
-  return value === null || typeof value === "boolean";
-}
-export function candidateV2(value: unknown): CandidateV2 | null {
-  if (record(value) && usesIndependentResults(value))
-    return independentCandidate(value);
-  if (
-    !record(value) ||
-    value.type !== "candidate" ||
-    value.protocolVersion !== 2 ||
-    !protocolId(value.generation) ||
-    !protocolId(value.sequence) ||
-    !protocolId(value.transaction) ||
-    typeof value.date !== "string" ||
-    typeof value.route !== "string" ||
-    value.route.length > 64 ||
-    !(
-      value.origin === "mouse" ||
-      value.origin === "key" ||
-      value.origin === "unknown"
-    ) ||
-    typeof value.injected !== "boolean" ||
-    typeof value.conflicted !== "boolean" ||
-    !record(value.evidence)
-  )
-    return null;
-  const raw = value.evidence;
-  let evidence: Evidence;
-  switch (raw.kind) {
-    case "caption-click":
-      if (
-        raw.profile !== "caption-click-v1" ||
-        !(
-          raw.terminal === null ||
-          raw.terminal === "maximized" ||
-          raw.terminal === "minimized"
-        ) ||
-        !["switched", "targetMatched", "released"].every(
-          (k) => typeof raw[k] === "boolean",
-        ) ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        terminal: raw.terminal,
-        switched: raw.switched as boolean,
-        targetMatched: raw.targetMatched as boolean,
-        released: raw.released as boolean,
-        inputAgeMs: raw.inputAgeMs,
-        monitor: bounds(raw.monitor),
-      };
-      break;
-    case "compound-drag": {
-      const fromMonitor = bounds(raw.fromMonitor),
-        toMonitor = bounds(raw.toMonitor);
-      if (
-        raw.profile !== "compound-drag-v1" ||
-        ![
-          "maximized",
-          "left-top",
-          "right-top",
-          "left-bottom",
-          "right-bottom",
-        ].includes(raw.terminal as string) ||
-        ![
-          "targetMatched",
-          "released",
-          "layoutStable",
-          "terminalEquivalent",
-        ].every((key) => typeof raw[key] === "boolean") ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0 ||
-        !fromMonitor ||
-        !toMonitor ||
-        !(
-          raw.moveDirection === null ||
-          raw.moveDirection === "left" ||
-          raw.moveDirection === "right"
-        ) ||
-        ("twoDisplayLayoutConfirmed" in raw &&
-          typeof raw.twoDisplayLayoutConfirmed !== "boolean")
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        terminal: raw.terminal as Extract<
-          Evidence,
-          { kind: "compound-drag" }
-        >["terminal"],
-        targetMatched: raw.targetMatched as boolean,
-        released: raw.released as boolean,
-        layoutStable: raw.layoutStable as boolean,
-        terminalEquivalent: raw.terminalEquivalent as boolean,
-        inputAgeMs: raw.inputAgeMs,
-        fromMonitor,
-        toMonitor,
-        moveDirection: raw.moveDirection,
-        ...("twoDisplayLayoutConfirmed" in raw
-          ? {
-              twoDisplayLayoutConfirmed:
-                raw.twoDisplayLayoutConfirmed as boolean,
-            }
-          : {}),
-      };
-      break;
-    }
-    case "window-close":
-      if (
-        raw.profile !== "window-close-v1" ||
-        typeof raw.targetMatched !== "boolean" ||
-        typeof raw.destroyed !== "boolean" ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0 ||
-        !(raw.monitor === null || bounds(raw.monitor))
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        targetMatched: raw.targetMatched,
-        destroyed: raw.destroyed,
-        inputAgeMs: raw.inputAgeMs,
-        monitor: bounds(raw.monitor),
-      };
-      break;
-    case "placement": {
-      const monitor = bounds(raw.monitor);
-      if (
-        raw.profile !== "placement-v1" ||
-        ![
-          "left-half",
-          "right-half",
-          "left-top",
-          "right-top",
-          "left-bottom",
-          "right-bottom",
-        ].includes(raw.shape as string) ||
-        typeof raw.targetMatched !== "boolean" ||
-        typeof raw.monitorChanged !== "boolean" ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0 ||
-        !monitor
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        shape: raw.shape as Extract<Evidence, { kind: "placement" }>["shape"],
-        targetMatched: raw.targetMatched,
-        monitorChanged: raw.monitorChanged,
-        inputAgeMs: raw.inputAgeMs,
-        monitor,
-      };
-      break;
-    }
-    case "window-switch":
-      if (
-        raw.profile !== "window-switch-v1" ||
-        ![
-          "windowsDifferent",
-          "eligible",
-          "inputTargetMatched",
-          "foregroundMatched",
-        ].every((key) => typeof raw[key] === "boolean") ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0 ||
-        typeof raw.settleMs !== "number" ||
-        !Number.isFinite(raw.settleMs) ||
-        raw.settleMs < 0 ||
-        !(raw.monitor === null || bounds(raw.monitor))
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        windowsDifferent: raw.windowsDifferent as boolean,
-        eligible: raw.eligible as boolean,
-        inputTargetMatched: raw.inputTargetMatched as boolean,
-        foregroundMatched: raw.foregroundMatched as boolean,
-        inputAgeMs: raw.inputAgeMs,
-        settleMs: raw.settleMs,
-        monitor: bounds(raw.monitor),
-      };
-      break;
-    case "taskbar-input":
-      if (
-        raw.profile !== "taskbar-input-v1" ||
-        !(raw.slot === null || (protocolId(raw.slot) && raw.slot <= 10)) ||
-        typeof raw.mappingConfirmed !== "boolean" ||
-        typeof raw.snapshotAgeMs !== "number" ||
-        !Number.isFinite(raw.snapshotAgeMs) ||
-        raw.snapshotAgeMs < 0 ||
-        typeof raw.confirmationAgeMs !== "number" ||
-        !Number.isFinite(raw.confirmationAgeMs) ||
-        raw.confirmationAgeMs < 0 ||
-        !(raw.monitor === null || bounds(raw.monitor))
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        slot: raw.slot,
-        mappingConfirmed: raw.mappingConfirmed,
-        snapshotAgeMs: raw.snapshotAgeMs,
-        confirmationAgeMs: raw.confirmationAgeMs,
-        monitor: bounds(raw.monitor),
-      };
-      break;
-    case "snap-invocation":
-      if (
-        raw.profile !== "snap-invocation-v1" ||
-        typeof raw.targetMatched !== "boolean" ||
-        typeof raw.eligible !== "boolean" ||
-        !nullableBoolean(raw.settingsEnabled) ||
-        ![null, "title-rect", "hit-fallback"].includes(
-          raw.buttonSource as null | string,
-        ) ||
-        typeof raw.dwellMs !== "number" ||
-        !Number.isFinite(raw.dwellMs) ||
-        raw.dwellMs < 0 ||
-        typeof raw.inputAgeMs !== "number" ||
-        !Number.isFinite(raw.inputAgeMs) ||
-        raw.inputAgeMs < 0 ||
-        !(raw.monitor === null || bounds(raw.monitor))
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        targetMatched: raw.targetMatched,
-        eligible: raw.eligible,
-        settingsEnabled: raw.settingsEnabled,
-        buttonSource: raw.buttonSource as "title-rect" | "hit-fallback" | null,
-        dwellMs: raw.dwellMs,
-        inputAgeMs: raw.inputAgeMs,
-        monitor: bounds(raw.monitor),
-      };
-      break;
-    case "window": {
-      if (
-        !(raw.profile === "legacy-window-v1" || raw.profile === "unverified") ||
-        !record(raw.result)
-      )
-        return null;
-      const result = windowResult(raw.result);
-      if (!result) return null;
-      evidence = { kind: "window", profile: raw.profile, result };
-      break;
-    }
-    case "shell-display":
-      if (
-        raw.profile !== "unverified" ||
-        !(raw.feature === "task-view" || raw.feature === "snap-layout") ||
-        !nullableBoolean(raw.wasVisible) ||
-        !nullableBoolean(raw.visible) ||
-        !nullableBoolean(raw.targetMatched)
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        feature: raw.feature,
-        wasVisible: raw.wasVisible,
-        visible: raw.visible,
-        targetMatched: raw.targetMatched,
-      };
-      break;
-    case "activation":
-      if (
-        raw.profile !== "unverified" ||
-        !(raw.slot === null || (protocolId(raw.slot) && raw.slot <= 9)) ||
-        !nullableBoolean(raw.appMatched) ||
-        !nullableBoolean(raw.targetMatched) ||
-        !nullableBoolean(raw.individualEquivalent) ||
-        !(
-          raw.result === "launched" ||
-          raw.result === "activated" ||
-          raw.result === "unknown"
-        )
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        slot: raw.slot,
-        appMatched: raw.appMatched,
-        targetMatched: raw.targetMatched,
-        individualEquivalent: raw.individualEquivalent,
-        result: raw.result,
-      };
-      break;
-    case "global":
-      if (
-        raw.profile !== "unverified" ||
-        !(raw.feature === "desktop" || raw.feature === "minimize-all") ||
-        !nullableBoolean(raw.targetsKnown) ||
-        !nullableBoolean(raw.resultConfirmed)
-      )
-        return null;
-      evidence = {
-        kind: raw.kind,
-        profile: raw.profile,
-        feature: raw.feature,
-        targetsKnown: raw.targetsKnown,
-        resultConfirmed: raw.resultConfirmed,
-      };
-      break;
-    default:
-      return null;
-  }
-  return {
-    type: "candidate",
-    protocolVersion: 2,
-    generation: value.generation,
-    sequence: value.sequence,
-    transaction: value.transaction,
-    date: value.date,
-    origin: value.origin,
-    route: value.route,
-    injected: value.injected,
-    conflicted: value.conflicted,
-    evidence,
-  };
-}
 
 export class ObserverClient {
   private child: ChildProcessWithoutNullStreams | null = null;
@@ -473,6 +47,7 @@ export class ObserverClient {
       timer: NodeJS.Timeout;
     }
   >();
+
   constructor(
     onCandidate: (candidate: ObserverCandidate) => void,
     onFault: () => void,
@@ -484,81 +59,10 @@ export class ObserverClient {
     this.fixture = fixture;
     this.onWindowDiagnostics = onWindowDiagnostics;
   }
+
   async start(): Promise<number> {
     if (!this.child) {
-      this.closing = false;
-      const path = app.isPackaged
-        ? join(process.resourcesPath, "native-helper", "WindowObserver.exe")
-        : join(
-            app.getAppPath(),
-            "resources",
-            "native-helper",
-            "WindowObserver.exe",
-          );
-      const mode = this.fixture
-        ? "--fixture"
-        : this.onWindowDiagnostics
-          ? "--window-validation-consented"
-          : "--observe";
-      this.child = spawn(path, [mode], {
-        cwd: dirname(path),
-        windowsHide: true,
-        stdio: "pipe",
-      });
-      const child = this.child;
-      // A failed transport retires a child, but kill() alone does not confirm its exit.
-      this.processes.set(
-        child,
-        new Promise<void>((resolve) => {
-          const done = () => {
-            this.processes.delete(child);
-            resolve();
-          };
-          child.once("exit", done);
-          child.once("error", () => {
-            if (!child.pid) done();
-          });
-        }),
-      );
-      let buffered = "";
-      child.stdout.setEncoding("utf8");
-      child.stdout.on("data", (text: string) => {
-        if (this.child !== child) return;
-        const parts = text.split("\n");
-        for (let index = 0; index < parts.length; index++) {
-          if (buffered.length + parts[index].length > 16384) {
-            buffered = "";
-            this.failed();
-            return;
-          }
-          buffered += parts[index];
-          if (index < parts.length - 1) {
-            this.receive(buffered.replace(/\r$/, ""));
-            buffered = "";
-            if (this.child !== child) return;
-          }
-        }
-      });
-      child.stdout.on("end", () => {
-        if (this.child === child && !this.closing) this.failed();
-      });
-      child.stderr.resume();
-      child.on("error", () => {
-        if (this.child === child) this.failed();
-      });
-      child.on("exit", () => {
-        if (this.child !== child) return;
-        if (this.closing) this.child = null;
-        else this.failed();
-      });
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          this.ready = null;
-          this.failed();
-          reject(new Error("helper-ready-timeout"));
-        }, 5000);
-        this.ready = { resolve, reject, timer };
-      });
+      await this.launchHelper();
       if (!this.arrangedAvailable && !this.fixture) {
         await this.shutdown();
         throw new Error("arranged-api-unavailable");
@@ -573,6 +77,95 @@ export class ObserverClient {
     this.active = true;
     return generation;
   }
+
+  private launchHelper(): Promise<void> {
+    this.closing = false;
+    const path = app.isPackaged
+      ? join(process.resourcesPath, "native-helper", "WindowObserver.exe")
+      : join(
+          app.getAppPath(),
+          "resources",
+          "native-helper",
+          "WindowObserver.exe",
+        );
+    const child = spawn(path, [this.helperMode()], {
+      cwd: dirname(path),
+      windowsHide: true,
+      stdio: "pipe",
+    });
+    this.child = child;
+    this.trackExit(child);
+    this.listenForLines(child);
+    this.listenForProcessFailure(child);
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.ready = null;
+        this.failed();
+        reject(new Error("helper-ready-timeout"));
+      }, 5000);
+      this.ready = { resolve, reject, timer };
+    });
+  }
+
+  private helperMode(): string {
+    if (this.fixture) return "--fixture";
+    return this.onWindowDiagnostics
+      ? "--window-validation-consented"
+      : "--observe";
+  }
+
+  private trackExit(child: ChildProcessWithoutNullStreams): void {
+    // A failed transport retires a child, but kill() alone does not confirm its exit.
+    const exited = new Promise<void>((resolve) => {
+      const done = () => {
+        this.processes.delete(child);
+        resolve();
+      };
+      child.once("exit", done);
+      child.once("error", () => {
+        if (!child.pid) done();
+      });
+    });
+    this.processes.set(child, exited);
+  }
+
+  private listenForLines(child: ChildProcessWithoutNullStreams): void {
+    let buffered = "";
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (text: string) => {
+      if (this.child !== child) return;
+      const parts = text.split("\n");
+      for (let index = 0; index < parts.length; index++) {
+        const part = parts[index];
+        if (buffered.length + part.length > 16384) {
+          buffered = "";
+          this.failed();
+          return;
+        }
+        buffered += part;
+        if (index === parts.length - 1) return;
+        this.receive(buffered.replace(/\r$/, ""));
+        buffered = "";
+        if (this.child !== child) return;
+      }
+    });
+  }
+
+  private listenForProcessFailure(child: ChildProcessWithoutNullStreams): void {
+    child.stdout.on("end", () => {
+      if (this.child === child && !this.closing) this.failed();
+    });
+    child.stderr.resume();
+    child.on("error", () => {
+      if (this.child === child) this.failed();
+    });
+    child.on("exit", () => {
+      if (this.child !== child) return;
+      if (this.closing) this.child = null;
+      else this.failed();
+    });
+  }
+
   async stop(): Promise<void> {
     this.active = false;
     if (!this.child) return;
@@ -584,6 +177,7 @@ export class ObserverClient {
       throw new Error("helper-stop-failed");
     }
   }
+
   async shutdown(): Promise<void> {
     this.closing = true;
     this.active = false;
@@ -619,10 +213,12 @@ export class ObserverClient {
     await Promise.all([shutdown(), ...waits]);
     if (this.child === child) this.child = null;
   }
+
   async inject(value: ObserverCandidate): Promise<void> {
     if (!this.fixture) throw new Error("fixture-only");
     await this.request("fixtureCandidate", { candidate: value });
   }
+
   async focusToken(): Promise<string> {
     if (!this.fixture) throw new Error("fixture-only");
     const response = await this.request("fixtureFocus");
@@ -630,6 +226,7 @@ export class ObserverClient {
       throw new Error("invalid-focus-token");
     return response.result;
   }
+
   private request(
     command: string,
     extra: Record<string, unknown> = {},
@@ -660,49 +257,63 @@ export class ObserverClient {
       );
     });
   }
+
   private receive(line: string): void {
     try {
       const message: unknown = parseObserverMessage(line);
       if (!record(message)) throw new Error("protocol");
-      if (message.type === "ready") {
-        if (message.protocolVersion !== 2) throw new Error("helper-protocol");
-        this.arrangedAvailable = message.arrangedAvailable === true;
-        if (this.ready) {
-          clearTimeout(this.ready.timer);
-          this.ready.resolve();
-          this.ready = null;
-        }
-        return;
-      }
-      if (message.type === "candidate") {
-        const value = candidateV2(message);
-        if (!value) throw new Error("candidate");
-        if (this.active && value.generation === this.generation)
-          this.onCandidate(value);
-        return;
-      }
-      if (message.type === "window-diagnostics" && this.onWindowDiagnostics) {
-        const counts = parseWindowDiagnostics(message.counts);
-        if (!counts || !protocolId(message.generation))
-          throw new Error("window-diagnostics");
-        if (message.generation === this.generation)
-          this.onWindowDiagnostics(counts);
-        return;
-      }
-      const pending = this.pending.get(message.requestId as number);
-      if (pending) {
-        if (message.type !== "fault" && message.type !== pending.type)
-          throw new Error("response-type");
-        clearTimeout(pending.timer);
-        this.pending.delete(message.requestId as number);
-        if (message.type === "fault") pending.reject(new Error("helper-fault"));
-        else pending.resolve(message);
-      }
-      if (message.type === "fault") this.failed();
+      if (message.type === "ready") return this.receiveReady(message);
+      if (message.type === "candidate") return this.receiveCandidate(message);
+      if (message.type === "window-diagnostics" && this.onWindowDiagnostics)
+        return this.receiveDiagnostics(message);
+      this.receiveResponse(message);
     } catch {
       this.failed();
     }
   }
+
+  private receiveReady(message: Record<string, unknown>): void {
+    if (message.protocolVersion !== 2) throw new Error("helper-protocol");
+    this.arrangedAvailable = message.arrangedAvailable === true;
+    if (!this.ready) return;
+    clearTimeout(this.ready.timer);
+    this.ready.resolve();
+    this.ready = null;
+  }
+
+  private receiveCandidate(message: Record<string, unknown>): void {
+    const value = candidateV2(message);
+    if (!value) throw new Error("candidate");
+    if (this.active && value.generation === this.generation)
+      this.onCandidate(value);
+  }
+
+  private receiveDiagnostics(message: Record<string, unknown>): void {
+    const counts = parseWindowDiagnostics(message.counts);
+    if (!counts || !protocolId(message.generation))
+      throw new Error("window-diagnostics");
+    if (message.generation === this.generation)
+      this.onWindowDiagnostics?.(counts);
+  }
+
+  private receiveResponse(message: Record<string, unknown>): void {
+    this.settleRequest(message);
+    if (message.type === "fault") this.failed();
+  }
+
+  private settleRequest(message: Record<string, unknown>): void {
+    const { requestId } = message;
+    if (typeof requestId !== "number") return;
+    const pending = this.pending.get(requestId);
+    if (!pending) return;
+    if (message.type !== "fault" && message.type !== pending.type)
+      throw new Error("response-type");
+    clearTimeout(pending.timer);
+    this.pending.delete(requestId);
+    if (message.type === "fault") pending.reject(new Error("helper-fault"));
+    else pending.resolve(message);
+  }
+
   private failed(): void {
     this.active = false;
     const child = this.child;

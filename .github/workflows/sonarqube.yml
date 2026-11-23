@@ -75,6 +75,36 @@ jobs:
             throw "No ObserverHost coverage was collected from the helper process fixtures."
           }
 
+      - name: Collect TypeScript unit coverage
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          node scripts/test/test.mjs unit --coverage --test-reporter=lcov --test-concurrency=2 > .tools/sonar-typescript.lcov
+          if (!(Select-String -LiteralPath .tools/sonar-typescript.lcov -Pattern '^DA:\d+,[1-9]' -Quiet)) {
+            throw "No TypeScript unit coverage was collected."
+          }
+
+      - name: Collect isolated Observer callback coverage
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          & tests/native/observer/build-win32-fixture.ps1
+          .tools/sonar-coverage/dotnet-coverage collect `
+            "dotnet run --project tests/native/observer/ObserverFixtures.csproj --configuration Release --disable-build-servers -- .tools/sonar-observer/observer-win32.dll" `
+            --output-format xml `
+            --output .tools/sonar-observer-coverage.xml
+          $observerCoverage = [xml](Get-Content .tools/sonar-observer-coverage.xml -Raw)
+          foreach ($source in @('\Core\Observer.cs', '\Window\CaptionHitTest.cs')) {
+            $covered = "//module//range[@covered='yes' and @source_id=ancestor::module/source_files/source_file[contains(@path, '$source')]/@id]"
+            if (!$observerCoverage.SelectSingleNode($covered)) {
+              throw "No coverage was collected for $source."
+            }
+          }
+
       - name: Analyze
         shell: pwsh
         env:
@@ -88,7 +118,8 @@ jobs:
             /o:"yutomatsui21" `
             /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.projectBaseDir="$((Get-Location).Path)" `
-            /d:sonar.cs.vscoveragexml.reportsPaths=".tools/sonar-native-coverage.xml,.tools/sonar-helper-coverage.xml"
+            /d:sonar.javascript.lcov.reportPaths=".tools/sonar-typescript.lcov" `
+            /d:sonar.cs.vscoveragexml.reportsPaths=".tools/sonar-native-coverage.xml,.tools/sonar-helper-coverage.xml,.tools/sonar-observer-coverage.xml"
 
           dotnet build native-helper/WindowObserver.csproj --no-incremental --disable-build-servers
 
