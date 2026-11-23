@@ -23,7 +23,7 @@ for (const option of options) {
     if (!pattern) throw new Error("Expected a non-empty test name pattern");
     new RegExp(pattern);
     forwarded.push(option);
-  } else if (/^--test-reporter=(spec|tap|dot)$/.test(option)) {
+  } else if (/^--test-reporter=(spec|tap|dot|lcov)$/.test(option)) {
     forwarded.push(option);
   } else if (/^--test-concurrency=(1|2|4|8)$/.test(option)) {
     forwarded.push(option);

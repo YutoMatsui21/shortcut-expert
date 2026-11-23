@@ -8,3 +8,5 @@ native-helper/obj/
 *.tsbuildinfo
 tests/native/policy/bin/
 tests/native/policy/obj/
+tests/native/observer/bin/
+tests/native/observer/obj/

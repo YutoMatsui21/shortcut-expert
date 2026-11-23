@@ -1,6 +1,8 @@
 using static NativeMethods;
 using Point = NativeMethods.Point;
 
+namespace ShortcutExpert.Detection;
+
 internal sealed class CaptionHitTest(Action<WindowDiagnosticReason>? diagnostic)
 {
     private const uint HitTestTimeoutMs = 10;
